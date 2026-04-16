@@ -56,7 +56,7 @@
                 android:textSize="11sp"
                 app:chipMinHeight="28dp"
                 app:chipCornerRadius="14dp"
-                app:checkable="true"
+                android:checkable="true"
                 app:checkedIconEnabled="true"
                 app:chipBackgroundColor="@color/error" />
             <com.google.android.material.chip.Chip
@@ -67,7 +67,7 @@
                 android:textSize="11sp"
                 app:chipMinHeight="28dp"
                 app:chipCornerRadius="14dp"
-                app:checkable="true"
+                android:checkable="true"
                 app:checkedIconEnabled="true"
                 app:chipBackgroundColor="@color/success_green" />
         </LinearLayout>
