@@ -1,0 +1,5 @@
+-keep class com.kahaf.guardian.data.local.db.entity.** { *; }
+-keep class com.kahaf.guardian.domain.model.** { *; }
+-keep class org.tensorflow.lite.** { *; }
+-keepclassmembers class * extends android.accessibilityservice.AccessibilityService { *; }
+-dontwarn org.tensorflow.**
