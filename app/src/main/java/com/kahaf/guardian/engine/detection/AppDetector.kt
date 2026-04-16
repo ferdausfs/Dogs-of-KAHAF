@@ -3,11 +3,8 @@ package com.kahaf.guardian.engine.detection
 import com.kahaf.guardian.domain.model.BlockReason
 import com.kahaf.guardian.domain.model.DetectionResult
 import com.kahaf.guardian.domain.repository.AppRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AppDetector @Inject constructor(private val repo: AppRepository) {
+class AppDetector constructor(private val repo: AppRepository) {
     @Volatile private var cache: Set<String> = emptySet()
     @Volatile private var lastUpdate: Long = 0
 

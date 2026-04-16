@@ -6,11 +6,8 @@ import com.kahaf.guardian.engine.detection.AiDetector
 import com.kahaf.guardian.engine.detection.AppDetector
 import com.kahaf.guardian.engine.detection.KeywordDetector
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class RulesEngine @Inject constructor(
+class RulesEngine constructor(
     private val wl: WhitelistChecker, private val ad: AppDetector,
     private val kd: KeywordDetector, private val ai: AiDetector,
     private val settings: SettingsRepository

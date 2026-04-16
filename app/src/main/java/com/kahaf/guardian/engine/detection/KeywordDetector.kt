@@ -5,11 +5,8 @@ import com.kahaf.guardian.domain.model.DetectionResult
 import com.kahaf.guardian.domain.repository.SettingsRepository
 import com.kahaf.guardian.util.Constants
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class KeywordDetector @Inject constructor(private val settings: SettingsRepository) {
+class KeywordDetector constructor(private val settings: SettingsRepository) {
     suspend fun detectInText(text: String, pkg: String): DetectionResult {
         if (!settings.isKeywordDetectionEnabled().first()) return DetectionResult(false, packageName = pkg)
         val lower = text.lowercase()

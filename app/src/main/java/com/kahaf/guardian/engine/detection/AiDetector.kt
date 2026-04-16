@@ -15,11 +15,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AiDetector @Inject constructor(private val ctx: Context, private val settings: SettingsRepository) {
+class AiDetector constructor(private val ctx: Context, private val settings: SettingsRepository) {
     private var interpreter: Interpreter? = null
     private var loaded = false
     @Volatile private var lastScan = 0L

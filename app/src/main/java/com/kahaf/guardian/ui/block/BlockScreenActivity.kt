@@ -29,5 +29,4 @@ class BlockScreenActivity : AppCompatActivity() {
 
     @Deprecated("Deprecated") override fun onBackPressed() { goHome() }
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_APP_SWITCH) { goHome(); true } else super.onKeyDown(keyCode, event)
-    override fun onPause() { super.onPause(); finishAndRemoveTask() }
 }

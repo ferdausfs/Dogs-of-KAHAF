@@ -2,17 +2,15 @@ package com.kahaf.guardian.engine.blocking
 
 import android.content.Context
 import com.kahaf.guardian.domain.model.BlockEvent
+import com.kahaf.guardian.domain.model.BlockReason
 import com.kahaf.guardian.domain.model.DetectionResult
 import com.kahaf.guardian.domain.repository.BlockLogRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class BlockingEngine @Inject constructor(
+class BlockingEngine constructor(
     private val ctx: Context, private val overlay: OverlayManager,
     private val logRepo: BlockLogRepository
 ) {
@@ -26,7 +24,7 @@ class BlockingEngine @Inject constructor(
         lastPkg = result.packageName; lastTime = now
         overlay.showBlockScreen(result)
         scope.launch {
-            try { logRepo.logBlockEvent(BlockEvent(packageName = result.packageName, reason = result.reason!!, details = result.details, timestamp = now)) }
+            try { logRepo.logBlockEvent(BlockEvent(packageName = result.packageName, reason = result.reason ?: BlockReason.APP_BLOCKED, details = result.details, timestamp = now)) }
             catch (_: Exception) {}
         }
     }

@@ -7,6 +7,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.kahaf.guardian.R
 import com.kahaf.guardian.data.local.prefs.SecurePrefsManager
+import com.kahaf.guardian.domain.repository.SettingsRepository
+import kotlinx.coroutines.launch
 import com.kahaf.guardian.databinding.ActivityDelayUnlockBinding
 import com.kahaf.guardian.service.KahafForegroundService
 import com.kahaf.guardian.ui.pin.PinVerifyActivity
@@ -19,6 +21,7 @@ import javax.inject.Inject
 class DelayUnlockActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDelayUnlockBinding
     @Inject lateinit var prefs: SecurePrefsManager
+    @Inject lateinit var settingsRepo: SettingsRepository
     private var timer: CountDownTimer? = null
     private var purpose = Constants.PURPOSE_SETTINGS
 
@@ -44,7 +47,7 @@ class DelayUnlockActivity : AppCompatActivity() {
     private fun onVerified() {
         when (purpose) {
             Constants.PURPOSE_SETTINGS -> { startActivity(Intent(this, SettingsActivity::class.java)); finish() }
-            Constants.PURPOSE_DISABLE -> { prefs.setProtectionActive(false); KahafForegroundService.stop(this); finish() }
+            Constants.PURPOSE_DISABLE -> { lifecycleScope.launch { settingsRepo.setProtectionActive(false) }; KahafForegroundService.stop(this); finish() }
             else -> finish()
         }
     }

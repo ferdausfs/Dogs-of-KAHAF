@@ -36,9 +36,12 @@ class KahafAccessibilityService : AccessibilityService() {
     private fun extractText(node: AccessibilityNodeInfo, sb: StringBuilder, max: Int, depth: Int) {
         if (depth > max) return
         val vid = node.viewIdResourceName
-        if (vid != null && (vid.contains("url") || vid.contains("address") || vid.contains("search")))
-            node.text?.let { sb.append(it).append(" ") }
-        node.text?.let { if (it.length in 4..500) sb.append(it).append(" ") }
+        val nodeText = node.text
+        if (vid != null && (vid.contains("url") || vid.contains("address") || vid.contains("search"))) {
+            nodeText?.let { sb.append(it).append(" ") }
+        } else {
+            nodeText?.let { if (it.length in 4..500) sb.append(it).append(" ") }
+        }
         for (i in 0 until node.childCount) {
             try { val c = node.getChild(i) ?: continue; extractText(c, sb, max, depth + 1); c.recycle() }
             catch (_: Exception) {}

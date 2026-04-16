@@ -2,11 +2,8 @@ package com.kahaf.guardian.engine.rules
 
 import com.kahaf.guardian.domain.repository.AppRepository
 import com.kahaf.guardian.util.Constants
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class WhitelistChecker @Inject constructor(private val repo: AppRepository) {
+class WhitelistChecker constructor(private val repo: AppRepository) {
     @Volatile private var cache: Set<String> = emptySet()
     @Volatile private var lastUpdate: Long = 0
 

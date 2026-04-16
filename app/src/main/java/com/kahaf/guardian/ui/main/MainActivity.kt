@@ -20,6 +20,7 @@ import com.kahaf.guardian.ui.pin.PinSetupActivity
 import com.kahaf.guardian.util.Constants
 import com.kahaf.guardian.util.PermissionHelper
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -63,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
 
-        lifecycleScope.launch { vm.isPinSet.collect { if (!it) startActivity(Intent(this@MainActivity, PinSetupActivity::class.java)) } }
+        lifecycleScope.launch { vm.isPinSet.filterNotNull().collect { if (!it) startActivity(Intent(this@MainActivity, PinSetupActivity::class.java)) } }
     }
 
     override fun onResume() {

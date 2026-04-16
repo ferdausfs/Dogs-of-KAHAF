@@ -19,8 +19,8 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtectionState())
     val protectionState: StateFlow<ProtectionState> = _state.asStateFlow()
-    private val _isPinSet = MutableStateFlow(false)
-    val isPinSet: StateFlow<Boolean> = _isPinSet.asStateFlow()
+    private val _isPinSet = MutableStateFlow<Boolean?>(null)
+    val isPinSet: StateFlow<Boolean?> = _isPinSet.asStateFlow()
 
     init {
         viewModelScope.launch {

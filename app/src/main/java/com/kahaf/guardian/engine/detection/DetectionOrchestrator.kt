@@ -9,11 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class DetectionOrchestrator @Inject constructor(
+class DetectionOrchestrator constructor(
     private val rules: RulesEngine, private val blocker: BlockingEngine,
     private val settings: SettingsRepository
 ) {
