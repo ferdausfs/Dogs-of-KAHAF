@@ -1,0 +1,61 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+  workflow_dispatch: # manual trigger from Actions tab
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Set up JDK 17 (required for AGP 8.x)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 3. Set up Gradle (handles missing wrapper jar automatically)
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.4"
+
+      # 4. Create local.properties with GitHub Actions SDK path
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+
+      # 5. Grant execute permission for gradlew
+      - name: Grant gradlew permission
+        run: chmod +x gradlew
+
+      # 6. Build Debug APK
+      - name: Build Debug APK
+        run: gradle assembleDebug
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2048m"
+
+      # 7. Upload APK as downloadable artifact
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GuardianShield-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # 8. Print APK info (optional — good for debugging)
+      - name: APK info
+        run: |
+          echo "✅ Build complete!"
+          ls -lh app/build/outputs/apk/debug/
