@@ -1,0 +1,139 @@
+package com.guardian.shield.viewmodel
+
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.guardian.shield.domain.model.AppRule
+import com.guardian.shield.domain.usecase.*
+import com.guardian.shield.service.accessibility.GuardianAccessibilityService
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import javax.inject.Inject
+
+data class InstalledApp(
+    val packageName: String,
+    val appName: String
+)
+
+data class AppListUiState(
+    val blockedApps: List<AppRule>      = emptyList(),
+    val whitelistedApps: List<AppRule>  = emptyList(),
+    val installedApps: List<InstalledApp> = emptyList(),
+    val isLoadingInstalled: Boolean     = false,
+    val searchQuery: String             = "",
+    val errorMessage: String?           = null
+)
+
+@HiltViewModel
+class AppListViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val observeBlockedAppsUseCase: ObserveBlockedAppsUseCase,
+    private val observeWhitelistedAppsUseCase: ObserveWhitelistedAppsUseCase,
+    private val addBlockedAppUseCase: AddBlockedAppUseCase,
+    private val addWhitelistedAppUseCase: AddWhitelistedAppUseCase,
+    private val removeAppRuleUseCase: RemoveAppRuleUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(AppListUiState())
+    val uiState: StateFlow<AppListUiState> = _uiState.asStateFlow()
+
+    // Filtered installed apps based on search query
+    val filteredInstalledApps: StateFlow<List<InstalledApp>> = combine(
+        _uiState.map { it.installedApps },
+        _uiState.map { it.searchQuery }
+    ) { apps, query ->
+        if (query.isBlank()) apps
+        else apps.filter { it.appName.contains(query, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        observeRules()
+        loadInstalledApps()
+    }
+
+    private fun observeRules() {
+        viewModelScope.launch {
+            observeBlockedAppsUseCase()
+                .catch { e -> Timber.e(e, "observeBlocked") }
+                .collect { list -> _uiState.update { it.copy(blockedApps = list) } }
+        }
+        viewModelScope.launch {
+            observeWhitelistedAppsUseCase()
+                .catch { e -> Timber.e(e, "observeWhitelisted") }
+                .collect { list -> _uiState.update { it.copy(whitelistedApps = list) } }
+        }
+    }
+
+    fun loadInstalledApps() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingInstalled = true) }
+            try {
+                val pm = context.packageManager
+                val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }  // user apps only
+                    .map { info ->
+                        InstalledApp(
+                            packageName = info.packageName,
+                            appName     = pm.getApplicationLabel(info).toString()
+                        )
+                    }
+                    .sortedBy { it.appName }
+                _uiState.update { it.copy(installedApps = apps, isLoadingInstalled = false) }
+            } catch (e: Exception) {
+                Timber.e(e, "loadInstalledApps")
+                _uiState.update { it.copy(isLoadingInstalled = false, errorMessage = e.message) }
+            }
+        }
+    }
+
+    fun addToBlockedList(app: InstalledApp) {
+        viewModelScope.launch {
+            addBlockedAppUseCase(
+                AppRule(packageName = app.packageName, appName = app.appName, isBlocked = true)
+            )
+            notifyService()
+        }
+    }
+
+    fun addToWhitelist(app: InstalledApp) {
+        viewModelScope.launch {
+            addWhitelistedAppUseCase(
+                AppRule(packageName = app.packageName, appName = app.appName, isWhitelisted = true)
+            )
+            notifyService()
+        }
+    }
+
+    fun removeRule(packageName: String) {
+        viewModelScope.launch {
+            removeAppRuleUseCase(packageName)
+            notifyService()
+        }
+    }
+
+    fun updateSearch(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    private fun notifyService() {
+        try {
+            context.sendBroadcast(
+                Intent(GuardianAccessibilityService.ACTION_REFRESH_RULES).apply {
+                    setPackage(context.packageName)
+                }
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "notifyService failed")
+        }
+    }
+}

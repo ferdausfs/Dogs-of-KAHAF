@@ -1,53 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <application
-        android:name=".KahafApplication"
+        android:name=".GuardianApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.GuardianShield"
         android:supportsRtl="true"
-        android:theme="@style/Theme.KahafGuardian"
-        tools:targetApi="34">
+        tools:replace="android:allowBackup">
 
+        <!-- Main Entry -->
         <activity
-            android:name=".ui.main.MainActivity"
+            android:name=".ui.dashboard.MainActivity"
             android:exported="true"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <!-- Settings (PIN protected) -->
         <activity
-            android:name=".ui.block.BlockScreenActivity"
-            android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
-            android:taskAffinity=""
-            android:theme="@style/Theme.KahafGuardian.BlockScreen"
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity" />
+
+        <!-- PIN Setup / Change -->
+        <activity
+            android:name=".ui.setup.PinSetupActivity"
             android:exported="false" />
 
-        <activity android:name=".ui.pin.PinSetupActivity" android:exported="false" />
-        <activity android:name=".ui.pin.PinVerifyActivity" android:exported="false" />
-        <activity android:name=".ui.applist.AppListActivity" android:exported="false" />
-        <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
-        <activity android:name=".ui.delay.DelayUnlockActivity" android:exported="false" />
-
-        <service
-            android:name=".service.KahafAccessibilityService"
+        <!-- PIN Verify entry gate -->
+        <activity
+            android:name=".ui.setup.PinVerifyActivity"
             android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
+        <!-- Block overlay screen -->
+        <activity
+            android:name=".ui.overlay.BlockOverlayActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.GuardianShield.Fullscreen" />
+
+        <!-- Delay unlock screen -->
+        <activity
+            android:name=".ui.unlock.DelayUnlockActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.GuardianShield.Fullscreen" />
+
+        <!-- Accessibility Service -->
+        <service
+            android:name=".service.accessibility.GuardianAccessibilityService"
+            android:exported="true"
+            android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -57,33 +87,20 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Foreground watchdog service -->
         <service
-            android:name=".service.KahafForegroundService"
+            android:name=".service.blocker.GuardianForegroundService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="dataSync" />
 
+        <!-- Boot receiver -->
         <receiver
-            android:name=".service.BootReceiver"
-            android:exported="true"
-            android:directBootAware="true">
-            <intent-filter>
+            android:name=".receiver.BootReceiver"
+            android:exported="true">
+            <intent-filter android:priority="999">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".service.KahafDeviceAdminReceiver"
-            android:exported="true"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin_receiver" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
-                <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
+                <action android:name="com.guardian.shield.RESTART_SERVICE" />
             </intent-filter>
         </receiver>
 

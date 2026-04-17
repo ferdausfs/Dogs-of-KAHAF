@@ -2,16 +2,18 @@ name: Build Debug APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master", "dev" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -19,20 +21,51 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: Generate Gradle Wrapper
+      - name: Download Gradle Wrapper JAR
         run: |
-          gradle wrapper --gradle-version 8.2
-          chmod +x gradlew
+          mkdir -p gradle/wrapper
+          curl -sL \
+            "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar || \
+          wget -q \
+            "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -O gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar size: $(du -h gradle/wrapper/gradle-wrapper.jar)"
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m"
 
-      - name: Upload Debug APK
+      - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kahaf-guardian-debug
+          name: GuardianShield-debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: APK build summary
+        run: |
+          echo "### ✅ Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| APK | \`app-debug.apk\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Size | $(du -sh app/build/outputs/apk/debug/app-debug.apk | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run # | ${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY

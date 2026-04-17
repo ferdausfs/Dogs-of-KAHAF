@@ -1,16 +1,27 @@
 *.iml
 .gradle
 /local.properties
-/.idea
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
 .DS_Store
 /build
-/app/build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Gradle wrapper jar (downloaded automatically)
+gradle/wrapper/gradle-wrapper.jar
+
+# APK outputs (downloaded from GitHub Actions artifacts)
 *.apk
 *.aab
+
+# Keystore (NEVER commit)
 *.jks
 *.keystore
-gradle/wrapper/gradle-wrapper.jar
+key.properties

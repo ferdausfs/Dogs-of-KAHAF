@@ -1,22 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.KahafGuardian" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/primary_light</item>
-        <item name="colorPrimaryDark">@color/primary_dark</item>
-        <item name="colorSecondary">@color/secondary</item>
-        <item name="android:colorBackground">@color/background_dark</item>
-        <item name="colorSurface">@color/surface_dark</item>
-        <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="colorError">@color/error</item>
-        <item name="android:statusBarColor">@color/background_dark</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
-    </style>
-
-    <style name="Theme.KahafGuardian.BlockScreen" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:colorBackground">@color/block_red_dark</item>
-        <item name="android:statusBarColor">@color/block_red_dark</item>
-        <item name="android:navigationBarColor">@color/block_red_dark</item>
-        <item name="android:windowNoTitle">true</item>
+    <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#90CAF9</item>
+        <item name="colorSecondary">#80CBC4</item>
+        <item name="colorError">#EF9A9A</item>
     </style>
 </resources>
