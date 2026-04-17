@@ -28,7 +28,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
-// System packages that should not update currentForegroundPkg
 private val SYSTEM_UI_SKIP = setOf(
     "android", "com.android.systemui",
     "com.google.android.inputmethod.latin",
@@ -53,7 +52,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         )
     }
 
-    // Manual injection — NOT using @AndroidEntryPoint
+    // Manual injection
     private lateinit var rulesEngine: RulesEngine
     private lateinit var blockingEngine: BlockingEngine
     private lateinit var aiDetector: AiDetector
@@ -74,14 +73,22 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private var textDebounceJob: Job? = null
 
-    // ── Receivers ─────────────────────────────────────────────────────
+    // ── Receiver (handles both REFRESH_RULES and RELOAD_MODEL) ────────
 
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
             if (!isInjected) return
+            Timber.d("$TAG receiver: ${intent?.action}")
             when (intent?.action) {
-                ACTION_REFRESH_RULES -> serviceScope.launch { loadRulesIntoEngine() }
-                ACTION_RELOAD_MODEL  -> serviceScope.launch { loadAiModel() }
+                ACTION_REFRESH_RULES -> serviceScope.launch {
+                    loadRulesIntoEngine()
+                    loadSettings()
+                }
+                ACTION_RELOAD_MODEL -> serviceScope.launch {
+                    Timber.d("$TAG RELOAD_MODEL received — reloading AI...")
+                    loadSettings()
+                    reloadAiModel()
+                }
             }
         }
     }
@@ -91,7 +98,6 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         Timber.d("$TAG onServiceConnected")
 
-        // FIX #1: Manual Hilt injection via EntryPoint
         try {
             val entryPoint = EntryPointAccessors.fromApplication(
                 applicationContext,
@@ -107,7 +113,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             isInjected = true
             Timber.d("$TAG injection successful")
         } catch (e: Exception) {
-            Timber.e(e, "$TAG injection FAILED")
+            Timber.e(e, "$TAG injection FAILED — service non-functional")
             return
         }
 
@@ -115,7 +121,14 @@ class GuardianAccessibilityService : AccessibilityService() {
             loadRulesIntoEngine()
             loadSettings()
             blockingEngine.loadSettings()
-            if (aiEnabled) loadAiModel()
+
+            // Auto-load AI model if enabled and available
+            if (aiEnabled) {
+                Timber.d("$TAG AI enabled at startup — loading model")
+                reloadAiModel()
+            } else {
+                Timber.d("$TAG AI disabled at startup")
+            }
         }
         registerReceivers()
         startForegroundWatchdog()
@@ -126,20 +139,16 @@ class GuardianAccessibilityService : AccessibilityService() {
         event ?: return
         val pkg = event.packageName?.toString() ?: return
 
-        // Track foreground app
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             if (!SYSTEM_UI_SKIP.contains(pkg) && !rulesEngine.isSystemUi(pkg)) {
                 currentForegroundPkg = pkg
             }
         }
 
-        // ── App-level check ───────────────────────────────────────────
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            // FIX #4: Do NOT pass event object to coroutine
             handleAppEvent(pkg)
         }
 
-        // ── Keyword check (debounced) ─────────────────────────────────
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
             debounceTextScan(pkg)
@@ -157,7 +166,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    // ── App event handler (FIX #4: no event object in coroutine) ──────
+    // ── App event handler ──────────────────────────────────────────────
 
     private fun handleAppEvent(pkg: String) {
         serviceScope.launch(Dispatchers.Default) {
@@ -208,28 +217,81 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    // ── AI model reload (KEY FIX) ─────────────────────────────────────
+
+    private suspend fun reloadAiModel() {
+        // Re-read settings first
+        try {
+            aiEnabled = prefs.isAiDetectionEnabled.first()
+            aiThreshold = prefs.aiThreshold.first()
+            aiIntervalMs = prefs.aiIntervalMs.first()
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG reloadAiModel: failed to read settings")
+        }
+
+        if (!aiEnabled) {
+            Timber.d("$TAG AI is disabled — stopping scan loop")
+            stopAiScanLoop()
+            aiDetector.unload()
+            return
+        }
+
+        // Check if model file exists
+        if (!AiDetector.isModelAvailable(applicationContext)) {
+            Timber.w("$TAG AI enabled but model file not found!")
+            stopAiScanLoop()
+            return
+        }
+
+        // Load/reload the model
+        val ok = withContext(Dispatchers.IO) {
+            aiDetector.reload()
+        }
+
+        if (ok) {
+            Timber.d("$TAG AI model loaded: ${aiDetector.getModelType()}")
+
+            // Start scan loop on Android 11+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                startAiScanLoop()
+                Timber.d("$TAG AI scan loop started (threshold=$aiThreshold, interval=${aiIntervalMs}ms)")
+            } else {
+                Timber.w("$TAG AI screenshot requires Android 11+ (current: ${Build.VERSION.SDK_INT})")
+            }
+        } else {
+            Timber.e("$TAG AI model load FAILED")
+            stopAiScanLoop()
+        }
+    }
+
     // ── AI scan loop ──────────────────────────────────────────────────
 
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     private fun startAiScanLoop() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         stopAiScanLoop()
         aiScanJob = serviceScope.launch {
+            Timber.d("$TAG AI scan loop STARTED")
             while (isActive) {
                 delay(aiIntervalMs)
-                if (!isInjected) continue
-                if (!aiDetector.isLoaded()) continue
+                if (!aiDetector.isLoaded()) {
+                    Timber.w("$TAG AI scan: model not loaded, skipping")
+                    continue
+                }
                 if (rulesEngine.isWhitelisted(currentForegroundPkg)) continue
+                if (blockingEngine.isCoolingDown()) continue
                 if (aiBusy) continue
+                if (currentForegroundPkg.isBlank()) continue
+
+                Timber.d("$TAG AI scan: analyzing ${currentForegroundPkg}...")
                 captureAndAnalyze()
             }
         }
-        Timber.d("$TAG AI scan loop started (interval=${aiIntervalMs}ms)")
     }
 
     private fun stopAiScanLoop() {
         aiScanJob?.cancel()
         aiScanJob = null
+        Timber.d("$TAG AI scan loop STOPPED")
     }
 
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
@@ -249,7 +311,9 @@ class GuardianAccessibilityService : AccessibilityService() {
                     }
                     override fun onFailure(errorCode: Int) {
                         aiBusy = false
-                        if (errorCode != 2) Timber.w("$TAG screenshot failed: $errorCode")
+                        if (errorCode != 2) {
+                            Timber.w("$TAG screenshot failed: errorCode=$errorCode")
+                        }
                     }
                 }
             )
@@ -265,41 +329,62 @@ class GuardianAccessibilityService : AccessibilityService() {
         var full: Bitmap? = null
         var cropped: Bitmap? = null
         try {
-            val hb = result.hardwareBuffer ?: return
+            val hb = result.hardwareBuffer ?: run {
+                Timber.w("$TAG analyzeScreenshot: null hardwareBuffer")
+                aiBusy = false
+                return
+            }
             val hwBmp = Bitmap.wrapHardwareBuffer(hb, result.colorSpace)
             full = hwBmp?.copy(Bitmap.Config.ARGB_8888, false)
             hwBmp?.recycle()
-            full ?: return
+            if (full == null) {
+                Timber.w("$TAG analyzeScreenshot: failed to copy bitmap")
+                aiBusy = false
+                return
+            }
 
             val w = full.width; val h = full.height
-            val topCut = (h * 0.07f).toInt()
-            val botCut = (h * 0.09f).toInt()
+            val topCut = (h * 0.07f).toInt()   // Status bar
+            val botCut = (h * 0.09f).toInt()   // Nav bar
             val cropH = h - topCut - botCut
-            cropped = if (cropH > 100) Bitmap.createBitmap(full, 0, topCut, w, cropH) else full
+            cropped = if (cropH > 100) {
+                Bitmap.createBitmap(full, 0, topCut, w, cropH)
+            } else {
+                full
+            }
 
-            if (aiDetector.shouldSkipFrame(cropped)) return
+            if (aiDetector.shouldSkipFrame(cropped)) {
+                Timber.d("$TAG AI: skipping frame (uniform/black)")
+                aiBusy = false
+                return
+            }
 
             val aiResult = aiDetector.classify(cropped, aiThreshold)
             val pkg = currentForegroundPkg
 
-            val evalResult = rulesEngine.evaluateAiResult(pkg, aiResult.unsafeScore, aiThreshold)
-            if (evalResult is DetectionResult.Block) {
-                val appName = getAppName(pkg)
-                withContext(Dispatchers.Main) {
-                    logAndBlock(pkg, appName, evalResult.reason, evalResult.detail)
+            Timber.d("$TAG AI result for $pkg: unsafe=${aiResult.unsafeScore}, label=${aiResult.label}")
+
+            if (aiResult.isUnsafe) {
+                val evalResult = rulesEngine.evaluateAiResult(pkg, aiResult.unsafeScore, aiThreshold)
+                if (evalResult is DetectionResult.Block) {
+                    val appName = getAppName(pkg)
+                    Timber.w("$TAG AI BLOCK: $pkg — ${aiResult.label}")
+                    withContext(Dispatchers.Main) {
+                        logAndBlock(pkg, appName, evalResult.reason, evalResult.detail)
+                    }
                 }
             }
         } catch (e: Exception) {
             Timber.e(e, "$TAG analyzeScreenshot error")
         } finally {
             try { result.hardwareBuffer?.close() } catch (_: Exception) {}
-            if (cropped !== full) cropped?.recycle()
+            if (cropped != null && cropped !== full) cropped.recycle()
             full?.recycle()
             aiBusy = false
         }
     }
 
-    // ── Block + log (FIX #4: removed event parameter) ─────────────────
+    // ── Block + log ────────────────────────────────────────────────────
 
     private suspend fun logAndBlock(
         pkg: String,
@@ -307,7 +392,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         reason: BlockReason,
         detail: String
     ) {
-        // Log to DB
         serviceScope.launch(Dispatchers.IO) {
             try {
                 blockEventRepo.logEvent(
@@ -323,7 +407,6 @@ class GuardianAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Execute block on main thread
         withContext(Dispatchers.Main) {
             blockingEngine.executeBlock(
                 this@GuardianAccessibilityService, pkg, appName, reason, detail
@@ -355,23 +438,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             rulesEngine.setProtectionEnabled(protectionOn)
             rulesEngine.setKeywordDetectionEnabled(keywordOn)
             rulesEngine.setStrictMode(strictMode)
+            Timber.d("$TAG settings loaded: ai=$aiEnabled, keyword=$keywordOn, protection=$protectionOn, threshold=$aiThreshold")
         } catch (e: Exception) {
             Timber.e(e, "$TAG loadSettings failed")
         }
     }
 
-    private suspend fun loadAiModel() {
-        if (!aiEnabled) return
-        val ok = withContext(Dispatchers.IO) { aiDetector.load() }
-        if (ok) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) startAiScanLoop()
-            Timber.d("$TAG AI model loaded")
-        } else {
-            Timber.w("$TAG AI model not available")
-        }
-    }
-
-    // ── Helpers (FIX #11: node scan limits) ────────────────────────────
+    // ── Helpers ────────────────────────────────────────────────────────
 
     private fun getAppName(pkg: String): String {
         return try {
@@ -446,6 +519,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             else
                 @Suppress("UnspecifiedRegisterReceiverFlag")
                 registerReceiver(refreshReceiver, filter)
+            Timber.d("$TAG receivers registered")
         } catch (e: Exception) {
             Timber.e(e, "$TAG registerReceivers failed")
         }

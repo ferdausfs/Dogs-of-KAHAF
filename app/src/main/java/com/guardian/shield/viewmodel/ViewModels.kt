@@ -31,6 +31,14 @@ data class SettingsUiState(
     val snackMessage: String?           = null
 )
 
+private data class SettingsSnapshot(
+    val ai: Boolean,
+    val keyword: Boolean,
+    val strict: Boolean,
+    val delay: Int,
+    val threshold: Float
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -49,7 +57,6 @@ class SettingsViewModel @Inject constructor(
         refreshPinStatus()
     }
 
-    // FIX #2: Proper combine usage with collect
     private fun observePrefs() {
         viewModelScope.launch {
             combine(
@@ -89,13 +96,17 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isPinSet = isPinSetUseCase()) }
     }
 
+    /**
+     * Toggle AI detection — ONLY saves preference.
+     * SettingsActivity handles the broadcast directly because
+     * it needs to check model availability before notifying service.
+     * This prevents double-broadcast.
+     */
     fun toggleAi(enabled: Boolean) {
         viewModelScope.launch {
             toggleAiDetectionUseCase(enabled)
-            notifyService(
-                if (enabled) GuardianAccessibilityService.ACTION_RELOAD_MODEL
-                else GuardianAccessibilityService.ACTION_REFRESH_RULES
-            )
+            // DO NOT send broadcast here — SettingsActivity does it
+            // with model availability check
         }
     }
 
@@ -128,20 +139,14 @@ class SettingsViewModel @Inject constructor(
 
     private fun notifyService(action: String) {
         try {
-            context.sendBroadcast(Intent(action).apply { setPackage(context.packageName) })
+            context.sendBroadcast(Intent(action).apply {
+                setPackage(context.packageName)
+            })
         } catch (e: Exception) {
             Timber.e(e, "notifyService $action")
         }
     }
 }
-
-private data class SettingsSnapshot(
-    val ai: Boolean,
-    val keyword: Boolean,
-    val strict: Boolean,
-    val delay: Int,
-    val threshold: Float
-)
 
 // ─────────────────────────────────────────────────────────────────────
 // Keyword ViewModel

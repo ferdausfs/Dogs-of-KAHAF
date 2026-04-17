@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -33,10 +34,9 @@ class SettingsActivity : AppCompatActivity() {
     private val keywordVm: KeywordViewModel by viewModels()
     private val appListVm: AppListViewModel by viewModels()
 
-    // FIX #7: Guard against switch listener feedback loop
     private var isUpdatingFromState = false
 
-    // FIX #8: Modern ActivityResultLauncher
+    // Model file picker
     private val modelPickLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -57,6 +57,12 @@ class SettingsActivity : AppCompatActivity() {
         observeAppLists()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Refresh model status when coming back
+        updateModelStatus()
+    }
+
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
     private fun setupRecyclerViews() {
@@ -75,7 +81,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
-        // FIX #7: Switch listeners with guard
+        // Switch listeners with guard
         binding.switchKeyword.setOnCheckedChangeListener { _, checked ->
             if (!isUpdatingFromState) {
                 settingsVm.toggleKeyword(checked)
@@ -84,6 +90,30 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchAi.setOnCheckedChangeListener { _, checked ->
             if (!isUpdatingFromState) {
                 settingsVm.toggleAi(checked)
+
+                // KEY FIX: When AI is toggled ON, immediately notify service
+                if (checked) {
+                    val modelAvail = AiDetector.isModelAvailable(this)
+                    if (modelAvail) {
+                        Timber.d("AI toggled ON — model available, sending RELOAD_MODEL")
+                        sendBroadcast(
+                            Intent(GuardianAccessibilityService.ACTION_RELOAD_MODEL).apply {
+                                setPackage(packageName)
+                            }
+                        )
+                        settingsVm.showMessage("AI detection enabled ✓")
+                    } else {
+                        settingsVm.showMessage("⚠️ Upload a .tflite model first!")
+                    }
+                } else {
+                    Timber.d("AI toggled OFF — sending REFRESH_RULES")
+                    sendBroadcast(
+                        Intent(GuardianAccessibilityService.ACTION_REFRESH_RULES).apply {
+                            setPackage(packageName)
+                        }
+                    )
+                    settingsVm.showMessage("AI detection disabled")
+                }
             }
         }
 
@@ -104,9 +134,9 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Model upload — FIX #8: use launcher
+        // Model upload
         binding.btnUploadModel.setOnClickListener {
-            modelPickLauncher.launch("application/octet-stream")
+            modelPickLauncher.launch("*/*")  // Accept any file type for .tflite
         }
 
         // Keyword add
@@ -117,8 +147,6 @@ class SettingsActivity : AppCompatActivity() {
             keywordVm.addKeyword()
             true
         }
-
-        // FIX #14: Use doAfterTextChanged extension
         binding.etKeywordInput.doAfterTextChanged { text ->
             keywordVm.updateInput(text.toString())
         }
@@ -158,33 +186,42 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    // FIX #7: Update switches with guard flag
     private fun observeSettings() {
         lifecycleScope.launch {
             settingsVm.uiState.collectLatest { state ->
                 isUpdatingFromState = true
 
-                binding.switchKeyword.isChecked     = state.isKeywordEnabled
-                binding.switchAi.isChecked          = state.isAiEnabled
-                binding.sliderDelay.value           = state.delayUnlockSeconds.toFloat()
-                binding.tvDelayValue.text           = "${state.delayUnlockSeconds}s"
-                binding.sliderAiThreshold.value     = state.aiThreshold
-                binding.tvAiThresholdValue.text     = "${(state.aiThreshold * 100).toInt()}%"
-                binding.layoutAiOptions.isVisible   = state.isAiEnabled
+                binding.switchKeyword.isChecked   = state.isKeywordEnabled
+                binding.switchAi.isChecked        = state.isAiEnabled
+                binding.sliderDelay.value         = state.delayUnlockSeconds.toFloat()
+                binding.tvDelayValue.text         = "${state.delayUnlockSeconds}s"
+                binding.sliderAiThreshold.value   = state.aiThreshold
+                binding.tvAiThresholdValue.text   = "${(state.aiThreshold * 100).toInt()}%"
+                binding.layoutAiOptions.isVisible = state.isAiEnabled
 
                 isUpdatingFromState = false
 
-                val modelAvail = AiDetector.isModelAvailable(this@SettingsActivity)
-                binding.tvModelStatus.text = if (modelAvail) "✓ Model loaded" else "No model — upload .tflite"
-                binding.tvModelStatus.setTextColor(
-                    getColor(if (modelAvail) android.R.color.holo_green_dark else android.R.color.holo_orange_dark)
-                )
+                updateModelStatus()
 
                 state.snackMessage?.let { msg ->
                     Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     settingsVm.clearMessage()
                 }
             }
+        }
+    }
+
+    private fun updateModelStatus() {
+        val modelAvail = AiDetector.isModelAvailable(this)
+        val modelFile = AiDetector.modelFile(this)
+
+        if (modelAvail) {
+            val sizeKB = modelFile.length() / 1024
+            binding.tvModelStatus.text = "✓ Model loaded (${sizeKB}KB)"
+            binding.tvModelStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+        } else {
+            binding.tvModelStatus.text = "⚠️ No model — upload .tflite file"
+            binding.tvModelStatus.setTextColor(getColor(android.R.color.holo_orange_dark))
         }
     }
 
@@ -207,21 +244,53 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    // KEY FIX: Proper model import with validation
     private fun importModel(uri: Uri) {
+        Timber.d("Importing model from: $uri")
         lifecycleScope.launch {
             try {
                 val dest = AiDetector.modelFile(this@SettingsActivity)
+
+                // Copy file
                 withContext(Dispatchers.IO) {
                     contentResolver.openInputStream(uri)?.use { input ->
-                        dest.outputStream().use { output -> input.copyTo(output) }
-                    }
+                        dest.outputStream().use { output ->
+                            val bytes = input.copyTo(output)
+                            Timber.d("Model copied: $bytes bytes → ${dest.absolutePath}")
+                        }
+                    } ?: throw Exception("Could not open input stream")
                 }
-                settingsVm.showMessage("Model imported successfully ✓")
-                sendBroadcast(Intent(GuardianAccessibilityService.ACTION_RELOAD_MODEL).apply {
-                    setPackage(packageName)
-                })
+
+                // Validate file
+                if (!dest.exists() || dest.length() < 1024) {
+                    dest.delete()
+                    settingsVm.showMessage("❌ Invalid model file (too small)")
+                    return@launch
+                }
+
+                val sizeKB = dest.length() / 1024
+                Timber.d("Model file saved: ${sizeKB}KB at ${dest.absolutePath}")
+
+                // Update UI
+                updateModelStatus()
+
+                // If AI is enabled, immediately reload in service
+                val aiEnabled = settingsVm.uiState.value.isAiEnabled
+                if (aiEnabled) {
+                    Timber.d("AI is enabled — sending RELOAD_MODEL to service")
+                    sendBroadcast(
+                        Intent(GuardianAccessibilityService.ACTION_RELOAD_MODEL).apply {
+                            setPackage(packageName)
+                        }
+                    )
+                    settingsVm.showMessage("✓ Model imported (${sizeKB}KB) — AI reloading...")
+                } else {
+                    settingsVm.showMessage("✓ Model imported (${sizeKB}KB) — Enable AI Detection to activate")
+                }
+
             } catch (e: Exception) {
-                settingsVm.showMessage("Import failed: ${e.message}")
+                Timber.e(e, "Model import FAILED")
+                settingsVm.showMessage("❌ Import failed: ${e.message}")
             }
         }
     }
