@@ -1,3 +1,4 @@
+// app/src/main/java/com/guardian/shield/ui/dashboard/MainActivity.kt
 package com.guardian.shield.ui.dashboard
 
 import android.content.Intent
@@ -27,6 +28,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: DashboardViewModel by viewModels()
     private lateinit var eventAdapter: BlockEventAdapter
+
+    // FIX #7: Guard for switch listener
+    private var isUpdatingSwitch = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,9 +67,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
+        // FIX #7: Switch with guard
         binding.switchProtection.setOnCheckedChangeListener { _, checked ->
-            if (checked == viewModel.uiState.value.isProtectionOn) return@setOnCheckedChangeListener
-            viewModel.toggleProtection(checked)
+            if (!isUpdatingSwitch) {
+                viewModel.toggleProtection(checked)
+            }
         }
         binding.cardAccessibility.setOnClickListener { showAccessibilityDialog() }
         binding.btnSetupPin.setOnClickListener {
@@ -89,9 +95,13 @@ class MainActivity : AppCompatActivity() {
                 binding.tvTotalBlocked.text = state.stats.totalBlocked.toString()
                 binding.tvTodayBlocked.text = state.stats.todayBlocked.toString()
                 binding.tvLastBlocked.text  = state.stats.lastBlockedApp.ifEmpty { "None yet" }
-                // Switch (guard against feedback loop)
+
+                // FIX #7: Switch update with guard
+                isUpdatingSwitch = true
                 if (binding.switchProtection.isChecked != state.isProtectionOn)
                     binding.switchProtection.isChecked = state.isProtectionOn
+                isUpdatingSwitch = false
+
                 // Accessibility card
                 val accessOk = state.protectionState.isAccessibilityEnabled
                 binding.ivAccessibilityStatus.setImageResource(
@@ -104,11 +114,11 @@ class MainActivity : AppCompatActivity() {
                     getColor(if (accessOk) R.color.status_active else R.color.status_inactive)
                 // PIN card
                 val pinSet = state.protectionState.isPinSet
-                binding.tvPinStatus.text   = if (pinSet) "PIN: Set ✓" else "PIN: Not set"
-                binding.btnSetupPin.text   = if (pinSet) "Change PIN" else "Set PIN"
+                binding.tvPinStatus.text = if (pinSet) "PIN: Set ✓" else "PIN: Not set"
+                binding.btnSetupPin.text = if (pinSet) "Change PIN" else "Set PIN"
                 // Recent events
-                binding.tvNoEvents.isVisible       = state.recentEvents.isEmpty()
-                binding.rvRecentEvents.isVisible   = state.recentEvents.isNotEmpty()
+                binding.tvNoEvents.isVisible     = state.recentEvents.isEmpty()
+                binding.rvRecentEvents.isVisible = state.recentEvents.isNotEmpty()
                 eventAdapter.submitList(state.recentEvents)
                 // Error
                 state.errorMessage?.let { msg ->

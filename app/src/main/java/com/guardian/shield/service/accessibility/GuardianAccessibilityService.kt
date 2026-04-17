@@ -1,3 +1,4 @@
+// app/src/main/java/com/guardian/shield/service/accessibility/GuardianAccessibilityService.kt
 package com.guardian.shield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
@@ -14,6 +15,7 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.data.repository.AppRuleRepository
 import com.guardian.shield.data.repository.BlockEventRepository
 import com.guardian.shield.data.repository.KeywordRepository
+import com.guardian.shield.di.AccessibilityServiceEntryPoint
 import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
@@ -21,24 +23,29 @@ import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
-import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
-import javax.inject.Inject
 
-@AndroidEntryPoint
+// System packages that should not update currentForegroundPkg
+private val SYSTEM_UI_SKIP = setOf(
+    "android", "com.android.systemui",
+    "com.google.android.inputmethod.latin",
+    "com.samsung.android.honeyboard",
+    "com.sec.android.inputmethod",
+    "com.touchtype.swiftkey",
+    "com.swiftkey.swiftkeyapp"
+)
+
 class GuardianAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "Guardian_Service"
         const val ACTION_REFRESH_RULES = "com.guardian.shield.REFRESH_RULES"
         const val ACTION_RELOAD_MODEL  = "com.guardian.shield.RELOAD_MODEL"
-
-        // Keyword debounce — don't scan text on every keystroke
         private const val TEXT_DEBOUNCE_MS = 700L
 
-        // Supported browser packages for URL bar detection
         private val BROWSER_PACKAGES = setOf(
             "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
             "com.brave.browser", "com.microsoft.emmx", "com.UCMobile.intl",
@@ -46,13 +53,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         )
     }
 
-    @Inject lateinit var rulesEngine: RulesEngine
-    @Inject lateinit var blockingEngine: BlockingEngine
-    @Inject lateinit var aiDetector: AiDetector
-    @Inject lateinit var appRuleRepo: AppRuleRepository
-    @Inject lateinit var keywordRepo: KeywordRepository
-    @Inject lateinit var blockEventRepo: BlockEventRepository
-    @Inject lateinit var prefs: GuardianPreferences
+    // Manual injection — NOT using @AndroidEntryPoint
+    private lateinit var rulesEngine: RulesEngine
+    private lateinit var blockingEngine: BlockingEngine
+    private lateinit var aiDetector: AiDetector
+    private lateinit var appRuleRepo: AppRuleRepository
+    private lateinit var keywordRepo: KeywordRepository
+    private lateinit var blockEventRepo: BlockEventRepository
+    private lateinit var prefs: GuardianPreferences
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -62,6 +70,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Volatile private var aiIntervalMs = 2_500L
     @Volatile private var aiScanJob: Job? = null
     @Volatile private var aiBusy = false
+    @Volatile private var isInjected = false
 
     private var textDebounceJob: Job? = null
 
@@ -69,6 +78,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (!isInjected) return
             when (intent?.action) {
                 ACTION_REFRESH_RULES -> serviceScope.launch { loadRulesIntoEngine() }
                 ACTION_RELOAD_MODEL  -> serviceScope.launch { loadAiModel() }
@@ -80,9 +90,31 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         Timber.d("$TAG onServiceConnected")
+
+        // FIX #1: Manual Hilt injection via EntryPoint
+        try {
+            val entryPoint = EntryPointAccessors.fromApplication(
+                applicationContext,
+                AccessibilityServiceEntryPoint::class.java
+            )
+            rulesEngine = entryPoint.rulesEngine()
+            blockingEngine = entryPoint.blockingEngine()
+            aiDetector = entryPoint.aiDetector()
+            appRuleRepo = entryPoint.appRuleRepo()
+            keywordRepo = entryPoint.keywordRepo()
+            blockEventRepo = entryPoint.blockEventRepo()
+            prefs = entryPoint.prefs()
+            isInjected = true
+            Timber.d("$TAG injection successful")
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG injection FAILED")
+            return
+        }
+
         serviceScope.launch {
             loadRulesIntoEngine()
             loadSettings()
+            blockingEngine.loadSettings()
             if (aiEnabled) loadAiModel()
         }
         registerReceivers()
@@ -90,22 +122,24 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!isInjected) return
         event ?: return
         val pkg = event.packageName?.toString() ?: return
 
-        // Track foreground app (ignore system UI transitions)
+        // Track foreground app
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             if (!SYSTEM_UI_SKIP.contains(pkg) && !rulesEngine.isSystemUi(pkg)) {
                 currentForegroundPkg = pkg
             }
         }
 
-        // ── App-level check (every window state change) ───────────────
+        // ── App-level check ───────────────────────────────────────────
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            handleAppEvent(pkg, event)
+            // FIX #4: Do NOT pass event object to coroutine
+            handleAppEvent(pkg)
         }
 
-        // ── Keyword check (text content events, debounced) ────────────
+        // ── Keyword check (debounced) ─────────────────────────────────
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
             debounceTextScan(pkg)
@@ -123,16 +157,20 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    // ── App event handler ──────────────────────────────────────────────
+    // ── App event handler (FIX #4: no event object in coroutine) ──────
 
-    private fun handleAppEvent(pkg: String, event: AccessibilityEvent) {
+    private fun handleAppEvent(pkg: String) {
         serviceScope.launch(Dispatchers.Default) {
-            when (val result = rulesEngine.evaluateApp(pkg)) {
-                is DetectionResult.Block -> {
-                    val appName = getAppName(pkg)
-                    logAndBlock(pkg, appName, result.reason, result.detail, event)
+            try {
+                when (val result = rulesEngine.evaluateApp(pkg)) {
+                    is DetectionResult.Block -> {
+                        val appName = getAppName(pkg)
+                        logAndBlock(pkg, appName, result.reason, result.detail)
+                    }
+                    else -> { /* allow */ }
                 }
-                else -> { /* allow */ }
+            } catch (e: Exception) {
+                Timber.e(e, "$TAG handleAppEvent error")
             }
         }
     }
@@ -143,15 +181,15 @@ class GuardianAccessibilityService : AccessibilityService() {
         textDebounceJob?.cancel()
         textDebounceJob = serviceScope.launch {
             delay(TEXT_DEBOUNCE_MS)
+            if (!isInjected) return@launch
             if (rulesEngine.isWhitelisted(pkg)) return@launch
             if (blockingEngine.isCoolingDown()) return@launch
 
-            val root = rootInActiveWindow ?: return@launch
+            val root = try { rootInActiveWindow } catch (_: Exception) { null } ?: return@launch
             try {
                 val text = collectAllText(root)
                 if (text.isBlank()) return@launch
 
-                // Also check URL bar for browsers
                 val scanText = if (pkg in BROWSER_PACKAGES) {
                     val url = getUrlBarText(root)
                     if (url != null) "$text $url" else text
@@ -160,23 +198,26 @@ class GuardianAccessibilityService : AccessibilityService() {
                 val result = rulesEngine.evaluateText(pkg, scanText)
                 if (result is DetectionResult.Block) {
                     val appName = getAppName(pkg)
-                    logAndBlock(pkg, appName, result.reason, result.detail, null)
+                    logAndBlock(pkg, appName, result.reason, result.detail)
                 }
+            } catch (e: Exception) {
+                Timber.e(e, "$TAG debounceTextScan error")
             } finally {
-                root.recycle()
+                try { root.recycle() } catch (_: Exception) {}
             }
         }
     }
 
-    // ── AI scan loop (event-triggered, interval-gated) ────────────────
+    // ── AI scan loop ──────────────────────────────────────────────────
 
-    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.R)
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     private fun startAiScanLoop() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         stopAiScanLoop()
         aiScanJob = serviceScope.launch {
             while (isActive) {
                 delay(aiIntervalMs)
+                if (!isInjected) continue
                 if (!aiDetector.isLoaded()) continue
                 if (rulesEngine.isWhitelisted(currentForegroundPkg)) continue
                 if (aiBusy) continue
@@ -191,7 +232,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         aiScanJob = null
     }
 
-    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.R)
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     @android.annotation.SuppressLint("NewApi")
     private fun captureAndAnalyze() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
@@ -218,7 +259,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.R)
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     @android.annotation.SuppressLint("NewApi")
     private suspend fun analyzeScreenshot(result: ScreenshotResult) {
         var full: Bitmap? = null
@@ -245,7 +286,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             if (evalResult is DetectionResult.Block) {
                 val appName = getAppName(pkg)
                 withContext(Dispatchers.Main) {
-                    logAndBlock(pkg, appName, evalResult.reason, evalResult.detail, null)
+                    logAndBlock(pkg, appName, evalResult.reason, evalResult.detail)
                 }
             }
         } catch (e: Exception) {
@@ -258,16 +299,15 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    // ── Block + log ────────────────────────────────────────────────────
+    // ── Block + log (FIX #4: removed event parameter) ─────────────────
 
     private suspend fun logAndBlock(
         pkg: String,
         appName: String,
         reason: BlockReason,
-        detail: String,
-        event: AccessibilityEvent?
+        detail: String
     ) {
-        // Log to DB (non-blocking)
+        // Log to DB
         serviceScope.launch(Dispatchers.IO) {
             try {
                 blockEventRepo.logEvent(
@@ -285,7 +325,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         // Execute block on main thread
         withContext(Dispatchers.Main) {
-            blockingEngine.executeBlock(this@GuardianAccessibilityService, pkg, appName, reason, detail)
+            blockingEngine.executeBlock(
+                this@GuardianAccessibilityService, pkg, appName, reason, detail
+            )
         }
     }
 
@@ -304,12 +346,12 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private suspend fun loadSettings() {
         try {
-            aiEnabled  = prefs.isAiDetectionEnabled.first()
-            aiThreshold = prefs.aiThreshold.first()
+            aiEnabled    = prefs.isAiDetectionEnabled.first()
+            aiThreshold  = prefs.aiThreshold.first()
             aiIntervalMs = prefs.aiIntervalMs.first()
-            val protectionOn      = prefs.isProtectionEnabled.first()
-            val keywordOn         = prefs.isKeywordDetectionEnabled.first()
-            val strictMode        = prefs.isStrictMode.first()
+            val protectionOn = prefs.isProtectionEnabled.first()
+            val keywordOn    = prefs.isKeywordDetectionEnabled.first()
+            val strictMode   = prefs.isStrictMode.first()
             rulesEngine.setProtectionEnabled(protectionOn)
             rulesEngine.setKeywordDetectionEnabled(keywordOn)
             rulesEngine.setStrictMode(strictMode)
@@ -329,7 +371,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────
+    // ── Helpers (FIX #11: node scan limits) ────────────────────────────
 
     private fun getAppName(pkg: String): String {
         return try {
@@ -340,14 +382,21 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun collectAllText(node: AccessibilityNodeInfo): String {
-        val sb = StringBuilder()
+        val sb = StringBuilder(512)
+        var nodeCount = 0
+        val maxNodes = 200
+
         fun go(n: AccessibilityNodeInfo?, depth: Int) {
-            if (n == null || depth > 20) return
-            n.text?.let { sb.append(it).append(' ') }
-            n.contentDescription?.let { sb.append(it).append(' ') }
-            for (i in 0 until n.childCount) {
-                val c = n.getChild(i) ?: continue
-                go(c, depth + 1); c.recycle()
+            if (n == null || depth > 15 || nodeCount >= maxNodes) return
+            nodeCount++
+            n.text?.let { if (it.length < 500) sb.append(it).append(' ') }
+            n.contentDescription?.let { if (it.length < 200) sb.append(it).append(' ') }
+            val childCount = minOf(n.childCount, 50)
+            for (i in 0 until childCount) {
+                if (nodeCount >= maxNodes) break
+                val c = try { n.getChild(i) } catch (_: Exception) { null } ?: continue
+                go(c, depth + 1)
+                try { c.recycle() } catch (_: Exception) {}
             }
         }
         go(node, 0)
@@ -362,12 +411,14 @@ class GuardianAccessibilityService : AccessibilityService() {
             "com.brave.browser:id/url_bar"
         )
         for (id in ids) {
-            val nodes = root.findAccessibilityNodeInfosByViewId(id)
-            if (nodes.isNotEmpty()) {
-                val text = nodes[0].text?.toString()
-                nodes.forEach { it.recycle() }
-                if (text != null) return text
-            }
+            try {
+                val nodes = root.findAccessibilityNodeInfosByViewId(id)
+                if (nodes.isNotEmpty()) {
+                    val text = nodes[0].text?.toString()
+                    nodes.forEach { try { it.recycle() } catch (_: Exception) {} }
+                    if (text != null) return text
+                }
+            } catch (_: Exception) {}
         }
         return null
     }
@@ -400,13 +451,3 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 }
-
-// System packages that should not update currentForegroundPkg
-private val SYSTEM_UI_SKIP = setOf(
-    "android", "com.android.systemui",
-    "com.google.android.inputmethod.latin",
-    "com.samsung.android.honeyboard",
-    "com.sec.android.inputmethod",
-    "com.touchtype.swiftkey",
-    "com.swiftkey.swiftkeyapp"
-)

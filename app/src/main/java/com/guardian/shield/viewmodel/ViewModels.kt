@@ -1,3 +1,4 @@
+// app/src/main/java/com/guardian/shield/viewmodel/ViewModels.kt
 package com.guardian.shield.viewmodel
 
 import android.content.Context
@@ -48,6 +49,7 @@ class SettingsViewModel @Inject constructor(
         refreshPinStatus()
     }
 
+    // FIX #2: Proper combine usage with collect
     private fun observePrefs() {
         viewModelScope.launch {
             combine(
@@ -56,17 +58,25 @@ class SettingsViewModel @Inject constructor(
                 prefs.isStrictMode,
                 prefs.delayUnlockSeconds,
                 prefs.aiThreshold
-            ) { ai, keyword, strict, delay, threshold ->
+            ) { values ->
+                SettingsSnapshot(
+                    ai        = values[0] as Boolean,
+                    keyword   = values[1] as Boolean,
+                    strict    = values[2] as Boolean,
+                    delay     = values[3] as Int,
+                    threshold = values[4] as Float
+                )
+            }.collect { snap ->
                 _uiState.update {
                     it.copy(
-                        isAiEnabled         = ai,
-                        isKeywordEnabled    = keyword,
-                        isStrictMode        = strict,
-                        delayUnlockSeconds  = delay,
-                        aiThreshold         = threshold
+                        isAiEnabled        = snap.ai,
+                        isKeywordEnabled   = snap.keyword,
+                        isStrictMode       = snap.strict,
+                        delayUnlockSeconds = snap.delay,
+                        aiThreshold        = snap.threshold
                     )
                 }
-            }.collect()
+            }
         }
         viewModelScope.launch {
             prefs.aiIntervalMs.collect { ms ->
@@ -124,6 +134,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
+
+private data class SettingsSnapshot(
+    val ai: Boolean,
+    val keyword: Boolean,
+    val strict: Boolean,
+    val delay: Int,
+    val threshold: Float
+)
 
 // ─────────────────────────────────────────────────────────────────────
 // Keyword ViewModel
@@ -236,11 +254,11 @@ class PinViewModel @Inject constructor(
     fun setupPin() {
         val result = setupPinUseCase(_uiState.value.input, _confirmInput.value)
         when (result) {
-            PinSetupResult.Success     -> _uiState.update { it.copy(isVerified = true, isPinSet = true) }
-            PinSetupResult.TooShort    -> _uiState.update { it.copy(error = "PIN must be at least 4 digits") }
-            PinSetupResult.Mismatch    -> _uiState.update { it.copy(error = "PINs do not match") }
-            PinSetupResult.InvalidChars-> _uiState.update { it.copy(error = "PIN must be digits only") }
-            PinSetupResult.Failed      -> _uiState.update { it.copy(error = "Failed to save PIN") }
+            PinSetupResult.Success      -> _uiState.update { it.copy(isVerified = true, isPinSet = true) }
+            PinSetupResult.TooShort     -> _uiState.update { it.copy(error = "PIN must be at least 4 digits") }
+            PinSetupResult.Mismatch     -> _uiState.update { it.copy(error = "PINs do not match") }
+            PinSetupResult.InvalidChars -> _uiState.update { it.copy(error = "PIN must be digits only") }
+            PinSetupResult.Failed       -> _uiState.update { it.copy(error = "Failed to save PIN") }
         }
     }
 

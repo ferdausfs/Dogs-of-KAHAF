@@ -1,25 +1,17 @@
+// app/src/main/java/com/guardian/shield/ui/overlay/BlockOverlayActivity.kt
 package com.guardian.shield.ui.overlay
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.KeyEvent
 import android.view.WindowManager
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Full-screen block overlay.
- *
- * Features:
- *  - Back/Home/Recents buttons intercepted (no easy dismiss)
- *  - "I understand" → DelayUnlockActivity (countdown + PIN)
- *  - Auto-finish after brief show to return to home
- */
 @AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
 
@@ -36,7 +28,6 @@ class BlockOverlayActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Keep screen on, show over lock screen
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -45,6 +36,13 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // FIX #6: Proper back press handling
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Do nothing — overlay cannot be dismissed by back press
+            }
+        })
 
         populateContent()
         setupButtons()
@@ -71,25 +69,21 @@ class BlockOverlayActivity : AppCompatActivity() {
             val delaySecs = intent.getIntExtra(EXTRA_DELAY_SECS, 30)
             startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra(EXTRA_PKG,          intent.getStringExtra(EXTRA_PKG) ?: "")
-                putExtra(EXTRA_APP_NAME,     intent.getStringExtra(EXTRA_APP_NAME) ?: "")
-                putExtra("delay_seconds",    delaySecs)
+                putExtra(EXTRA_PKG,       intent.getStringExtra(EXTRA_PKG) ?: "")
+                putExtra(EXTRA_APP_NAME,  intent.getStringExtra(EXTRA_APP_NAME) ?: "")
+                putExtra("delay_seconds", delaySecs)
             })
             finish()
         }
     }
 
-    // Intercept ALL hardware back button attempts — no easy bypass
+    // Intercept hardware keys
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_HOME,
-            KeyEvent.KEYCODE_APP_SWITCH -> true   // Consume — do nothing
+            KeyEvent.KEYCODE_APP_SWITCH -> true
             else -> super.onKeyDown(keyCode, event)
         }
-    }
-
-    override fun onBackPressed() {
-        // Do nothing — overlay cannot be dismissed by back press
     }
 }

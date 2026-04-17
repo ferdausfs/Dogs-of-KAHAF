@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- app/src/main/res/layout/layout_numpad.xml -->
+<!-- FIX #3: Removed unsupported layout_columnWeight from Space -->
 <GridLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
@@ -52,8 +54,7 @@
     <!-- Row 4: empty 0 backspace -->
     <Space
         android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_columnWeight="1" />
+        android:layout_height="72dp" />
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn0"
         style="@style/NumpadButton"

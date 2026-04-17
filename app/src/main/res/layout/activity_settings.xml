@@ -198,7 +198,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:valueFrom="10"
-                            android:valueTo="120"
+                            android:valueTo="300"
                             android:stepSize="5"
                             android:value="30" />
                         <TextView

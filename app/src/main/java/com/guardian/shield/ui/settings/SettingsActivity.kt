@@ -1,10 +1,14 @@
+// app/src/main/java/com/guardian/shield/ui/settings/SettingsActivity.kt
 package com.guardian.shield.ui.settings
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -16,8 +20,10 @@ import com.guardian.shield.viewmodel.SettingsViewModel
 import com.guardian.shield.viewmodel.KeywordViewModel
 import com.guardian.shield.viewmodel.AppListViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -26,6 +32,16 @@ class SettingsActivity : AppCompatActivity() {
     private val settingsVm: SettingsViewModel by viewModels()
     private val keywordVm: KeywordViewModel by viewModels()
     private val appListVm: AppListViewModel by viewModels()
+
+    // FIX #7: Guard against switch listener feedback loop
+    private var isUpdatingFromState = false
+
+    // FIX #8: Modern ActivityResultLauncher
+    private val modelPickLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { importModel(it) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,15 +75,19 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
-        // ── Protection toggles ────────────────────────────────────────
+        // FIX #7: Switch listeners with guard
         binding.switchKeyword.setOnCheckedChangeListener { _, checked ->
-            settingsVm.toggleKeyword(checked)
+            if (!isUpdatingFromState) {
+                settingsVm.toggleKeyword(checked)
+            }
         }
         binding.switchAi.setOnCheckedChangeListener { _, checked ->
-            settingsVm.toggleAi(checked)
+            if (!isUpdatingFromState) {
+                settingsVm.toggleAi(checked)
+            }
         }
 
-        // ── Delay unlock slider ───────────────────────────────────────
+        // Delay unlock slider
         binding.sliderDelay.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
                 val secs = value.toInt()
@@ -76,7 +96,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // ── AI threshold slider ───────────────────────────────────────
+        // AI threshold slider
         binding.sliderAiThreshold.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
                 settingsVm.setAiThreshold(value)
@@ -84,16 +104,12 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // ── Model upload ──────────────────────────────────────────────
+        // Model upload — FIX #8: use launcher
         binding.btnUploadModel.setOnClickListener {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "application/octet-stream"
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-            startActivityForResult(intent, REQ_MODEL_PICK)
+            modelPickLauncher.launch("application/octet-stream")
         }
 
-        // ── Keyword add ───────────────────────────────────────────────
+        // Keyword add
         binding.btnAddKeyword.setOnClickListener {
             keywordVm.addKeyword()
         }
@@ -101,15 +117,13 @@ class SettingsActivity : AppCompatActivity() {
             keywordVm.addKeyword()
             true
         }
-        binding.etKeywordInput.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
-                keywordVm.updateInput(s.toString())
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
 
-        // ── App picker buttons ────────────────────────────────────────
+        // FIX #14: Use doAfterTextChanged extension
+        binding.etKeywordInput.doAfterTextChanged { text ->
+            keywordVm.updateInput(text.toString())
+        }
+
+        // App picker buttons
         binding.btnAddBlockedApp.setOnClickListener {
             showAppPickerDialog(isWhitelist = false)
         }
@@ -144,9 +158,12 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    // FIX #7: Update switches with guard flag
     private fun observeSettings() {
         lifecycleScope.launch {
             settingsVm.uiState.collectLatest { state ->
+                isUpdatingFromState = true
+
                 binding.switchKeyword.isChecked     = state.isKeywordEnabled
                 binding.switchAi.isChecked          = state.isAiEnabled
                 binding.sliderDelay.value           = state.delayUnlockSeconds.toFloat()
@@ -154,6 +171,8 @@ class SettingsActivity : AppCompatActivity() {
                 binding.sliderAiThreshold.value     = state.aiThreshold
                 binding.tvAiThresholdValue.text     = "${(state.aiThreshold * 100).toInt()}%"
                 binding.layoutAiOptions.isVisible   = state.isAiEnabled
+
+                isUpdatingFromState = false
 
                 val modelAvail = AiDetector.isModelAvailable(this@SettingsActivity)
                 binding.tvModelStatus.text = if (modelAvail) "✓ Model loaded" else "No model — upload .tflite"
@@ -188,19 +207,11 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_MODEL_PICK && resultCode == RESULT_OK) {
-            data?.data?.let { uri -> importModel(uri) }
-        }
-    }
-
-    private fun importModel(uri: android.net.Uri) {
+    private fun importModel(uri: Uri) {
         lifecycleScope.launch {
             try {
                 val dest = AiDetector.modelFile(this@SettingsActivity)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                withContext(Dispatchers.IO) {
                     contentResolver.openInputStream(uri)?.use { input ->
                         dest.outputStream().use { output -> input.copyTo(output) }
                     }
@@ -214,10 +225,4 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
     }
-
-
-    companion object {
-        private const val REQ_MODEL_PICK = 201
-    }
 }
-
