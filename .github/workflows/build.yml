@@ -33,19 +33,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Download Gradle Wrapper JAR
+      - name: Download fresh Gradle Wrapper
         run: |
+          rm -f gradlew gradlew.bat
           mkdir -p gradle/wrapper
-          curl -sL \
-            "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
-            -o gradle/wrapper/gradle-wrapper.jar || \
-          wget -q \
-            "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
-            -O gradle/wrapper/gradle-wrapper.jar
-          echo "gradle-wrapper.jar size: $(du -h gradle/wrapper/gradle-wrapper.jar)"
-
-      - name: Grant execute permission
-        run: chmod +x gradlew
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradlew" -o gradlew
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradlew.bat" -o gradlew.bat
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar" -o gradle/wrapper/gradle-wrapper.jar
+          chmod +x gradlew
+          echo "gradlew downloaded successfully"
 
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
