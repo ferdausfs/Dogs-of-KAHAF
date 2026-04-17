@@ -89,30 +89,12 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.switchAi.setOnCheckedChangeListener { _, checked ->
             if (!isUpdatingFromState) {
-                settingsVm.toggleAi(checked)
-
-                // KEY FIX: When AI is toggled ON, immediately notify service
-                if (checked) {
-                    val modelAvail = AiDetector.isModelAvailable(this)
-                    if (modelAvail) {
-                        Timber.d("AI toggled ON — model available, sending RELOAD_MODEL")
-                        sendBroadcast(
-                            Intent(GuardianAccessibilityService.ACTION_RELOAD_MODEL).apply {
-                                setPackage(packageName)
-                            }
-                        )
-                        settingsVm.showMessage("AI detection enabled ✓")
-                    } else {
-                        settingsVm.showMessage("⚠️ Upload a .tflite model first!")
-                    }
-                } else {
-                    Timber.d("AI toggled OFF — sending REFRESH_RULES")
-                    sendBroadcast(
-                        Intent(GuardianAccessibilityService.ACTION_REFRESH_RULES).apply {
-                            setPackage(packageName)
-                        }
-                    )
-                    settingsVm.showMessage("AI detection disabled")
+                // BUG FIX: Pass modelAvailable so ViewModel can broadcast AFTER pref is saved.
+                // Previously, broadcast was sent before DataStore write completed (race condition).
+                val modelAvail = AiDetector.isModelAvailable(this)
+                settingsVm.toggleAi(checked, modelAvailable = modelAvail)
+                if (checked && !modelAvail) {
+                    settingsVm.showMessage("⚠️ Upload a .tflite model first!")
                 }
             }
         }

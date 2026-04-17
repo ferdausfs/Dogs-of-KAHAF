@@ -130,16 +130,22 @@ class AiDetector @Inject constructor(
         }
 
         return try {
+            // BUG FIX: Read outputSize AND run inference inside the same synchronized block.
+            // Previously outputSize was read OUTSIDE, so a concurrent unload() could set it to 0
+            // between the block and parseOutput(), causing wrong classification path.
             val output: Array<FloatArray>
+            val capturedOutputSize: Int
             synchronized(this) {
                 val interp = interpreter
                     ?: return AiResult(false, 0f, "Model not loaded")
+                if (!loaded) return AiResult(false, 0f, "Model not loaded")
+                capturedOutputSize = outputSize
                 val input = bitmapToBuffer(bitmap)
-                output = Array(1) { FloatArray(outputSize) }
+                output = Array(1) { FloatArray(capturedOutputSize) }
                 interp.run(input, output)
             }
 
-            val result = parseOutput(output[0], outputSize, threshold)
+            val result = parseOutput(output[0], capturedOutputSize, threshold)
             Timber.d("$TAG classify result: unsafe=${result.unsafeScore}, label=${result.label}")
             result
         } catch (e: Exception) {

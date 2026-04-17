@@ -97,16 +97,22 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Toggle AI detection — ONLY saves preference.
-     * SettingsActivity handles the broadcast directly because
-     * it needs to check model availability before notifying service.
-     * This prevents double-broadcast.
+     * Toggle AI detection — saves preference AND broadcasts to service.
+     * Broadcast is sent AFTER DataStore write completes to avoid race condition
+     * where service reads stale "false" value and immediately stops AI.
      */
-    fun toggleAi(enabled: Boolean) {
+    fun toggleAi(enabled: Boolean, modelAvailable: Boolean = false) {
         viewModelScope.launch {
             toggleAiDetectionUseCase(enabled)
-            // DO NOT send broadcast here — SettingsActivity does it
-            // with model availability check
+            // Pref is now saved — safe to notify the service
+            if (enabled && modelAvailable) {
+                notifyService(GuardianAccessibilityService.ACTION_RELOAD_MODEL)
+                _uiState.update { it.copy(snackMessage = "AI detection enabled ✓") }
+            } else if (!enabled) {
+                notifyService(GuardianAccessibilityService.ACTION_REFRESH_RULES)
+                _uiState.update { it.copy(snackMessage = "AI detection disabled") }
+            }
+            // If enabled but no model: SettingsActivity shows the warning, no broadcast needed
         }
     }
 

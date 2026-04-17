@@ -36,7 +36,10 @@ fun BlockEventEntity.toDomain() = BlockEvent(
     id          = id,
     packageName = packageName,
     appName     = appName,
-    reason      = BlockReason.valueOf(reason),
+    // BUG FIX: BlockReason.valueOf() throws IllegalArgumentException if the DB contains
+    // an unknown string (e.g. after a rename or old DB from a previous version).
+    // Use a safe fallback instead of crashing.
+    reason      = try { BlockReason.valueOf(reason) } catch (_: Exception) { BlockReason.APP_BLOCKED },
     detail      = detail,
     timestamp   = timestamp
 )

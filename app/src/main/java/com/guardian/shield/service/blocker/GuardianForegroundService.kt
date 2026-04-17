@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -31,7 +32,17 @@ class GuardianForegroundService : Service() {
         super.onCreate()
         Timber.d("$TAG onCreate")
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        // BUG FIX: Android 14+ (API 34) requires explicit serviceType in startForeground()
+        // when foregroundServiceType is declared in the manifest
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

@@ -369,9 +369,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (evalResult is DetectionResult.Block) {
                     val appName = getAppName(pkg)
                     Timber.w("$TAG AI BLOCK: $pkg — ${aiResult.label}")
-                    withContext(Dispatchers.Main) {
-                        logAndBlock(pkg, appName, evalResult.reason, evalResult.detail)
-                    }
+                    // BUG FIX: logAndBlock already switches to Main for blockingEngine.executeBlock()
+                    // wrapping in withContext(Main) again caused a nested dispatcher issue and
+                    // the log DB write (IO) was being cancelled when the outer coroutine resumed.
+                    logAndBlock(pkg, appName, evalResult.reason, evalResult.detail)
                 }
             }
         } catch (e: Exception) {

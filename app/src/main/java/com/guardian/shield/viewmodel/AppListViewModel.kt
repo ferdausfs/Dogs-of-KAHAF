@@ -2,7 +2,6 @@ package com.guardian.shield.viewmodel
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -74,16 +73,20 @@ class AppListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingInstalled = true) }
             try {
-                val pm = context.packageManager
-                val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                    .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }  // user apps only
-                    .map { info ->
-                        InstalledApp(
-                            packageName = info.packageName,
-                            appName     = pm.getApplicationLabel(info).toString()
-                        )
-                    }
-                    .sortedBy { it.appName }
+                // BUG FIX: PackageManager.getInstalledApplications(GET_META_DATA) is a heavy IPC
+                // call that blocks the calling thread. Must run on IO dispatcher to avoid ANR.
+                val apps = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val pm = context.packageManager
+                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                        .filter { (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0 }
+                        .map { info ->
+                            InstalledApp(
+                                packageName = info.packageName,
+                                appName     = pm.getApplicationLabel(info).toString()
+                            )
+                        }
+                        .sortedBy { it.appName }
+                }
                 _uiState.update { it.copy(installedApps = apps, isLoadingInstalled = false) }
             } catch (e: Exception) {
                 Timber.e(e, "loadInstalledApps")
