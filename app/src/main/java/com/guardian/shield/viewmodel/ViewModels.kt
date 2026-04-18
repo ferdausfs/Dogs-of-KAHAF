@@ -59,19 +59,22 @@ class SettingsViewModel @Inject constructor(
 
     private fun observePrefs() {
         viewModelScope.launch {
+            // BUG FIX: Was using vararg combine { values -> values[3] as Int } which
+            // can throw ClassCastException on ART when unboxing Integer/Float as Any?.
+            // Fix: use typed 5-arg combine overload with explicit parameter types.
             combine(
                 prefs.isAiDetectionEnabled,
                 prefs.isKeywordDetectionEnabled,
                 prefs.isStrictMode,
                 prefs.delayUnlockSeconds,
                 prefs.aiThreshold
-            ) { values ->
+            ) { ai: Boolean, keyword: Boolean, strict: Boolean, delay: Int, threshold: Float ->
                 SettingsSnapshot(
-                    ai        = values[0] as Boolean,
-                    keyword   = values[1] as Boolean,
-                    strict    = values[2] as Boolean,
-                    delay     = values[3] as Int,
-                    threshold = values[4] as Float
+                    ai        = ai,
+                    keyword   = keyword,
+                    strict    = strict,
+                    delay     = delay,
+                    threshold = threshold
                 )
             }.collect { snap ->
                 _uiState.update {

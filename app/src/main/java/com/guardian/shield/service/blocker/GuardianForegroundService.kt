@@ -6,10 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.guardian.shield.R
 import com.guardian.shield.ui.dashboard.MainActivity
 import timber.log.Timber
@@ -32,8 +34,11 @@ class GuardianForegroundService : Service() {
         super.onCreate()
         Timber.d("$TAG onCreate")
         createNotificationChannel()
-        // BUG FIX: Android 14+ (API 34) requires explicit serviceType in startForeground()
-        // when foregroundServiceType is declared in the manifest
+        // BUG FIX 1: Android 14+ (API 34) requires explicit serviceType in startForeground()
+        // when foregroundServiceType is declared in the manifest.
+        // BUG FIX 2: On Android 13+ (API 33) check POST_NOTIFICATIONS before startForeground.
+        // If not granted, we still call startForeground (required to avoid ANR) but the
+        // notification won't display — service still runs, just silently.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,

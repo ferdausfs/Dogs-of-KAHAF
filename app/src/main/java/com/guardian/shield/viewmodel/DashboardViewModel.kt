@@ -1,10 +1,8 @@
 package com.guardian.shield.viewmodel
 
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -68,30 +66,40 @@ class DashboardViewModel @Inject constructor(
     private fun observeRecentEvents() {
         viewModelScope.launch {
             observeBlockEventsUseCase()
-                .catch { e -> Timber.e(e, "observeRecentEvents error") }
+                .catch { e ->
+                    Timber.e(e, "observeRecentEvents error")
+                    _uiState.update { it.copy(errorMessage = "Failed to load events") }
+                }
                 .collect { events ->
                     _uiState.update { it.copy(recentEvents = events.take(10)) }
-                    // Refresh stats when events change
-                    val stats = getBlockStatsUseCase()
-                    _uiState.update { it.copy(stats = stats) }
+                    // BUG FIX: Wrap stats refresh in try-catch.
+                    // Without this, a Room IO failure would propagate out of collect(),
+                    // cancel the entire coroutine, and freeze the dashboard permanently.
+                    try {
+                        val stats = getBlockStatsUseCase()
+                        _uiState.update { it.copy(stats = stats) }
+                    } catch (e: Exception) {
+                        Timber.e(e, "stats refresh error")
+                    }
                 }
         }
     }
 
     private fun observePrefs() {
         viewModelScope.launch {
+            // BUG FIX: 4-arg combine uses the typed overload, avoiding Array<*> unboxing issues.
             combine(
                 prefs.isProtectionEnabled,
                 prefs.isAiDetectionEnabled,
                 prefs.isKeywordDetectionEnabled,
                 prefs.delayUnlockSeconds
-            ) { protection, ai, keyword, delay ->
+            ) { protection: Boolean, ai: Boolean, keyword: Boolean, delay: Int ->
                 _uiState.update {
                     it.copy(
-                        isProtectionOn      = protection,
-                        isAiOn              = ai,
-                        isKeywordOn         = keyword,
-                        delayUnlockSeconds  = delay
+                        isProtectionOn     = protection,
+                        isAiOn             = ai,
+                        isKeywordOn        = keyword,
+                        delayUnlockSeconds = delay
                     )
                 }
             }.collect()

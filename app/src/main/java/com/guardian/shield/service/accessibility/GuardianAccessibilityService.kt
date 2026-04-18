@@ -393,8 +393,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         reason: BlockReason,
         detail: String
     ) {
-        serviceScope.launch(Dispatchers.IO) {
-            try {
+        // BUG FIX: Log event first on IO, then execute block on Main.
+        // Previous version launched a fire-and-forget serviceScope.launch(IO) for logging
+        // AND did withContext(Main) for blocking — this created a race where if the calling
+        // coroutine was cancelled (e.g. by stopAiScanLoop()), the IO log job would be
+        // orphaned and the withContext(Main) block call would be skipped silently.
+        // Fix: use sequential withContext() for both operations. Logging is fast (<1ms DB write).
+        try {
+            withContext(Dispatchers.IO) {
                 blockEventRepo.logEvent(
                     BlockEvent(
                         packageName = pkg,
@@ -403,9 +409,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                         detail      = detail
                     )
                 )
-            } catch (e: Exception) {
-                Timber.e(e, "$TAG log event failed")
             }
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG log event failed")
+            // Continue to execute block even if logging failed
         }
 
         withContext(Dispatchers.Main) {

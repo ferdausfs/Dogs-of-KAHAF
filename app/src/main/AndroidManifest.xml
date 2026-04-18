@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <!-- BUG FIX: Required on Android 13+ (API 33) to show foreground service notification.
+         Without this, the notification is silently blocked and the OS can kill the
+         foreground service, causing the accessibility service to stop. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".GuardianApplication"

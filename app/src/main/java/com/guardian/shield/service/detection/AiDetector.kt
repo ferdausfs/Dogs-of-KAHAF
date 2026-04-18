@@ -41,10 +41,11 @@ class AiDetector @Inject constructor(
         val label: String
     )
 
-    private val pixelBuf = IntArray(INPUT_SIZE * INPUT_SIZE)
-    private val inputBuf: ByteBuffer = ByteBuffer
-        .allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * 4)
-        .apply { order(ByteOrder.nativeOrder()) }
+    // BUG FIX: Removed shared pixelBuf/inputBuf instance fields.
+    // These were allocated once and reused across all classify() calls, but classify()
+    // runs on Dispatchers.Default which uses a thread pool. Concurrent calls would
+    // clobber each other's buffer causing corrupted inference results.
+    // Fix: allocate fresh buffers per classify() call in bitmapToBuffer().
 
     @Volatile private var interpreter: Interpreter? = null
     @Volatile private var loaded = false
@@ -266,7 +267,13 @@ class AiDetector @Inject constructor(
         } else {
             src
         }
-        inputBuf.rewind()
+        // BUG FIX: Allocate fresh buffers per call (thread-safe).
+        // Shared instance buffers caused data corruption on concurrent classify() calls.
+        val pixelBuf = IntArray(INPUT_SIZE * INPUT_SIZE)
+        val inputBuf = ByteBuffer
+            .allocateDirect(INPUT_SIZE * INPUT_SIZE * 3 * 4)
+            .apply { order(ByteOrder.nativeOrder()) }
+
         bmp.getPixels(pixelBuf, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
         if (bmp !== src) bmp.recycle()
 

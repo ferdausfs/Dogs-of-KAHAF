@@ -1,11 +1,16 @@
 // app/src/main/java/com/guardian/shield/ui/dashboard/MainActivity.kt
 package com.guardian.shield.ui.dashboard
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -32,10 +37,25 @@ class MainActivity : AppCompatActivity() {
     // FIX #7: Guard for switch listener
     private var isUpdatingSwitch = false
 
+    // BUG FIX: Request POST_NOTIFICATIONS on Android 13+ so the foreground
+    // service notification displays — without it the OS silently drops the
+    // notification and may kill the service on low-memory devices.
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted) {
+                Snackbar.make(
+                    binding.root,
+                    "Notification permission needed to keep protection running",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        requestNotificationPermission()
         setupToolbar()
         setupRecyclerView()
         setupClickListeners()
@@ -78,6 +98,17 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, PinSetupActivity::class.java))
         }
         binding.fabSettings.setOnClickListener { openSettingsWithPinCheck() }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
     private fun observeState() {
