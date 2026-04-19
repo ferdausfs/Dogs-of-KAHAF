@@ -5,7 +5,7 @@ on:
     branches: [ main, master, dev ]
   pull_request:
     branches: [ main, master, dev ]
-  workflow_dispatch: # manual trigger from Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,7 +25,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. Set up Gradle (handles missing wrapper jar automatically)
+      # 3. Set up Gradle (provisions Gradle 8.4 binary, puts `gradle` on PATH)
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -33,16 +33,18 @@ jobs:
 
       # 4. Create local.properties with GitHub Actions SDK path
       - name: Create local.properties
-        run: |
-          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
 
-      # 5. Grant execute permission for gradlew
-      - name: Grant gradlew permission
-        run: chmod +x gradlew
+      # 5. ROOT CAUSE FIX: gradle-wrapper.jar is NOT committed to the repo (gitignored).
+      #    ./gradlew fails with "ClassNotFoundException: GradleWrapperMain" without it.
+      #    Fix: use the provisioned `gradle` binary (step 3) to regenerate the wrapper jar.
+      #    This regenerates gradle-wrapper.jar + sets correct version in .properties + makes gradlew executable.
+      - name: Generate Gradle wrapper jar
+        run: |
+          gradle wrapper --gradle-version 8.4 --distribution-type bin
+          chmod +x gradlew
 
       # 6. Build Debug APK
-      # BUG FIX: was `gradle assembleDebug` (system Gradle) → version mismatch with project wrapper.
-      # Fix: use `./gradlew` (project's own wrapper) → always uses the correct Gradle version.
       - name: Build Debug APK
         run: ./gradlew assembleDebug
         env:
@@ -56,8 +58,8 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
-      # 8. Print APK info (optional — good for debugging)
+      # 8. Print APK info
       - name: APK info
         run: |
-          echo "✅ Build complete!"
+          echo "Build complete!"
           ls -lh app/build/outputs/apk/debug/
