@@ -92,9 +92,14 @@
         </service>
 
         <!-- Foreground watchdog service -->
+        <!-- BUG FIX: stopWithTask="false" যোগ করা হয়েছে।
+             ছাড়া: user recents থেকে app swipe করলে service kill হয়।
+             সহ: task destroy হলেও service চলতে থাকে। START_STICKY + এই flag মিলে
+             service reliably alive থাকে। -->
         <service
             android:name=".service.blocker.GuardianForegroundService"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="dataSync" />
 
         <!-- Boot receiver -->

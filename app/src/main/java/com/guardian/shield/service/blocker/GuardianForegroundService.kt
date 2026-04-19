@@ -58,8 +58,9 @@ class GuardianForegroundService : Service() {
 
     override fun onDestroy() {
         Timber.d("$TAG onDestroy — attempting restart")
-        super.onDestroy()
-        // Self-restart via broadcast
+        // BUG FIX: sendBroadcast() BEFORE super.onDestroy().
+        // আগে: super.onDestroy() → sendBroadcast() — service context partially invalidated।
+        // এখন: broadcast first → then super.onDestroy() — context still fully valid।
         try {
             sendBroadcast(Intent("com.guardian.shield.RESTART_SERVICE").apply {
                 setPackage(packageName)
@@ -67,6 +68,7 @@ class GuardianForegroundService : Service() {
         } catch (e: Exception) {
             Timber.e(e, "$TAG restart broadcast failed")
         }
+        super.onDestroy()
     }
 
     private fun createNotificationChannel() {

@@ -45,6 +45,8 @@ class SettingsViewModel @Inject constructor(
     private val prefs: GuardianPreferences,
     private val toggleAiDetectionUseCase: ToggleAiDetectionUseCase,
     private val toggleKeywordDetectionUseCase: ToggleKeywordDetectionUseCase,
+    // BUG FIX: inject the now-existing ToggleStrictModeUseCase
+    private val toggleStrictModeUseCase: ToggleStrictModeUseCase,
     private val setDelayUnlockSecondsUseCase: SetDelayUnlockSecondsUseCase,
     private val isPinSetUseCase: IsPinSetUseCase
 ) : ViewModel() {
@@ -122,6 +124,15 @@ class SettingsViewModel @Inject constructor(
     fun toggleKeyword(enabled: Boolean) {
         viewModelScope.launch {
             toggleKeywordDetectionUseCase(enabled)
+            notifyService(GuardianAccessibilityService.ACTION_REFRESH_RULES)
+        }
+    }
+
+    // BUG FIX: toggleStrictMode() was missing — SettingsActivity had no way to call it.
+    // ToggleStrictModeUseCase now exists; this method saves the pref and notifies the service.
+    fun toggleStrictMode(enabled: Boolean) {
+        viewModelScope.launch {
+            toggleStrictModeUseCase(enabled)
             notifyService(GuardianAccessibilityService.ACTION_REFRESH_RULES)
         }
     }

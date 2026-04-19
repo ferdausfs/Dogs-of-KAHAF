@@ -130,6 +130,16 @@ class ToggleKeywordDetectionUseCase @Inject constructor(
     suspend operator fun invoke(enabled: Boolean) = prefs.setKeywordDetection(enabled)
 }
 
+// BUG FIX: ToggleStrictModeUseCase was missing entirely.
+// GuardianPreferences.setStrictMode() existed, RulesEngine.setStrictMode() existed,
+// but there was no use case bridging them — strict mode toggle in SettingsActivity
+// was silently doing nothing (no-op). Added here to complete the feature.
+class ToggleStrictModeUseCase @Inject constructor(
+    private val prefs: GuardianPreferences
+) {
+    suspend operator fun invoke(enabled: Boolean) = prefs.setStrictMode(enabled)
+}
+
 class SetDelayUnlockSecondsUseCase @Inject constructor(
     private val prefs: GuardianPreferences
 ) {

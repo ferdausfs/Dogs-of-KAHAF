@@ -41,8 +41,10 @@ jobs:
         run: chmod +x gradlew
 
       # 6. Build Debug APK
+      # BUG FIX: was `gradle assembleDebug` (system Gradle) → version mismatch with project wrapper.
+      # Fix: use `./gradlew` (project's own wrapper) → always uses the correct Gradle version.
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2048m"
 

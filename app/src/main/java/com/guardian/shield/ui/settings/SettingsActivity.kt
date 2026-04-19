@@ -98,6 +98,13 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         }
+        // BUG FIX: switchStrictMode listener was missing — toggle clicked but nothing happened.
+        // Now properly calls toggleStrictMode() which saves pref + notifies service.
+        binding.switchStrictMode.setOnCheckedChangeListener { _, checked ->
+            if (!isUpdatingFromState) {
+                settingsVm.toggleStrictMode(checked)
+            }
+        }
 
         // Delay unlock slider
         binding.sliderDelay.addOnChangeListener { _, value, fromUser ->
@@ -175,6 +182,8 @@ class SettingsActivity : AppCompatActivity() {
 
                 binding.switchKeyword.isChecked   = state.isKeywordEnabled
                 binding.switchAi.isChecked        = state.isAiEnabled
+                // BUG FIX: switchStrictMode was never synced from state — always showed wrong value.
+                binding.switchStrictMode.isChecked = state.isStrictMode
                 binding.sliderDelay.value         = state.delayUnlockSeconds.toFloat()
                 binding.tvDelayValue.text         = "${state.delayUnlockSeconds}s"
                 binding.sliderAiThreshold.value   = state.aiThreshold
