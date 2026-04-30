@@ -11,26 +11,31 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * BlockingEngine — orchestrates the user-visible block sequence.
+ *
+ * Flow when a violation is detected:
+ *   1. Push offending app to background via GLOBAL_ACTION_HOME
+ *   2. Launch BlockOverlayActivity — covers screen with the block UI
+ *
+ * Cooldown reduced from 3000ms → 1500ms so subsequent blocks aren't
+ * silently swallowed when the user keeps trying to reopen the same app.
+ */
 @Singleton
 class BlockingEngine @Inject constructor(
     private val prefs: GuardianPreferences
 ) {
-
     companion object {
         private const val TAG = "Guardian_Blocker"
-        private const val BLOCK_COOLDOWN_MS = 3_000L
+        private const val BLOCK_COOLDOWN_MS = 1_500L
     }
 
     @Volatile private var lastBlockTime = 0L
     @Volatile private var cachedDelaySecs = 30
 
-    // FIX #5: Load settings asynchronously, cache the value
     suspend fun loadSettings() {
-        try {
-            cachedDelaySecs = prefs.delayUnlockSeconds.first()
-        } catch (_: Exception) {
-            cachedDelaySecs = 30
-        }
+        try { cachedDelaySecs = prefs.delayUnlockSeconds.first() }
+        catch (_: Exception) { cachedDelaySecs = 30 }
     }
 
     fun isCoolingDown(): Boolean =
@@ -43,21 +48,24 @@ class BlockingEngine @Inject constructor(
         reason: BlockReason,
         detail: String = ""
     ) {
-        if (isCoolingDown()) {
-            Timber.d("$TAG cooldown active — skip block for $pkg")
-            return
-        }
+        if (isCoolingDown()) return
         lastBlockTime = System.currentTimeMillis()
 
-        Timber.w("$TAG BLOCKING: pkg=$pkg reason=$reason detail=$detail")
+        Timber.w("$TAG BLOCK pkg=$pkg reason=$reason detail=$detail")
 
-        // Step 1: Push app to background
+        // Step 1: kick offending app to background BEFORE showing the overlay,
+        // otherwise on some Android versions the overlay activity briefly
+        // composites underneath the offending app's surface.
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
 
-        // Step 2: Show block overlay (using cached delay — NO runBlocking)
+        // Step 2: launch block UI
         try {
             val intent = Intent(service, BlockOverlayActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION
+                )
                 putExtra(BlockOverlayActivity.EXTRA_PKG, pkg)
                 putExtra(BlockOverlayActivity.EXTRA_APP_NAME, appName)
                 putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
@@ -65,12 +73,8 @@ class BlockingEngine @Inject constructor(
                 putExtra(BlockOverlayActivity.EXTRA_DELAY_SECS, cachedDelaySecs)
             }
             service.startActivity(intent)
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG failed to launch BlockOverlayActivity")
-        }
+        } catch (e: Exception) { Timber.e(e, "$TAG launch overlay") }
     }
 
-    fun resetCooldown() {
-        lastBlockTime = 0L
-    }
+    fun resetCooldown() { lastBlockTime = 0L }
 }

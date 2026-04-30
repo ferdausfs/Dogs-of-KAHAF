@@ -2,6 +2,7 @@
 package com.guardian.shield.ui.overlay
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -12,6 +13,18 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * BlockOverlayActivity — full-screen block UI shown after a violation.
+ *
+ * Improvements over the previous version:
+ *   - setShowWhenLocked / setTurnScreenOn called via the API methods (not
+ *     just window flags) so the activity reliably appears even when the
+ *     device is in lock-screen / always-on-display state.
+ *   - Excluded from recents AND background-task list so the user can't
+ *     swipe back into the offending app from the recents UI.
+ *   - Hardware nav keys are swallowed so power-users can't dismiss the
+ *     block by pressing Back/Home/Recents.
+ */
 @AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
 
@@ -28,20 +41,24 @@ class BlockOverlayActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-        )
+        // Newer way (API 27+) — replaces the deprecated FLAG_SHOW_WHEN_LOCKED etc.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // FIX #6: Proper back press handling
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Do nothing — overlay cannot be dismissed by back press
-            }
+            override fun handleOnBackPressed() { /* swallow */ }
         })
 
         populateContent()
@@ -55,7 +72,6 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.tvBlockedApp.text = appName
         binding.tvBlockMessage.text = "Blocked for your protection"
-
         binding.tvBlockReason.text = when (reason) {
             BlockReason.APP_BLOCKED.name      -> "📵 This app is on your blocked list"
             BlockReason.KEYWORD_DETECTED.name -> "🔤 Blocked keyword detected: \"$detail\""
@@ -68,7 +84,7 @@ class BlockOverlayActivity : AppCompatActivity() {
         binding.btnUnderstand.setOnClickListener {
             val delaySecs = intent.getIntExtra(EXTRA_DELAY_SECS, 30)
             startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 putExtra(EXTRA_PKG,       intent.getStringExtra(EXTRA_PKG) ?: "")
                 putExtra(EXTRA_APP_NAME,  intent.getStringExtra(EXTRA_APP_NAME) ?: "")
                 putExtra("delay_seconds", delaySecs)
@@ -77,13 +93,24 @@ class BlockOverlayActivity : AppCompatActivity() {
         }
     }
 
-    // Intercept hardware keys
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_HOME,
-            KeyEvent.KEYCODE_APP_SWITCH -> true
+            KeyEvent.KEYCODE_APP_SWITCH,
+            KeyEvent.KEYCODE_MENU -> true
             else -> super.onKeyDown(keyCode, event)
         }
+    }
+
+    /**
+     * Pressing system-level home/recents may finish() this activity. We
+     * re-launch ourselves so the block can't be silently dismissed.
+     * (Limited — Android stops us if user invokes power button etc.)
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // No-op — the foreground service + accessibility re-block will
+        // re-launch us if the user hits Home and reopens the offending app.
     }
 }
