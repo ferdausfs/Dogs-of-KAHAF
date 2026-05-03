@@ -16,9 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-// ─────────────────────────────────────────────────────────────────────
-// PIN Setup
-// ─────────────────────────────────────────────────────────────────────
+// ── PIN Setup ──────────────────────────────────────────────────────────
 
 @AndroidEntryPoint
 class PinSetupActivity : AppCompatActivity() {
@@ -67,6 +65,13 @@ class PinSetupActivity : AppCompatActivity() {
                     else binding.tilPin.error = err
                 }
                 if (state.isVerified) {
+                    // FIX: Disable inputs after success — prevent double submit
+                    binding.btnSavePin.isEnabled  = false
+                    binding.etPin.isEnabled        = false
+                    binding.etConfirm.isEnabled    = false
+                    // FIX: Clear plain text from memory
+                    binding.etPin.text?.clear()
+                    binding.etConfirm.text?.clear()
                     Snackbar.make(binding.root, "PIN saved ✓", Snackbar.LENGTH_SHORT).show()
                     binding.root.postDelayed({ finish() }, 800)
                 }
@@ -75,9 +80,7 @@ class PinSetupActivity : AppCompatActivity() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// PIN Verify
-// ─────────────────────────────────────────────────────────────────────
+// ── PIN Verify ─────────────────────────────────────────────────────────
 
 @AndroidEntryPoint
 class PinVerifyActivity : AppCompatActivity() {
@@ -128,8 +131,12 @@ class PinVerifyActivity : AppCompatActivity() {
                 if (state.isVerified) {
                     when (intent.getStringExtra(EXTRA_DESTINATION)) {
                         DEST_SETTINGS ->
-                            startActivity(Intent(this@PinVerifyActivity, SettingsActivity::class.java))
-                        else -> { /* caller decides */ }
+                            startActivity(
+                                Intent(this@PinVerifyActivity, SettingsActivity::class.java)
+                            )
+                        // FIX: DEST_DISABLE — pass result back to caller
+                        DEST_DISABLE -> setResult(RESULT_OK)
+                        else         -> setResult(RESULT_OK)
                     }
                     finish()
                 }
@@ -137,9 +144,11 @@ class PinVerifyActivity : AppCompatActivity() {
         }
     }
 
+    // FIX: 8 dots — matches PinManager.MAX_PIN_LENGTH = 8
     private fun updatePinDots(length: Int) {
-        listOf(binding.dot1, binding.dot2, binding.dot3,
-               binding.dot4, binding.dot5, binding.dot6)
-            .forEachIndexed { i, dot -> dot.isActivated = i < length }
+        listOf(
+            binding.dot1, binding.dot2, binding.dot3, binding.dot4,
+            binding.dot5, binding.dot6, binding.dot7, binding.dot8
+        ).forEachIndexed { i, dot -> dot.isActivated = i < length }
     }
 }

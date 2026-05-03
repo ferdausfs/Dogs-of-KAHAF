@@ -3,7 +3,6 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -14,7 +13,7 @@
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <!-- FIX: USE_FINGERPRINT deprecated — removed -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
@@ -26,8 +25,13 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.GuardianShield"
         android:supportsRtl="true"
-        android:hardwareAccelerated="true"
-        tools:replace="android:allowBackup">
+        android:hardwareAccelerated="true">
+        <!-- FIX: tools:replace removed — unnecessary -->
+
+        <!-- FIX: FOREGROUND_SERVICE_SPECIAL_USE meta-data added -->
+        <property
+            android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+            android:value="This app uses a special foreground service to keep the accessibility service alive for content protection." />
 
         <activity
             android:name=".ui.dashboard.MainActivity"
@@ -62,7 +66,7 @@
             android:turnScreenOn="true"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
-            android:noHistory="false"
+            android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.GuardianShield.Fullscreen" />
 
@@ -76,8 +80,6 @@
             android:taskAffinity=""
             android:theme="@style/Theme.GuardianShield.Fullscreen" />
 
-        <!-- Accessibility Service — uses notificationTimeout=16ms in config
-             for near-instant event delivery. -->
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
             android:exported="true"
@@ -91,18 +93,17 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Foreground watchdog — keeps process alive so accessibility
-             service isn't killed by the OS under memory pressure. -->
         <service
             android:name=".service.blocker.GuardianForegroundService"
             android:exported="false"
             android:stopWithTask="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Boot + restart receiver -->
+        <!-- FIX: permission added to BootReceiver -->
         <receiver
             android:name=".receiver.BootReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter android:priority="999">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />

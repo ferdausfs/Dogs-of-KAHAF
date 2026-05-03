@@ -14,21 +14,28 @@ import com.guardian.shield.domain.usecase.*
 import com.guardian.shield.service.accessibility.GuardianAccessibilityService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
 data class DashboardUiState(
     val protectionState: ProtectionState = ProtectionState(),
-    val stats: BlockStats = BlockStats(),
-    val recentEvents: List<BlockEvent> = emptyList(),
-    val isProtectionOn: Boolean = true,
-    val isAiOn: Boolean = false,
-    val isKeywordOn: Boolean = true,
-    val delayUnlockSeconds: Int = 30,
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val stats: BlockStats                = BlockStats(),
+    val recentEvents: List<BlockEvent>   = emptyList(),
+    // FIX: isProtectionOn kept for switch state but derived from protectionState
+    val isProtectionOn: Boolean          = true,
+    val isLoading: Boolean               = false,
+    val errorMessage: String?            = null
+)
+
+private data class PrefSnapshot(
+    val protection: Boolean,
+    val ai: Boolean,
+    val keyword: Boolean,
+    val delay: Int
 )
 
 @HiltViewModel
@@ -45,19 +52,20 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        loadAll()
+        loadInitial()
         observeRecentEvents()
         observePrefs()
     }
 
-    private fun loadAll() {
+    private fun loadInitial() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val stats = getBlockStatsUseCase()
-                _uiState.update { it.copy(stats = stats, isLoading = false) }
+                // FIX: loadInitial does NOT load stats — observeRecentEvents handles that
+                // Prevents double DB query on init
+                _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
-                Timber.e(e, "loadAll error")
+                Timber.e(e, "loadInitial error")
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
@@ -72,9 +80,6 @@ class DashboardViewModel @Inject constructor(
                 }
                 .collect { events ->
                     _uiState.update { it.copy(recentEvents = events.take(10)) }
-                    // BUG FIX: Wrap stats refresh in try-catch.
-                    // Without this, a Room IO failure would propagate out of collect(),
-                    // cancel the entire coroutine, and freeze the dashboard permanently.
                     try {
                         val stats = getBlockStatsUseCase()
                         _uiState.update { it.copy(stats = stats) }
@@ -87,41 +92,42 @@ class DashboardViewModel @Inject constructor(
 
     private fun observePrefs() {
         viewModelScope.launch {
-            // BUG FIX: 4-arg combine uses the typed overload, avoiding Array<*> unboxing issues.
+            // FIX: transform block returns data — no side effects inside combine
             combine(
                 prefs.isProtectionEnabled,
                 prefs.isAiDetectionEnabled,
                 prefs.isKeywordDetectionEnabled,
                 prefs.delayUnlockSeconds
             ) { protection: Boolean, ai: Boolean, keyword: Boolean, delay: Int ->
+                PrefSnapshot(protection, ai, keyword, delay)
+            }.collect { snap ->
                 _uiState.update {
-                    it.copy(
-                        isProtectionOn     = protection,
-                        isAiOn             = ai,
-                        isKeywordOn        = keyword,
-                        delayUnlockSeconds = delay
-                    )
+                    it.copy(isProtectionOn = snap.protection)
                 }
-            }.collect()
+            }
         }
     }
 
     fun refreshProtectionState() {
-        val isPinSet = isPinSetUseCase()
-        val accessibility = isAccessibilityEnabled()
-        val protState = ProtectionState(
-            isAccessibilityEnabled      = accessibility,
-            isOverlayPermissionGranted  = true, // overlay not strictly needed for this approach
-            isPinSet                    = isPinSet,
-            isProtectionActive          = accessibility && _uiState.value.isProtectionOn
-        )
-        _uiState.update { it.copy(protectionState = protState) }
+        // FIX: IO dispatcher — isPinSetUseCase reads EncryptedSharedPreferences (blocking I/O)
+        viewModelScope.launch(Dispatchers.IO) {
+            val isPinSet      = isPinSetUseCase()
+            val accessibility = isAccessibilityEnabled()
+            val protState     = ProtectionState(
+                isAccessibilityEnabled     = accessibility,
+                isOverlayPermissionGranted = true,
+                isPinSet                   = isPinSet,
+                isProtectionActive         = accessibility && _uiState.value.isProtectionOn
+            )
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(protectionState = protState) }
+            }
+        }
     }
 
     fun toggleProtection(enabled: Boolean) {
         viewModelScope.launch {
             toggleProtectionUseCase(enabled)
-            // Notify service
             notifyServiceRulesChanged()
         }
     }
@@ -142,11 +148,16 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    // FIX: Full component name check — not fragile contains()
     private fun isAccessibilityEnabled(): Boolean {
         return try {
-            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-            am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-                .any { it.id.contains("GuardianAccessibilityService") }
+            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE)
+                as AccessibilityManager
+            val expectedId = "${context.packageName}/" +
+                "com.guardian.shield.service.accessibility.GuardianAccessibilityService"
+            am.getEnabledAccessibilityServiceList(
+                AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+            ).any { it.id == expectedId }
         } catch (_: Exception) { false }
     }
 }

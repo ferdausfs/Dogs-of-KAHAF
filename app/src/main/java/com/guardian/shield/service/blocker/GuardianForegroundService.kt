@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.guardian.shield.R
 import com.guardian.shield.ui.dashboard.MainActivity
@@ -17,19 +18,14 @@ import timber.log.Timber
 /**
  * Persistent foreground service — keeps the app process alive so the
  * AccessibilityService isn't killed by the OS under memory pressure.
- *
- * Improvements:
- *   - START_REDELIVER_INTENT instead of START_STICKY so any pending intent
- *     is re-delivered after a kill (better resilience).
- *   - Notification importance bumped from LOW → MIN where supported so the
- *     notification is silent yet still respected by the OS as foreground.
  */
 class GuardianForegroundService : Service() {
 
     companion object {
-        private const val CHANNEL_ID     = "guardian_protection"
+        private const val CHANNEL_ID      = "guardian_protection"
         private const val NOTIFICATION_ID = 1001
-        private const val TAG = "Guardian_Foreground"
+        private const val TAG             = "Guardian_Foreground"
+        const val ACTION_RESTART          = "com.guardian.shield.RESTART_SERVICE"
     }
 
     override fun onCreate() {
@@ -48,39 +44,41 @@ class GuardianForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // REDELIVER ensures intent is replayed if the service is killed.
-        return START_REDELIVER_INTENT
+        // FIX: START_REDELIVER_INTENT removed — combined with onDestroy broadcast
+        // caused double restart. START_STICKY is sufficient.
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        Timber.d("$TAG onDestroy — restart broadcast")
+        Timber.d("$TAG onDestroy — sending restart broadcast")
         try {
-            sendBroadcast(Intent("com.guardian.shield.RESTART_SERVICE").apply {
+            sendBroadcast(Intent(ACTION_RESTART).apply {
                 setPackage(packageName)
             })
-        } catch (e: Exception) { Timber.e(e, "$TAG restart broadcast") }
+        } catch (e: Exception) {
+            Log.e(TAG, "restart broadcast failed: ${e.message}")
+        }
         super.onDestroy()
     }
 
+    // FIX: minSdk=26, NotificationChannel always available — removed API check
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Guardian Protection",
-                NotificationManager.IMPORTANCE_MIN
-            ).apply {
-                description = "Active content protection"
-                setShowBadge(false)
-                setSound(null, null)
-                enableVibration(false)
-                enableLights(false)
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
-            }
-            getSystemService(NotificationManager::class.java)
-                ?.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Guardian Protection",
+            NotificationManager.IMPORTANCE_MIN
+        ).apply {
+            description = "Active content protection"
+            setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
+            enableLights(false)
+            lockscreenVisibility = Notification.VISIBILITY_SECRET
         }
+        getSystemService(NotificationManager::class.java)
+            ?.createNotificationChannel(channel)
     }
 
     private fun buildNotification(): Notification {

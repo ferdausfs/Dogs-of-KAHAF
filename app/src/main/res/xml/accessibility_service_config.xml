@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    notificationTimeout reduced 100 → 16ms (one frame). The OS coalesces
-    accessibility events for this duration before delivering — at 100ms we
-    were artificially delaying every detection by up to a tenth of a second.
-
-    canRequestFilterKeyEvents added so the foreground/back keys can also be
-    intercepted by Strict Mode in a future update.
+    notificationTimeout=16ms (one frame) for near-instant event delivery.
+    FIX: typeViewScrolled removed — causes excessive events on scroll (battery drain).
+    FIX: flagRequestEnhancedWebAccessibility removed — deprecated API 26+.
+    FIX: canRequestFilterKeyEvents added for key event interception.
+    FIX: settingsActivity added for direct navigation from accessibility settings.
 -->
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged|typeViewScrolled"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows|flagRequestEnhancedWebAccessibility"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="true"
     android:canTakeScreenshot="true"
+    android:canRequestFilterKeyEvents="true"
     android:notificationTimeout="16"
+    android:settingsActivity="com.guardian.shield.ui.settings.SettingsActivity"
     android:description="@string/accessibility_service_description" />

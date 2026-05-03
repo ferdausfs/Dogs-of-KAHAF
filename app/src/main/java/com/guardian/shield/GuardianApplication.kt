@@ -1,10 +1,10 @@
 package com.guardian.shield
 
 import android.app.Application
-import com.guardian.shield.BuildConfig
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 
+// FIX: Removed redundant import of BuildConfig (same package)
 @HiltAndroidApp
 class GuardianApplication : Application() {
 

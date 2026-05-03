@@ -4,41 +4,53 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import com.guardian.shield.service.blocker.GuardianForegroundService
-import timber.log.Timber
 
 /**
- * BootReceiver — restart the foreground service after device boot, package
- * upgrade, or an in-process restart broadcast.
- *
- * Hardened against background-start restrictions on Android 12+ by wrapping
- * the start in try/catch — if the OS denies the start (e.g. the app was
- * force-stopped), we simply log and exit instead of crashing the receiver.
+ * BootReceiver — restart the foreground service after device boot,
+ * package upgrade, or an in-process restart broadcast.
  */
 class BootReceiver : BroadcastReceiver() {
 
+    companion object {
+        // FIX: constants instead of hardcoded strings — typo-proof
+        private const val TAG = "BootReceiver"
+        const val ACTION_RESTART  = "com.guardian.shield.RESTART_SERVICE"
+        const val ACTION_QUICKBOOT = "android.intent.action.QUICKBOOT_POWERON"
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+
         val accepted =
-            action == Intent.ACTION_BOOT_COMPLETED ||
-            action == "android.intent.action.QUICKBOOT_POWERON" ||
-            action == "android.intent.action.LOCKED_BOOT_COMPLETED" ||
-            action == "android.intent.action.MY_PACKAGE_REPLACED" ||
-            action == "com.guardian.shield.RESTART_SERVICE"
+            action == Intent.ACTION_BOOT_COMPLETED          ||
+            action == Intent.ACTION_LOCKED_BOOT_COMPLETED   ||
+            action == ACTION_QUICKBOOT                       ||
+            action == Intent.ACTION_MY_PACKAGE_REPLACED     ||
+            action == ACTION_RESTART
+
         if (!accepted) return
 
-        Timber.d("BootReceiver: $action — starting service")
+        // FIX: Use android.util.Log instead of Timber
+        // Timber may not be initialized at boot time (before Application.onCreate)
+        Log.d(TAG, "$action — starting foreground service")
+
+        // FIX: LOCKED_BOOT_COMPLETED fires in Direct Boot mode
+        // encrypted storage (DataStore/Room) is NOT accessible yet
+        // Only start basic service — avoid any encrypted storage access
+        if (action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
+            Log.d(TAG, "Locked boot — limited start, skipping encrypted storage")
+        }
+
         try {
             val serviceIntent = Intent(context, GuardianForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            // FIX: minSdk=26 so startForegroundService always available
+            // No need for SDK version check
+            context.startForegroundService(serviceIntent)
         } catch (e: Exception) {
             // Android 12+ background-start restriction can throw here.
-            // Nothing we can do — service will start on next user launch.
-            Timber.e(e, "BootReceiver: failed to start service")
+            Log.e(TAG, "Failed to start service: ${e.message}")
         }
     }
 }

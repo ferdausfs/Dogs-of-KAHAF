@@ -7,18 +7,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * RulesEngine — the single authority for ALL block decisions.
+ * RulesEngine — single authority for ALL block decisions.
  *
- * Priority order (MUST NOT be changed):
- *   1. OWN package → always allow
- *   2. WHITELIST → always allow (overrides everything)
- *   3. BLOCKED app list → block
- *   4. KEYWORD match → block
- *   5. AI detection → block
- *   6. Default → allow
- *
- * This engine holds in-memory caches refreshed from DB.
- * The AccessibilityService calls evaluate() on every relevant event.
+ * Priority order (immutable):
+ *   1. OWN package     → always allow
+ *   2. WHITELIST       → always allow
+ *   3. BLOCKED apps    → block
+ *   4. KEYWORD match   → block
+ *   5. AI detection    → block
+ *   6. Default         → allow
  */
 @Singleton
 class RulesEngine @Inject constructor() {
@@ -27,7 +24,6 @@ class RulesEngine @Inject constructor() {
         const val OUR_PACKAGE = "com.guardian.shield"
         private const val TAG = "Guardian_Rules"
 
-        // System packages that should never be interfered with
         private val SYSTEM_PACKAGES = setOf(
             "android",
             "com.android.systemui",
@@ -47,15 +43,17 @@ class RulesEngine @Inject constructor() {
         )
     }
 
-    // In-memory caches — refreshed via refreshCaches()
-    @Volatile private var blockedPackages: Set<String>    = emptySet()
+    @Volatile private var blockedPackages: Set<String>     = emptySet()
     @Volatile private var whitelistedPackages: Set<String> = emptySet()
-    @Volatile private var activeKeywords: List<String>    = emptyList()
-    @Volatile private var isKeywordDetectionOn: Boolean   = true
-    @Volatile private var isProtectionEnabled: Boolean    = true
-    @Volatile private var isStrictMode: Boolean           = false
+    @Volatile private var activeKeywords: List<String>     = emptyList()
+    @Volatile private var isKeywordDetectionOn: Boolean    = true
+    @Volatile private var isProtectionEnabled: Boolean     = true
+    @Volatile private var isStrictMode: Boolean            = false
 
-    // ── Cache refresh (called by service on startup + DB change) ──────
+    // FIX: Pre-compiled Regex for keyword matching — O(n) instead of O(n×m)
+    @Volatile private var keywordPattern: Regex? = null
+
+    // ── Cache refresh ──────────────────────────────────────────────────
 
     fun refreshBlockedApps(packages: Set<String>) {
         blockedPackages = packages
@@ -69,6 +67,11 @@ class RulesEngine @Inject constructor() {
 
     fun refreshKeywords(keywords: List<String>) {
         activeKeywords = keywords.map { it.lowercase().trim() }
+        // FIX: Build combined Regex pattern — single pass instead of per-keyword contains()
+        keywordPattern = if (keywords.isEmpty()) null
+        else Regex(
+            keywords.joinToString("|") { Regex.escape(it.lowercase().trim()) }
+        )
         Timber.d("$TAG keywords refreshed: ${keywords.size} keywords")
     }
 
@@ -76,22 +79,18 @@ class RulesEngine @Inject constructor() {
     fun setProtectionEnabled(enabled: Boolean)        { isProtectionEnabled  = enabled }
     fun setStrictMode(enabled: Boolean)               { isStrictMode         = enabled }
 
-    // ── Main evaluation ───────────────────────────────────────────────
+    // ── Main evaluation ────────────────────────────────────────────────
 
-    /**
-     * Evaluate foreground app package.
-     * Returns DetectionResult.Allow, .Whitelist, or .Block
-     */
     fun evaluateApp(packageName: String): DetectionResult {
         if (!isProtectionEnabled) return DetectionResult.Allow
 
-        // Rule 1: Own package — never block ourselves
+        // Rule 1: Own package
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
 
-        // Rule 2: System UI — never block
+        // Rule 2: System UI
         if (isSystemPackage(packageName)) return DetectionResult.Allow
 
-        // Rule 3: WHITELIST — highest priority, overrides everything
+        // Rule 3: Whitelist
         if (packageName in whitelistedPackages) {
             Timber.d("$TAG ALLOW (whitelist): $packageName")
             return DetectionResult.Whitelist
@@ -106,20 +105,16 @@ class RulesEngine @Inject constructor() {
         return DetectionResult.Allow
     }
 
-    /**
-     * Evaluate screen text for keyword matches.
-     * Only called if keyword detection is enabled and app is not whitelisted.
-     */
     fun evaluateText(packageName: String, text: String): DetectionResult {
-        if (!isProtectionEnabled) return DetectionResult.Allow
-        if (!isKeywordDetectionOn) return DetectionResult.Allow
+        if (!isProtectionEnabled)    return DetectionResult.Allow
+        if (!isKeywordDetectionOn)   return DetectionResult.Allow
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
         if (packageName in whitelistedPackages) return DetectionResult.Whitelist
 
         val lower = text.lowercase()
-        val hit = activeKeywords.firstOrNull { kw ->
-            lower.contains(kw)
-        }
+
+        // FIX: Single-pass Regex match instead of O(n×m) contains() loop
+        val hit = keywordPattern?.find(lower)?.value
 
         return if (hit != null) {
             Timber.d("$TAG BLOCK (keyword '$hit'): $packageName")
@@ -129,36 +124,36 @@ class RulesEngine @Inject constructor() {
         }
     }
 
-    /**
-     * Evaluate AI model result.
-     * Called only if AI detection is enabled.
-     */
-    fun evaluateAiResult(packageName: String, unsafeScore: Float, threshold: Float): DetectionResult {
-        if (!isProtectionEnabled) return DetectionResult.Allow
+    fun evaluateAiResult(
+        packageName: String,
+        unsafeScore: Float,
+        threshold: Float
+    ): DetectionResult {
+        // FIX: Consistent priority order — own package and whitelist first
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
         if (packageName in whitelistedPackages) return DetectionResult.Whitelist
+        if (!isProtectionEnabled) return DetectionResult.Allow
 
         return if (unsafeScore >= threshold) {
-            Timber.d("$TAG BLOCK (AI score=${unsafeScore}): $packageName")
-            DetectionResult.Block(BlockReason.AI_DETECTED, "${(unsafeScore * 100).toInt()}% unsafe")
+            Timber.d("$TAG BLOCK (AI score=$unsafeScore): $packageName")
+            DetectionResult.Block(
+                BlockReason.AI_DETECTED,
+                "${(unsafeScore * 100).toInt()}% unsafe"
+            )
         } else {
             DetectionResult.Allow
         }
     }
 
-    /**
-     * Quick whitelist check for use in AI scanner loop.
-     */
     fun isWhitelisted(packageName: String): Boolean =
         packageName == OUR_PACKAGE || packageName in whitelistedPackages
 
-    fun isSystemUi(pkg: String): Boolean = isSystemPackage(pkg)
-
-    fun isProtectionActive(): Boolean = isProtectionEnabled
-
-    private fun isSystemPackage(pkg: String): Boolean {
+    // FIX: isSystemUi() was redundant alias — replaced with isSystemPackage()
+    fun isSystemPackage(pkg: String): Boolean {
         if (pkg in SYSTEM_PACKAGES) return true
         SYSTEM_PREFIXES.forEach { if (pkg.startsWith(it)) return true }
         return false
     }
+
+    fun isProtectionActive(): Boolean = isProtectionEnabled
 }

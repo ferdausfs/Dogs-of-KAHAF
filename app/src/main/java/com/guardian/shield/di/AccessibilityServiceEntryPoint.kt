@@ -1,4 +1,3 @@
-// app/src/main/java/com/guardian/shield/di/AccessibilityServiceEntryPoint.kt
 package com.guardian.shield.di
 
 import com.guardian.shield.data.local.datastore.GuardianPreferences

@@ -1,4 +1,3 @@
-// app/src/main/java/com/guardian/shield/service/blocker/PreemptiveBlurManager.kt
 package com.guardian.shield.service.blocker
 
 import android.accessibilityservice.AccessibilityService
@@ -16,34 +15,17 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import timber.log.Timber
 
 /**
- * PreemptiveBlurManager — instantly draws an opaque/blur overlay on top of
- * the current screen the moment a potentially-risky app opens, BEFORE the
- * AI inference has finished. Once the AI confirms the screen is safe, the
- * overlay is removed. If unsafe is detected, the full BlockOverlayActivity
- * takes over.
- *
- * Why: previously the app waited 2.5s between AI scans, meaning the user
- * could see explicit content for up to 2.5s before the block kicked in.
- * With preemptive blur:
- *   t=0ms     → user opens browser/social app
- *   t=0ms     → black/blur overlay drawn instantly via WindowManager
- *   t=~400ms  → AI verdict ready
- *   t=~400ms  → overlay removed (safe) OR full block shown (unsafe)
- *
- * Implementation note: We use TYPE_ACCESSIBILITY_OVERLAY which is granted
- * automatically with the accessibility permission — no SYSTEM_ALERT_WINDOW
- * runtime grant required.
+ * PreemptiveBlurManager — instantly draws an opaque overlay on top of
+ * the current screen when a risky app opens, BEFORE AI inference completes.
  */
 class PreemptiveBlurManager(
     private val service: AccessibilityService
 ) {
     companion object {
-        private const val TAG = "Guardian_Blur"
-        // How long to keep the blur up if no AI verdict arrives (safety net).
+        private const val TAG                = "Guardian_Blur"
         private const val MAX_BLUR_DURATION_MS = 6_000L
     }
 
@@ -51,51 +33,30 @@ class PreemptiveBlurManager(
         service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    @Volatile private var overlayView: View? = null
-    @Volatile private var currentPkg: String = ""
+    // Only accessed on Main thread — no synchronization needed
+    private var overlayView: View?   = null
+    private var currentPkg: String   = ""
 
     private val autoRemoveRunnable = Runnable {
-        Timber.d("$TAG auto-remove triggered (AI didn't respond in time)")
-        hideBlur()
+        Timber.d("$TAG auto-remove (AI timeout)")
+        removeOverlayOnMainThread()
     }
 
-    /**
-     * Show preemptive blur immediately. Idempotent — multiple calls for the
-     * same package are no-ops.
-     */
-    @Synchronized
     fun showBlur(packageName: String, message: String = "Scanning content…") {
-        if (overlayView != null && currentPkg == packageName) return
-
-        // Different package — remove old overlay first
-        if (overlayView != null) hideBlurInternal()
-
-        currentPkg = packageName
-
-        // BUG FIX: Set a sentinel on the main thread BEFORE posting, so that
-        // a second synchronized call arriving while the post is queued sees
-        // currentPkg already set and returns early (prevents duplicate addView).
-        val view = buildOverlayView(message)
-        val params = buildLayoutParams()
-
         mainHandler.post {
-            // Double-check: another call may have hidden the blur between the
-            // synchronized block above and this post executing.
-            if (currentPkg != packageName) return@post
+            if (overlayView != null && currentPkg == packageName) return@post
+            if (overlayView != null) removeOverlayOnMainThread()
+
+            currentPkg = packageName
+            val view   = buildOverlayView(message)
+            val params = buildLayoutParams()
 
             try {
-                if (overlayView != null) {
-                    try { wm.removeViewImmediate(overlayView!!) } catch (_: Exception) {}
-                    overlayView = null
-                }
                 wm.addView(view, params)
                 overlayView = view
-
-                // Safety: never let blur stay up forever
                 mainHandler.removeCallbacks(autoRemoveRunnable)
                 mainHandler.postDelayed(autoRemoveRunnable, MAX_BLUR_DURATION_MS)
-
-                Timber.d("$TAG showBlur for $packageName")
+                Timber.d("$TAG showBlur: $packageName")
             } catch (e: Exception) {
                 Timber.e(e, "$TAG showBlur failed")
                 overlayView = null
@@ -103,112 +64,106 @@ class PreemptiveBlurManager(
         }
     }
 
-    /**
-     * Hide the blur — called after the AI confirms the screen is safe.
-     */
-    @Synchronized
     fun hideBlur() {
         mainHandler.removeCallbacks(autoRemoveRunnable)
-        if (overlayView == null) return
-        mainHandler.post { hideBlurInternal() }
+        mainHandler.post { removeOverlayOnMainThread() }
     }
 
-    @Synchronized
-    private fun hideBlurInternal() {
+    // FIX: All overlay operations on Main thread — no synchronized needed
+    // FIX: @Synchronized + mainHandler.post deadlock risk removed
+    private fun removeOverlayOnMainThread() {
+        if (overlayView == null) return
         try {
-            overlayView?.let { wm.removeViewImmediate(it) }
+            wm.removeViewImmediate(overlayView!!)
         } catch (e: Exception) {
             Timber.w(e, "$TAG removeView failed")
         } finally {
             overlayView = null
-            currentPkg = ""
+            currentPkg  = ""
         }
     }
 
-    /**
-     * Force-remove on service destroy.
-     */
     fun destroy() {
         mainHandler.removeCallbacksAndMessages(null)
-        hideBlurInternal()
+        mainHandler.post { removeOverlayOnMainThread() }
     }
 
-    // ── Builders ──────────────────────────────────────────────────────
+    // ── Builders ───────────────────────────────────────────────────────
 
     private fun buildLayoutParams(): WindowManager.LayoutParams {
-        val type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        val type  = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        // FIX: FLAG_LAYOUT_INSET_DECOR removed — deprecated in API 30+
         val flags = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
             or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-            or WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
             or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
             or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            type,
-            flags,
+            type, flags,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
-            // On Android 12+ apply real-time window blur if supported
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 blurBehindRadius = 60
                 this.flags = this.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                dimAmount = 0.85f
+                dimAmount  = 0.85f
             } else {
                 dimAmount = 1.0f
             }
         }
     }
 
+    // FIX: dp conversion helper — prevents wrong sizes on different densities
+    private fun Int.dp(): Int =
+        (this * service.resources.displayMetrics.density).toInt()
+
     private fun buildOverlayView(message: String): View {
-        val ctx = service
+        val ctx  = service
         val root = FrameLayout(ctx).apply {
-            // Solid near-black (works on every Android version, even when
-            // hardware blur isn't available).
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#F2000000"))
             }
-            isClickable = true   // swallow taps so user can't bypass
-            isFocusable = false
+            isClickable  = true
+            isFocusable  = false
         }
 
         val column = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            val lp = FrameLayout.LayoutParams(
+            gravity     = Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).also { it.gravity = Gravity.CENTER }
-            layoutParams = lp
         }
 
         val shield = TextView(ctx).apply {
-            text = "🛡️"
+            text     = "🛡️"
             textSize = 64f
-            gravity = Gravity.CENTER
+            gravity  = Gravity.CENTER
         }
         val title = TextView(ctx).apply {
-            text = "Guardian Shield"
+            text     = "Guardian Shield"
             setTextColor(Color.WHITE)
             textSize = 22f
-            gravity = Gravity.CENTER
-            setPadding(0, 16, 0, 0)
+            gravity  = Gravity.CENTER
+            // FIX: dp() conversion — correct size on all screen densities
+            setPadding(0, 16.dp(), 0, 0)
         }
         val subtitle = TextView(ctx).apply {
-            text = message
+            text     = message
             setTextColor(Color.parseColor("#CCCCCC"))
             textSize = 14f
-            gravity = Gravity.CENTER
-            setPadding(32, 8, 32, 0)
+            gravity  = Gravity.CENTER
+            setPadding(32.dp(), 8.dp(), 32.dp(), 0)
         }
         val progress = ProgressBar(ctx).apply {
-            val pp = LinearLayout.LayoutParams(96, 96).also {
-                it.topMargin = 32
-                it.gravity = Gravity.CENTER
+            val size = 96.dp()
+            layoutParams = LinearLayout.LayoutParams(size, size).also {
+                it.topMargin = 32.dp()
+                it.gravity   = Gravity.CENTER
             }
-            layoutParams = pp
             isIndeterminate = true
         }
 

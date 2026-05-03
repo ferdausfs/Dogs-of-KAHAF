@@ -1,7 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'
+    // FIX: kapt → ksp (faster builds)
+    id 'com.google.devtools.ksp'
     id 'com.google.dagger.hilt.android'
 }
 
@@ -43,13 +44,12 @@ android {
         buildConfig true
     }
 
-    // Keep TFLite native libs uncompressed — required for fast model loading
-    // (mmap fails on compressed entries).
     androidResources {
         noCompress 'tflite'
     }
 
-    packagingOptions {
+    // FIX: packagingOptions → packaging (deprecated)
+    packaging {
         jniLibs {
             useLegacyPackaging false
         }
@@ -69,32 +69,30 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
     implementation 'androidx.lifecycle:lifecycle-service:2.6.2'
 
-    // Hilt - Dependency Injection
+    // Hilt
     implementation 'com.google.dagger:hilt-android:2.48.1'
-    kapt 'com.google.dagger:hilt-android-compiler:2.48.1'
+    ksp 'com.google.dagger:hilt-android-compiler:2.48.1'
 
-    // Room Database
+    // Room
     implementation 'androidx.room:room-runtime:2.6.1'
     implementation 'androidx.room:room-ktx:2.6.1'
-    kapt 'androidx.room:room-compiler:2.6.1'
+    ksp 'androidx.room:room-compiler:2.6.1'
 
-    // DataStore Preferences
-    implementation 'androidx.datastore:datastore-preferences:1.0.0'
+    // FIX: DataStore updated 1.0.0 → 1.1.1
+    implementation 'androidx.datastore:datastore-preferences:1.1.1'
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
-    // Security / Crypto
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    // FIX: Security Crypto alpha → stable
+    implementation 'androidx.security:security-crypto:1.0.0'
 
-    // TensorFlow Lite — core + NNAPI delegate for hardware acceleration.
-    // GPU delegate deps removed: GPU delegate is never instantiated in AiDetector.kt
-    // (only NnApiDelegate is used). Removing saves ~15MB from the APK.
+    // TensorFlow Lite
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
 
-    // Timber Logging
+    // Timber
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // RecyclerView
@@ -104,7 +102,7 @@ dependencies {
     implementation 'androidx.activity:activity-ktx:1.8.1'
     implementation 'androidx.fragment:fragment-ktx:1.6.2'
 
-    // Work Manager (for periodic event log cleanup)
+    // WorkManager
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
 
     // Testing
@@ -113,6 +111,4 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
-kapt {
-    correctErrorTypes = true
-}
+// FIX: kapt → ksp, so kapt block removed

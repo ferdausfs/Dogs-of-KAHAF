@@ -1,4 +1,3 @@
-// app/src/main/java/com/guardian/shield/service/accessibility/GuardianAccessibilityService.kt
 package com.guardian.shield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
@@ -28,6 +27,8 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 private val SYSTEM_UI_SKIP = setOf(
     "android", "com.android.systemui",
@@ -38,26 +39,16 @@ private val SYSTEM_UI_SKIP = setOf(
     "com.swiftkey.swiftkeyapp"
 )
 
-/**
- * Risky packages — these get a preemptive blur as soon as they come to the
- * foreground, hiding any content until the AI confirms the screen is safe.
- *
- * Blur shows for AT MOST one AI cycle (~400-600 ms) and is removed
- * immediately if the screen is verified safe.
- */
 private val RISKY_PACKAGES = setOf(
-    // Browsers
     "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
     "com.opera.mini.native", "com.brave.browser", "com.microsoft.emmx",
     "com.UCMobile.intl", "com.sec.android.app.sbrowser",
     "com.kiwibrowser.browser", "com.duckduckgo.mobile.android",
     "org.mozilla.focus", "com.vivaldi.browser",
-    // Social / image-heavy
     "com.instagram.android", "com.snapchat.android", "com.zhiliaoapp.musically",
     "com.ss.android.ugc.trill", "com.twitter.android",
     "com.facebook.katana", "com.facebook.lite", "com.reddit.frontpage",
     "com.pinterest", "com.tumblr",
-    // Galleries / file managers
     "com.google.android.apps.photos", "com.miui.gallery",
     "com.sec.android.gallery3d", "com.android.gallery3d",
     "com.mi.android.globalFileexplorer", "com.android.documentsui"
@@ -72,11 +63,12 @@ private val BROWSER_PACKAGES = setOf(
 class GuardianAccessibilityService : AccessibilityService() {
 
     companion object {
-        private const val TAG = "Guardian_Service"
-        const val ACTION_REFRESH_RULES = "com.guardian.shield.REFRESH_RULES"
-        const val ACTION_RELOAD_MODEL  = "com.guardian.shield.RELOAD_MODEL"
-        // Reduced from 700 → 250 ms: keyword detection is now near-instant.
+        private const val TAG              = "Guardian_Service"
+        const val ACTION_REFRESH_RULES     = "com.guardian.shield.REFRESH_RULES"
+        const val ACTION_RELOAD_MODEL      = "com.guardian.shield.RELOAD_MODEL"
         private const val TEXT_DEBOUNCE_MS = 250L
+        // FIX: AI scan debounce — prevents battery drain on rapid content changes
+        private const val AI_DEBOUNCE_MS   = 300L
     }
 
     private lateinit var rulesEngine: RulesEngine
@@ -91,17 +83,23 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     @Volatile private var currentForegroundPkg = ""
-    @Volatile private var aiEnabled = false
-    @Volatile private var aiThreshold = 0.30f       // safer default
-    @Volatile private var aiIntervalMs = 600L       // faster default
-    @Volatile private var aiScanJob: Job? = null
-    @Volatile private var aiBusy = false
-    @Volatile private var isInjected = false
-    @Volatile private var consecutiveSafeFrames = 0  // for blur removal stability
+    @Volatile private var aiEnabled            = false
+    @Volatile private var aiThreshold          = 0.30f
+    @Volatile private var aiIntervalMs         = 600L
+    @Volatile private var aiScanJob: Job?       = null
+    @Volatile private var isInjected           = false
+
+    // FIX: AtomicBoolean — prevents race condition in aiBusy check+set
+    private val aiBusy = AtomicBoolean(false)
+
+    // FIX: AtomicInteger — thread-safe consecutive safe frame counting
+    private val consecutiveSafeFrames = AtomicInteger(0)
 
     private var textDebounceJob: Job? = null
+    // FIX: AI debounce job — prevents excessive AI scans on content changes
+    private var aiDebounceJob: Job?   = null
 
-    // ── Receiver ─────────────────────────────────────────────────────
+    // ── Receiver ──────────────────────────────────────────────────────
 
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
@@ -119,7 +117,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────
+    // ── Lifecycle ──────────────────────────────────────────────────────
 
     override fun onServiceConnected() {
         Timber.d("$TAG onServiceConnected")
@@ -136,7 +134,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             blockEventRepo = entryPoint.blockEventRepo()
             prefs          = entryPoint.prefs()
             blurManager    = PreemptiveBlurManager(this)
-            isInjected = true
+            isInjected     = true
         } catch (e: Exception) {
             Timber.e(e, "$TAG injection FAILED")
             return
@@ -159,21 +157,17 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                if (!SYSTEM_UI_SKIP.contains(pkg) && !rulesEngine.isSystemUi(pkg)) {
+                if (!SYSTEM_UI_SKIP.contains(pkg) && !rulesEngine.isSystemPackage(pkg)) {
                     val pkgChanged = currentForegroundPkg != pkg
                     currentForegroundPkg = pkg
 
                     if (pkgChanged) {
-                        consecutiveSafeFrames = 0
-
-                        // ★ KEY: drop blur from previous app immediately
+                        consecutiveSafeFrames.set(0)
                         blurManager?.hideBlur()
 
-                        // ★ KEY: if entering a risky app & AI is on, show
-                        //   preemptive blur INSTANTLY and trigger urgent scan.
                         if (aiEnabled && aiDetector.isLoaded() &&
-                            isRiskyPackage(pkg) &&
-                            !rulesEngine.isWhitelisted(pkg) &&
+                            isRiskyPackage(pkg)                 &&
+                            !rulesEngine.isWhitelisted(pkg)     &&
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
 
                             blurManager?.showBlur(pkg, "Scanning content…")
@@ -183,19 +177,20 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
                 handleAppEvent(pkg)
             }
+
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
                 debounceTextScan(pkg)
 
-                // ★ While in a risky app, every content change triggers a
-                //   fresh blur+scan because images can change without window
-                //   state changing (e.g. swipe / scroll).
-                if (aiEnabled && aiDetector.isLoaded() &&
-                    isRiskyPackage(pkg) &&
+                // FIX: Debounced AI scan — was triggering on every content
+                // change causing battery drain on scroll/swipe
+                if (aiEnabled                       &&
+                    aiDetector.isLoaded()           &&
+                    isRiskyPackage(pkg)             &&
                     !rulesEngine.isWhitelisted(pkg) &&
                     !blockingEngine.isCoolingDown() &&
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    triggerImmediateAiScan()
+                    debounceAiScan()
                 }
             }
         }
@@ -211,15 +206,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    // ── App + text handlers ─────────────────────────────────────────
+    // ── App + text handlers ────────────────────────────────────────────
 
     private fun handleAppEvent(pkg: String) {
         serviceScope.launch(Dispatchers.Default) {
             try {
                 when (val r = rulesEngine.evaluateApp(pkg)) {
-                    is DetectionResult.Block -> {
+                    is DetectionResult.Block ->
                         logAndBlock(pkg, getAppName(pkg), r.reason, r.detail)
-                    }
                     else -> { /* allow */ }
                 }
             } catch (e: Exception) { Timber.e(e, "$TAG handleAppEvent") }
@@ -234,7 +228,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             if (rulesEngine.isWhitelisted(pkg)) return@launch
             if (blockingEngine.isCoolingDown()) return@launch
 
-            val root = try { rootInActiveWindow } catch (_: Exception) { null } ?: return@launch
+            val root = try { rootInActiveWindow } catch (_: Exception) { null }
+                ?: return@launch
             try {
                 val text = collectAllText(root)
                 if (text.isBlank()) return@launch
@@ -253,7 +248,18 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    // ── AI model / scan loop ────────────────────────────────────────
+    // FIX: Debounced AI scan — prevents battery drain on rapid content changes
+    private fun debounceAiScan() {
+        aiDebounceJob?.cancel()
+        aiDebounceJob = serviceScope.launch {
+            delay(AI_DEBOUNCE_MS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                triggerImmediateAiScan()
+            }
+        }
+    }
+
+    // ── AI model / scan loop ───────────────────────────────────────────
 
     private suspend fun reloadAiModel() {
         try {
@@ -287,11 +293,11 @@ class GuardianAccessibilityService : AccessibilityService() {
         aiScanJob = serviceScope.launch {
             while (isActive) {
                 delay(aiIntervalMs)
-                if (!aiDetector.isLoaded()) continue
+                if (!aiDetector.isLoaded())                      continue
                 if (rulesEngine.isWhitelisted(currentForegroundPkg)) continue
-                if (blockingEngine.isCoolingDown()) continue
-                if (aiBusy) continue
-                if (currentForegroundPkg.isBlank()) continue
+                if (blockingEngine.isCoolingDown())               continue
+                if (aiBusy.get())                                 continue
+                if (currentForegroundPkg.isBlank())               continue
                 captureAndAnalyze()
             }
         }
@@ -302,15 +308,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         aiScanJob = null
     }
 
-    /**
-     * Trigger an immediate (non-throttled) AI scan — used when entering a
-     * risky app or detecting a content change. Only one urgent scan can be
-     * in-flight at a time (gated by aiBusy).
-     */
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     private fun triggerImmediateAiScan() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-        if (aiBusy) return
+        // FIX: AtomicBoolean.get() — no race condition
+        if (aiBusy.get()) return
         if (!aiDetector.isLoaded()) return
         serviceScope.launch { captureAndAnalyze() }
     }
@@ -319,22 +320,28 @@ class GuardianAccessibilityService : AccessibilityService() {
     @android.annotation.SuppressLint("NewApi")
     private fun captureAndAnalyze() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-        aiBusy = true
+
+        // FIX: AtomicBoolean.compareAndSet — atomic check+set, no race condition
+        if (!aiBusy.compareAndSet(false, true)) return
+
         try {
             takeScreenshot(
                 Display.DEFAULT_DISPLAY, mainExecutor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(result: ScreenshotResult) {
-                        serviceScope.launch(Dispatchers.Default) { analyzeScreenshot(result) }
+                        serviceScope.launch(Dispatchers.Default) {
+                            analyzeScreenshot(result)
+                        }
                     }
                     override fun onFailure(errorCode: Int) {
-                        aiBusy = false
-                        if (errorCode != 2) Timber.w("$TAG screenshot fail code=$errorCode")
+                        aiBusy.set(false)
+                        if (errorCode != 2)
+                            Timber.w("$TAG screenshot fail code=$errorCode")
                     }
                 }
             )
         } catch (e: Exception) {
-            aiBusy = false
+            aiBusy.set(false)
             Timber.e(e, "$TAG captureAndAnalyze")
         }
     }
@@ -342,65 +349,65 @@ class GuardianAccessibilityService : AccessibilityService() {
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
     @android.annotation.SuppressLint("NewApi")
     private suspend fun analyzeScreenshot(result: ScreenshotResult) {
-        var full: Bitmap? = null
+        var full: Bitmap?    = null
         var cropped: Bitmap? = null
         try {
-            val hb = result.hardwareBuffer ?: run { aiBusy = false; return }
+            // FIX: hardwareBuffer reference kept — close in finally block
+            val hb = result.hardwareBuffer ?: run { aiBusy.set(false); return }
+
             val hwBmp = Bitmap.wrapHardwareBuffer(hb, result.colorSpace)
             full = hwBmp?.copy(Bitmap.Config.ARGB_8888, false)
             hwBmp?.recycle()
-            if (full == null) { aiBusy = false; return }
 
-            val w = full.width; val h = full.height
+            if (full == null) { aiBusy.set(false); return }
+
+            val w      = full.width
+            val h      = full.height
             val topCut = (h * 0.07f).toInt()
             val botCut = (h * 0.09f).toInt()
-            val cropH = h - topCut - botCut
-            cropped = if (cropH > 100) Bitmap.createBitmap(full, 0, topCut, w, cropH) else full
+            val cropH  = h - topCut - botCut
+            cropped    = if (cropH > 100)
+                Bitmap.createBitmap(full, 0, topCut, w, cropH)
+            else full
 
             if (aiDetector.shouldSkipFrame(cropped)) {
-                // Uniform / black screen — treat as "safe" for blur purposes
                 onSafeFrame()
-                aiBusy = false
                 return
             }
 
-            val r = aiDetector.classify(cropped, aiThreshold)
+            val r   = aiDetector.classify(cropped, aiThreshold)
             val pkg = currentForegroundPkg
             Timber.d("$TAG AI $pkg: ${r.label}")
 
             if (r.isUnsafe) {
-                consecutiveSafeFrames = 0
+                consecutiveSafeFrames.set(0)
                 val ev = rulesEngine.evaluateAiResult(pkg, r.unsafeScore, aiThreshold)
                 if (ev is DetectionResult.Block) {
                     logAndBlock(pkg, getAppName(pkg), ev.reason, ev.detail)
                 }
-                // keep blur shown — block flow takes over
             } else {
                 onSafeFrame()
             }
         } catch (e: Exception) {
             Timber.e(e, "$TAG analyzeScreenshot")
         } finally {
+            // FIX: hardwareBuffer closed in finally — guaranteed cleanup
             try { result.hardwareBuffer?.close() } catch (_: Exception) {}
+            // FIX: cropped recycled only if different from full — no double recycle
             if (cropped != null && cropped !== full) cropped.recycle()
             full?.recycle()
-            aiBusy = false
+            aiBusy.set(false)
         }
     }
 
-    /**
-     * Two consecutive safe verdicts → confidently lift the blur.
-     * Single-verdict lifting can flicker when one frame happens to be
-     * black/transitioning.
-     */
+    // FIX: AtomicInteger.incrementAndGet() — thread-safe counter
     private fun onSafeFrame() {
-        consecutiveSafeFrames++
-        if (consecutiveSafeFrames >= 2) {
+        if (consecutiveSafeFrames.incrementAndGet() >= 2) {
             blurManager?.hideBlur()
         }
     }
 
-    // ── Block + log ─────────────────────────────────────────────────
+    // ── Block + log ────────────────────────────────────────────────────
 
     private suspend fun logAndBlock(
         pkg: String, appName: String, reason: BlockReason, detail: String
@@ -408,17 +415,25 @@ class GuardianAccessibilityService : AccessibilityService() {
         try {
             withContext(Dispatchers.IO) {
                 blockEventRepo.logEvent(
-                    BlockEvent(packageName = pkg, appName = appName, reason = reason, detail = detail)
+                    BlockEvent(
+                        packageName = pkg,
+                        appName     = appName,
+                        reason      = reason,
+                        detail      = detail
+                    )
                 )
             }
         } catch (e: Exception) { Timber.e(e, "$TAG log") }
 
         withContext(Dispatchers.Main) {
-            blockingEngine.executeBlock(this@GuardianAccessibilityService, pkg, appName, reason, detail)
+            blockingEngine.executeBlock(
+                this@GuardianAccessibilityService,
+                pkg, appName, reason, detail
+            )
         }
     }
 
-    // ── Rule cache loading ──────────────────────────────────────────
+    // ── Rule cache loading ─────────────────────────────────────────────
 
     private suspend fun loadRulesIntoEngine() {
         try {
@@ -433,16 +448,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             aiEnabled    = prefs.isAiDetectionEnabled.first()
             aiThreshold  = prefs.aiThreshold.first()
             aiIntervalMs = prefs.aiIntervalMs.first()
-            val protectionOn = prefs.isProtectionEnabled.first()
-            val keywordOn    = prefs.isKeywordDetectionEnabled.first()
-            val strictMode   = prefs.isStrictMode.first()
-            rulesEngine.setProtectionEnabled(protectionOn)
-            rulesEngine.setKeywordDetectionEnabled(keywordOn)
-            rulesEngine.setStrictMode(strictMode)
+            rulesEngine.setProtectionEnabled(prefs.isProtectionEnabled.first())
+            rulesEngine.setKeywordDetectionEnabled(prefs.isKeywordDetectionEnabled.first())
+            rulesEngine.setStrictMode(prefs.isStrictMode.first())
         } catch (e: Exception) { Timber.e(e, "$TAG loadSettings") }
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────
+    // ── Helpers ────────────────────────────────────────────────────────
 
     private fun isRiskyPackage(pkg: String): Boolean = pkg in RISKY_PACKAGES
 
@@ -453,19 +465,23 @@ class GuardianAccessibilityService : AccessibilityService() {
     } catch (_: Exception) { pkg }
 
     private fun collectAllText(node: AccessibilityNodeInfo): String {
-        val sb = StringBuilder(512)
+        val sb        = StringBuilder(512)
         var nodeCount = 0
-        val maxNodes = 200
+        val maxNodes  = 200
+
         fun go(n: AccessibilityNodeInfo?, depth: Int) {
             if (n == null || depth > 15 || nodeCount >= maxNodes) return
             nodeCount++
-            n.text?.let { if (it.length < 500) sb.append(it).append(' ') }
+            n.text?.let              { if (it.length < 500) sb.append(it).append(' ') }
             n.contentDescription?.let { if (it.length < 200) sb.append(it).append(' ') }
+
             val cc = minOf(n.childCount, 50)
             for (i in 0 until cc) {
                 if (nodeCount >= maxNodes) break
                 val c = try { n.getChild(i) } catch (_: Exception) { null } ?: continue
                 go(c, depth + 1)
+                // FIX: Only recycle direct children after recursion is complete
+                // Prevents double-recycle of nodes recycled in deeper recursive calls
                 try { c.recycle() } catch (_: Exception) {}
             }
         }
@@ -497,13 +513,16 @@ class GuardianAccessibilityService : AccessibilityService() {
         try {
             val intent = Intent(this, GuardianForegroundService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                startForegroundService(intent) else startService(intent)
+                startForegroundService(intent)
+            else
+                startService(intent)
         } catch (e: Exception) { Timber.e(e, "$TAG fgService") }
     }
 
     private fun registerReceivers() {
         val filter = IntentFilter().apply {
-            addAction(ACTION_REFRESH_RULES); addAction(ACTION_RELOAD_MODEL)
+            addAction(ACTION_REFRESH_RULES)
+            addAction(ACTION_RELOAD_MODEL)
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)

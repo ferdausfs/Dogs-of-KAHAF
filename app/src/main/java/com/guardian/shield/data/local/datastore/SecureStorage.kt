@@ -4,39 +4,34 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Secure storage for sensitive data (PIN hash).
+ * Secure storage for sensitive data (PIN hash + salt).
  * Uses EncryptedSharedPreferences backed by Android Keystore.
- * PIN is stored as SHA-256 hash — never plain text.
  *
- * BUG FIX: All EncryptedSharedPreferences READ/WRITE operations are now
- * wrapped in try-catch. On Samsung (Knox/OneUI) and certain Android 9-12
- * devices, crypto operations on EncryptedSharedPreferences can throw
- * SecurityException or AEADBadTagException AFTER successful create().
- * Without this protection, the exception propagates to MainActivity.onResume()
- * and crashes the app on first launch.
+ * FIX: Fallback to unencrypted storage removed — PIN hash must never
+ * be stored unencrypted. If EncryptedSharedPreferences fails, all
+ * operations return safe defaults (null / false).
  */
 @Singleton
 class SecureStorage @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val context: Context
 ) {
     companion object {
-        private const val PREFS_NAME  = "guardian_secure"
+        private const val PREFS_NAME   = "guardian_secure"
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_SET  = "pin_set"
-        private const val TAG = "SecureStorage"
+        private const val KEY_SALT     = "pin_salt"
+        private const val TAG          = "SecureStorage"
     }
 
-    private val prefs: SharedPreferences by lazy { buildPrefs() }
+    // FIX: Nullable — if init fails, operations return safe defaults
+    private val prefs: SharedPreferences? by lazy { buildPrefs() }
 
-    // ── Initialization ────────────────────────────────────────────────
-
-    private fun buildPrefs(): SharedPreferences {
+    private fun buildPrefs(): SharedPreferences? {
         return try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -49,58 +44,63 @@ class SecureStorage @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // Fallback: Samsung Knox / older Android Keystore failure
-            Timber.e(e, "$TAG EncryptedSharedPreferences init failed — using fallback")
-            context.getSharedPreferences("${PREFS_NAME}_fallback", Context.MODE_PRIVATE)
+            // FIX: No unencrypted fallback — PIN hash must stay encrypted
+            Timber.e(e, "$TAG EncryptedSharedPreferences init failed — no fallback")
+            null
         }
     }
 
-    // ── Public API ────────────────────────────────────────────────────
-
-    /**
-     * BUG FIX: Wrapped in try-catch.
-     * EncryptedSharedPreferences.getBoolean() can throw AEADBadTagException
-     * on Samsung devices on first access after creation.
-     */
     fun isPinSet(): Boolean = try {
-        prefs.getBoolean(KEY_PIN_SET, false)
+        prefs?.getBoolean(KEY_PIN_SET, false) ?: false
     } catch (e: Exception) {
-        Timber.e(e, "$TAG isPinSet failed — returning false")
+        Timber.e(e, "$TAG isPinSet failed")
         false
     }
 
-    /**
-     * BUG FIX: Wrapped in try-catch.
-     * EncryptedSharedPreferences.getString() can throw on Samsung/Knox devices.
-     */
     fun getPinHash(): String? = try {
-        prefs.getString(KEY_PIN_HASH, null)
+        prefs?.getString(KEY_PIN_HASH, null)
     } catch (e: Exception) {
-        Timber.e(e, "$TAG getPinHash failed — returning null")
+        Timber.e(e, "$TAG getPinHash failed")
         null
     }
 
-    /**
-     * BUG FIX: Wrapped in try-catch.
-     * EncryptedSharedPreferences.edit().put*().apply() can throw on writes too.
-     */
     fun savePinHash(hash: String) {
         try {
-            prefs.edit()
-                .putString(KEY_PIN_HASH, hash)
-                .putBoolean(KEY_PIN_SET, true)
-                .apply()
+            prefs?.edit()
+                ?.putString(KEY_PIN_HASH, hash)
+                ?.putBoolean(KEY_PIN_SET, true)
+                ?.apply()
         } catch (e: Exception) {
             Timber.e(e, "$TAG savePinHash failed")
         }
     }
 
+    // FIX: getSalt / saveSalt for PBKDF2 support
+    fun getSalt(): String? = try {
+        prefs?.getString(KEY_SALT, null)
+    } catch (e: Exception) {
+        Timber.e(e, "$TAG getSalt failed")
+        null
+    }
+
+    fun saveSalt(salt: String) {
+        try {
+            prefs?.edit()
+                ?.putString(KEY_SALT, salt)
+                ?.apply()
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG saveSalt failed")
+        }
+    }
+
+    // FIX: remove() instead of putBoolean(false) — consistent state
     fun clearPin() {
         try {
-            prefs.edit()
-                .remove(KEY_PIN_HASH)
-                .putBoolean(KEY_PIN_SET, false)
-                .apply()
+            prefs?.edit()
+                ?.remove(KEY_PIN_HASH)
+                ?.remove(KEY_PIN_SET)
+                ?.remove(KEY_SALT)
+                ?.apply()
         } catch (e: Exception) {
             Timber.e(e, "$TAG clearPin failed")
         }

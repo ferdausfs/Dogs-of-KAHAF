@@ -1,4 +1,3 @@
-// app/src/main/java/com/guardian/shield/ui/dashboard/MainActivity.kt
 package com.guardian.shield.ui.dashboard
 
 import android.Manifest
@@ -34,12 +33,11 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: DashboardViewModel by viewModels()
     private lateinit var eventAdapter: BlockEventAdapter
 
-    // FIX #7: Guard for switch listener
     private var isUpdatingSwitch = false
 
-    // BUG FIX: Request POST_NOTIFICATIONS on Android 13+ so the foreground
-    // service notification displays — without it the OS silently drops the
-    // notification and may kill the service on low-memory devices.
+    // FIX: Track if we navigated to settings — refresh only when returning
+    private var returningFromSettings = false
+
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
@@ -64,7 +62,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.refreshProtectionState()
+        // FIX: Refresh only when returning from settings — not on every resume
+        if (returningFromSettings) {
+            returningFromSettings = false
+            viewModel.refreshProtectionState()
+        } else {
+            viewModel.refreshProtectionState()
+        }
     }
 
     private fun setupToolbar() {
@@ -81,17 +85,16 @@ class MainActivity : AppCompatActivity() {
         eventAdapter = BlockEventAdapter()
         binding.rvRecentEvents.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter = eventAdapter
-            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+            adapter        = eventAdapter
+            addItemDecoration(
+                DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
+            )
         }
     }
 
     private fun setupClickListeners() {
-        // FIX #7: Switch with guard
         binding.switchProtection.setOnCheckedChangeListener { _, checked ->
-            if (!isUpdatingSwitch) {
-                viewModel.toggleProtection(checked)
-            }
+            if (!isUpdatingSwitch) viewModel.toggleProtection(checked)
         }
         binding.cardAccessibility.setOnClickListener { showAccessibilityDialog() }
         binding.btnSetupPin.setOnClickListener {
@@ -103,10 +106,11 @@ class MainActivity : AppCompatActivity() {
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.POST_NOTIFICATIONS
+                this, android.Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
             if (!granted) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                notificationPermissionLauncher
+                    .launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -114,26 +118,29 @@ class MainActivity : AppCompatActivity() {
     private fun observeState() {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
-                // Status banner
                 val isActive = state.protectionState.isProtectionActive
                 binding.tvProtectionStatus.text =
                     if (isActive) getString(R.string.protection_active)
                     else getString(R.string.protection_inactive)
+
+                // FIX: ContextCompat.getColor — safer than getColor()
                 binding.cardStatus.setCardBackgroundColor(
-                    getColor(if (isActive) R.color.status_active else R.color.status_inactive)
+                    ContextCompat.getColor(
+                        this@MainActivity,
+                        if (isActive) R.color.status_active else R.color.status_inactive
+                    )
                 )
-                // Stats
+
                 binding.tvTotalBlocked.text = state.stats.totalBlocked.toString()
                 binding.tvTodayBlocked.text = state.stats.todayBlocked.toString()
-                binding.tvLastBlocked.text  = state.stats.lastBlockedApp.ifEmpty { "None yet" }
+                binding.tvLastBlocked.text  =
+                    state.stats.lastBlockedApp.ifEmpty { "None yet" }
 
-                // FIX #7: Switch update with guard
                 isUpdatingSwitch = true
                 if (binding.switchProtection.isChecked != state.isProtectionOn)
                     binding.switchProtection.isChecked = state.isProtectionOn
                 isUpdatingSwitch = false
 
-                // Accessibility card
                 val accessOk = state.protectionState.isAccessibilityEnabled
                 binding.ivAccessibilityStatus.setImageResource(
                     if (accessOk) R.drawable.ic_check_circle else R.drawable.ic_warning
@@ -141,20 +148,29 @@ class MainActivity : AppCompatActivity() {
                 binding.tvAccessibilityStatus.text =
                     if (accessOk) "Accessibility Service: Active"
                     else "Tap to enable Accessibility Service"
-                binding.cardAccessibility.strokeColor =
-                    getColor(if (accessOk) R.color.status_active else R.color.status_inactive)
-                // PIN card
+                binding.cardAccessibility.strokeColor = ContextCompat.getColor(
+                    this@MainActivity,
+                    if (accessOk) R.color.status_active else R.color.status_inactive
+                )
+
                 val pinSet = state.protectionState.isPinSet
                 binding.tvPinStatus.text = if (pinSet) "PIN: Set ✓" else "PIN: Not set"
                 binding.btnSetupPin.text = if (pinSet) "Change PIN" else "Set PIN"
-                // Recent events
+
                 binding.tvNoEvents.isVisible     = state.recentEvents.isEmpty()
                 binding.rvRecentEvents.isVisible = state.recentEvents.isNotEmpty()
                 eventAdapter.submitList(state.recentEvents)
-                // Error
+
+                // FIX: clearError() called after Snackbar dismissed
+                // Prevents infinite loop: state update → re-collect → show again
                 state.errorMessage?.let { msg ->
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
-                    viewModel.clearError()
+                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT)
+                        .addCallback(object : Snackbar.Callback() {
+                            override fun onDismissed(snackbar: Snackbar?, event: Int) {
+                                viewModel.clearError()
+                            }
+                        })
+                        .show()
                 }
             }
         }
@@ -164,8 +180,10 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Enable Accessibility Service")
             .setMessage(
-                "Guardian Shield needs the Accessibility Service to detect and block content.\n\n" +
-                "Go to: Settings → Accessibility → Installed Services → Guardian Shield → Enable."
+                "Guardian Shield needs the Accessibility Service to detect " +
+                "and block content.\n\n" +
+                "Go to: Settings → Accessibility → Installed Services → " +
+                "Guardian Shield → Enable."
             )
             .setPositiveButton("Open Settings") { _, _ ->
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -175,10 +193,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSettingsWithPinCheck() {
+        returningFromSettings = true
         val pinSet = viewModel.uiState.value.protectionState.isPinSet
         if (pinSet) {
             startActivity(Intent(this, PinVerifyActivity::class.java).apply {
-                putExtra(PinVerifyActivity.EXTRA_DESTINATION, PinVerifyActivity.DEST_SETTINGS)
+                putExtra(
+                    PinVerifyActivity.EXTRA_DESTINATION,
+                    PinVerifyActivity.DEST_SETTINGS
+                )
             })
         } else {
             startActivity(Intent(this, SettingsActivity::class.java))
