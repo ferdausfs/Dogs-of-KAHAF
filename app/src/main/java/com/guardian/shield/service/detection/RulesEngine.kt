@@ -6,18 +6,6 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * RulesEngine — single authority for ALL block decisions.
- *
- * Priority:
- *   1. OWN package        → always allow
- *   2. ESSENTIAL system   → always allow (launcher, systemui only)
- *   3. WHITELIST          → always allow
- *   4. BLOCKED apps       → block (INCLUDES Settings, DNS, etc. if user added them)
- *   5. KEYWORD match      → block
- *   6. AI detection       → block
- *   7. Default            → allow
- */
 @Singleton
 class RulesEngine @Inject constructor() {
 
@@ -25,8 +13,6 @@ class RulesEngine @Inject constructor() {
         const val OUR_PACKAGE = "com.guardian.shield"
         private const val TAG = "Guardian_Rules"
 
-        // FIX: Only ESSENTIAL system UI - everything else can be blocked
-        // Settings is NOT here so user can block it for tamper protection
         private val ESSENTIAL_SYSTEM = setOf(
             "android",
             "com.android.systemui",
@@ -35,8 +21,8 @@ class RulesEngine @Inject constructor() {
             "com.sec.android.inputmethod",
             "com.touchtype.swiftkey",
             "com.swiftkey.swiftkeyapp",
-            "com.miui.home",        // Xiaomi launcher
-            "com.sec.android.app.launcher", // Samsung launcher
+            "com.miui.home",
+            "com.sec.android.app.launcher",
             "com.google.android.apps.nexuslauncher",
             "com.android.launcher",
             "com.android.launcher3",
@@ -70,9 +56,12 @@ class RulesEngine @Inject constructor() {
 
     fun refreshKeywords(keywords: List<String>) {
         activeKeywords = keywords.map { it.lowercase().trim() }
+        // CRITICAL FIX: Added word-boundary guards (?<!\w) and (?!\w)
+        // Without this, keyword "sex" would also block "Sussex", "Essex" etc.
+        // Now only exact word matches trigger a block.
         keywordPattern = if (keywords.isEmpty()) null
         else Regex(
-            keywords.joinToString("|") { Regex.escape(it.lowercase().trim()) }
+            keywords.joinToString("|") { "(?i)(?<![\\w])${Regex.escape(it.lowercase().trim())}(?![\\w])" }
         )
         Timber.d("$TAG keywords refreshed: ${keywords.size} keywords")
     }
@@ -91,8 +80,6 @@ class RulesEngine @Inject constructor() {
             return DetectionResult.Whitelist
         }
 
-        // FIX: Blocked list overrides everything except essential system
-        // This means Settings, DNS apps, etc. CAN be blocked if user adds them
         if (packageName in blockedPackages) {
             Timber.w("$TAG BLOCK (app list): $packageName")
             return DetectionResult.Block(BlockReason.APP_BLOCKED, packageName)
@@ -142,17 +129,15 @@ class RulesEngine @Inject constructor() {
     fun isWhitelisted(packageName: String): Boolean =
         packageName == OUR_PACKAGE || packageName in whitelistedPackages
 
-    // FIX: Renamed - only ESSENTIAL apps that can never be blocked (launcher, keyboard, systemui)
     fun isEssentialSystem(pkg: String): Boolean {
         if (pkg in ESSENTIAL_SYSTEM) return true
         ESSENTIAL_PREFIXES.forEach { if (pkg.startsWith(it)) return true }
         return false
     }
-      
-    // Kept for backward compat with service code
+
     fun isSystemPackage(pkg: String): Boolean = isEssentialSystem(pkg)
 
     fun isProtectionActive(): Boolean = isProtectionEnabled
-    // Helper for service code that needs OUR_PACKAGE constant
-fun OUR_PACKAGE_HOLDER(): String = OUR_PACKAGE
+
+    fun OUR_PACKAGE_HOLDER(): String = OUR_PACKAGE
 }

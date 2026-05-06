@@ -48,13 +48,11 @@ class BlockingEngine @Inject constructor(
         val now = System.currentTimeMillis()
         val prev = lastBlockTime.get()
 
-        // FIX: Single atomic check — if too soon since last block, skip
         if (now - prev < BLOCK_COOLDOWN_MS) {
             Timber.d("$TAG cooldown active, skipping block")
             return
         }
 
-        // FIX: Atomic update — only one coroutine wins
         if (!lastBlockTime.compareAndSet(prev, now)) {
             Timber.d("$TAG another thread won the block race")
             return
@@ -62,14 +60,17 @@ class BlockingEngine @Inject constructor(
 
         Timber.w("$TAG BLOCK pkg=$pkg reason=$reason detail=$detail")
 
-        // Step 1: kick to background first
-        try {
-            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG GLOBAL_ACTION_HOME failed")
-        }
+        // CRITICAL FIX: Launch overlay FIRST, then go home.
+        //
+        // Old (buggy) order: HOME → startActivity(overlay)
+        //   Problem: HOME is async. The blocked app can regain focus in the
+        //   gap before our overlay launches — especially on slow devices.
+        //
+        // New (fixed) order: startActivity(overlay) → HOME
+        //   Overlay is queued in the activity stack immediately. Then HOME
+        //   sends the blocked app to background. Our overlay stays on top.
 
-        // Step 2: launch block UI
+        // Step 1: Launch block UI immediately
         try {
             val intent = Intent(service, BlockOverlayActivity::class.java).apply {
                 addFlags(
@@ -86,6 +87,13 @@ class BlockingEngine @Inject constructor(
             service.startActivity(intent)
         } catch (e: Exception) {
             Timber.e(e, "$TAG launch overlay failed")
+        }
+
+        // Step 2: Send blocked app to background AFTER overlay is queued
+        try {
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG GLOBAL_ACTION_HOME failed")
         }
     }
 

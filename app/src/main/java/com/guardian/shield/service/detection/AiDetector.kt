@@ -22,10 +22,9 @@ class AiDetector @Inject constructor(
 ) {
     companion object {
         const val MODEL_FILENAME = "guardian_model.tflite"
-        private const val INPUT_SIZE = 224  // FIX: 224 is standard for MobileNet/NsfwJS
+        private const val INPUT_SIZE = 224
         private const val TAG = "Guardian_AI"
 
-        // FIX: AGGRESSIVE thresholds — block if ANY single NSFW class is high
         private const val PORN_HARD_THRESHOLD = 0.20f
         private const val HENTAI_HARD_THRESHOLD = 0.25f
         private const val SEXY_HARD_THRESHOLD = 0.40f
@@ -53,7 +52,7 @@ class AiDetector @Inject constructor(
     @Volatile private var loaded = false
     @Volatile private var outputSize = 0
     @Volatile private var inputSize = INPUT_SIZE
-    @Volatile private var isQuantized = false  // FIX: Detect uint8 vs float32 model
+    @Volatile private var isQuantized = false
 
     fun isLoaded(): Boolean = loaded
 
@@ -93,9 +92,8 @@ class AiDetector @Inject constructor(
                 val interp = Interpreter(buf, options)
                 interpreter = interp
 
-                // FIX: Auto-detect input size and type from model
                 val inputTensor = interp.getInputTensor(0)
-                val shape = inputTensor.shape() // [1, H, W, 3]
+                val shape = inputTensor.shape()
                 inputSize = if (shape.size >= 3) shape[1] else INPUT_SIZE
                 isQuantized = inputTensor.dataType().toString().contains("UINT8", ignoreCase = true)
 
@@ -153,7 +151,6 @@ class AiDetector @Inject constructor(
                 interp.run(input, output)
                 val dt = System.currentTimeMillis() - t0
 
-                // FIX: Apply softmax if outputs don't sum to ~1 (raw logits)
                 val scores = normalizeScores(output[0])
                 val result = parseOutput(scores, capturedSize, threshold)
                 Timber.d("$TAG classify ${dt}ms — ${result.label} | raw=${scores.joinToString(",") { "%.2f".format(it) }}")
@@ -165,7 +162,6 @@ class AiDetector @Inject constructor(
         }
     }
 
-    // FIX: Apply softmax if scores look like logits (negative or sum != 1)
     private fun normalizeScores(scores: FloatArray): FloatArray {
         val sum = scores.sum()
         val hasNegative = scores.any { it < 0f }
@@ -182,32 +178,22 @@ class AiDetector @Inject constructor(
     }
 
     fun shouldSkipFrame(bitmap: Bitmap): Boolean {
-        val sample = Bitmap.createScaledBitmap(bitmap, 24, 24, false)
-        val pixels = IntArray(24 * 24)
-        sample.getPixels(pixels, 0, 24, 0, 0, 24, 24)
+        // CRITICAL FIX: ONLY skip completely black/blank screens.
+        // DO NOT use variance-based skipping — adult/skin-tone content has
+        // LOW variance by nature (uniform flesh tones) and was being skipped
+        // before AI could ever analyse it. Only skip truly empty frames.
+        val sample = Bitmap.createScaledBitmap(bitmap, 16, 16, false)
+        val pixels = IntArray(16 * 16)
+        sample.getPixels(pixels, 0, 16, 0, 0, 16, 16)
         if (sample !== bitmap) sample.recycle()
 
         var brightness = 0L
-        var sumR = 0L; var sumG = 0L; var sumB = 0L
-        var sumR2 = 0L; var sumG2 = 0L; var sumB2 = 0L
-
         for (p in pixels) {
-            val r = (p shr 16) and 0xFF
-            val g = (p shr 8) and 0xFF
-            val b = p and 0xFF
-            brightness += (r + g + b)
-            sumR += r; sumG += g; sumB += b
-            sumR2 += r * r; sumG2 += g * g; sumB2 += b * b
+            brightness += ((p shr 16) and 0xFF) + ((p shr 8) and 0xFF) + (p and 0xFF)
         }
-        val n = pixels.size
-        val avg = brightness / (n * 3)
-        if (avg < 8) return true  // Very dark only
-
-        val varR = (sumR2.toDouble() / n) - (sumR.toDouble() / n).let { it * it }
-        val varG = (sumG2.toDouble() / n) - (sumG.toDouble() / n).let { it * it }
-        val varB = (sumB2.toDouble() / n) - (sumB.toDouble() / n).let { it * it }
-        // FIX: Lower variance threshold — was skipping too many real frames
-        return (varR + varG + varB).toFloat() < 60f
+        val avg = brightness / (pixels.size * 3)
+        // Only skip near-black screens (loading screens, screen-off, etc.)
+        return avg < 10
     }
 
     private fun parseOutput(scores: FloatArray, size: Int, threshold: Float): AiResult {
@@ -232,7 +218,6 @@ class AiDetector @Inject constructor(
                 val porn = scores[3]
                 val sexy = scores[4]
 
-                // FIX: HARD blocks - ANY single NSFW class above its threshold = block
                 if (porn >= PORN_HARD_THRESHOLD) {
                     return AiResult(true, porn,
                         "🔞 PORN (${(porn * 100).toInt()}%)", scores)
@@ -246,7 +231,6 @@ class AiDetector @Inject constructor(
                         "⚠️ SEXY (${(sexy * 100).toInt()}%)", scores)
                 }
 
-                // FIX: Combined NSFW score - sum of all unsafe classes
                 val combinedUnsafe = (porn + hentai + (sexy * 0.7f)).coerceIn(0f, 1f)
                 val isUnsafe = combinedUnsafe >= threshold
 
@@ -276,11 +260,10 @@ class AiDetector @Inject constructor(
         }
     }
 
-    // FIX: Support both quantized (uint8) and float32 models
     private fun bitmapToBuffer(src: Bitmap): ByteBuffer {
         val targetSize = inputSize
         val bmp = if (src.width != targetSize || src.height != targetSize)
-            Bitmap.createScaledBitmap(src, targetSize, targetSize, true) // FIX: bilinear filter
+            Bitmap.createScaledBitmap(src, targetSize, targetSize, true)
         else src
 
         val pixels = IntArray(targetSize * targetSize)
@@ -293,14 +276,12 @@ class AiDetector @Inject constructor(
             .apply { order(ByteOrder.nativeOrder()) }
 
         if (isQuantized) {
-            // uint8 model: raw RGB bytes 0-255
             for (p in pixels) {
                 buf.put(((p shr 16) and 0xFF).toByte())
                 buf.put(((p shr 8) and 0xFF).toByte())
                 buf.put((p and 0xFF).toByte())
             }
         } else {
-            // FIX: float32 model: normalize to [0, 1]
             val inv255 = 1f / 255f
             for (p in pixels) {
                 buf.putFloat(((p shr 16) and 0xFF) * inv255)
