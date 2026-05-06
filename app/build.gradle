@@ -1,7 +1,6 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    // FIX: kapt → ksp (faster builds)
     id 'com.google.devtools.ksp'
     id 'com.google.dagger.hilt.android'
 }
@@ -48,7 +47,6 @@ android {
         noCompress 'tflite'
     }
 
-    // FIX: packagingOptions → packaging (deprecated)
     packaging {
         jniLibs {
             useLegacyPackaging false
@@ -78,15 +76,16 @@ dependencies {
     implementation 'androidx.room:room-ktx:2.6.1'
     ksp 'androidx.room:room-compiler:2.6.1'
 
-    // FIX: DataStore updated 1.0.0 → 1.1.1
+    // DataStore
     implementation 'androidx.datastore:datastore-preferences:1.1.1'
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
-    // FIX: Security Crypto alpha → stable
-    implementation 'androidx.security:security-crypto:1.0.0'
+    // FIX: security-crypto 1.1.0-alpha06 — MasterKey class only exists here
+    // 1.0.0 stable does NOT have MasterKey, only the deprecated MasterKeys helper
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // TensorFlow Lite
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
@@ -110,5 +109,3 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
-
-// FIX: kapt → ksp, so kapt block removed

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,24 +12,19 @@ import javax.inject.Singleton
 /**
  * Secure storage for sensitive data (PIN hash + salt).
  * Uses EncryptedSharedPreferences backed by Android Keystore.
- *
- * FIX: Fallback to unencrypted storage removed — PIN hash must never
- * be stored unencrypted. If EncryptedSharedPreferences fails, all
- * operations return safe defaults (null / false).
  */
 @Singleton
 class SecureStorage @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val PREFS_NAME   = "guardian_secure"
+        private const val PREFS_NAME = "guardian_secure"
         private const val KEY_PIN_HASH = "pin_hash"
-        private const val KEY_PIN_SET  = "pin_set"
-        private const val KEY_SALT     = "pin_salt"
-        private const val TAG          = "SecureStorage"
+        private const val KEY_PIN_SET = "pin_set"
+        private const val KEY_SALT = "pin_salt"
+        private const val TAG = "SecureStorage"
     }
 
-    // FIX: Nullable — if init fails, operations return safe defaults
     private val prefs: SharedPreferences? by lazy { buildPrefs() }
 
     private fun buildPrefs(): SharedPreferences? {
@@ -44,7 +40,6 @@ class SecureStorage @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            // FIX: No unencrypted fallback — PIN hash must stay encrypted
             Timber.e(e, "$TAG EncryptedSharedPreferences init failed — no fallback")
             null
         }
@@ -75,7 +70,6 @@ class SecureStorage @Inject constructor(
         }
     }
 
-    // FIX: getSalt / saveSalt for PBKDF2 support
     fun getSalt(): String? = try {
         prefs?.getString(KEY_SALT, null)
     } catch (e: Exception) {
@@ -93,7 +87,6 @@ class SecureStorage @Inject constructor(
         }
     }
 
-    // FIX: remove() instead of putBoolean(false) — consistent state
     fun clearPin() {
         try {
             prefs?.edit()
