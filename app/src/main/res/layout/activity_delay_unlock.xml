@@ -9,7 +9,7 @@
     android:padding="32dp"
     android:background="?attr/colorSurface">
 
-    <!-- ═══ Phase 1: Countdown ═══ -->
+    <!-- Phase 1: Countdown -->
     <LinearLayout
         android:id="@+id/group_countdown"
         android:layout_width="match_parent"
@@ -62,7 +62,7 @@
 
     </LinearLayout>
 
-    <!-- ═══ Phase 2: PIN Entry ═══ -->
+    <!-- Phase 2: PIN Entry -->
     <LinearLayout
         android:id="@+id/group_pin"
         android:layout_width="match_parent"
@@ -87,7 +87,7 @@
             android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="32dp" />
 
-        <!-- PIN dots display -->
+        <!-- PIN dots display - 8 dots -->
         <LinearLayout
             android:id="@+id/pin_view"
             android:layout_width="wrap_content"
@@ -102,6 +102,8 @@
             <View android:id="@+id/dot4" style="@style/PinDot" />
             <View android:id="@+id/dot5" style="@style/PinDot" />
             <View android:id="@+id/dot6" style="@style/PinDot" />
+            <View android:id="@+id/dot7" style="@style/PinDot" />
+            <View android:id="@+id/dot8" style="@style/PinDot" />
         </LinearLayout>
 
         <TextView

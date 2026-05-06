@@ -12,25 +12,16 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * BlockingEngine — orchestrates the user-visible block sequence.
- *
- * Flow:
- *   1. Push offending app to background via GLOBAL_ACTION_HOME
- *   2. Launch BlockOverlayActivity
- */
 @Singleton
 class BlockingEngine @Inject constructor(
     private val prefs: GuardianPreferences
 ) {
     companion object {
-        private const val TAG              = "Guardian_Blocker"
+        private const val TAG = "Guardian_Blocker"
         private const val BLOCK_COOLDOWN_MS = 1_500L
-        // FIX: Default value as constant — not magic number
         private const val DEFAULT_DELAY_SECS = 30
     }
 
-    // FIX: AtomicLong instead of @Volatile Long — prevents race condition
     private val lastBlockTime = AtomicLong(0L)
 
     @Volatile private var cachedDelaySecs = DEFAULT_DELAY_SECS
@@ -46,7 +37,6 @@ class BlockingEngine @Inject constructor(
     fun isCoolingDown(): Boolean =
         System.currentTimeMillis() - lastBlockTime.get() < BLOCK_COOLDOWN_MS
 
-    // FIX: @MainThread annotation — enforces correct thread usage
     @MainThread
     fun executeBlock(
         service: AccessibilityService,
@@ -56,42 +46,46 @@ class BlockingEngine @Inject constructor(
         detail: String = ""
     ) {
         val now = System.currentTimeMillis()
+        val prev = lastBlockTime.get()
 
-        // FIX: Atomic check+set — prevents race condition where two coroutines
-        // both pass isCoolingDown() and both execute the block
-        if (!lastBlockTime.compareAndSet(lastBlockTime.get(), now)) return
-        if (now - lastBlockTime.get() < BLOCK_COOLDOWN_MS &&
-            lastBlockTime.get() != now) return
-
-        // Simplified atomic cooldown check
-        val prev = lastBlockTime.getAndSet(now)
+        // FIX: Single atomic check — if too soon since last block, skip
         if (now - prev < BLOCK_COOLDOWN_MS) {
-            lastBlockTime.set(prev) // restore
+            Timber.d("$TAG cooldown active, skipping block")
+            return
+        }
+
+        // FIX: Atomic update — only one coroutine wins
+        if (!lastBlockTime.compareAndSet(prev, now)) {
+            Timber.d("$TAG another thread won the block race")
             return
         }
 
         Timber.w("$TAG BLOCK pkg=$pkg reason=$reason detail=$detail")
 
         // Step 1: kick to background first
-        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        try {
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        } catch (e: Exception) {
+            Timber.e(e, "$TAG GLOBAL_ACTION_HOME failed")
+        }
 
         // Step 2: launch block UI
         try {
             val intent = Intent(service, BlockOverlayActivity::class.java).apply {
                 addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK    or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP   or
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_NO_ANIMATION
                 )
-                putExtra(BlockOverlayActivity.EXTRA_PKG,        pkg)
-                putExtra(BlockOverlayActivity.EXTRA_APP_NAME,   appName)
-                putExtra(BlockOverlayActivity.EXTRA_REASON,     reason.name)
-                putExtra(BlockOverlayActivity.EXTRA_DETAIL,     detail)
+                putExtra(BlockOverlayActivity.EXTRA_PKG, pkg)
+                putExtra(BlockOverlayActivity.EXTRA_APP_NAME, appName)
+                putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
+                putExtra(BlockOverlayActivity.EXTRA_DETAIL, detail)
                 putExtra(BlockOverlayActivity.EXTRA_DELAY_SECS, cachedDelaySecs)
             }
             service.startActivity(intent)
         } catch (e: Exception) {
-            Timber.e(e, "$TAG launch overlay")
+            Timber.e(e, "$TAG launch overlay failed")
         }
     }
 

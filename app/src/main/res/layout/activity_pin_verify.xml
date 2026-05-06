@@ -32,7 +32,7 @@
         android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="32dp" />
 
-    <!-- PIN dots display -->
+    <!-- PIN dots display - 8 dots to match MAX_PIN_LENGTH -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -45,6 +45,8 @@
         <View android:id="@+id/dot4" style="@style/PinDot" />
         <View android:id="@+id/dot5" style="@style/PinDot" />
         <View android:id="@+id/dot6" style="@style/PinDot" />
+        <View android:id="@+id/dot7" style="@style/PinDot" />
+        <View android:id="@+id/dot8" style="@style/PinDot" />
     </LinearLayout>
 
     <TextView

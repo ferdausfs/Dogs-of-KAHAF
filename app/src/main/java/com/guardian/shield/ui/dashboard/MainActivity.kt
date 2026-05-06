@@ -1,11 +1,11 @@
 package com.guardian.shield.ui.dashboard
 
-import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Menu
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -35,9 +35,6 @@ class MainActivity : AppCompatActivity() {
 
     private var isUpdatingSwitch = false
 
-    // FIX: Track if we navigated to settings — refresh only when returning
-    private var returningFromSettings = false
-
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
@@ -62,13 +59,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // FIX: Refresh only when returning from settings — not on every resume
-        if (returningFromSettings) {
-            returningFromSettings = false
-            viewModel.refreshProtectionState()
-        } else {
-            viewModel.refreshProtectionState()
-        }
+        viewModel.refreshProtectionState()
+    }
+
+    // FIX: Menu inflation was missing — toolbar settings icon never appeared
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
     }
 
     private fun setupToolbar() {
@@ -85,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         eventAdapter = BlockEventAdapter()
         binding.rvRecentEvents.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter        = eventAdapter
+            adapter = eventAdapter
             addItemDecoration(
                 DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
             )
@@ -123,7 +120,6 @@ class MainActivity : AppCompatActivity() {
                     if (isActive) getString(R.string.protection_active)
                     else getString(R.string.protection_inactive)
 
-                // FIX: ContextCompat.getColor — safer than getColor()
                 binding.cardStatus.setCardBackgroundColor(
                     ContextCompat.getColor(
                         this@MainActivity,
@@ -133,7 +129,7 @@ class MainActivity : AppCompatActivity() {
 
                 binding.tvTotalBlocked.text = state.stats.totalBlocked.toString()
                 binding.tvTodayBlocked.text = state.stats.todayBlocked.toString()
-                binding.tvLastBlocked.text  =
+                binding.tvLastBlocked.text =
                     state.stats.lastBlockedApp.ifEmpty { "None yet" }
 
                 isUpdatingSwitch = true
@@ -157,12 +153,10 @@ class MainActivity : AppCompatActivity() {
                 binding.tvPinStatus.text = if (pinSet) "PIN: Set ✓" else "PIN: Not set"
                 binding.btnSetupPin.text = if (pinSet) "Change PIN" else "Set PIN"
 
-                binding.tvNoEvents.isVisible     = state.recentEvents.isEmpty()
+                binding.tvNoEvents.isVisible = state.recentEvents.isEmpty()
                 binding.rvRecentEvents.isVisible = state.recentEvents.isNotEmpty()
                 eventAdapter.submitList(state.recentEvents)
 
-                // FIX: clearError() called after Snackbar dismissed
-                // Prevents infinite loop: state update → re-collect → show again
                 state.errorMessage?.let { msg ->
                     Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT)
                         .addCallback(object : Snackbar.Callback() {
@@ -193,7 +187,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSettingsWithPinCheck() {
-        returningFromSettings = true
         val pinSet = viewModel.uiState.value.protectionState.isPinSet
         if (pinSet) {
             startActivity(Intent(this, PinVerifyActivity::class.java).apply {
