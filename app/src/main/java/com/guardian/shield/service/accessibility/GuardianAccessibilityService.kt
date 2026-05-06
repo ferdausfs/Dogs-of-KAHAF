@@ -116,15 +116,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             return
         }
 
-        serviceScope.launch {
-            loadRulesIntoEngine()
-            loadSettings()
-            blockingEngine.loadSettings()
-            if (aiEnabled) reloadAiModel()
-        }
-        registerReceivers()
-        startForegroundWatchdog()
-    }
+        // এটা নতুন:
+serviceScope.launch {
+    loadRulesIntoEngine()
+    loadSettings()           // FIX: await settings first
+    blockingEngine.loadSettings()
+    reloadAiModel()          // FIX: always call — reloadAiModel() checks aiEnabled internally
+}
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!isInjected) return

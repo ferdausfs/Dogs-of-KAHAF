@@ -22,7 +22,6 @@ class GuardianPreferences @Inject constructor(
     companion object {
         val KEY_PROTECTION_ENABLED   = booleanPreferencesKey("protection_enabled")
         val KEY_AI_DETECTION_ON      = booleanPreferencesKey("ai_detection_enabled")
-        // FIX: spacing fixed
         val KEY_KEYWORD_DETECTION_ON = booleanPreferencesKey("keyword_detection_enabled")
         val KEY_STRICT_MODE          = booleanPreferencesKey("strict_mode")
         val KEY_DELAY_UNLOCK_SECS    = intPreferencesKey("delay_unlock_seconds")
@@ -36,7 +35,6 @@ class GuardianPreferences @Inject constructor(
         private const val MAX_INTERVAL_MS     = 5_000L
     }
 
-    // FIX: Specific error messages per key for easier debugging
     val isProtectionEnabled: Flow<Boolean> = context.dataStore.data
         .catch { e ->
             Timber.e(e, "DataStore read failed: KEY_PROTECTION_ENABLED")
@@ -49,7 +47,7 @@ class GuardianPreferences @Inject constructor(
             Timber.e(e, "DataStore read failed: KEY_AI_DETECTION_ON")
             emit(emptyPreferences())
         }
-        .map { it[KEY_AI_DETECTION_ON] ?: false }
+        .map { it[KEY_AI_DETECTION_ON] ?: true }  // FIX: default ON (was false)
 
     val isKeywordDetectionEnabled: Flow<Boolean> = context.dataStore.data
         .catch { e ->
@@ -70,7 +68,6 @@ class GuardianPreferences @Inject constructor(
             Timber.e(e, "DataStore read failed: KEY_DELAY_UNLOCK_SECS")
             emit(emptyPreferences())
         }
-        // FIX: coerceIn only on read — removed double coerceIn
         .map { (it[KEY_DELAY_UNLOCK_SECS] ?: 30).coerceIn(10, 300) }
 
     val isFirstRun: Flow<Boolean> = context.dataStore.data
@@ -108,7 +105,6 @@ class GuardianPreferences @Inject constructor(
         context.dataStore.edit { it[KEY_STRICT_MODE] = enabled }
     }
     suspend fun setDelayUnlockSeconds(secs: Int) {
-        // FIX: coerceIn only on write — read already has coerceIn
         context.dataStore.edit { it[KEY_DELAY_UNLOCK_SECS] = secs.coerceIn(10, 300) }
     }
     suspend fun setFirstRunDone() {
