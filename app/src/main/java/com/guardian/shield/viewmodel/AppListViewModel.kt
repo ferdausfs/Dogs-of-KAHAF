@@ -2,6 +2,7 @@ package com.guardian.shield.viewmodel
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.guardian.shield.domain.model.AppRule
@@ -9,6 +10,7 @@ import com.guardian.shield.domain.usecase.*
 import com.guardian.shield.service.accessibility.GuardianAccessibilityService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -17,16 +19,19 @@ import javax.inject.Inject
 
 data class InstalledApp(
     val packageName: String,
-    val appName: String
+    val appName: String,
+    val isSystem: Boolean = false,
+    val isCritical: Boolean = false  // Settings, DNS, Play Store etc.
 )
 
 data class AppListUiState(
-    val blockedApps: List<AppRule>      = emptyList(),
-    val whitelistedApps: List<AppRule>  = emptyList(),
+    val blockedApps: List<AppRule> = emptyList(),
+    val whitelistedApps: List<AppRule> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
-    val isLoadingInstalled: Boolean     = false,
-    val searchQuery: String             = "",
-    val errorMessage: String?           = null
+    val isLoadingInstalled: Boolean = false,
+    val searchQuery: String = "",
+    val showSystemApps: Boolean = true,  // FIX: Default true so user can block Settings/DNS
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -39,16 +44,53 @@ class AppListViewModel @Inject constructor(
     private val removeAppRuleUseCase: RemoveAppRuleUseCase
 ) : ViewModel() {
 
+    companion object {
+        // Critical apps that user might want to block to prevent bypass
+        private val CRITICAL_PACKAGES = setOf(
+            // Android Settings (to prevent disabling accessibility)
+            "com.android.settings",
+            "com.samsung.android.settings",
+            "com.miui.securitycenter",
+            "com.oneplus.security",
+            // Package installers (prevent uninstall)
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller",
+            "com.miui.packageinstaller",
+            // Play Store (prevent app updates / new installs)
+            "com.android.vending",
+            // DNS apps (prevent DNS bypass)
+            "com.frostnerd.smokescreen",
+            "org.adaway",
+            "com.netguard",
+            "eu.faircode.netguard",
+            "org.blokada.fem",
+            "org.blokada.alarm.dnschanger",
+            "com.kaspersky.dnschanger",
+            "com.burakgon.dnschanger",
+            "com.dnschanger",
+            // VPN apps (often used to bypass blockers)
+            "com.protonvpn.android",
+            "com.expressvpn.vpn",
+            "com.nordvpn.android",
+            // File managers (could be used to delete app data)
+            "com.android.documentsui",
+            // ADB / shell apps
+            "com.android.shell"
+        )
+    }
+
     private val _uiState = MutableStateFlow(AppListUiState())
     val uiState: StateFlow<AppListUiState> = _uiState.asStateFlow()
 
-    // Filtered installed apps based on search query
     val filteredInstalledApps: StateFlow<List<InstalledApp>> = combine(
         _uiState.map { it.installedApps },
-        _uiState.map { it.searchQuery }
-    ) { apps, query ->
-        if (query.isBlank()) apps
-        else apps.filter { it.appName.contains(query, ignoreCase = true) }
+        _uiState.map { it.searchQuery },
+        _uiState.map { it.showSystemApps }
+    ) { apps, query, showSystem ->
+        apps
+            .filter { showSystem || !it.isSystem || it.isCritical }
+            .filter { query.isBlank() || it.appName.contains(query, ignoreCase = true) ||
+                      it.packageName.contains(query, ignoreCase = true) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -73,22 +115,24 @@ class AppListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingInstalled = true) }
             try {
-                // BUG FIX: PackageManager.getInstalledApplications(GET_META_DATA) is a heavy IPC
-                // call that blocks the calling thread. Must run on IO dispatcher to avoid ANR.
-                val apps = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val apps = withContext(Dispatchers.IO) {
                     val pm = context.packageManager
-                    // BUG FIX: was GET_META_DATA — loads ALL app metadata (icons, bundle data etc.)
-                    // which is 5-10x slower and wastes memory. We only need label + packageName.
-                    // Fix: pass 0 (no extra flags) — label is always available without flags.
+                    // FIX: Load ALL apps including system apps
                     pm.getInstalledApplications(0)
-                        .filter { (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0 }
                         .map { info ->
+                            val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                            val isCritical = info.packageName in CRITICAL_PACKAGES
                             InstalledApp(
                                 packageName = info.packageName,
-                                appName     = pm.getApplicationLabel(info).toString()
+                                appName = pm.getApplicationLabel(info).toString(),
+                                isSystem = isSystem,
+                                isCritical = isCritical
                             )
                         }
-                        .sortedBy { it.appName }
+                        // Critical apps first, then user apps, then other system
+                        .sortedWith(compareByDescending<InstalledApp> { it.isCritical }
+                            .thenBy { it.isSystem }
+                            .thenBy { it.appName.lowercase() })
                 }
                 _uiState.update { it.copy(installedApps = apps, isLoadingInstalled = false) }
             } catch (e: Exception) {
@@ -96,6 +140,10 @@ class AppListViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoadingInstalled = false, errorMessage = e.message) }
             }
         }
+    }
+
+    fun toggleShowSystemApps() {
+        _uiState.update { it.copy(showSystemApps = !it.showSystemApps) }
     }
 
     fun addToBlockedList(app: InstalledApp) {

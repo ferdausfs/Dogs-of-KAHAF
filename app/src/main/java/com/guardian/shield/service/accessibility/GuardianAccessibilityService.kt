@@ -34,33 +34,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 private val SYSTEM_UI_SKIP = setOf(
-    "android", "com.android.systemui",
+    "com.android.systemui",
     "com.google.android.inputmethod.latin",
     "com.samsung.android.honeyboard",
     "com.sec.android.inputmethod",
     "com.touchtype.swiftkey",
     "com.swiftkey.swiftkeyapp"
-)
-
-private val RISKY_PACKAGES = setOf(
-    "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
-    "com.opera.mini.native", "com.brave.browser", "com.microsoft.emmx",
-    "com.UCMobile.intl", "com.sec.android.app.sbrowser",
-    "com.kiwibrowser.browser", "com.duckduckgo.mobile.android",
-    "org.mozilla.focus", "com.vivaldi.browser",
-    "com.instagram.android", "com.snapchat.android", "com.zhiliaoapp.musically",
-    "com.ss.android.ugc.trill", "com.twitter.android",
-    "com.facebook.katana", "com.facebook.lite", "com.reddit.frontpage",
-    "com.pinterest", "com.tumblr",
-    "com.google.android.apps.photos", "com.miui.gallery",
-    "com.sec.android.gallery3d", "com.android.gallery3d",
-    "com.mi.android.globalFileexplorer", "com.android.documentsui"
-)
-
-private val BROWSER_PACKAGES = setOf(
-    "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
-    "com.brave.browser", "com.microsoft.emmx", "com.UCMobile.intl",
-    "com.sec.android.app.sbrowser", "com.kiwibrowser.browser"
 )
 
 class GuardianAccessibilityService : AccessibilityService() {
@@ -69,8 +48,8 @@ class GuardianAccessibilityService : AccessibilityService() {
         private const val TAG = "Guardian_Service"
         const val ACTION_REFRESH_RULES = "com.guardian.shield.REFRESH_RULES"
         const val ACTION_RELOAD_MODEL = "com.guardian.shield.RELOAD_MODEL"
-        private const val TEXT_DEBOUNCE_MS = 250L
-        private const val AI_DEBOUNCE_MS = 300L
+        private const val TEXT_DEBOUNCE_MS = 200L
+        private const val AI_DEBOUNCE_MS = 250L
     }
 
     private lateinit var rulesEngine: RulesEngine
@@ -84,7 +63,6 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // FIX: Manual main executor for API 26+ compat (mainExecutor needs API 28)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mainExec = Executor { command -> mainHandler.post(command) }
 
@@ -155,7 +133,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                if (!SYSTEM_UI_SKIP.contains(pkg) && !rulesEngine.isSystemPackage(pkg)) {
+                if (!SYSTEM_UI_SKIP.contains(pkg)) {
                     val pkgChanged = currentForegroundPkg != pkg
                     currentForegroundPkg = pkg
 
@@ -163,9 +141,12 @@ class GuardianAccessibilityService : AccessibilityService() {
                         consecutiveSafeFrames.set(0)
                         blurManager?.hideBlur()
 
+                        // FIX: Trigger AI scan for ANY app (not just "risky" list)
+                        // because porn can be viewed via ANY browser/gallery/file manager
                         if (aiEnabled && aiDetector.isLoaded() &&
-                            isRiskyPackage(pkg) &&
                             !rulesEngine.isWhitelisted(pkg) &&
+                            !rulesEngine.isEssentialSystem(pkg) &&
+                            pkg != rulesEngine.OUR_PACKAGE_HOLDER() &&
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
 
                             blurManager?.showBlur(pkg, "Scanning content…")
@@ -180,10 +161,11 @@ class GuardianAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
                 debounceTextScan(pkg)
 
+                // FIX: AI scan on content change for ALL apps
                 if (aiEnabled &&
                     aiDetector.isLoaded() &&
-                    isRiskyPackage(pkg) &&
                     !rulesEngine.isWhitelisted(pkg) &&
+                    !rulesEngine.isEssentialSystem(pkg) &&
                     !blockingEngine.isCoolingDown() &&
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     debounceAiScan()
@@ -228,12 +210,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                 val text = collectAllText(root)
                 if (text.isBlank()) return@launch
 
-                val scanText = if (pkg in BROWSER_PACKAGES) {
-                    val url = getUrlBarText(root)
-                    if (url != null) "$text $url" else text
-                } else text
-
-                val r = rulesEngine.evaluateText(pkg, scanText)
+                val r = rulesEngine.evaluateText(pkg, text)
                 if (r is DetectionResult.Block) {
                     logAndBlock(pkg, getAppName(pkg), r.reason, r.detail)
                 }
@@ -266,11 +243,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             return
         }
         if (!AiDetector.isModelAvailable(applicationContext)) {
+            Timber.w("$TAG AI enabled but no model file")
             stopAiScanLoop()
             return
         }
 
         val ok = withContext(Dispatchers.IO) { aiDetector.reload() }
+        Timber.d("$TAG AI model reloaded: $ok")
         if (ok && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startAiScanLoop()
         } else {
@@ -289,9 +268,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (blockingEngine.isCoolingDown()) continue
                 if (aiBusy.get()) continue
                 if (currentForegroundPkg.isBlank()) continue
+                if (rulesEngine.isEssentialSystem(currentForegroundPkg)) continue
                 captureAndAnalyze()
             }
         }
+        Timber.d("$TAG AI scan loop started, interval=${aiIntervalMs}ms")
     }
 
     private fun stopAiScanLoop() {
@@ -350,21 +331,23 @@ class GuardianAccessibilityService : AccessibilityService() {
 
             val w = full.width
             val h = full.height
-            val topCut = (h * 0.07f).toInt()
-            val botCut = (h * 0.09f).toInt()
+            // FIX: Smaller crop - keep more of the image for better detection
+            val topCut = (h * 0.05f).toInt()
+            val botCut = (h * 0.05f).toInt()
             val cropH = h - topCut - botCut
             cropped = if (cropH > 100)
                 Bitmap.createBitmap(full, 0, topCut, w, cropH)
             else full
 
             if (aiDetector.shouldSkipFrame(cropped)) {
+                Timber.d("$TAG skipping uniform/dark frame")
                 onSafeFrame()
                 return
             }
 
             val r = aiDetector.classify(cropped, aiThreshold)
             val pkg = currentForegroundPkg
-            Timber.d("$TAG AI $pkg: ${r.label}")
+            Timber.i("$TAG AI [$pkg]: ${r.label} score=${r.unsafeScore}")
 
             if (r.isUnsafe) {
                 consecutiveSafeFrames.set(0)
@@ -431,10 +414,9 @@ class GuardianAccessibilityService : AccessibilityService() {
             rulesEngine.setProtectionEnabled(prefs.isProtectionEnabled.first())
             rulesEngine.setKeywordDetectionEnabled(prefs.isKeywordDetectionEnabled.first())
             rulesEngine.setStrictMode(prefs.isStrictMode.first())
+            Timber.d("$TAG settings: ai=$aiEnabled, threshold=$aiThreshold")
         } catch (e: Exception) { Timber.e(e, "$TAG loadSettings") }
     }
-
-    private fun isRiskyPackage(pkg: String): Boolean = pkg in RISKY_PACKAGES
 
     private fun getAppName(pkg: String): String = try {
         packageManager.getApplicationLabel(
@@ -465,33 +447,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         return sb.toString()
     }
 
-    private fun getUrlBarText(root: AccessibilityNodeInfo): String? {
-        val ids = listOf(
-            "com.android.chrome:id/url_bar",
-            "com.android.chrome:id/search_box_text",
-            "org.mozilla.firefox:id/mozac_browser_toolbar_url_view",
-            "com.brave.browser:id/url_bar"
-        )
-        for (id in ids) {
-            try {
-                val nodes = root.findAccessibilityNodeInfosByViewId(id)
-                if (nodes.isNotEmpty()) {
-                    val t = nodes[0].text?.toString()
-                    nodes.forEach { try { it.recycle() } catch (_: Exception) {} }
-                    if (t != null) return t
-                }
-            } catch (_: Exception) {}
-        }
-        return null
-    }
-
     private fun startForegroundWatchdog() {
         try {
             val intent = Intent(this, GuardianForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                startForegroundService(intent)
-            else
-                startService(intent)
+            startForegroundService(intent)
         } catch (e: Exception) { Timber.e(e, "$TAG fgService") }
     }
 

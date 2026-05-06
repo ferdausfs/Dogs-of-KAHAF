@@ -22,18 +22,13 @@ class AiDetector @Inject constructor(
 ) {
     companion object {
         const val MODEL_FILENAME = "guardian_model.tflite"
-        private const val INPUT_SIZE = 192
+        private const val INPUT_SIZE = 224  // FIX: 224 is standard for MobileNet/NsfwJS
         private const val TAG = "Guardian_AI"
 
-        private const val HARD_PORN_THRESHOLD = 0.25f
-        private const val HARD_HENTAI_THRESHOLD = 0.30f
-        private const val HARD_SEXY_THRESHOLD = 0.45f
-
-        private const val SEXY_HIGH_WEIGHT = 1.5f
-        private const val SEXY_MED_WEIGHT = 0.6f
-        private const val SEXY_LOW_WEIGHT = 0.1f
-        private const val SEXY_HIGH_CUTOFF = 0.30f
-        private const val SEXY_MED_CUTOFF = 0.15f
+        // FIX: AGGRESSIVE thresholds — block if ANY single NSFW class is high
+        private const val PORN_HARD_THRESHOLD = 0.20f
+        private const val HENTAI_HARD_THRESHOLD = 0.25f
+        private const val SEXY_HARD_THRESHOLD = 0.40f
 
         fun modelFile(ctx: Context): File =
             File(ctx.filesDir, MODEL_FILENAME)
@@ -49,13 +44,16 @@ class AiDetector @Inject constructor(
     data class AiResult(
         val isUnsafe: Boolean,
         val unsafeScore: Float,
-        val label: String
+        val label: String,
+        val rawScores: FloatArray = floatArrayOf()
     )
 
     @Volatile private var interpreter: Interpreter? = null
     @Volatile private var nnapiDelegate: NnApiDelegate? = null
     @Volatile private var loaded = false
     @Volatile private var outputSize = 0
+    @Volatile private var inputSize = INPUT_SIZE
+    @Volatile private var isQuantized = false  // FIX: Detect uint8 vs float32 model
 
     fun isLoaded(): Boolean = loaded
 
@@ -85,20 +83,28 @@ class AiDetector @Inject constructor(
                         val delegate = NnApiDelegate()
                         addDelegate(delegate)
                         nnapiDelegate = delegate
-                        Timber.d("$TAG NNAPI delegate enabled")
                     } catch (e: Throwable) {
-                        Timber.w(e, "$TAG NNAPI not available — CPU+XNNPACK fallback")
+                        Timber.w(e, "$TAG NNAPI not available")
                     }
                 }
             }
 
             synchronized(this) {
-                interpreter = Interpreter(buf, options)
-                outputSize = interpreter!!.getOutputTensor(0).shape()[1]
-                loaded = true
-            }
+                val interp = Interpreter(buf, options)
+                interpreter = interp
 
-            Timber.d("$TAG loaded — outputSize=$outputSize (${getModelType()})")
+                // FIX: Auto-detect input size and type from model
+                val inputTensor = interp.getInputTensor(0)
+                val shape = inputTensor.shape() // [1, H, W, 3]
+                inputSize = if (shape.size >= 3) shape[1] else INPUT_SIZE
+                isQuantized = inputTensor.dataType().toString().contains("UINT8", ignoreCase = true)
+
+                outputSize = interp.getOutputTensor(0).shape()[1]
+                loaded = true
+
+                Timber.d("$TAG loaded: input=${inputSize}x${inputSize}, " +
+                        "outputSize=$outputSize, quantized=$isQuantized, type=${getModelType()}")
+            }
             true
         } catch (e: Exception) {
             Timber.e(e, "$TAG load FAILED")
@@ -126,8 +132,8 @@ class AiDetector @Inject constructor(
 
     fun getModelType(): String = when (outputSize) {
         2 -> "2-class [safe, unsafe]"
-        5 -> "5-class [drawings, hentai, neutral, porn, sexy]"
-        else -> "$outputSize-class (unknown)"
+        5 -> "5-class NSFW [drawings, hentai, neutral, porn, sexy]"
+        else -> "$outputSize-class"
     }
 
     fun classify(bitmap: Bitmap, threshold: Float = 0.30f): AiResult {
@@ -146,13 +152,32 @@ class AiDetector @Inject constructor(
                 val t0 = System.currentTimeMillis()
                 interp.run(input, output)
                 val dt = System.currentTimeMillis() - t0
-                val result = parseOutput(output[0], capturedSize, threshold)
-                Timber.d("$TAG classify ${dt}ms — ${result.label}")
+
+                // FIX: Apply softmax if outputs don't sum to ~1 (raw logits)
+                val scores = normalizeScores(output[0])
+                val result = parseOutput(scores, capturedSize, threshold)
+                Timber.d("$TAG classify ${dt}ms — ${result.label} | raw=${scores.joinToString(",") { "%.2f".format(it) }}")
                 result
             } catch (e: Exception) {
                 Timber.e(e, "$TAG classify error")
                 AiResult(false, 0f, "Error: ${e.message}")
             }
+        }
+    }
+
+    // FIX: Apply softmax if scores look like logits (negative or sum != 1)
+    private fun normalizeScores(scores: FloatArray): FloatArray {
+        val sum = scores.sum()
+        val hasNegative = scores.any { it < 0f }
+        val needsSoftmax = hasNegative || sum < 0.5f || sum > 1.5f
+
+        return if (needsSoftmax) {
+            val maxVal = scores.max()
+            val exp = FloatArray(scores.size) { kotlin.math.exp((scores[it] - maxVal).toDouble()).toFloat() }
+            val expSum = exp.sum()
+            FloatArray(scores.size) { exp[it] / expSum }
+        } else {
+            scores
         }
     }
 
@@ -176,12 +201,13 @@ class AiDetector @Inject constructor(
         }
         val n = pixels.size
         val avg = brightness / (n * 3)
-        if (avg < 12) return true
+        if (avg < 8) return true  // Very dark only
 
         val varR = (sumR2.toDouble() / n) - (sumR.toDouble() / n).let { it * it }
         val varG = (sumG2.toDouble() / n) - (sumG.toDouble() / n).let { it * it }
         val varB = (sumB2.toDouble() / n) - (sumB.toDouble() / n).let { it * it }
-        return (varR + varG + varB).toFloat() < 120f
+        // FIX: Lower variance threshold — was skipping too many real frames
+        return (varR + varG + varB).toFloat() < 60f
     }
 
     private fun parseOutput(scores: FloatArray, size: Int, threshold: Float): AiResult {
@@ -194,38 +220,35 @@ class AiDetector @Inject constructor(
                     label = if (unsafe >= threshold)
                         "Unsafe (${(unsafe * 100).toInt()}%)"
                     else
-                        "Safe (${((1 - unsafe) * 100).toInt()}%)"
+                        "Safe (${((1 - unsafe) * 100).toInt()}%)",
+                    rawScores = scores
                 )
             }
             5 -> {
+                // NsfwJS order: [drawings, hentai, neutral, porn, sexy]
+                val drawings = scores[0]
                 val hentai = scores[1]
+                val neutral = scores[2]
                 val porn = scores[3]
                 val sexy = scores[4]
 
-                if (porn >= HARD_PORN_THRESHOLD ||
-                    hentai >= HARD_HENTAI_THRESHOLD ||
-                    sexy >= HARD_SEXY_THRESHOLD) {
-
-                    val dominant = when {
-                        porn >= HARD_PORN_THRESHOLD -> "porn"
-                        hentai >= HARD_HENTAI_THRESHOLD -> "hentai"
-                        else -> "sexy"
-                    }
-                    val score = maxOf(porn, hentai, sexy)
-                    return AiResult(
-                        isUnsafe = true,
-                        unsafeScore = score,
-                        label = "NSFW: $dominant (${(score * 100).toInt()}%)"
-                    )
+                // FIX: HARD blocks - ANY single NSFW class above its threshold = block
+                if (porn >= PORN_HARD_THRESHOLD) {
+                    return AiResult(true, porn,
+                        "🔞 PORN (${(porn * 100).toInt()}%)", scores)
+                }
+                if (hentai >= HENTAI_HARD_THRESHOLD) {
+                    return AiResult(true, hentai,
+                        "🔞 HENTAI (${(hentai * 100).toInt()}%)", scores)
+                }
+                if (sexy >= SEXY_HARD_THRESHOLD) {
+                    return AiResult(true, sexy,
+                        "⚠️ SEXY (${(sexy * 100).toInt()}%)", scores)
                 }
 
-                val sexyContrib = when {
-                    sexy > SEXY_HIGH_CUTOFF -> sexy * SEXY_HIGH_WEIGHT
-                    sexy > SEXY_MED_CUTOFF -> sexy * SEXY_MED_WEIGHT
-                    else -> sexy * SEXY_LOW_WEIGHT
-                }
-                val unsafeScore = (hentai + porn + sexyContrib).coerceIn(0f, 1f)
-                val isUnsafe = unsafeScore >= threshold
+                // FIX: Combined NSFW score - sum of all unsafe classes
+                val combinedUnsafe = (porn + hentai + (sexy * 0.7f)).coerceIn(0f, 1f)
+                val isUnsafe = combinedUnsafe >= threshold
 
                 val labels = listOf("drawings", "hentai", "neutral", "porn", "sexy")
                 val maxIdx = scores.indices.maxByOrNull { scores[it] } ?: 2
@@ -233,11 +256,12 @@ class AiDetector @Inject constructor(
 
                 AiResult(
                     isUnsafe = isUnsafe,
-                    unsafeScore = unsafeScore,
+                    unsafeScore = combinedUnsafe,
                     label = if (isUnsafe)
-                        "NSFW: $dominant (${(unsafeScore * 100).toInt()}%)"
+                        "NSFW: $dominant (${(combinedUnsafe * 100).toInt()}%)"
                     else
-                        "Safe: $dominant"
+                        "Safe: $dominant (n=${(neutral * 100).toInt()}%)",
+                    rawScores = scores
                 )
             }
             else -> {
@@ -245,37 +269,49 @@ class AiDetector @Inject constructor(
                 AiResult(
                     isUnsafe = unsafe >= threshold,
                     unsafeScore = unsafe,
-                    label = "Score: ${(unsafe * 100).toInt()}%"
+                    label = "Score: ${(unsafe * 100).toInt()}%",
+                    rawScores = scores
                 )
             }
         }
     }
 
+    // FIX: Support both quantized (uint8) and float32 models
     private fun bitmapToBuffer(src: Bitmap): ByteBuffer {
-        val bmp = if (src.width != INPUT_SIZE || src.height != INPUT_SIZE)
-            Bitmap.createScaledBitmap(src, INPUT_SIZE, INPUT_SIZE, false)
+        val targetSize = inputSize
+        val bmp = if (src.width != targetSize || src.height != targetSize)
+            Bitmap.createScaledBitmap(src, targetSize, targetSize, true) // FIX: bilinear filter
         else src
 
-        val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
-        bmp.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
+        val pixels = IntArray(targetSize * targetSize)
+        bmp.getPixels(pixels, 0, targetSize, 0, 0, targetSize, targetSize)
         if (bmp !== src) bmp.recycle()
 
+        val bytesPerChannel = if (isQuantized) 1 else 4
         val buf = ByteBuffer
-            .allocateDirect(INPUT_SIZE * INPUT_SIZE * 3 * 4)
+            .allocateDirect(targetSize * targetSize * 3 * bytesPerChannel)
             .apply { order(ByteOrder.nativeOrder()) }
 
-        val inv255 = 1f / 255f
-        for (p in pixels) {
-            buf.putFloat(((p shr 16) and 0xFF) * inv255)
-            buf.putFloat(((p shr 8) and 0xFF) * inv255)
-            buf.putFloat((p and 0xFF) * inv255)
+        if (isQuantized) {
+            // uint8 model: raw RGB bytes 0-255
+            for (p in pixels) {
+                buf.put(((p shr 16) and 0xFF).toByte())
+                buf.put(((p shr 8) and 0xFF).toByte())
+                buf.put((p and 0xFF).toByte())
+            }
+        } else {
+            // FIX: float32 model: normalize to [0, 1]
+            val inv255 = 1f / 255f
+            for (p in pixels) {
+                buf.putFloat(((p shr 16) and 0xFF) * inv255)
+                buf.putFloat(((p shr 8) and 0xFF) * inv255)
+                buf.putFloat((p and 0xFF) * inv255)
+            }
         }
         buf.rewind()
         return buf
     }
 
-    // FIX: Use RandomAccessFile + try-with-resources for FileChannel —
-    // the channel can be closed after mmap (the mapping survives)
     private fun mapFile(f: File): MappedByteBuffer {
         RandomAccessFile(f, "r").use { raf ->
             raf.channel.use { channel ->

@@ -9,13 +9,14 @@ import javax.inject.Singleton
 /**
  * RulesEngine — single authority for ALL block decisions.
  *
- * Priority order (immutable):
- *   1. OWN package     → always allow
- *   2. WHITELIST       → always allow
- *   3. BLOCKED apps    → block
- *   4. KEYWORD match   → block
- *   5. AI detection    → block
- *   6. Default         → allow
+ * Priority:
+ *   1. OWN package        → always allow
+ *   2. ESSENTIAL system   → always allow (launcher, systemui only)
+ *   3. WHITELIST          → always allow
+ *   4. BLOCKED apps       → block (INCLUDES Settings, DNS, etc. if user added them)
+ *   5. KEYWORD match      → block
+ *   6. AI detection       → block
+ *   7. Default            → allow
  */
 @Singleton
 class RulesEngine @Inject constructor() {
@@ -24,40 +25,42 @@ class RulesEngine @Inject constructor() {
         const val OUR_PACKAGE = "com.guardian.shield"
         private const val TAG = "Guardian_Rules"
 
-        private val SYSTEM_PACKAGES = setOf(
+        // FIX: Only ESSENTIAL system UI - everything else can be blocked
+        // Settings is NOT here so user can block it for tamper protection
+        private val ESSENTIAL_SYSTEM = setOf(
             "android",
             "com.android.systemui",
             "com.google.android.inputmethod.latin",
             "com.samsung.android.honeyboard",
             "com.sec.android.inputmethod",
             "com.touchtype.swiftkey",
-            "com.android.settings.intelligence",
-            "com.miui.msa.global"
+            "com.swiftkey.swiftkeyapp",
+            "com.miui.home",        // Xiaomi launcher
+            "com.sec.android.app.launcher", // Samsung launcher
+            "com.google.android.apps.nexuslauncher",
+            "com.android.launcher",
+            "com.android.launcher3",
+            "com.oneplus.launcher",
+            "net.oneplus.launcher"
         )
 
-        private val SYSTEM_PREFIXES = arrayOf(
-            "com.android.systemui.",
-            "com.oneplus.",
-            "com.nothing.launcher",
-            "com.samsung.android.app.taskbar"
+        private val ESSENTIAL_PREFIXES = arrayOf(
+            "com.android.systemui."
         )
     }
 
-    @Volatile private var blockedPackages: Set<String>     = emptySet()
+    @Volatile private var blockedPackages: Set<String> = emptySet()
     @Volatile private var whitelistedPackages: Set<String> = emptySet()
-    @Volatile private var activeKeywords: List<String>     = emptyList()
-    @Volatile private var isKeywordDetectionOn: Boolean    = true
-    @Volatile private var isProtectionEnabled: Boolean     = true
-    @Volatile private var isStrictMode: Boolean            = false
+    @Volatile private var activeKeywords: List<String> = emptyList()
+    @Volatile private var isKeywordDetectionOn: Boolean = true
+    @Volatile private var isProtectionEnabled: Boolean = true
+    @Volatile private var isStrictMode: Boolean = false
 
-    // FIX: Pre-compiled Regex for keyword matching — O(n) instead of O(n×m)
     @Volatile private var keywordPattern: Regex? = null
-
-    // ── Cache refresh ──────────────────────────────────────────────────
 
     fun refreshBlockedApps(packages: Set<String>) {
         blockedPackages = packages
-        Timber.d("$TAG blocked list refreshed: ${packages.size} apps")
+        Timber.d("$TAG blocked list refreshed: ${packages.size} apps -> $packages")
     }
 
     fun refreshWhitelistedApps(packages: Set<String>) {
@@ -67,7 +70,6 @@ class RulesEngine @Inject constructor() {
 
     fun refreshKeywords(keywords: List<String>) {
         activeKeywords = keywords.map { it.lowercase().trim() }
-        // FIX: Build combined Regex pattern — single pass instead of per-keyword contains()
         keywordPattern = if (keywords.isEmpty()) null
         else Regex(
             keywords.joinToString("|") { Regex.escape(it.lowercase().trim()) }
@@ -76,29 +78,23 @@ class RulesEngine @Inject constructor() {
     }
 
     fun setKeywordDetectionEnabled(enabled: Boolean) { isKeywordDetectionOn = enabled }
-    fun setProtectionEnabled(enabled: Boolean)        { isProtectionEnabled  = enabled }
-    fun setStrictMode(enabled: Boolean)               { isStrictMode         = enabled }
-
-    // ── Main evaluation ────────────────────────────────────────────────
+    fun setProtectionEnabled(enabled: Boolean) { isProtectionEnabled = enabled }
+    fun setStrictMode(enabled: Boolean) { isStrictMode = enabled }
 
     fun evaluateApp(packageName: String): DetectionResult {
         if (!isProtectionEnabled) return DetectionResult.Allow
 
-        // Rule 1: Own package
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
+        if (isEssentialSystem(packageName)) return DetectionResult.Allow
 
-        // Rule 2: System UI
-        if (isSystemPackage(packageName)) return DetectionResult.Allow
-
-        // Rule 3: Whitelist
         if (packageName in whitelistedPackages) {
-            Timber.d("$TAG ALLOW (whitelist): $packageName")
             return DetectionResult.Whitelist
         }
 
-        // Rule 4: Blocked app list
+        // FIX: Blocked list overrides everything except essential system
+        // This means Settings, DNS apps, etc. CAN be blocked if user adds them
         if (packageName in blockedPackages) {
-            Timber.d("$TAG BLOCK (app list): $packageName")
+            Timber.w("$TAG BLOCK (app list): $packageName")
             return DetectionResult.Block(BlockReason.APP_BLOCKED, packageName)
         }
 
@@ -106,18 +102,16 @@ class RulesEngine @Inject constructor() {
     }
 
     fun evaluateText(packageName: String, text: String): DetectionResult {
-        if (!isProtectionEnabled)    return DetectionResult.Allow
-        if (!isKeywordDetectionOn)   return DetectionResult.Allow
+        if (!isProtectionEnabled) return DetectionResult.Allow
+        if (!isKeywordDetectionOn) return DetectionResult.Allow
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
         if (packageName in whitelistedPackages) return DetectionResult.Whitelist
 
         val lower = text.lowercase()
-
-        // FIX: Single-pass Regex match instead of O(n×m) contains() loop
         val hit = keywordPattern?.find(lower)?.value
 
         return if (hit != null) {
-            Timber.d("$TAG BLOCK (keyword '$hit'): $packageName")
+            Timber.w("$TAG BLOCK (keyword '$hit'): $packageName")
             DetectionResult.Block(BlockReason.KEYWORD_DETECTED, hit)
         } else {
             DetectionResult.Allow
@@ -129,18 +123,18 @@ class RulesEngine @Inject constructor() {
         unsafeScore: Float,
         threshold: Float
     ): DetectionResult {
-        // FIX: Consistent priority order — own package and whitelist first
         if (packageName == OUR_PACKAGE) return DetectionResult.Allow
         if (packageName in whitelistedPackages) return DetectionResult.Whitelist
         if (!isProtectionEnabled) return DetectionResult.Allow
 
         return if (unsafeScore >= threshold) {
-            Timber.d("$TAG BLOCK (AI score=$unsafeScore): $packageName")
+            Timber.w("$TAG BLOCK (AI score=$unsafeScore >= $threshold): $packageName")
             DetectionResult.Block(
                 BlockReason.AI_DETECTED,
                 "${(unsafeScore * 100).toInt()}% unsafe"
             )
         } else {
+            Timber.d("$TAG AI safe: $packageName score=$unsafeScore")
             DetectionResult.Allow
         }
     }
@@ -148,12 +142,17 @@ class RulesEngine @Inject constructor() {
     fun isWhitelisted(packageName: String): Boolean =
         packageName == OUR_PACKAGE || packageName in whitelistedPackages
 
-    // FIX: isSystemUi() was redundant alias — replaced with isSystemPackage()
-    fun isSystemPackage(pkg: String): Boolean {
-        if (pkg in SYSTEM_PACKAGES) return true
-        SYSTEM_PREFIXES.forEach { if (pkg.startsWith(it)) return true }
+    // FIX: Renamed - only ESSENTIAL apps that can never be blocked (launcher, keyboard, systemui)
+    fun isEssentialSystem(pkg: String): Boolean {
+        if (pkg in ESSENTIAL_SYSTEM) return true
+        ESSENTIAL_PREFIXES.forEach { if (pkg.startsWith(it)) return true }
         return false
     }
+      
+    // Kept for backward compat with service code
+    fun isSystemPackage(pkg: String): Boolean = isEssentialSystem(pkg)
 
     fun isProtectionActive(): Boolean = isProtectionEnabled
+    // Helper for service code that needs OUR_PACKAGE constant
+fun OUR_PACKAGE_HOLDER(): String = OUR_PACKAGE
 }
