@@ -116,13 +116,16 @@ class GuardianAccessibilityService : AccessibilityService() {
             return
         }
 
-        // এটা নতুন:
-serviceScope.launch {
-    loadRulesIntoEngine()
-    loadSettings()           // FIX: await settings first
-    blockingEngine.loadSettings()
-    reloadAiModel()          // FIX: always call — reloadAiModel() checks aiEnabled internally
-}
+        // FIX: await loadSettings() before checking aiEnabled — race condition fix
+        serviceScope.launch {
+            loadRulesIntoEngine()
+            loadSettings()
+            blockingEngine.loadSettings()
+            reloadAiModel() // FIX: always call — reloadAiModel() checks aiEnabled internally
+        }
+        registerReceivers()
+        startForegroundWatchdog()
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!isInjected) return
@@ -139,8 +142,6 @@ serviceScope.launch {
                         consecutiveSafeFrames.set(0)
                         blurManager?.hideBlur()
 
-                        // FIX: Trigger AI scan for ANY app (not just "risky" list)
-                        // because porn can be viewed via ANY browser/gallery/file manager
                         if (aiEnabled && aiDetector.isLoaded() &&
                             !rulesEngine.isWhitelisted(pkg) &&
                             !rulesEngine.isEssentialSystem(pkg) &&
@@ -159,7 +160,6 @@ serviceScope.launch {
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
                 debounceTextScan(pkg)
 
-                // FIX: AI scan on content change for ALL apps
                 if (aiEnabled &&
                     aiDetector.isLoaded() &&
                     !rulesEngine.isWhitelisted(pkg) &&
@@ -329,7 +329,6 @@ serviceScope.launch {
 
             val w = full.width
             val h = full.height
-            // FIX: Smaller crop - keep more of the image for better detection
             val topCut = (h * 0.05f).toInt()
             val botCut = (h * 0.05f).toInt()
             val cropH = h - topCut - botCut
