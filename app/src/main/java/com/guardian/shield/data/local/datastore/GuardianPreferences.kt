@@ -3,6 +3,7 @@ package com.guardian.shield.data.local.datastore
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -11,7 +12,9 @@ import javax.inject.Singleton
 private val Context.dataStore by preferencesDataStore(name = "guardian_prefs")
 
 @Singleton
-class GuardianPreferences @Inject constructor(private val context: Context) {
+class GuardianPreferences @Inject constructor(
+    @ApplicationContext private val context: Context  // ✅ @ApplicationContext যোগ
+) {
 
     companion object {
         val KEY_KEYWORD_FILTER = booleanPreferencesKey("keyword_filter")
