@@ -72,3 +72,4 @@ class RulesEngine @Inject constructor(
         if (whitelistSet.contains(pkg)) return false
         return true
     }
+}
