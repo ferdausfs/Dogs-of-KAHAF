@@ -5,46 +5,21 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * PIN management — all PIN logic lives here.
- * PIN is NEVER stored in plain text.
- * Storage: SHA-256 hash in EncryptedSharedPreferences.
- */
 @Singleton
-class PinManager @Inject constructor(
-    private val secureStorage: SecureStorage
-) {
-    companion object {
-        const val MIN_PIN_LENGTH = 4
-        const val MAX_PIN_LENGTH = 8
-    }
+class PinManager @Inject constructor(private val storage: SecureStorage) {
+    companion object { private const val KEY_PIN_HASH = "pin_hash" }
 
-    fun isPinSet(): Boolean = secureStorage.isPinSet()
+    fun isPinSet(): Boolean = storage.contains(KEY_PIN_HASH)
 
-    /**
-     * Save a new PIN (hashed).
-     * Returns false if PIN is too short/long.
-     */
-    fun savePin(pin: String): Boolean {
-        if (pin.length < MIN_PIN_LENGTH || pin.length > MAX_PIN_LENGTH) return false
-        if (!pin.all { it.isDigit() }) return false
-        secureStorage.savePinHash(hash(pin))
-        return true
-    }
+    fun setPin(pin: String) { storage.putString(KEY_PIN_HASH, hash(pin)) }
 
-    /**
-     * Verify PIN against stored hash.
-     */
-    fun verifyPin(input: String): Boolean {
-        val stored = secureStorage.getPinHash() ?: return false
-        return hash(input) == stored
-    }
+    fun verifyPin(pin: String): Boolean =
+        storage.getString(KEY_PIN_HASH)?.let { it == hash(pin) } ?: false
 
-    fun clearPin() = secureStorage.clearPin()
+    fun clearPin() = storage.remove(KEY_PIN_HASH)
 
-    private fun hash(value: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val bytes  = digest.digest(value.toByteArray(Charsets.UTF_8))
+    private fun hash(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
     }
 }

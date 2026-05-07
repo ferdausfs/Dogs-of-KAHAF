@@ -1,20 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    notificationTimeout=16ms (one frame) for near-instant event delivery.
-    FIX: typeViewScrolled removed — causes excessive events on scroll (battery drain).
-    FIX: flagRequestEnhancedWebAccessibility removed — deprecated API 26+.
-    FIX: canRequestFilterKeyEvents added for key event interception.
-    FIX: settingsActivity added for direct navigation from accessibility settings.
--->
-<accessibility-service
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
     android:canRetrieveWindowContent="true"
-    android:canPerformGestures="true"
-    android:canTakeScreenshot="true"
-    android:canRequestFilterKeyEvents="true"
-    android:notificationTimeout="16"
-    android:settingsActivity="com.guardian.shield.ui.settings.SettingsActivity"
-    android:description="@string/accessibility_service_description" />
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.guardian.shield.ui.settings.SettingsActivity" />

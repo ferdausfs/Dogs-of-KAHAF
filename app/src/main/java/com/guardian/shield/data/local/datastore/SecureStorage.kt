@@ -4,98 +4,23 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import dagger.hilt.android.qualifiers.ApplicationContext
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Secure storage for sensitive data (PIN hash + salt).
- * Uses EncryptedSharedPreferences backed by Android Keystore.
- */
 @Singleton
-class SecureStorage @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    companion object {
-        private const val PREFS_NAME = "guardian_secure"
-        private const val KEY_PIN_HASH = "pin_hash"
-        private const val KEY_PIN_SET = "pin_set"
-        private const val KEY_SALT = "pin_salt"
-        private const val TAG = "SecureStorage"
-    }
+class SecureStorage @Inject constructor(context: Context) {
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
 
-    private val prefs: SharedPreferences? by lazy { buildPrefs() }
+    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
+        context, "guardian_secure", masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
-    private fun buildPrefs(): SharedPreferences? {
-        return try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                context,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG EncryptedSharedPreferences init failed — no fallback")
-            null
-        }
-    }
-
-    fun isPinSet(): Boolean = try {
-        prefs?.getBoolean(KEY_PIN_SET, false) ?: false
-    } catch (e: Exception) {
-        Timber.e(e, "$TAG isPinSet failed")
-        false
-    }
-
-    fun getPinHash(): String? = try {
-        prefs?.getString(KEY_PIN_HASH, null)
-    } catch (e: Exception) {
-        Timber.e(e, "$TAG getPinHash failed")
-        null
-    }
-
-    fun savePinHash(hash: String) {
-        try {
-            prefs?.edit()
-                ?.putString(KEY_PIN_HASH, hash)
-                ?.putBoolean(KEY_PIN_SET, true)
-                ?.apply()
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG savePinHash failed")
-        }
-    }
-
-    fun getSalt(): String? = try {
-        prefs?.getString(KEY_SALT, null)
-    } catch (e: Exception) {
-        Timber.e(e, "$TAG getSalt failed")
-        null
-    }
-
-    fun saveSalt(salt: String) {
-        try {
-            prefs?.edit()
-                ?.putString(KEY_SALT, salt)
-                ?.apply()
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG saveSalt failed")
-        }
-    }
-
-    fun clearPin() {
-        try {
-            prefs?.edit()
-                ?.remove(KEY_PIN_HASH)
-                ?.remove(KEY_PIN_SET)
-                ?.remove(KEY_SALT)
-                ?.apply()
-        } catch (e: Exception) {
-            Timber.e(e, "$TAG clearPin failed")
-        }
-    }
+    fun putString(key: String, value: String) = prefs.edit().putString(key, value).apply()
+    fun getString(key: String): String? = prefs.getString(key, null)
+    fun remove(key: String) = prefs.edit().remove(key).apply()
+    fun contains(key: String) = prefs.contains(key)
 }

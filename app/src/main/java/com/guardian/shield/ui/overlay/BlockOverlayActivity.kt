@@ -1,14 +1,12 @@
 package com.guardian.shield.ui.overlay
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.view.KeyEvent
-import android.view.WindowManager
-import androidx.activity.OnBackPressedCallback
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.appcompat.app.AppCompatActivity
+import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
-import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -16,84 +14,47 @@ import dagger.hilt.android.AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_PKG        = "pkg"
-        const val EXTRA_APP_NAME   = "app_name"
-        const val EXTRA_REASON     = "reason"
-        const val EXTRA_DETAIL     = "detail"
-        const val EXTRA_DELAY_SECS = "delay_seconds"
+        const val EXTRA_PACKAGE = "extra_pkg"
+        const val EXTRA_REASON = "extra_reason"
+        const val EXTRA_TERM = "extra_term"
     }
 
     private lateinit var binding: ActivityBlockOverlayBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
-        }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        vibrate()
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() { /* swallow — user must use PIN */ }
-        })
+        val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: "unknown"
+        val term = intent.getStringExtra(EXTRA_TERM)
+        binding.tvBlockedPackage.text = pkg
+        binding.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
 
-        populateContent()
-        setupButtons()
-    }
-
-    private fun populateContent() {
-        val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: "App"
-        val reason  = intent.getStringExtra(EXTRA_REASON)   ?: BlockReason.APP_BLOCKED.name
-        val detail  = intent.getStringExtra(EXTRA_DETAIL)   ?: ""
-
-        binding.tvBlockedApp.text  = appName
-        binding.tvBlockMessage.text = "Blocked for your protection"
-
-        // FIX: enum valueOf instead of string comparison — safe against renames
-        val blockReason = try {
-            BlockReason.valueOf(reason)
-        } catch (_: Exception) { null }
-
-        binding.tvBlockReason.text = when (blockReason) {
-            BlockReason.APP_BLOCKED      -> "📵 This app is on your blocked list"
-            BlockReason.KEYWORD_DETECTED -> "🔤 Blocked keyword detected: \"$detail\""
-            BlockReason.AI_DETECTED      -> "🤖 Unsafe content detected ($detail)"
-            null                         -> "⚠️ Content violation"
+        binding.btnHome.setOnClickListener {
+            val home = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(home); finish()
         }
-    }
-
-    private fun setupButtons() {
-        binding.btnUnderstand.setOnClickListener {
-            val delaySecs = intent.getIntExtra(EXTRA_DELAY_SECS, 30)
-            startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                putExtra(EXTRA_PKG,              intent.getStringExtra(EXTRA_PKG) ?: "")
-                putExtra(EXTRA_APP_NAME,         intent.getStringExtra(EXTRA_APP_NAME) ?: "")
-                // FIX: Use constant instead of hardcoded string
-                putExtra(DelayUnlockActivity.EXTRA_DELAY_SECS, delaySecs)
-            })
+        binding.btnRequestUnlock.setOnClickListener {
+            startActivity(Intent(this, DelayUnlockActivity::class.java))
             finish()
         }
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // FIX: HOME and APP_SWITCH cannot be intercepted by Activities —
-        // removed dead code. Only BACK and MENU can be swallowed here.
-        return when (keyCode) {
-            KeyEvent.KEYCODE_BACK,
-            KeyEvent.KEYCODE_MENU -> true
-            else -> super.onKeyDown(keyCode, event)
-        }
+    @Suppress("DEPRECATION")
+    private fun vibrate() = runCatching {
+        val v = if (android.os.Build.VERSION.SDK_INT >= 31)
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        else getSystemService(VIBRATOR_SERVICE) as Vibrator
+        v.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
     }
-    // FIX: onUserLeaveHint() dead code removed
+
+    @Suppress("MissingSuperCall")
+    override fun onBackPressed() { /* prevent dismissal */ }
 }

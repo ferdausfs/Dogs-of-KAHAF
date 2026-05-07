@@ -1,143 +1,58 @@
 package com.guardian.shield.service.detection
 
+import android.content.Context
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
-import timber.log.Timber
+import com.guardian.shield.domain.usecase.GetAllAppRulesSyncUseCase
+import com.guardian.shield.domain.usecase.GetAllKeywordsSyncUseCase
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class RulesEngine @Inject constructor() {
+class RulesEngine @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val getApps: GetAllAppRulesSyncUseCase,
+    private val getKws: GetAllKeywordsSyncUseCase
+) {
+    private val mutex = Mutex()
+    private val systemUiPackages = setOf(
+        "com.android.systemui", "com.google.android.inputmethod.latin",
+        "com.android.launcher", "com.google.android.apps.nexuslauncher",
+        "com.android.settings"
+    )
 
-    companion object {
-        const val OUR_PACKAGE = "com.guardian.shield"
-        private const val TAG = "Guardian_Rules"
+    @Volatile private var blockedSet: Set<String> = emptySet()
+    @Volatile private var whitelistSet: Set<String> = emptySet()
+    @Volatile private var keywords: List<Pair<String, Boolean>> = emptyList()
 
-        private val ESSENTIAL_SYSTEM = setOf(
-            "android",
-            "com.android.systemui",
-            "com.google.android.inputmethod.latin",
-            "com.samsung.android.honeyboard",
-            "com.sec.android.inputmethod",
-            "com.touchtype.swiftkey",
-            "com.swiftkey.swiftkeyapp",
-            "com.miui.home",
-            "com.sec.android.app.launcher",
-            "com.google.android.apps.nexuslauncher",
-            "com.android.launcher",
-            "com.android.launcher3",
-            "com.oneplus.launcher",
-            "net.oneplus.launcher"
-        )
-
-        private val ESSENTIAL_PREFIXES = arrayOf(
-            "com.android.systemui."
-        )
+    suspend fun reload() = mutex.withLock {
+        val apps = getApps()
+        blockedSet = apps.filter { it.isBlocked && !it.isWhitelisted }.map { it.packageName }.toSet()
+        whitelistSet = apps.filter { it.isWhitelisted }.map { it.packageName }.toSet()
+        keywords = getKws().map { it.keyword to it.isRegex }
     }
 
-    @Volatile private var blockedPackages: Set<String> = emptySet()
-    @Volatile private var whitelistedPackages: Set<String> = emptySet()
-    @Volatile private var activeKeywords: List<String> = emptyList()
-    @Volatile private var isKeywordDetectionOn: Boolean = true
-    @Volatile private var isProtectionEnabled: Boolean = true
-    @Volatile private var isStrictMode: Boolean = false
-
-    @Volatile private var keywordPattern: Regex? = null
-
-    fun refreshBlockedApps(packages: Set<String>) {
-        blockedPackages = packages
-        Timber.d("$TAG blocked list refreshed: ${packages.size} apps -> $packages")
-    }
-
-    fun refreshWhitelistedApps(packages: Set<String>) {
-        whitelistedPackages = packages
-        Timber.d("$TAG whitelist refreshed: ${packages.size} apps")
-    }
-
-    fun refreshKeywords(keywords: List<String>) {
-        activeKeywords = keywords.map { it.lowercase().trim() }
-        // CRITICAL FIX: Added word-boundary guards (?<!\w) and (?!\w)
-        // Without this, keyword "sex" would also block "Sussex", "Essex" etc.
-        // Now only exact word matches trigger a block.
-        keywordPattern = if (keywords.isEmpty()) null
-        else Regex(
-            keywords.joinToString("|") { "(?i)(?<![\\w])${Regex.escape(it.lowercase().trim())}(?![\\w])" }
-        )
-        Timber.d("$TAG keywords refreshed: ${keywords.size} keywords")
-    }
-
-    fun setKeywordDetectionEnabled(enabled: Boolean) { isKeywordDetectionOn = enabled }
-    fun setProtectionEnabled(enabled: Boolean) { isProtectionEnabled = enabled }
-    fun setStrictMode(enabled: Boolean) { isStrictMode = enabled }
-
-    fun evaluateApp(packageName: String): DetectionResult {
-        if (!isProtectionEnabled) return DetectionResult.Allow
-
-        if (packageName == OUR_PACKAGE) return DetectionResult.Allow
-        if (isEssentialSystem(packageName)) return DetectionResult.Allow
-
-        if (packageName in whitelistedPackages) {
-            return DetectionResult.Whitelist
-        }
-
-        if (packageName in blockedPackages) {
-            Timber.w("$TAG BLOCK (app list): $packageName")
-            return DetectionResult.Block(BlockReason.APP_BLOCKED, packageName)
-        }
-
+    fun evaluatePackage(pkg: String): DetectionResult {
+        if (pkg == context.packageName) return DetectionResult.Allow
+        if (systemUiPackages.any { pkg.startsWith(it) }) return DetectionResult.Allow
+        if (whitelistSet.contains(pkg)) return DetectionResult.Allow
+        if (blockedSet.contains(pkg)) return DetectionResult.Block(BlockReason.APP_BLOCKED, pkg)
         return DetectionResult.Allow
     }
 
-    fun evaluateText(packageName: String, text: String): DetectionResult {
-        if (!isProtectionEnabled) return DetectionResult.Allow
-        if (!isKeywordDetectionOn) return DetectionResult.Allow
-        if (packageName == OUR_PACKAGE) return DetectionResult.Allow
-        if (packageName in whitelistedPackages) return DetectionResult.Whitelist
-
-        val lower = text.lowercase()
-        val hit = keywordPattern?.find(lower)?.value
-
-        return if (hit != null) {
-            Timber.w("$TAG BLOCK (keyword '$hit'): $packageName")
-            DetectionResult.Block(BlockReason.KEYWORD_DETECTED, hit)
-        } else {
-            DetectionResult.Allow
+    fun evaluateText(text: CharSequence?): DetectionResult {
+        if (text.isNullOrBlank() || keywords.isEmpty()) return DetectionResult.Allow
+        val lower = text.toString().lowercase()
+        for ((kw, isRegex) in keywords) {
+            val match = if (isRegex) runCatching { Regex(kw).containsMatchIn(lower) }.getOrDefault(false)
+                        else lower.contains(kw)
+            if (match) return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
         }
+        return DetectionResult.Allow
     }
 
-    fun evaluateAiResult(
-        packageName: String,
-        unsafeScore: Float,
-        threshold: Float
-    ): DetectionResult {
-        if (packageName == OUR_PACKAGE) return DetectionResult.Allow
-        if (packageName in whitelistedPackages) return DetectionResult.Whitelist
-        if (!isProtectionEnabled) return DetectionResult.Allow
-
-        return if (unsafeScore >= threshold) {
-            Timber.w("$TAG BLOCK (AI score=$unsafeScore >= $threshold): $packageName")
-            DetectionResult.Block(
-                BlockReason.AI_DETECTED,
-                "${(unsafeScore * 100).toInt()}% unsafe"
-            )
-        } else {
-            Timber.d("$TAG AI safe: $packageName score=$unsafeScore")
-            DetectionResult.Allow
-        }
-    }
-
-    fun isWhitelisted(packageName: String): Boolean =
-        packageName == OUR_PACKAGE || packageName in whitelistedPackages
-
-    fun isEssentialSystem(pkg: String): Boolean {
-        if (pkg in ESSENTIAL_SYSTEM) return true
-        ESSENTIAL_PREFIXES.forEach { if (pkg.startsWith(it)) return true }
-        return false
-    }
-
-    fun isSystemPackage(pkg: String): Boolean = isEssentialSystem(pkg)
-
-    fun isProtectionActive(): Boolean = isProtectionEnabled
-
-    fun OUR_PACKAGE_HOLDER(): String = OUR_PACKAGE
+    fun isWhitelisted(pkg: String): Boolean = whitelistSet.contains(pkg)
 }
