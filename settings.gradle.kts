@@ -12,6 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = "GuardianShield"
-include ':app'
+include(":app")

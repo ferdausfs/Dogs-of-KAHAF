@@ -1,28 +1,15 @@
-# Built outputs
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-
-# APK outputs (don't commit built APKs)
+app/build/
 *.apk
 *.aab
-
-# Keystore (NEVER commit)
-*.jks
+keystore.jks
 *.keystore
-
-# Android Studio / IntelliJ
-*.iml
-.idea/
