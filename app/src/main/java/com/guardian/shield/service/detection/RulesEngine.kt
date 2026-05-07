@@ -17,6 +17,11 @@ class RulesEngine @Inject constructor(
     private val getApps: GetAllAppRulesSyncUseCase,
     private val getKws: GetAllKeywordsSyncUseCase
 ) {
+    companion object {
+        // Broadcast this action whenever rules/keywords change so the service reloads its cache
+        const val ACTION_RULES_CHANGED = "com.guardian.shield.ACTION_RULES_CHANGED"
+    }
+
     private val mutex = Mutex()
     private val systemUiPackages = setOf(
         "com.android.systemui", "com.google.android.inputmethod.latin",
@@ -30,15 +35,16 @@ class RulesEngine @Inject constructor(
 
     suspend fun reload() = mutex.withLock {
         val apps = getApps()
-        blockedSet = apps.filter { it.isBlocked && !it.isWhitelisted }.map { it.packageName }.toSet()
+        blockedSet  = apps.filter { it.isBlocked && !it.isWhitelisted }.map { it.packageName }.toSet()
         whitelistSet = apps.filter { it.isWhitelisted }.map { it.packageName }.toSet()
-        keywords = getKws().map { it.keyword to it.isRegex }
+        keywords    = getKws().map { it.keyword to it.isRegex }
     }
 
+    /** Whitelist → system UI → own pkg → blocked list → allow */
     fun evaluatePackage(pkg: String): DetectionResult {
         if (pkg == context.packageName) return DetectionResult.Allow
         if (systemUiPackages.any { pkg.startsWith(it) }) return DetectionResult.Allow
-        if (whitelistSet.contains(pkg)) return DetectionResult.Allow
+        if (whitelistSet.contains(pkg)) return DetectionResult.Allow        // ← allowlist wins
         if (blockedSet.contains(pkg)) return DetectionResult.Block(BlockReason.APP_BLOCKED, pkg)
         return DetectionResult.Allow
     }
