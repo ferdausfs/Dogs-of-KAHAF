@@ -282,11 +282,13 @@ class AiDetector @Inject constructor(
                 buf.put((p and 0xFF).toByte())
             }
         } else {
-            val inv255 = 1f / 255f
+            // FIX: [-1,1] normalization — Keras MobileNet preprocess_input standard
+            // Previous [0,1] (÷255) gave completely wrong predictions
+            val inv127_5 = 1f / 127.5f
             for (p in pixels) {
-                buf.putFloat(((p shr 16) and 0xFF) * inv255)
-                buf.putFloat(((p shr 8) and 0xFF) * inv255)
-                buf.putFloat((p and 0xFF) * inv255)
+                buf.putFloat(((p shr 16) and 0xFF) * inv127_5 - 1f)
+                buf.putFloat(((p shr 8) and 0xFF) * inv127_5 - 1f)
+                buf.putFloat((p and 0xFF) * inv127_5 - 1f)
             }
         }
         buf.rewind()

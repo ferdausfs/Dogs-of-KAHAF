@@ -229,8 +229,8 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private suspend fun reloadAiModel() {
         try {
-            aiEnabled = prefs.isAiDetectionEnabled.first()
-            aiThreshold = prefs.aiThreshold.first()
+            aiEnabled    = prefs.isAiDetectionEnabled.first()
+            aiThreshold  = prefs.aiThreshold.first()
             aiIntervalMs = prefs.aiIntervalMs.first()
         } catch (e: Exception) { Timber.e(e, "$TAG reloadAi settings") }
 
@@ -240,17 +240,25 @@ class GuardianAccessibilityService : AccessibilityService() {
             blurManager?.hideBlur()
             return
         }
-        if (!AiDetector.isModelAvailable(applicationContext)) {
-            Timber.w("$TAG AI enabled but no model file")
-            stopAiScanLoop()
-            return
+
+        // FIX: Retry loop — GuardianApplication copies model from assets on a
+        // background thread. Service may start before copy finishes.
+        var ok = false
+        repeat(8) { attempt ->
+            if (ok) return@repeat
+            if (AiDetector.isModelAvailable(applicationContext)) {
+                ok = withContext(Dispatchers.IO) { aiDetector.reload() }
+                Timber.d("$TAG AI model load attempt ${attempt + 1}: $ok")
+            } else {
+                Timber.w("$TAG model not ready, attempt ${attempt + 1}/8 — wait 2s")
+                delay(2_000)
+            }
         }
 
-        val ok = withContext(Dispatchers.IO) { aiDetector.reload() }
-        Timber.d("$TAG AI model reloaded: $ok")
         if (ok && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startAiScanLoop()
         } else {
+            if (!ok) Timber.e("$TAG AI model failed to load after all retries")
             stopAiScanLoop()
         }
     }
