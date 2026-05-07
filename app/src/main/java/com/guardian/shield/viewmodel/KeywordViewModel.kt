@@ -20,8 +20,10 @@ import javax.inject.Inject
 class KeywordViewModel @Inject constructor(
     @ApplicationContext private val context: Context,   // FIX: need context for broadcast
     getKeywords: GetKeywordsUseCase,
-    private val add: AddKeywordUseCase,
-    private val delete: DeleteKeywordUseCase
+    // FIX: renamed to avoid shadowing fun add() and fun delete() below
+    //      (was causing "recursive problem" Kotlin type error → build failure)
+    private val addUseCase: AddKeywordUseCase,
+    private val deleteUseCase: DeleteKeywordUseCase
 ) : ViewModel() {
 
     val keywords: StateFlow<List<KeywordRule>> = getKeywords()
@@ -29,14 +31,14 @@ class KeywordViewModel @Inject constructor(
 
     fun add(text: String, isRegex: Boolean = false) = viewModelScope.launch {
         if (text.isNotBlank()) {
-            add(text, isRegex)
-            notifyRulesChanged()  // FIX: refresh service cache
+            addUseCase(text, isRegex)
+            notifyRulesChanged()
         }
     }
 
     fun delete(id: Long) = viewModelScope.launch {
-        delete(id)
-        notifyRulesChanged()      // FIX: refresh service cache
+        deleteUseCase(id)
+        notifyRulesChanged()
     }
 
     private fun notifyRulesChanged() {

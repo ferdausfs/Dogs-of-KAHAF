@@ -72,9 +72,11 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         when (val result = rulesEngine.evaluatePackage(pkg)) {
             is DetectionResult.Block -> blockingEngine.block(pkg, result.reason, result.detail)
-            DetectionResult.Allow    -> {
-                // FIX: run AI screenshot check on every new foreground window (API 30+)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            DetectionResult.Allow -> {
+                // FIX: only run AI check on packages that are actually blockable
+                // (skip system UI, own package, and whitelisted apps)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    && rulesEngine.canBlock(pkg)) {
                     triggerAiCheck(pkg)
                 }
             }
@@ -82,8 +84,8 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun handleContentChange(pkg: String, event: AccessibilityEvent) {
-        if (rulesEngine.isWhitelisted(pkg)) return
-        if (pkg == packageName) return
+        // FIX: use canBlock() — covers whitelisted, system UI, and own package in one call
+        if (!rulesEngine.canBlock(pkg)) return
 
         val now = System.currentTimeMillis()
         if (now - lastTextScanMs < 600) return
@@ -96,7 +98,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                     blockingEngine.block(pkg, BlockReason.KEYWORD_MATCH, result.detail)
                 }
                 DetectionResult.Allow -> {
-                    // FIX: also run periodic AI check on content changes
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         val aiNow = System.currentTimeMillis()
                         if (aiNow - lastAiScanMs >= 3_000L) {
@@ -177,8 +178,12 @@ class GuardianAccessibilityService : AccessibilityService() {
             node.text?.let { sb.append(it).append(' ') }
             node.contentDescription?.let { sb.append(it).append(' ') }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
+            // FIX: recycle every node after we're done with it to avoid memory pressure
+            if (node !== root) node.recycle()
             nodes++
         }
+        // Drain any remaining un-visited nodes and recycle them
+        queue.forEach { if (it !== root) it.recycle() }
         return sb.toString().takeIf { it.isNotBlank() }
     }
 

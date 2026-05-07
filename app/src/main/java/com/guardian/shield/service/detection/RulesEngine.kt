@@ -61,4 +61,14 @@ class RulesEngine @Inject constructor(
     }
 
     fun isWhitelisted(pkg: String): Boolean = whitelistSet.contains(pkg)
-}
+
+    /**
+     * Returns true if it is safe to run any blocking check (AI or keyword) on this package.
+     * False for: our own app, system UI, or explicitly whitelisted packages.
+     */
+    fun canBlock(pkg: String): Boolean {
+        if (pkg == context.packageName) return false
+        if (systemUiPackages.any { pkg.startsWith(it) }) return false
+        if (whitelistSet.contains(pkg)) return false
+        return true
+    }

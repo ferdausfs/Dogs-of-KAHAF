@@ -31,20 +31,40 @@ class AiDetector @Inject constructor(
         .add(ResizeOp(INPUT_SIZE, INPUT_SIZE, ResizeOp.ResizeMethod.BILINEAR))
         .build()
 
-    fun isModelAvailable(): Boolean = File(context.filesDir, MODEL_FILE).exists()
+    fun isModelAvailable(): Boolean =
+        File(context.filesDir, MODEL_FILE).exists() || modelExistsInAssets()
+
+    private fun modelExistsInAssets(): Boolean = runCatching {
+        context.assets.open(MODEL_FILE).use { true }
+    }.getOrDefault(false)
 
     @Synchronized
     fun ensureLoaded(): Boolean {
         if (interpreter != null) return true
-        val file = File(context.filesDir, MODEL_FILE)
-        if (!file.exists()) return false
+        // Priority 1: user-provided model in filesDir (allows runtime model updates)
+        val externalFile = File(context.filesDir, MODEL_FILE)
+        val buffer: ByteBuffer? = when {
+            externalFile.exists() -> runCatching {
+                val bytes = externalFile.readBytes()
+                ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
+                    .also { it.put(bytes); it.rewind() }
+            }.onFailure { Timber.e(it, "Failed to read model from filesDir") }.getOrNull()
+
+            // Priority 2: bundled model in assets (shipped with APK)
+            else -> runCatching {
+                context.assets.open(MODEL_FILE).use { stream ->
+                    val bytes = stream.readBytes()
+                    ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
+                        .also { it.put(bytes); it.rewind() }
+                }
+            }.onFailure { Timber.e(it, "Failed to read model from assets") }.getOrNull()
+        }
+        if (buffer == null) return false
         return runCatching {
-            val bytes = file.readBytes()
-            val buffer = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
-            buffer.put(bytes); buffer.rewind()
             interpreter = Interpreter(buffer)
+            Timber.i("TFLite model loaded successfully")
             true
-        }.onFailure { Timber.e(it, "Failed to load TFLite model") }.getOrDefault(false)
+        }.onFailure { Timber.e(it, "Failed to create TFLite interpreter") }.getOrDefault(false)
     }
 
     suspend fun isUnsafe(bitmap: Bitmap): Boolean {
