@@ -1,14 +1,11 @@
 package com.guardian.shield.viewmodel
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.guardian.shield.domain.model.AppRule
 import com.guardian.shield.domain.usecase.*
-import com.guardian.shield.service.detection.RulesEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -52,23 +49,14 @@ class AppListViewModel @Inject constructor(
             delete(app.pkg)
         }
         load()
-        notifyRulesChanged()  // FIX: tell the accessibility service to refresh its cache
     }
 
     fun toggleWhitelist(app: InstalledApp) = viewModelScope.launch {
         val curr = app.rule
         upsert(AppRule(
             packageName = app.pkg, appName = app.name,
-            isBlocked = false,                              // always clear block when whitelisting
-            isWhitelisted = !(curr?.isWhitelisted ?: false)
+            isBlocked = false, isWhitelisted = !(curr?.isWhitelisted ?: false)
         ))
         load()
-        notifyRulesChanged()  // FIX: tell the accessibility service to refresh its cache
-    }
-
-    /** Sends a LocalBroadcast so GuardianAccessibilityService reloads its in-memory rule cache. */
-    private fun notifyRulesChanged() {
-        LocalBroadcastManager.getInstance(context)
-            .sendBroadcast(Intent(RulesEngine.ACTION_RULES_CHANGED))
     }
 }
