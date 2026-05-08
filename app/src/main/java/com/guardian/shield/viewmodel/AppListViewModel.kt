@@ -19,6 +19,13 @@ import javax.inject.Inject
 
 data class InstalledApp(val pkg: String, val name: String, val rule: AppRule?)
 
+/**
+ * FIX-LOG (vs original):
+ *  - BUG #11: toggleBlock used to delete the row when the app was already
+ *    blocked, which also wiped the whitelist flag. We now keep the row and
+ *    just flip isBlocked, so block/whitelist flags are independent.
+ *  - Skip our own package from the displayed list (was confusingly listed).
+ */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -38,6 +45,7 @@ class AppListViewModel @Inject constructor(
             val pm = context.packageManager
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+                .filter { it.packageName != context.packageName }   // hide self
                 .map { InstalledApp(it.packageName, pm.getApplicationLabel(it).toString(), rules[it.packageName]) }
                 .sortedBy { it.name.lowercase() }
         }
@@ -46,27 +54,40 @@ class AppListViewModel @Inject constructor(
 
     fun toggleBlock(app: InstalledApp) = viewModelScope.launch {
         val curr = app.rule
-        if (curr == null || (!curr.isBlocked && !curr.isWhitelisted)) {
-            upsert(AppRule(packageName = app.pkg, appName = app.name, isBlocked = true))
-        } else if (curr.isBlocked) {
+        val nextBlocked = !(curr?.isBlocked ?: false)
+        val nextWhitelisted = curr?.isWhitelisted ?: false
+        if (!nextBlocked && !nextWhitelisted) {
+            // Both flags off → no need to keep an empty row.
             delete(app.pkg)
+        } else {
+            upsert(AppRule(
+                packageName = app.pkg, appName = app.name,
+                isBlocked = nextBlocked,
+                isWhitelisted = nextWhitelisted
+            ))
         }
         load()
-        notifyRulesChanged()  // FIX: tell the accessibility service to refresh its cache
+        notifyRulesChanged()
     }
 
     fun toggleWhitelist(app: InstalledApp) = viewModelScope.launch {
         val curr = app.rule
-        upsert(AppRule(
-            packageName = app.pkg, appName = app.name,
-            isBlocked = false,                              // always clear block when whitelisting
-            isWhitelisted = !(curr?.isWhitelisted ?: false)
-        ))
+        val nextWhitelisted = !(curr?.isWhitelisted ?: false)
+        // Whitelist trumps block — clear block flag when whitelisting.
+        val nextBlocked = if (nextWhitelisted) false else (curr?.isBlocked ?: false)
+        if (!nextBlocked && !nextWhitelisted) {
+            delete(app.pkg)
+        } else {
+            upsert(AppRule(
+                packageName = app.pkg, appName = app.name,
+                isBlocked = nextBlocked,
+                isWhitelisted = nextWhitelisted
+            ))
+        }
         load()
-        notifyRulesChanged()  // FIX: tell the accessibility service to refresh its cache
+        notifyRulesChanged()
     }
 
-    /** Sends a LocalBroadcast so GuardianAccessibilityService reloads its in-memory rule cache. */
     private fun notifyRulesChanged() {
         LocalBroadcastManager.getInstance(context)
             .sendBroadcast(Intent(RulesEngine.ACTION_RULES_CHANGED))

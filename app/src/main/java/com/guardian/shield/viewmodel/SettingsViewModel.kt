@@ -18,6 +18,12 @@ data class SettingsUi(
     val modelLoaded: Boolean = false
 )
 
+/**
+ * FIX-LOG (vs original):
+ *  - Added refresh() so SettingsActivity can update the UI immediately after a
+ *    user uploads a new .tflite model — previously the "Model loaded" indicator
+ *    was stuck on stale state until the user navigated away and back.
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: GuardianPreferences,
@@ -25,16 +31,19 @@ class SettingsViewModel @Inject constructor(
     private val pinManager: PinManager
 ) : ViewModel() {
 
+    private val refreshTrigger = MutableStateFlow(0)
+
     val ui: StateFlow<SettingsUi> = combine(
         prefs.keywordFilterEnabled, prefs.aiDetectionEnabled,
-        prefs.delaySeconds, prefs.aiThreshold
-    ) { kw, aiOn, delay, th ->
+        prefs.delaySeconds, prefs.aiThreshold, refreshTrigger
+    ) { kw, aiOn, delay, th, _ ->
         SettingsUi(kw, aiOn, delay, th, ai.isModelAvailable())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUi())
 
     fun setKeywordFilter(v: Boolean) = viewModelScope.launch { prefs.setKeywordFilter(v) }
-    fun setAiDetection(v: Boolean) = viewModelScope.launch { prefs.setAiDetection(v) }
-    fun setDelaySeconds(v: Int) = viewModelScope.launch { prefs.setDelaySeconds(v) }
-    fun setAiThreshold(v: Float) = viewModelScope.launch { prefs.setAiThreshold(v) }
-    fun resetPin() = pinManager.clearPin()
+    fun setAiDetection(v: Boolean)   = viewModelScope.launch { prefs.setAiDetection(v) }
+    fun setDelaySeconds(v: Int)      = viewModelScope.launch { prefs.setDelaySeconds(v) }
+    fun setAiThreshold(v: Float)     = viewModelScope.launch { prefs.setAiThreshold(v) }
+    fun resetPin()                   = pinManager.clearPin()
+    fun refresh()                    { refreshTrigger.value = refreshTrigger.value + 1 }
 }

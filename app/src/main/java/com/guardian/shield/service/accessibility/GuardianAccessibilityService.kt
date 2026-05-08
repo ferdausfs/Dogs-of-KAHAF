@@ -22,22 +22,45 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
+/**
+ * FIX-LOG (vs original):
+ *  - BUG #2: AI scan only ran on text-change events → image-only apps (Reels, Gallery,
+ *            video players) never triggered detection. Now a periodic scanner runs every
+ *            `AI_PERIODIC_MS` (default 1500 ms) for the active foreground package as long
+ *            as it is blockable AND ai_detection toggle is on.
+ *  - BUG #10: lastAiScanMs was global → first 3 s after switching apps was a blind spot.
+ *            Throttle is now per-package.
+ *  - BUG #14: ensure only one screenshot+inference is in flight at a time (atomic flag).
+ *  - notificationTimeout reduced reliance on aggressive event delivery; periodic scan
+ *    decouples blocking from text events entirely.
+ */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
 
+    companion object {
+        private const val TEXT_THROTTLE_MS = 600L
+        private const val AI_THROTTLE_MS   = 1_500L  // per-package
+        private const val AI_PERIODIC_MS   = 1_500L  // periodic scan cadence
+    }
+
     @Inject lateinit var rulesEngine: RulesEngine
     @Inject lateinit var blockingEngine: BlockingEngine
-    @Inject lateinit var aiDetector: AiDetector          // FIX: inject AI detector
-    @Inject lateinit var prefs: GuardianPreferences      // FIX: inject prefs to check AI toggle
+    @Inject lateinit var aiDetector: AiDetector
+    @Inject lateinit var prefs: GuardianPreferences
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var lastForegroundPkg: String? = null
-    private var lastTextScanMs = 0L
-    private var lastAiScanMs   = 0L  // throttle AI checks to once every 3 s
+    private var periodicJob: Job? = null
 
-    // FIX: listen for rule/keyword changes so cache stays fresh
+    @Volatile private var lastForegroundPkg: String? = null
+    private var lastTextScanMs = 0L
+    // BUG #10 fix — per-package throttle.
+    private val lastAiScanByPkg = HashMap<String, Long>()
+    // BUG #14 fix — guard against concurrent screenshot+inference.
+    private val aiInFlight = AtomicBoolean(false)
+
     private val rulesReloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             scope.launch {
@@ -54,6 +77,28 @@ class GuardianAccessibilityService : AccessibilityService() {
         LocalBroadcastManager.getInstance(this).registerReceiver(
             rulesReloadReceiver, IntentFilter(RulesEngine.ACTION_RULES_CHANGED)
         )
+        startPeriodicAiScanner()  // BUG #2 fix
+    }
+
+    /**
+     * BUG #2 fix: a coroutine that ticks every AI_PERIODIC_MS and runs an AI screenshot
+     * scan on the current foreground package, regardless of whether any accessibility
+     * text event has fired. This is what actually catches image-heavy apps.
+     */
+    private fun startPeriodicAiScanner() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        periodicJob?.cancel()
+        periodicJob = scope.launch {
+            while (isActive) {
+                delay(AI_PERIODIC_MS)
+                val pkg = lastForegroundPkg ?: continue
+                if (!rulesEngine.canBlock(pkg)) continue
+                val enabled = runCatching { prefs.aiDetectionEnabled.first() }.getOrDefault(false)
+                if (!enabled) continue
+                if (!aiDetector.isModelAvailable()) continue
+                triggerAiCheck(pkg)
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -73,8 +118,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         when (val result = rulesEngine.evaluatePackage(pkg)) {
             is DetectionResult.Block -> blockingEngine.block(pkg, result.reason, result.detail)
             DetectionResult.Allow -> {
-                // FIX: only run AI check on packages that are actually blockable
-                // (skip system UI, own package, and whitelisted apps)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                     && rulesEngine.canBlock(pkg)) {
                     triggerAiCheck(pkg)
@@ -84,85 +127,90 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun handleContentChange(pkg: String, event: AccessibilityEvent) {
-        // FIX: use canBlock() — covers whitelisted, system UI, and own package in one call
         if (!rulesEngine.canBlock(pkg)) return
 
         val now = System.currentTimeMillis()
-        if (now - lastTextScanMs < 600) return
+        if (now - lastTextScanMs < TEXT_THROTTLE_MS) return
         lastTextScanMs = now
 
         scope.launch {
-            val text = collectVisibleText(rootInActiveWindow) ?: return@launch
-            when (val result = rulesEngine.evaluateText(text)) {
-                is DetectionResult.Block -> withContext(Dispatchers.Main) {
-                    blockingEngine.block(pkg, BlockReason.KEYWORD_MATCH, result.detail)
-                }
-                DetectionResult.Allow -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        val aiNow = System.currentTimeMillis()
-                        if (aiNow - lastAiScanMs >= 3_000L) {
-                            lastAiScanMs = aiNow
-                            withContext(Dispatchers.Main) { triggerAiCheck(pkg) }
-                        }
+            val text = collectVisibleText(rootInActiveWindow)
+            if (!text.isNullOrBlank()) {
+                when (val result = rulesEngine.evaluateText(text)) {
+                    is DetectionResult.Block -> withContext(Dispatchers.Main) {
+                        blockingEngine.block(pkg, BlockReason.KEYWORD_MATCH, result.detail)
                     }
+                    DetectionResult.Allow -> { /* periodic scanner handles AI */ }
                 }
             }
         }
     }
 
-    /**
-     * Takes a screenshot and runs the TFLite model on it.
-     * Only called on API 30+ (Android 11+).
-     * Requires android:canTakeScreenshot="true" in accessibility_service_config.xml.
-     */
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String) {
+        // BUG #10 — per-package throttle.
+        val now = System.currentTimeMillis()
+        val last = lastAiScanByPkg[pkg] ?: 0L
+        if (now - last < AI_THROTTLE_MS) return
+        lastAiScanByPkg[pkg] = now
+
+        // BUG #14 — only one inference in flight at a time.
+        if (!aiInFlight.compareAndSet(false, true)) return
+
         scope.launch {
-            val aiEnabled = prefs.aiDetectionEnabled.first()
-            if (!aiEnabled) return@launch
-            if (!aiDetector.ensureLoaded()) {
-                Timber.w("AI model not loaded — skipping screenshot check")
-                return@launch
-            }
-            if (rulesEngine.isWhitelisted(pkg)) return@launch
+            try {
+                val aiEnabled = prefs.aiDetectionEnabled.first()
+                if (!aiEnabled) { aiInFlight.set(false); return@launch }
+                if (!aiDetector.ensureLoaded()) {
+                    Timber.w("AI model not loaded — skipping screenshot check")
+                    aiInFlight.set(false); return@launch
+                }
+                if (rulesEngine.isWhitelisted(pkg)) { aiInFlight.set(false); return@launch }
 
-            // takeScreenshot must be called on the main thread
-            withContext(Dispatchers.Main) {
-                takeScreenshot(
-                    Display.DEFAULT_DISPLAY,
-                    mainExecutor,
-                    object : TakeScreenshotCallback {
-                        override fun onSuccess(result: ScreenshotResult) {
-                            scope.launch(Dispatchers.Default) {
-                                try {
-                                    // Copy from HardwareBuffer → ARGB_8888 for TFLite
-                                    val bmp = Bitmap.wrapHardwareBuffer(
-                                        result.hardwareBuffer, result.colorSpace
-                                    )?.copy(Bitmap.Config.ARGB_8888, false)
-                                    result.hardwareBuffer.close()
+                withContext(Dispatchers.Main) {
+                    takeScreenshot(
+                        Display.DEFAULT_DISPLAY,
+                        mainExecutor,
+                        object : TakeScreenshotCallback {
+                            override fun onSuccess(result: ScreenshotResult) {
+                                scope.launch(Dispatchers.Default) {
+                                    var bmp: Bitmap? = null
+                                    try {
+                                        bmp = Bitmap.wrapHardwareBuffer(
+                                            result.hardwareBuffer, result.colorSpace
+                                        )?.copy(Bitmap.Config.ARGB_8888, false)
+                                        result.hardwareBuffer.close()
 
-                                    if (bmp == null) return@launch
+                                        if (bmp == null) return@launch
 
-                                    if (aiDetector.isUnsafe(bmp)) {
-                                        bmp.recycle()
-                                        Timber.d("AI flagged content in $pkg")
-                                        blockingEngine.block(
-                                            pkg, BlockReason.AI_DETECTION, "AI detected unsafe content"
-                                        )
-                                    } else {
-                                        bmp.recycle()
+                                        if (aiDetector.isUnsafe(bmp)) {
+                                            Timber.d("AI flagged content in $pkg")
+                                            withContext(Dispatchers.Main) {
+                                                blockingEngine.block(
+                                                    pkg, BlockReason.AI_DETECTION,
+                                                    "AI detected unsafe content"
+                                                )
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Timber.e(e, "AI screenshot processing error")
+                                    } finally {
+                                        bmp?.recycle()
+                                        aiInFlight.set(false)
                                     }
-                                } catch (e: Exception) {
-                                    Timber.e(e, "AI screenshot processing error")
                                 }
                             }
-                        }
 
-                        override fun onFailure(errorCode: Int) {
-                            Timber.w("takeScreenshot failed: errorCode=$errorCode")
+                            override fun onFailure(errorCode: Int) {
+                                Timber.w("takeScreenshot failed: errorCode=$errorCode")
+                                aiInFlight.set(false)
+                            }
                         }
-                    }
-                )
+                    )
+                }
+            } catch (t: Throwable) {
+                Timber.e(t, "triggerAiCheck error")
+                aiInFlight.set(false)
             }
         }
     }
@@ -178,11 +226,9 @@ class GuardianAccessibilityService : AccessibilityService() {
             node.text?.let { sb.append(it).append(' ') }
             node.contentDescription?.let { sb.append(it).append(' ') }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
-            // FIX: recycle every node after we're done with it to avoid memory pressure
             if (node !== root) node.recycle()
             nodes++
         }
-        // Drain any remaining un-visited nodes and recycle them
         queue.forEach { if (it !== root) it.recycle() }
         return sb.toString().takeIf { it.isNotBlank() }
     }
@@ -190,6 +236,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        periodicJob?.cancel()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(rulesReloadReceiver)
         scope.cancel()
         aiDetector.close()

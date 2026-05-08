@@ -3,7 +3,10 @@ package com.guardian.shield.ui.dashboard
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.view.accessibility.AccessibilityManager
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -23,6 +26,17 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * FIX-LOG (vs original):
+ *  - BUG #5: PIN gate did not actually protect anything — MainActivity rendered
+ *            FIRST, then PinVerifyActivity was launched on top. Anyone could press
+ *            HOME and re-enter without verifying. Now:
+ *               • If no PIN set → PinSetup is launched as ActivityResult; we keep
+ *                 the root view hidden until result returns.
+ *               • If PIN set → PinVerify is launched as ActivityResult; root view
+ *                 is hidden until success. On cancellation we finish().
+ *            The dashboard UI is genuinely gated.
+ */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
@@ -31,15 +45,39 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var pinManager: PinManager
     @Inject lateinit var rulesEngine: RulesEngine
 
+    private var unlocked = false
+
+    private val pinSetupLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            if (res.resultCode == RESULT_OK || pinManager.isPinSet()) {
+                unlocked = true
+                binding.root.visibility = View.VISIBLE
+            } else {
+                finish()
+            }
+        }
+
+    private val pinVerifyLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            if (res.resultCode == RESULT_OK) {
+                unlocked = true
+                binding.root.visibility = View.VISIBLE
+            } else {
+                finishAffinity()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // BUG #5 fix — hide UI until PIN is verified.
+        binding.root.visibility = View.INVISIBLE
 
         if (!pinManager.isPinSet()) {
-            startActivity(Intent(this, PinSetupActivity::class.java))
+            pinSetupLauncher.launch(Intent(this, PinSetupActivity::class.java))
         } else {
-            startActivity(Intent(this, PinVerifyActivity::class.java))
+            pinVerifyLauncher.launch(Intent(this, PinVerifyActivity::class.java))
         }
 
         val adapter = BlockEventAdapter()
@@ -50,6 +88,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.btnSettings.setOnClickListener {
+            // Settings still requires PIN (re-verify each time) — see SettingsActivity.
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         binding.btnClear.setOnClickListener { vm.clearAll() }

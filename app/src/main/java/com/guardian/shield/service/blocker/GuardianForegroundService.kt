@@ -9,24 +9,41 @@ import androidx.core.app.NotificationCompat
 import com.guardian.shield.R
 import com.guardian.shield.ui.dashboard.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 
+/**
+ * FIX-LOG (vs original):
+ *  - BUG #13: wrap startForegroundService in a try/catch — API 31+ can throw
+ *    BackgroundServiceStartNotAllowedException, and on some OEMs even foreground
+ *    starts can fail. Failing silently is better than crashing the host.
+ *  - Use FOREGROUND_SERVICE_TYPE_SPECIAL_USE on API 34+ when calling
+ *    startForeground() so the service binds to its declared FGS type.
+ */
 @AndroidEntryPoint
 class GuardianForegroundService : Service() {
 
     companion object {
         const val CHANNEL_ID = "guardian_protection"
         const val NOTIFICATION_ID = 4242
-        fun start(ctx: Context) {
+        fun start(ctx: Context) = runCatching {
             val intent = Intent(ctx, GuardianForegroundService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent)
             else ctx.startService(intent)
-        }
+        }.onFailure { Timber.w(it, "GuardianForegroundService.start failed") }
     }
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        val notif = buildNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID, notif,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notif)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY

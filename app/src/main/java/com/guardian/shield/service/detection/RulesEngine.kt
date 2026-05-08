@@ -11,6 +11,19 @@ import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * FIX-LOG (vs original):
+ *  - BUG #8: pkg.startsWith("com.android.systemui") matched "com.android.systemuixyz".
+ *            Now exact-match against a Set, plus a separate set of launcher prefixes
+ *            that are intentionally prefix-matched (because every OEM uses a different
+ *            launcher package).
+ *  - BUG #11: previously, when an app was BOTH blocked and whitelisted, it was
+ *            silently allowed because the reload step filtered out blocked rules
+ *            that were also whitelisted. That is the documented behaviour
+ *            (whitelist > blocklist) but the data model allowed both flags to be
+ *            true simultaneously, which caused weird UX. Behaviour is preserved
+ *            (whitelist wins) but is now explicit and documented.
+ */
 @Singleton
 class RulesEngine @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -18,16 +31,34 @@ class RulesEngine @Inject constructor(
     private val getKws: GetAllKeywordsSyncUseCase
 ) {
     companion object {
-        // Broadcast this action whenever rules/keywords change so the service reloads its cache
         const val ACTION_RULES_CHANGED = "com.guardian.shield.ACTION_RULES_CHANGED"
+
+        // Exact-match system / IME packages (BUG #8 fix).
+        private val SYSTEM_EXACT = setOf(
+            "com.android.systemui",
+            "com.android.settings",
+            "com.google.android.inputmethod.latin",
+            "com.google.android.gms",
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
+            "android"
+        )
+        // Launcher / IME prefix matches (kept intentionally because launcher packages
+        // legitimately vary across OEMs: com.android.launcher3, com.miui.home,
+        // com.sec.android.app.launcher, etc.).
+        private val LAUNCHER_PREFIXES = listOf(
+            "com.android.launcher",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.realme.launcher",
+            "com.vivo.launcher"
+        )
     }
 
     private val mutex = Mutex()
-    private val systemUiPackages = setOf(
-        "com.android.systemui", "com.google.android.inputmethod.latin",
-        "com.android.launcher", "com.google.android.apps.nexuslauncher",
-        "com.android.settings"
-    )
 
     @Volatile private var blockedSet: Set<String> = emptySet()
     @Volatile private var whitelistSet: Set<String> = emptySet()
@@ -35,16 +66,23 @@ class RulesEngine @Inject constructor(
 
     suspend fun reload() = mutex.withLock {
         val apps = getApps()
-        blockedSet  = apps.filter { it.isBlocked && !it.isWhitelisted }.map { it.packageName }.toSet()
+        // Whitelist wins → if both flags are true, treat as whitelisted only.
         whitelistSet = apps.filter { it.isWhitelisted }.map { it.packageName }.toSet()
-        keywords    = getKws().map { it.keyword to it.isRegex }
+        blockedSet  = apps.filter { it.isBlocked && !it.isWhitelisted }
+            .map { it.packageName }.toSet()
+        keywords    = getKws().map { it.keyword.lowercase() to it.isRegex }
+    }
+
+    private fun isSystemPackage(pkg: String): Boolean {
+        if (pkg in SYSTEM_EXACT) return true
+        return LAUNCHER_PREFIXES.any { pkg.startsWith(it) }
     }
 
     /** Whitelist → system UI → own pkg → blocked list → allow */
     fun evaluatePackage(pkg: String): DetectionResult {
         if (pkg == context.packageName) return DetectionResult.Allow
-        if (systemUiPackages.any { pkg.startsWith(it) }) return DetectionResult.Allow
-        if (whitelistSet.contains(pkg)) return DetectionResult.Allow        // ← allowlist wins
+        if (isSystemPackage(pkg)) return DetectionResult.Allow
+        if (whitelistSet.contains(pkg)) return DetectionResult.Allow
         if (blockedSet.contains(pkg)) return DetectionResult.Block(BlockReason.APP_BLOCKED, pkg)
         return DetectionResult.Allow
     }
@@ -62,13 +100,9 @@ class RulesEngine @Inject constructor(
 
     fun isWhitelisted(pkg: String): Boolean = whitelistSet.contains(pkg)
 
-    /**
-     * Returns true if it is safe to run any blocking check (AI or keyword) on this package.
-     * False for: our own app, system UI, or explicitly whitelisted packages.
-     */
     fun canBlock(pkg: String): Boolean {
         if (pkg == context.packageName) return false
-        if (systemUiPackages.any { pkg.startsWith(it) }) return false
+        if (isSystemPackage(pkg)) return false
         if (whitelistSet.contains(pkg)) return false
         return true
     }
