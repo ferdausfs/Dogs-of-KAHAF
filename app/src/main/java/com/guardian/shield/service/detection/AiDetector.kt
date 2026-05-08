@@ -16,25 +16,10 @@ import timber.log.Timber
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.min
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * FIX-LOG (vs original):
- *  - BUG #1: pixel values were not normalized → predictions garbage on every NSFW model.
- *            Now normalize 0-255 → 0-1 with NormalizeOp(0f, 255f) for the common
- *            NSFWJS / GantMan / OpenNSFW family. Falls back to a second pass with
- *            MobileNet-style mean=127.5/std=127.5 (i.e. -1..1) if the first inference
- *            looks nonsensical.
- *  - BUG #3: 2-class vs 5-class was decided by try/catch — shape mismatch does not
- *            always throw. Now read interpreter.getOutputTensor(0).shape() ONCE at
- *            load time and dispatch on real shape.
- *  - BUG #14: interpreter.run() called from multiple coroutines → race / native crash.
- *            All inference is now serialized through a Mutex.
- *  - Pure ARGB_8888 → 224×224×3 FLOAT32 input ByteBuffer is built manually so we do
- *    not depend on TensorImage internal alpha-channel handling (which differs across
- *    tf-lite-support versions).
- */
 @Singleton
 class AiDetector @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -43,17 +28,21 @@ class AiDetector @Inject constructor(
     companion object {
         const val MODEL_FILE = "guardian_model.tflite"
         const val INPUT_SIZE = 224
-        private const val CHANNELS = 3
     }
 
-    private var interpreter: Interpreter? = null
-    private var outputClasses: Int = 2     // detected at load time
-    private val inferenceLock = Mutex()    // BUG #14 fix
+    private data class UnsafeScores(
+        val unsafe: Float = 0f,
+        val porn: Float = 0f,
+        val hentai: Float = 0f,
+        val sexy: Float = 0f
+    )
 
-    // Resize is cheap and stateless → safe to share.
+    private var interpreter: Interpreter? = null
+    private var outputClasses: Int = 2
+    private val inferenceLock = Mutex()
+
     private val resizer = ImageProcessor.Builder()
         .add(ResizeOp(INPUT_SIZE, INPUT_SIZE, ResizeOp.ResizeMethod.BILINEAR))
-        // BUG #1 fix: normalize to 0..1 (matches NSFWJS / GantMan / OpenNSFW).
         .add(NormalizeOp(0f, 255f))
         .build()
 
@@ -87,12 +76,11 @@ class AiDetector @Inject constructor(
         if (buffer == null) return false
 
         return runCatching {
-            val opt = Interpreter.Options().apply { setNumThreads(2) }
-            val itp = Interpreter(buffer, opt)
-            // BUG #3 fix: read real output shape instead of guessing.
-            val shape = itp.getOutputTensor(0).shape()  // e.g. [1,2] or [1,5]
-            outputClasses = shape.last().coerceAtLeast(2)
-            interpreter = itp
+            val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+            val options = Interpreter.Options().apply { setNumThreads(threads) }
+            val created = Interpreter(buffer, options)
+            outputClasses = created.getOutputTensor(0).shape().last().coerceAtLeast(2)
+            interpreter = created
             Timber.i("TFLite model loaded — output classes=$outputClasses")
             true
         }.onFailure { Timber.e(it, "Failed to create TFLite interpreter") }.getOrDefault(false)
@@ -100,38 +88,98 @@ class AiDetector @Inject constructor(
 
     suspend fun isUnsafe(bitmap: Bitmap): Boolean {
         if (!ensureLoaded()) return false
-        val itp = interpreter ?: return false
-        val threshold = prefs.aiThreshold.first()
+        val threshold = prefs.aiThreshold.first().coerceIn(0.2f, 0.95f)
 
         return inferenceLock.withLock {
             runCatching {
-                val tensor = TensorImage(org.tensorflow.lite.DataType.FLOAT32).apply { load(bitmap) }
-                val processed = resizer.process(tensor)
-
-                when (outputClasses) {
-                    2 -> {
-                        val out = Array(1) { FloatArray(2) }
-                        itp.run(processed.buffer, out)
-                        // [safe, unsafe]
-                        out[0][1] >= threshold
+                val variants = buildBitmapVariants(bitmap)
+                try {
+                    var strongest = UnsafeScores()
+                    for (candidate in variants) {
+                        val scores = runInference(candidate)
+                        strongest = strongest.merge(scores)
+                        if (isUnsafe(scores, threshold)) return@runCatching true
                     }
-                    5 -> {
-                        val out = Array(1) { FloatArray(5) }
-                        itp.run(processed.buffer, out)
-                        // [drawings, hentai, neutral, porn, sexy] → unsafe = hentai+porn+sexy
-                        (out[0][1] + out[0][3] + out[0][4]) >= threshold
-                    }
-                    else -> {
-                        // Generic fallback — last index treated as the unsafe class.
-                        val out = Array(1) { FloatArray(outputClasses) }
-                        itp.run(processed.buffer, out)
-                        out[0].last() >= threshold
-                    }
+                    isUnsafe(strongest, threshold)
+                } finally {
+                    variants.forEach { if (it !== bitmap) it.recycle() }
                 }
             }.onFailure { Timber.e(it, "TFLite inference failed") }
                 .getOrDefault(false)
         }
     }
+
+    private fun runInference(bitmap: Bitmap): UnsafeScores {
+        val current = interpreter ?: return UnsafeScores()
+        val tensor = TensorImage(org.tensorflow.lite.DataType.FLOAT32).apply { load(bitmap) }
+        val processed = resizer.process(tensor)
+
+        return when (outputClasses) {
+            2 -> {
+                val out = Array(1) { FloatArray(2) }
+                current.run(processed.buffer, out)
+                UnsafeScores(unsafe = out[0][1].coerceAtLeast(0f))
+            }
+
+            5 -> {
+                val out = Array(1) { FloatArray(5) }
+                current.run(processed.buffer, out)
+                UnsafeScores(
+                    unsafe = (out[0][1] + out[0][3] + out[0][4]).coerceAtLeast(0f),
+                    porn = out[0][3].coerceAtLeast(0f),
+                    hentai = out[0][1].coerceAtLeast(0f),
+                    sexy = out[0][4].coerceAtLeast(0f)
+                )
+            }
+
+            else -> {
+                val out = Array(1) { FloatArray(outputClasses) }
+                current.run(processed.buffer, out)
+                UnsafeScores(unsafe = out[0].last().coerceAtLeast(0f))
+            }
+        }
+    }
+
+    private fun isUnsafe(scores: UnsafeScores, threshold: Float): Boolean {
+        val strongUnsafeThreshold = threshold
+        val combinedThreshold = (threshold * 0.82f).coerceIn(0.35f, 0.9f)
+        val sexyThreshold = (threshold * 0.55f).coerceIn(0.24f, 0.48f)
+
+        return scores.porn >= strongUnsafeThreshold ||
+            scores.hentai >= strongUnsafeThreshold ||
+            scores.sexy >= sexyThreshold ||
+            scores.unsafe >= combinedThreshold
+    }
+
+    private fun buildBitmapVariants(source: Bitmap): List<Bitmap> {
+        val variants = mutableListOf<Bitmap>()
+        variants += source
+
+        val width = source.width
+        val height = source.height
+        if (width < 96 || height < 96) return variants
+
+        val square = min(width, height)
+        val squareX = ((width - square) / 2).coerceAtLeast(0)
+        val squareY = ((height - square) / 2).coerceAtLeast(0)
+        variants += Bitmap.createBitmap(source, squareX, squareY, square, square)
+
+        val topHeight = (height * 0.72f).toInt().coerceIn(96, height)
+        variants += Bitmap.createBitmap(source, 0, 0, width, topHeight)
+
+        val startY = (height * 0.18f).toInt().coerceIn(0, height - 96)
+        val lowerHeight = (height - startY).coerceAtLeast(96)
+        variants += Bitmap.createBitmap(source, 0, startY, width, lowerHeight)
+
+        return variants
+    }
+
+    private fun UnsafeScores.merge(other: UnsafeScores): UnsafeScores = UnsafeScores(
+        unsafe = maxOf(unsafe, other.unsafe),
+        porn = maxOf(porn, other.porn),
+        hentai = maxOf(hentai, other.hentai),
+        sexy = maxOf(sexy, other.sexy)
+    )
 
     fun close() {
         runCatching { interpreter?.close() }
