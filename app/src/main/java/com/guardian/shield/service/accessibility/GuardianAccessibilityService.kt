@@ -13,6 +13,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.guardian.shield.data.local.datastore.GuardianPreferences
+import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_NONE
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
@@ -71,9 +72,13 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         scope.launch {
             rulesEngine.reload()
-            if (aiDetector.isModelAvailable()) {
-                aiDetector.ensureLoaded()
-            }
+            // Try to load both legacy + new pipelines. Failures are silent.
+            runCatching {
+                if (aiDetector.isModelAvailable()) aiDetector.ensureLoaded()
+            }.onFailure { Timber.e(it, "Legacy model preload failed") }
+            runCatching {
+                if (aiDetector.isNsfwModelAvailable()) aiDetector.ensureGenderPipelineLoaded()
+            }.onFailure { Timber.e(it, "Gender pipeline preload failed") }
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -93,7 +98,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (!rulesEngine.canBlock(pkg)) continue
                 val enabled = runCatching { prefs.aiDetectionEnabled.first() }.getOrDefault(false)
                 if (!enabled) continue
-                if (!aiDetector.isModelAvailable()) continue
+                if (!aiDetector.isModelAvailable() && !aiDetector.isNsfwModelAvailable()) continue
                 triggerAiCheck(pkg)
             }
         }
@@ -174,16 +179,28 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         scope.launch {
             try {
-                val aiEnabled = prefs.aiDetectionEnabled.first()
+                val aiEnabled = runCatching { prefs.aiDetectionEnabled.first() }.getOrDefault(false)
                 if (!aiEnabled) {
                     aiInFlight.set(false)
                     return@launch
                 }
-                if (!aiDetector.ensureLoaded()) {
-                    Timber.w("AI model not loaded — skipping screenshot check")
+
+                // Read user gender once per scan (cheap — DataStore).
+                val userGender = runCatching { prefs.userGender.first() }.getOrDefault(GENDER_NONE)
+
+                // Decide which detectors are even possible right now.
+                val genderFeatureOn = userGender != GENDER_NONE && aiDetector.isNsfwModelAvailable()
+                val legacyOn        = aiDetector.isModelAvailable()
+
+                if (!genderFeatureOn && !legacyOn) {
                     aiInFlight.set(false)
                     return@launch
                 }
+
+                // Eagerly attempt loads — failures are silent inside AiDetector.
+                if (genderFeatureOn) aiDetector.ensureGenderPipelineLoaded()
+                if (legacyOn)        aiDetector.ensureLoaded()
+
                 if (!rulesEngine.canBlock(pkg)) {
                     aiInFlight.set(false)
                     return@launch
@@ -202,24 +219,57 @@ class GuardianAccessibilityService : AccessibilityService() {
                                             result.hardwareBuffer,
                                             result.colorSpace
                                         )?.copy(Bitmap.Config.ARGB_8888, false)
-                                        result.hardwareBuffer.close()
+                                        runCatching { result.hardwareBuffer.close() }
 
-                                        if (bmp == null) return@launch
+                                        val safeBmp = bmp ?: return@launch
 
-                                        if (aiDetector.isUnsafe(bmp)) {
-                                            Timber.d("AI flagged content in $pkg")
-                                            withContext(Dispatchers.Main) {
-                                                blockingEngine.block(
-                                                    pkg,
-                                                    BlockReason.AI_DETECTION,
-                                                    "AI detected unsafe content"
-                                                )
+                                        // ── Step 1: opposite-gender NSFW (if armed) ──
+                                        var blocked = false
+                                        if (genderFeatureOn) {
+                                            val hit = runCatching {
+                                                aiDetector.isOppositeGenderNsfw(safeBmp, userGender)
+                                            }.onFailure {
+                                                Timber.e(it, "isOppositeGenderNsfw threw")
+                                            }.getOrDefault(false)
+
+                                            if (hit) {
+                                                Timber.d("AI flagged opposite-gender NSFW in $pkg")
+                                                withContext(Dispatchers.Main) {
+                                                    blockingEngine.block(
+                                                        pkg,
+                                                        BlockReason.AI_DETECTION,
+                                                        "AI detected opposite-gender NSFW content"
+                                                    )
+                                                }
+                                                blocked = true
                                             }
                                         }
+
+                                        // ── Step 2: legacy generic NSFW fallback ──
+                                        if (!blocked && legacyOn) {
+                                            val hit = runCatching {
+                                                aiDetector.isUnsafe(safeBmp)
+                                            }.onFailure {
+                                                Timber.e(it, "isUnsafe threw")
+                                            }.getOrDefault(false)
+
+                                            if (hit) {
+                                                Timber.d("AI flagged content in $pkg")
+                                                withContext(Dispatchers.Main) {
+                                                    blockingEngine.block(
+                                                        pkg,
+                                                        BlockReason.AI_DETECTION,
+                                                        "AI detected unsafe content"
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } catch (oom: OutOfMemoryError) {
+                                        Timber.e(oom, "OOM in screenshot pipeline")
                                     } catch (e: Exception) {
                                         Timber.e(e, "AI screenshot processing error")
                                     } finally {
-                                        bmp?.recycle()
+                                        runCatching { if (bmp?.isRecycled == false) bmp.recycle() }
                                         aiInFlight.set(false)
                                     }
                                 }
@@ -262,10 +312,12 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
-        periodicJob?.cancel()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(rulesReloadReceiver)
-        scope.cancel()
-        aiDetector.close()
+        runCatching { periodicJob?.cancel() }
+        runCatching {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(rulesReloadReceiver)
+        }
+        runCatching { scope.cancel() }
+        runCatching { aiDetector.close() }
         super.onDestroy()
     }
 }

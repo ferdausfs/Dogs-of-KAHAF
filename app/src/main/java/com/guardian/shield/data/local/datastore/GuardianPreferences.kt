@@ -13,7 +13,7 @@ private val Context.dataStore by preferencesDataStore(name = "guardian_prefs")
 
 @Singleton
 class GuardianPreferences @Inject constructor(
-    @ApplicationContext private val context: Context  // ✅ @ApplicationContext যোগ
+    @ApplicationContext private val context: Context
 ) {
 
     companion object {
@@ -22,6 +22,16 @@ class GuardianPreferences @Inject constructor(
         val KEY_DELAY_SECONDS  = intPreferencesKey("delay_seconds")
         val KEY_AI_THRESHOLD   = floatPreferencesKey("ai_threshold")
         val KEY_FIRST_RUN      = booleanPreferencesKey("first_run")
+
+        // ── Opposite-gender NSFW filter ────────────────────────────────────
+        // "MALE"   → block FEMALE NSFW
+        // "FEMALE" → block MALE NSFW
+        // "NONE"   → feature disabled (default)
+        val KEY_USER_GENDER    = stringPreferencesKey("user_gender")
+
+        const val GENDER_MALE   = "MALE"
+        const val GENDER_FEMALE = "FEMALE"
+        const val GENDER_NONE   = "NONE"
     }
 
     val keywordFilterEnabled: Flow<Boolean> =
@@ -35,9 +45,21 @@ class GuardianPreferences @Inject constructor(
     val isFirstRun: Flow<Boolean> =
         context.dataStore.data.map { it[KEY_FIRST_RUN] ?: true }
 
+    /** User-selected gender. Default = NONE → feature is OFF. */
+    val userGender: Flow<String> =
+        context.dataStore.data.map { it[KEY_USER_GENDER] ?: GENDER_NONE }
+
     suspend fun setKeywordFilter(v: Boolean) = context.dataStore.edit { it[KEY_KEYWORD_FILTER] = v }
-    suspend fun setAiDetection(v: Boolean) = context.dataStore.edit { it[KEY_AI_DETECTION] = v }
-    suspend fun setDelaySeconds(v: Int) = context.dataStore.edit { it[KEY_DELAY_SECONDS] = v }
-    suspend fun setAiThreshold(v: Float) = context.dataStore.edit { it[KEY_AI_THRESHOLD] = v }
-    suspend fun setFirstRun(v: Boolean) = context.dataStore.edit { it[KEY_FIRST_RUN] = v }
+    suspend fun setAiDetection(v: Boolean)   = context.dataStore.edit { it[KEY_AI_DETECTION] = v }
+    suspend fun setDelaySeconds(v: Int)      = context.dataStore.edit { it[KEY_DELAY_SECONDS] = v }
+    suspend fun setAiThreshold(v: Float)     = context.dataStore.edit { it[KEY_AI_THRESHOLD] = v }
+    suspend fun setFirstRun(v: Boolean)      = context.dataStore.edit { it[KEY_FIRST_RUN] = v }
+
+    /** Persist user gender. Pass [GENDER_MALE], [GENDER_FEMALE], or [GENDER_NONE]. */
+    suspend fun setUserGender(v: String) = context.dataStore.edit {
+        it[KEY_USER_GENDER] = when (v) {
+            GENDER_MALE, GENDER_FEMALE, GENDER_NONE -> v
+            else -> GENDER_NONE
+        }
+    }
 }
