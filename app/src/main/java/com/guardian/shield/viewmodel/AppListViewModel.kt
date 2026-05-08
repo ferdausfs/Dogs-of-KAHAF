@@ -1,13 +1,11 @@
 package com.guardian.shield.viewmodel
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.AppRule
 import com.guardian.shield.domain.usecase.DeleteAppRuleUseCase
@@ -37,15 +35,12 @@ data class InstalledApp(
 )
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-11 → toggleBlock / toggleWhitelist no longer call full load() after
- *    every toggle. We mutate the in-memory list entry for the changed package
- *    only. A full load() takes 200–500ms on a phone with 200+ apps and caused
- *    a visible RecyclerView flicker on every tap. Full load is still done on
- *    init() and on the explicit refresh() call.
- *  • BUG-12 → after every rule mutation we bump prefs.rulesVersion so
- *    MainActivity.onResume can detect when a real change happened and skip
- *    the spurious RulesEngine.reload() on unrelated resumes.
+ * v9 (2.0.0):
+ *  • P2-B → LocalBroadcastManager removed. Rule changes are propagated by
+ *    calling rulesEngine.reload() directly; observers (e.g. the
+ *    AccessibilityService) get notified via RulesEngine.rulesChanged.
+ *
+ * Earlier v8 BUG-11 / BUG-12 still apply.
  */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
@@ -53,7 +48,8 @@ class AppListViewModel @Inject constructor(
     private val getRules: GetAppRulesUseCase,
     private val upsert: UpsertAppRuleUseCase,
     private val delete: DeleteAppRuleUseCase,
-    private val prefs: GuardianPreferences
+    private val prefs: GuardianPreferences,
+    private val rulesEngine: RulesEngine
 ) : ViewModel() {
 
     private val allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
@@ -78,7 +74,6 @@ class AppListViewModel @Inject constructor(
         searchQuery.value = query
     }
 
-    /** Full reload — used on init() and explicit user refresh only. */
     fun load() = viewModelScope.launch {
         val rules = getRules().first().associateBy { it.packageName }
         val installed = withContext(Dispatchers.IO) {
@@ -132,9 +127,7 @@ class AppListViewModel @Inject constructor(
             upsert(r)
             r
         }
-        // BUG-11: in-memory patch instead of full load().
         patchInMemory(app.pkg, newRule)
-        // BUG-12: signal that rules actually changed.
         runCatching { prefs.bumpRulesVersion() }
         notifyRulesChanged()
     }
@@ -162,12 +155,6 @@ class AppListViewModel @Inject constructor(
         notifyRulesChanged()
     }
 
-    /**
-     * BUG-11 helper — replace just the single changed entry in [allApps] in
-     * O(n) instead of doing a full PackageManager re-scan. Preserves the
-     * existing sort order by leaving items in place; the user already saw
-     * the list in this order so we don't shuffle on every toggle.
-     */
     private fun patchInMemory(pkg: String, newRule: AppRule?) {
         val current = allApps.value
         val idx = current.indexOfFirst { it.pkg == pkg }
@@ -177,9 +164,12 @@ class AppListViewModel @Inject constructor(
         allApps.value = updated
     }
 
-    private fun notifyRulesChanged() {
-        LocalBroadcastManager.getInstance(context)
-            .sendBroadcast(Intent(RulesEngine.ACTION_RULES_CHANGED))
+    /**
+     * P2-B: directly reload RulesEngine. Subscribers (the AccessibilityService)
+     * are notified via the rulesChanged SharedFlow that reload() emits to.
+     */
+    private fun notifyRulesChanged() = viewModelScope.launch {
+        runCatching { rulesEngine.reload() }
     }
 
     private fun getInstalledApplicationsCompat(pm: PackageManager): List<ApplicationInfo> {

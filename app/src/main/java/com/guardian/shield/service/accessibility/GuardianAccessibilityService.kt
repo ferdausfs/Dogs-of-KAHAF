@@ -11,7 +11,6 @@ import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_NONE
 import com.guardian.shield.domain.model.BlockReason
@@ -19,14 +18,14 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.util.GuardianConstants
+import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -35,35 +34,35 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-01 → triggerAiCheck(): wrap the entire withContext(Main) screenshot
- *    block in a try/finally so aiInFlight ALWAYS resets, even if takeScreenshot
- *    throws synchronously or the coroutine is cancelled before the callback
- *    is registered.
- *  • BUG-02 → startPeriodicAiScanner(): each tick is wrapped in try/catch so
- *    a single failed iteration never kills the loop. delay() is the only
- *    cancellation point that's allowed to break the loop.
- *  • BUG-03 → lastAiScanByPkg is now capped at MAX_AI_SCAN_MAP entries; the
- *    oldest entry is evicted before insert when the cap would be exceeded.
- *  • BUG-09 → On API < 30, schedule a chain of 3 follow-up scans (best-effort
- *    fallback for scroll-heavy apps where periodic screenshot scanning isn't
- *    available without MediaProjection).
+ * v9 (2.0.0) FIX-LOG (performance + cleanup pass):
+ *  • P1-C → preference reads on every tick are gone. AiDetector.startPrefsCache
+ *    is called once from onServiceConnected; tick logic reads cached fields.
+ *  • P1-E → screen-state-aware periodic scanner. ACTION_SCREEN_OFF pauses /
+ *    slows the scanner to SCREEN_OFF_PERIODIC_MS. ACTION_SCREEN_ON resumes.
+ *  • P2-B → LocalBroadcastManager removed. We collect RulesEngine.rulesChanged
+ *    SharedFlow directly via the service scope.
+ *  • P2-C → collectVisibleText() now tracks every recycled node in a visited
+ *    set so we never call recycle() twice on the same handle (some OEMs let
+ *    `getChild(i)` return a node that's already a sibling reference).
+ *
+ * Earlier v8 fixes preserved:
+ *   - BUG-01 → triggerAiCheck() always resets aiInFlight via finally.
+ *   - BUG-02 → periodic loop wraps each tick in try/catch.
+ *   - BUG-03 → bounded per-package throttle map.
+ *   - BUG-09 → API < 30 follow-up scan chain.
+ *   - companion isRunning flag for the foreground watchdog (BUG-05).
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
 
     companion object {
-        private const val TEXT_THROTTLE_MS = 600L
-        private const val AI_THROTTLE_MS = 700L
-        private const val AI_PERIODIC_MS = 850L
-        private const val AI_FOLLOW_UP_MS = 450L
+        private const val TEXT_THROTTLE_MS = GuardianConstants.TEXT_THROTTLE_MS
+        private const val AI_THROTTLE_MS = GuardianConstants.AI_THROTTLE_MS
+        private const val AI_PERIODIC_MS = GuardianConstants.AI_PERIODIC_MS
+        private const val AI_FOLLOW_UP_MS = GuardianConstants.AI_FOLLOW_UP_MS
+        private const val SCREEN_OFF_PERIODIC_MS = GuardianConstants.SCREEN_OFF_PERIODIC_MS
+        private const val MAX_AI_SCAN_MAP = GuardianConstants.MAX_AI_SCAN_MAP
 
-        // BUG-03: bound the per-package throttle map.
-        private const val MAX_AI_SCAN_MAP = 50
-
-        // BUG-05: companion flag the foreground watchdog can poll. Settings
-        // can claim accessibility is "enabled" while the OS has actually
-        // killed the bound service on aggressive OEMs.
         @Volatile var isRunning: Boolean = false
             private set
     }
@@ -73,7 +72,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope: CoroutineScope = Scopes.default()
     private var periodicJob: Job? = null
 
     @Volatile private var lastForegroundPkg: String? = null
@@ -81,11 +80,24 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val lastAiScanByPkg = HashMap<String, Long>()
     private val aiInFlight = AtomicBoolean(false)
 
-    private val rulesReloadReceiver = object : BroadcastReceiver() {
+    // P1-E: live screen state. Defaults to ON because the service is normally
+    // bound while the user is interacting with the device.
+    @Volatile private var isScreenOn = true
+
+    // P4-C: cached master protection switch. Refreshed via a hot collector.
+    @Volatile private var protectionMasterEnabled = true
+
+    private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            scope.launch {
-                rulesEngine.reload()
-                Timber.d("RulesEngine reloaded via broadcast")
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
+                    Timber.d("Screen OFF — AI scanner slowed")
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    isScreenOn = true
+                    Timber.d("Screen ON — AI scanner resumed")
+                }
             }
         }
     }
@@ -94,6 +106,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         isRunning = true
         Timber.i("GuardianAccessibilityService connected")
+
+        // P1-C: start hot collectors for the prefs the AI loop reads on every
+        // tick. ONE collector per pref instead of a DataStore read per tick.
+        runCatching { aiDetector.startPrefsCache(scope) }
 
         scope.launch {
             rulesEngine.reload()
@@ -106,25 +122,58 @@ class GuardianAccessibilityService : AccessibilityService() {
             }.onFailure { Timber.e(it, "Gender pipeline preload failed") }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            rulesReloadReceiver,
-            IntentFilter(RulesEngine.ACTION_RULES_CHANGED)
-        )
+        // P2-B: collect RulesEngine.rulesChanged directly — replaces the
+        // deprecated LocalBroadcastManager + BroadcastReceiver wiring.
+        scope.launch {
+            runCatching {
+                rulesEngine.rulesChanged.collect {
+                    Timber.d("RulesEngine reloaded via SharedFlow")
+                }
+            }.onFailure { Timber.w(it, "rulesChanged collector failed") }
+        }
+
+        // P4-C: hot collector for the master protection switch.
+        scope.launch {
+            runCatching {
+                prefs.protectionEnabled.collect { protectionMasterEnabled = it }
+            }.onFailure { Timber.w(it, "protectionEnabled collector failed") }
+        }
+
+        // P1-E: register screen state receiver.
+        runCatching {
+            registerReceiver(
+                screenStateReceiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_SCREEN_ON)
+                }
+            )
+        }.onFailure { Timber.w(it, "Failed to register screen state receiver") }
+
         startPeriodicAiScanner()
     }
 
+    /**
+     * P1-E: screen-state-aware. When the screen is OFF we use a much longer
+     * delay (SCREEN_OFF_PERIODIC_MS) AND skip the scan body entirely. This
+     * preserves battery while still allowing a quick wake when the screen
+     * turns back on.
+     */
     private fun startPeriodicAiScanner() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         periodicJob?.cancel()
         periodicJob = scope.launch {
             while (isActive) {
-                delay(AI_PERIODIC_MS)
+                val interval = if (isScreenOn) AI_PERIODIC_MS else SCREEN_OFF_PERIODIC_MS
+                delay(interval)
+                if (!isScreenOn) continue   // skip the scan body while screen is off
+
                 // BUG-02: single tick failures must NOT kill the loop.
                 try {
                     val pkg = lastForegroundPkg ?: continue
                     if (!rulesEngine.canBlock(pkg)) continue
-                    val enabled = runCatching { prefs.aiDetectionEnabled.first() }.getOrDefault(false)
-                    if (!enabled) continue
+                    // P1-C: cached pref instead of DataStore read.
+                    if (!aiDetector.cachedAiEnabled) continue
                     if (!aiDetector.isModelAvailable() && !aiDetector.isNsfwModelAvailable()) continue
                     triggerAiCheck(pkg)
                 } catch (t: Throwable) {
@@ -136,6 +185,11 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        // P4-C: master protection switch — skip all processing when paused.
+        // We read the cached pref via a fast non-blocking flow.last() emulation
+        // by checking the AiDetector pref cache hot-state; the master switch
+        // itself uses a synchronous boolean cache.
+        if (!protectionMasterEnabled) return
         val pkg = event.packageName?.toString() ?: return
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> handleWindowChange(pkg)
@@ -159,9 +213,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                     triggerAiCheck(pkg, force = true)
                     scheduleFollowUpScan(pkg)
                 } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R && rulesEngine.canBlock(pkg)) {
-                    // BUG-09: API 26-29 has no screenshot API; we run a chain of
-                    // text-only follow-up scans so scroll-heavy apps still get
-                    // multiple chances to flag content. Best-effort only.
                     scheduleLegacyFollowUpChain(pkg)
                 }
             }
@@ -180,9 +231,6 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     /**
      * BUG-09: best-effort progressive content rescan for API < 30.
-     * Without MediaProjection we cannot screenshot, so we re-scan visible
-     * text at 500/1500/3000 ms — gives 3 chances to catch progressively
-     * loaded content (Instagram, gallery, browser).
      */
     private fun scheduleLegacyFollowUpChain(pkg: String) {
         scope.launch {
@@ -233,10 +281,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    /**
-     * BUG-03: bounded per-package throttle map.
-     * Removes the oldest entry when the cap would be exceeded.
-     */
     private fun recordScanTime(pkg: String, now: Long) {
         synchronized(lastAiScanByPkg) {
             if (lastAiScanByPkg.size >= MAX_AI_SCAN_MAP && !lastAiScanByPkg.containsKey(pkg)) {
@@ -261,14 +305,15 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         scope.launch {
             try {
-                val aiEnabled = runCatching { prefs.aiDetectionEnabled.first() }.getOrDefault(false)
+                // P1-C: cached pref reads (was prefs.aiDetectionEnabled.first()).
+                val aiEnabled = aiDetector.cachedAiEnabled
                 if (!aiEnabled) {
                     aiInFlight.set(false)
                     return@launch
                 }
 
-                // Read user gender once per scan (cheap — DataStore).
-                val userGender = runCatching { prefs.userGender.first() }.getOrDefault(GENDER_NONE)
+                // P1-C: cached gender (was prefs.userGender.first()).
+                val userGender = aiDetector.cachedUserGender
 
                 // Decide which detectors are even possible right now.
                 val genderFeatureOn = userGender != GENDER_NONE && aiDetector.isNsfwModelAvailable()
@@ -279,7 +324,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                     return@launch
                 }
 
-                // Eagerly attempt loads — failures are silent inside AiDetector.
                 if (genderFeatureOn) aiDetector.ensureGenderPipelineLoaded()
                 if (legacyOn)        aiDetector.ensureLoaded()
 
@@ -288,11 +332,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                     return@launch
                 }
 
-                // BUG-01: guarantee aiInFlight is reset even if takeScreenshot
-                // throws synchronously or the coroutine is cancelled before
-                // either callback fires. We use a local flag to know whether
-                // a callback successfully claimed ownership; if not, we reset
-                // here in finally.
                 val callbackTookOver = AtomicBoolean(false)
                 try {
                     withContext(Dispatchers.Main) {
@@ -314,7 +353,6 @@ class GuardianAccessibilityService : AccessibilityService() {
 
                                                 val safeBmp = bmp ?: return@launch
 
-                                                // ── Step 1: opposite-gender NSFW (if armed) ──
                                                 var blocked = false
                                                 if (genderFeatureOn) {
                                                     val hit = runCatching {
@@ -336,7 +374,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                     }
                                                 }
 
-                                                // ── Step 2: legacy generic NSFW fallback ──
                                                 if (!blocked && legacyOn) {
                                                     val hit = runCatching {
                                                         aiDetector.isUnsafe(safeBmp)
@@ -374,18 +411,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 }
                             )
                         } catch (t: Throwable) {
-                            // Synchronous throw from takeScreenshot itself
-                            // (e.g. service detached). Caller's finally will
-                            // reset aiInFlight because callbackTookOver is
-                            // still false.
                             Timber.w(t, "takeScreenshot threw synchronously")
                             throw t
                         }
                     }
                 } finally {
-                    // BUG-01 safety net: if neither callback claimed the in-flight
-                    // flag (sync throw, cancellation, etc.) we MUST clear it here
-                    // or detection silently stops forever.
                     if (!callbackTookOver.get()) {
                         aiInFlight.set(false)
                     }
@@ -397,23 +427,39 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * P2-C: visited-set tracking — avoids double-recycle when a child node
+     * reference is also reachable through another path on certain OEMs.
+     * We collect every non-root node into [toRecycle] and recycle each
+     * exactly once after the BFS completes.
+     */
     private fun collectVisibleText(root: AccessibilityNodeInfo?): String? {
         root ?: return null
-        val sb = StringBuilder()
+        val sb = StringBuilder(512)
         val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
+        val toRecycle: MutableSet<AccessibilityNodeInfo> = HashSet()
         queue.add(root)
         var nodes = 0
-        while (queue.isNotEmpty() && nodes < 250) {
-            val node = queue.removeFirst()
-            node.text?.let { sb.append(it).append(' ') }
-            node.contentDescription?.let { sb.append(it).append(' ') }
-            for (i in 0 until node.childCount) {
-                node.getChild(i)?.let { queue.add(it) }
+        try {
+            while (queue.isNotEmpty() && nodes < 250) {
+                val node = queue.removeFirst()
+                node.text?.let { sb.append(it).append(' ') }
+                node.contentDescription?.let { sb.append(it).append(' ') }
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i) ?: continue
+                    queue.add(child)
+                    if (child !== root) toRecycle.add(child)
+                }
+                nodes++
             }
-            if (node !== root) node.recycle()
-            nodes++
+            // Drain any remaining queue entries — they also need recycling.
+            for (n in queue) {
+                if (n !== root) toRecycle.add(n)
+            }
+        } finally {
+            // Recycle exactly once per non-root node.
+            for (n in toRecycle) runCatching { n.recycle() }
         }
-        queue.forEach { if (it !== root) it.recycle() }
         return sb.toString().takeIf { it.isNotBlank() }
     }
 
@@ -422,9 +468,8 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         isRunning = false
         runCatching { periodicJob?.cancel() }
-        runCatching {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(rulesReloadReceiver)
-        }
+        // P2-B: no LocalBroadcastManager to unregister anymore.
+        runCatching { unregisterReceiver(screenStateReceiver) }
         runCatching { scope.cancel() }
         runCatching { aiDetector.close() }
         super.onDestroy()

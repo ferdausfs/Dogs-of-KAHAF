@@ -8,24 +8,24 @@ import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.usecase.LogBlockEventUseCase
 import com.guardian.shield.ui.overlay.BlockOverlayActivity
+import com.guardian.shield.util.GuardianConstants
+import com.guardian.shield.util.Scopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-10 → de-dupe throttle is now a per-package map. Previously, a
- *    single (pkg, ts) pair was tracked, so rapid alternation between two
- *    blocked packages bypassed the throttle entirely → overlay launched
- *    5–10 times/sec. Capped at MAX_THROTTLE_MAP entries with oldest-out
- *    eviction (same pattern as GuardianAccessibilityService).
+ * v9 (2.0.0):
+ *  • P5-A → uses Scopes.io() instead of inline SupervisorJob+Dispatchers.IO.
+ *  • P5-B → throttle constants are now in GuardianConstants.
  *
- *  Existing behavior preserved:
+ * Earlier v8 fix (BUG-10) preserved: per-package de-dupe throttle map with
+ * oldest-out eviction.
+ *
+ * Existing behavior preserved:
  *   - HOME → overlay → log order is unchanged (must NEVER reorder).
  *   - Each Intent dispatch is wrapped in runCatching for OEM resilience.
  */
@@ -35,13 +35,12 @@ class BlockingEngine @Inject constructor(
     private val logEvent: LogBlockEventUseCase
 ) {
     companion object {
-        private const val THROTTLE_MS = 800L
-        private const val MAX_THROTTLE_MAP = 50
+        private const val THROTTLE_MS = GuardianConstants.BLOCK_THROTTLE_MS
+        private const val MAX_THROTTLE_MAP = GuardianConstants.MAX_THROTTLE_MAP
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope: CoroutineScope = Scopes.io()
 
-    // BUG-10: per-package timestamp map.
     private val lastBlockByPkg = HashMap<String, Long>()
 
     fun block(packageName: String, reason: BlockReason, term: String? = null) {

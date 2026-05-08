@@ -96,6 +96,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnKeywords.setOnClickListener {
             runCatching { startActivity(Intent(this, KeywordActivity::class.java)) }
         }
+        // v9 (2.0.0) — P4-A: schedule rules entry-point.
+        binding.btnSchedule.setOnClickListener {
+            runCatching { startActivity(Intent(this, ScheduleActivity::class.java)) }
+        }
         binding.btnUploadModel.setOnClickListener { pickLegacyModel.launch(arrayOf("*/*")) }
         binding.btnPermissionHealth.setOnClickListener {
             runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }

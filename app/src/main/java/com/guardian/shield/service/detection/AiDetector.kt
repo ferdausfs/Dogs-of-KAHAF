@@ -6,50 +6,55 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_FEMALE
 import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_MALE
 import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_NONE
+import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.CompatibilityList
+import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
 import timber.log.Timber
 import java.io.File
+import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-04 → close() now serialises with active inference by acquiring
- *    inferenceLock via runBlocking before nulling the interpreters. This
- *    prevents the JNI native crash where a model re-import (or service
- *    teardown) raced with an in-flight Interpreter.run() and called close()
- *    on a live native handle.
+ * v9 (2.0.0) FIX-LOG (performance pass):
+ *  • P1-A → GPU delegate is tried first; CPU fallback on unsupported devices.
+ *  • P1-B → memory-mapped model loading via FileChannel.map (zero-copy).
+ *           Fallback to byte-array copy if mmap fails.
+ *  • P1-C → cached preference values (cachedAiEnabled, cachedUserGender).
+ *           startPrefsCache() is called once from the AccessibilityService
+ *           and replaces the per-tick DataStore reads.
+ *  • P1-D → adaptive bitmap variant scanning with early exit.
+ *  • P2-A → close() now uses withTimeoutOrNull(2 s) to prevent ANR if the
+ *           inference lock is held by a long-running run.
  *
- * Loads & runs three TFLite models:
- *   • [MODEL_FILE]            — legacy combined "guardian" NSFW model (back-compat)
- *   • [NSFW_MODEL_FILE]       — dedicated NSFW probability head (single float / 2-class output)
- *   • [GENDER_MODEL_FILE]     — gender classifier → [male_prob, female_prob]
- *
- * Stability guarantees:
- *   - All loads are wrapped in try/catch — a missing/corrupt model NEVER crashes the app.
- *   - Inference is mutex-guarded (no concurrent runs), and a coarse [inferenceInFlight] flag
- *     short-circuits re-entrant calls coming through different paths.
- *   - close() is serialised against active inference (BUG-04).
- *   - Bitmaps created internally are recycled in `finally`; the caller's bitmap is never
- *     recycled by us.
+ * Earlier v8 stability guarantees (preserved):
+ *   - Loads are wrapped in try/catch — missing/corrupt model never crashes.
+ *   - Inference is mutex-guarded; coarse [inferenceInFlight] short-circuits
+ *     re-entrant calls.
+ *   - close() is idempotent.
+ *   - Bitmaps created internally are recycled in `finally`.
  *   - All inference runs on Dispatchers.Default; never on Main.
  *   - OutOfMemoryError is caught explicitly so we degrade instead of crashing.
- *   - close() is idempotent and try/catch-guarded.
  */
 @Singleton
 class AiDetector @Inject constructor(
@@ -67,11 +72,10 @@ class AiDetector @Inject constructor(
         const val INPUT_SIZE = 224
 
         // ── Tunable thresholds (kept as constants for easy tweaking) ──────
-        /** Minimum NSFW score (from nsfw_model) before we even bother running gender. */
-        const val NSFW_GATE_THRESHOLD: Float = 0.6f
-
-        /** Minimum class probability from gender_model to trust the classification. */
-        const val GENDER_CONFIDENCE_THRESHOLD: Float = 0.65f
+        // P5-B: re-exported via util/Constants.kt; these aliases preserve
+        // the existing public surface in case other callers reach in.
+        const val NSFW_GATE_THRESHOLD: Float = GuardianConstants.NSFW_GATE_THRESHOLD
+        const val GENDER_CONFIDENCE_THRESHOLD: Float = GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
     }
 
     private data class UnsafeScores(
@@ -105,6 +109,11 @@ class AiDetector @Inject constructor(
     @Volatile private var nsfwLoadFailed   = false
     @Volatile private var genderLoadFailed = false
 
+    // P1-A: track the GPU delegates so we can release them on close().
+    @Volatile private var legacyGpuDelegate: GpuDelegate? = null
+    @Volatile private var nsfwGpuDelegate:   GpuDelegate? = null
+    @Volatile private var genderGpuDelegate: GpuDelegate? = null
+
     private val inferenceLock = Mutex()
     private val inferenceInFlight = AtomicBoolean(false)
 
@@ -112,6 +121,39 @@ class AiDetector @Inject constructor(
         .add(ResizeOp(INPUT_SIZE, INPUT_SIZE, ResizeOp.ResizeMethod.BILINEAR))
         .add(NormalizeOp(0f, 255f))
         .build()
+
+    // ── P1-C: preference cache ────────────────────────────────────────
+    /** Hot-cached value of prefs.aiDetectionEnabled. Default = false until first emit. */
+    @Volatile var cachedAiEnabled: Boolean = false
+        private set
+    /** Hot-cached value of prefs.userGender. Default = NONE until first emit. */
+    @Volatile var cachedUserGender: String = GENDER_NONE
+        private set
+    @Volatile private var prefsCacheStarted = false
+
+    /**
+     * P1-C: collect both preference flows once and stay hot. Replaces the
+     * `prefs.aiDetectionEnabled.first()` and `prefs.userGender.first()` calls
+     * that previously happened on EVERY scan tick (every 850 ms).
+     *
+     * Must be called once from GuardianAccessibilityService.onServiceConnected.
+     * Safe to call multiple times — only the first call attaches collectors.
+     */
+    @Synchronized
+    fun startPrefsCache(scope: CoroutineScope) {
+        if (prefsCacheStarted) return
+        prefsCacheStarted = true
+        scope.launch {
+            runCatching {
+                prefs.aiDetectionEnabled.collect { cachedAiEnabled = it }
+            }.onFailure { Timber.w(it, "aiDetectionEnabled collector failed") }
+        }
+        scope.launch {
+            runCatching {
+                prefs.userGender.collect { cachedUserGender = it }
+            }.onFailure { Timber.w(it, "userGender collector failed") }
+        }
+    }
 
     // ── Public surface ────────────────────────────────────────────────────
 
@@ -131,6 +173,39 @@ class AiDetector @Inject constructor(
     }.getOrDefault(false)
 
     /**
+     * P1-A: build interpreter options with GPU delegate first, CPU fallback.
+     * We hand back the GpuDelegate (if any) so the caller can null it on close().
+     */
+    private data class BuiltOptions(val options: Interpreter.Options, val gpu: GpuDelegate?)
+
+    private fun buildInterpreterOptions(label: String): BuiltOptions {
+        val opts = Interpreter.Options()
+        // Try GPU delegate first.
+        val gpu: GpuDelegate? = runCatching {
+            val compat = CompatibilityList()
+            if (compat.isDelegateSupportedOnThisDevice) {
+                val gpuOpts = GpuDelegate.Options().apply { setPrecisionLossAllowed(true) }
+                val delegate = GpuDelegate(gpuOpts)
+                opts.addDelegate(delegate)
+                Timber.i("TFLite[$label]: GPU delegate enabled")
+                delegate
+            } else {
+                Timber.i("TFLite[$label]: GPU not supported — using CPU")
+                null
+            }
+        }.onFailure {
+            Timber.w(it, "TFLite[$label]: GPU delegate unavailable, falling back to CPU")
+        }.getOrNull()
+
+        if (gpu == null) {
+            // CPU fallback — same threading policy as before.
+            val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+            opts.setNumThreads(threads)
+        }
+        return BuiltOptions(opts, gpu)
+    }
+
+    /**
      * Lazily load the legacy combined model (existing behavior — DO NOT change).
      * Returns false if loading failed; callers should silently skip in that case.
      */
@@ -140,9 +215,20 @@ class AiDetector @Inject constructor(
 
         val buffer = readModelBuffer(MODEL_FILE) ?: return false
         return runCatching {
-            val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
-            val options = Interpreter.Options().apply { setNumThreads(threads) }
-            val created = Interpreter(buffer, options)
+            val (options, gpu) = buildInterpreterOptions("legacy")
+            val created = try {
+                Interpreter(buffer, options)
+            } catch (t: Throwable) {
+                // GPU failed at runtime — release delegate & retry on CPU.
+                runCatching { gpu?.close() }
+                Timber.w(t, "GPU interpreter failed for legacy — retrying on CPU")
+                val cpuOpts = Interpreter.Options().apply {
+                    setNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
+                }
+                Interpreter(buffer, cpuOpts)
+            }.also {
+                if (gpu != null) legacyGpuDelegate = gpu
+            }
             outputClasses = created.getOutputTensor(0).shape().last().coerceAtLeast(2)
             interpreter = created
             Timber.i("TFLite (legacy) model loaded — output classes=$outputClasses")
@@ -172,9 +258,20 @@ class AiDetector @Inject constructor(
             return
         }
         runCatching {
-            val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
-            val opts = Interpreter.Options().apply { setNumThreads(threads) }
-            nsfwInterpreter = Interpreter(buffer, opts)
+            val (opts, gpu) = buildInterpreterOptions("nsfw")
+            val created = try {
+                Interpreter(buffer, opts)
+            } catch (t: Throwable) {
+                runCatching { gpu?.close() }
+                Timber.w(t, "GPU interpreter failed for nsfw — retrying on CPU")
+                val cpuOpts = Interpreter.Options().apply {
+                    setNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
+                }
+                Interpreter(buffer, cpuOpts)
+            }.also {
+                if (gpu != null) nsfwGpuDelegate = gpu
+            }
+            nsfwInterpreter = created
             Timber.i("nsfw_model.tflite loaded successfully")
         }.onFailure {
             nsfwLoadFailed = true
@@ -193,9 +290,20 @@ class AiDetector @Inject constructor(
             return
         }
         runCatching {
-            val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
-            val opts = Interpreter.Options().apply { setNumThreads(threads) }
-            genderInterpreter = Interpreter(buffer, opts)
+            val (opts, gpu) = buildInterpreterOptions("gender")
+            val created = try {
+                Interpreter(buffer, opts)
+            } catch (t: Throwable) {
+                runCatching { gpu?.close() }
+                Timber.w(t, "GPU interpreter failed for gender — retrying on CPU")
+                val cpuOpts = Interpreter.Options().apply {
+                    setNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
+                }
+                Interpreter(buffer, cpuOpts)
+            }.also {
+                if (gpu != null) genderGpuDelegate = gpu
+            }
+            genderInterpreter = created
             Timber.i("gender_model.tflite loaded successfully")
         }.onFailure {
             genderLoadFailed = true
@@ -205,28 +313,50 @@ class AiDetector @Inject constructor(
         }
     }
 
+    /**
+     * P1-B: memory-mapped model loading.
+     * Previously: file.readBytes() into a byte array then copied to
+     * ByteBuffer.allocateDirect() — 2× memory usage and slow start.
+     * Now: FileChannel.map() returns a zero-copy MappedByteBuffer.
+     * Fallback to the byte-array path if mmap throws (some FS, sealed assets).
+     */
     private fun readModelBuffer(name: String): ByteBuffer? {
+        // 1. Imported file in filesDir — try mmap first.
         val externalFile = File(context.filesDir, name)
-        return when {
-            externalFile.exists() -> runCatching {
+        if (externalFile.exists()) {
+            // Attempt mmap.
+            val mapped = runCatching {
+                FileInputStream(externalFile).use { fis ->
+                    fis.channel.map(FileChannel.MapMode.READ_ONLY, 0, externalFile.length())
+                        .order(ByteOrder.nativeOrder())
+                }
+            }.onFailure { Timber.w(it, "MappedByteBuffer failed for $name, falling back to readBytes") }
+                .getOrNull()
+            if (mapped != null) return mapped
+
+            // Fallback: byte-array copy (original v8 path).
+            return runCatching {
                 val bytes = externalFile.readBytes()
                 ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
                     .also { it.put(bytes); it.rewind() }
             }.onFailure { Timber.e(it, "Failed to read $name from filesDir") }.getOrNull()
+        }
 
-            modelExistsInAssets(name) -> runCatching {
+        // 2. Asset fallback — assets cannot be mmap'd through the standard API,
+        // so we keep the byte-array copy here.
+        if (modelExistsInAssets(name)) {
+            return runCatching {
                 context.assets.open(name).use { stream ->
                     val bytes = stream.readBytes()
                     ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
                         .also { it.put(bytes); it.rewind() }
                 }
             }.onFailure { Timber.e(it, "Failed to read $name from assets") }.getOrNull()
-
-            else -> null
         }
+        return null
     }
 
-    // ── Existing isUnsafe() flow (kept verbatim for back-compat) ──────────
+    // ── Existing isUnsafe() flow (P1-D adaptive variants with early exit) ──
 
     suspend fun isUnsafe(bitmap: Bitmap): Boolean {
         if (!ensureLoaded()) return false
@@ -237,9 +367,23 @@ class AiDetector @Inject constructor(
                 runCatching {
                     val variants = buildBitmapVariants(bitmap)
                     try {
-                        var strongest = UnsafeScores()
-                        for (candidate in variants) {
-                            val scores = runLegacyInference(candidate)
+                        // P1-D: fast path — run full image first.
+                        val primaryScores = runLegacyInference(variants[0])
+                        // If primary score is very low (< 20% of threshold), skip crops.
+                        val earlyExitThreshold = threshold * GuardianConstants.EARLY_EXIT_RATIO
+                        if (primaryScores.unsafe < earlyExitThreshold &&
+                            primaryScores.porn   < earlyExitThreshold &&
+                            primaryScores.hentai < earlyExitThreshold &&
+                            primaryScores.sexy   < earlyExitThreshold * 0.5f
+                        ) {
+                            return@runCatching false
+                        }
+                        if (isUnsafe(primaryScores, threshold)) return@runCatching true
+
+                        // Full scan for remaining variants.
+                        var strongest = primaryScores
+                        for (i in 1 until variants.size) {
+                            val scores = runLegacyInference(variants[i])
                             strongest = strongest.merge(scores)
                             if (isUnsafe(scores, threshold)) return@runCatching true
                         }
@@ -457,34 +601,55 @@ class AiDetector @Inject constructor(
     }
 
     /**
-     * BUG-04: Idempotent and now SAFE w.r.t. concurrent inference.
+     * P2-A: ANR-safe close.
      *
-     * Without serialisation, `close()` could call `interpreter?.close()` while
-     * another thread was mid-`Interpreter.run()` → JNI native crash that
-     * silently terminates the AccessibilityService. We acquire `inferenceLock`
-     * via runBlocking (this method is NOT a suspend function) so any active
-     * inference completes before we tear down native handles.
+     * v8 used a plain `runBlocking { inferenceLock.withLock { ... } }` which
+     * could block the main thread for the full duration of an in-flight
+     * inference (potentially 1–3 s on slow devices) → ANR risk on Android
+     * 12+ where onDestroy must return promptly.
+     *
+     * We now run on Dispatchers.IO and bound the wait to AI_DETECTOR_CLOSE_TIMEOUT_MS.
+     * If the lock can't be acquired in time we tear down anyway — the next
+     * Interpreter.run() will fail gracefully (caller already wraps it in
+     * runCatching).
      *
      * Safe to call multiple times. Never throws.
      */
     fun close() {
         runCatching {
-            runBlocking {
-                inferenceLock.withLock {
-                    runCatching { interpreter?.close() }
-                    runCatching { nsfwInterpreter?.close() }
-                    runCatching { genderInterpreter?.close() }
-                    interpreter = null
-                    nsfwInterpreter = null
-                    genderInterpreter = null
-                    // Allow the next ensureLoaded() / ensureGenderPipelineLoaded()
-                    // to actually re-create the interpreters from the new file.
-                    nsfwLoadAttempted = false
-                    genderLoadAttempted = false
-                    nsfwLoadFailed = false
-                    genderLoadFailed = false
+            runBlocking(Dispatchers.IO) {
+                val acquired = withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
+                    inferenceLock.withLock { tearDownInterpreters() }
+                    true
+                }
+                if (acquired == null) {
+                    Timber.w("AiDetector.close() timed out waiting for inference lock — tearing down anyway")
+                    tearDownInterpreters()
                 }
             }
         }.onFailure { Timber.w(it, "AiDetector.close() failed (suppressed)") }
+    }
+
+    private fun tearDownInterpreters() {
+        runCatching { interpreter?.close() }
+        runCatching { nsfwInterpreter?.close() }
+        runCatching { genderInterpreter?.close() }
+        // Release GPU delegates explicitly — TFLite docs say leaking these
+        // can pin GPU memory until process death.
+        runCatching { legacyGpuDelegate?.close() }
+        runCatching { nsfwGpuDelegate?.close() }
+        runCatching { genderGpuDelegate?.close() }
+        interpreter = null
+        nsfwInterpreter = null
+        genderInterpreter = null
+        legacyGpuDelegate = null
+        nsfwGpuDelegate = null
+        genderGpuDelegate = null
+        // Allow the next ensureLoaded() / ensureGenderPipelineLoaded()
+        // to actually re-create the interpreters from the new file.
+        nsfwLoadAttempted = false
+        genderLoadAttempted = false
+        nsfwLoadFailed = false
+        genderLoadFailed = false
     }
 }

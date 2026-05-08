@@ -79,6 +79,8 @@
         <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
         <activity android:name=".ui.settings.AppListActivity" android:exported="false" />
         <activity android:name=".ui.settings.KeywordActivity" android:exported="false" />
+        <!-- v9 (2.0.0) — P4-A: schedule rules screen -->
+        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false" />
 
         <!-- v2: Permission Health screen -->
         <activity android:name=".ui.permissions.PermissionsActivity"

@@ -57,3 +57,32 @@ class GetAllKeywordsSyncUseCase @Inject constructor(private val repo: RulesRepos
 class GetAllAppRulesSyncUseCase @Inject constructor(private val repo: RulesRepository) {
     suspend operator fun invoke(): List<AppRule> = repo.getAllAppRules()
 }
+
+// ── v9 (2.0.0) — block-log export + dashboard stats ─────────────────────
+
+class GetAllBlockEventsUseCase @Inject constructor(private val repo: RulesRepository) {
+    suspend operator fun invoke(): List<BlockEvent> = repo.getAllBlockEvents()
+}
+
+class ObserveBlockEventsSinceUseCase @Inject constructor(private val repo: RulesRepository) {
+    operator fun invoke(since: Long): Flow<List<BlockEvent>> =
+        repo.observeBlockEventsSince(since)
+}
+
+// ── v9 (2.0.0) — P4-A schedule rules use cases ──────────────────────────
+
+class GetScheduleRulesUseCase @Inject constructor(private val repo: RulesRepository) {
+    operator fun invoke(): Flow<List<ScheduleRule>> = repo.observeScheduleRules()
+}
+
+class UpsertScheduleRuleUseCase @Inject constructor(private val repo: RulesRepository) {
+    suspend operator fun invoke(rule: ScheduleRule) = repo.upsertScheduleRule(rule)
+}
+
+class DeleteScheduleRuleUseCase @Inject constructor(private val repo: RulesRepository) {
+    suspend operator fun invoke(pkg: String) = repo.deleteScheduleRule(pkg)
+}
+
+class GetAllScheduleRulesSyncUseCase @Inject constructor(private val repo: RulesRepository) {
+    suspend operator fun invoke(): List<ScheduleRule> = repo.getAllScheduleRules()
+}

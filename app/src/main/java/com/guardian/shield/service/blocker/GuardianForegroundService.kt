@@ -13,11 +13,10 @@ import com.guardian.shield.service.accessibility.GuardianAccessibilityService
 import com.guardian.shield.ui.dashboard.MainActivity
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.util.PermissionManager
+import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -25,21 +24,11 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-05 → watchdog now also checks GuardianAccessibilityService.isRunning.
- *    On aggressive OEMs (MIUI / ColorOS) the OS can kill the bound service
- *    without disabling it in Settings, leaving Settings.isAccessibilityEnabled
- *    falsely returning true. We now post a separate degraded-state alert
- *    notification on the high-importance channel when this happens.
- *  • BUG-06 → onTaskRemoved no longer calls startForegroundService directly
- *    (which can race with process tear-down on Android 12+ →
- *    ForegroundServiceDidNotStartInTimeException). Instead we schedule a
- *    3-second AlarmManager wake-up to BootReceiver with a custom
- *    ACTION_RESTART_SERVICE.
- *  • BUG-14 → "degraded" notification now goes on the high-importance
- *    CHANNEL_ID_ALERT (separate notification ID), so it actually pops up
- *    as a heads-up. The persistent foreground notification stays unchanged
- *    on the low-importance CHANNEL_ID.
+ * v9 (2.0.0):
+ *  • P5-A → uses Scopes.default() instead of inline SupervisorJob+Dispatchers.
+ *
+ * Earlier v8 fixes preserved: BUG-05 (degraded-state detection), BUG-06
+ * (alarm-based self-restart), BUG-14 (separate alert channel).
  */
 @AndroidEntryPoint
 class GuardianForegroundService : Service() {
@@ -59,7 +48,7 @@ class GuardianForegroundService : Service() {
         }.onFailure { Timber.w(it, "GuardianForegroundService.start failed") }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope: CoroutineScope = Scopes.default()
     private var watchdogJob: Job? = null
 
     override fun onCreate() {
@@ -81,12 +70,6 @@ class GuardianForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /**
-     * BUG-06: schedule a delayed self-restart through AlarmManager → BootReceiver
-     * instead of calling startForegroundService synchronously. On Android 12+
-     * the latter can throw ForegroundServiceDidNotStartInTimeException because
-     * the process is already being torn down.
-     */
     override fun onTaskRemoved(rootIntent: Intent?) {
         runCatching {
             val am = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
@@ -114,7 +97,6 @@ class GuardianForegroundService : Service() {
     override fun onDestroy() {
         watchdogJob?.cancel()
         scope.cancel()
-        // Clear any lingering alert notification on clean shutdown.
         runCatching {
             getSystemService(NotificationManager::class.java)?.cancel(ALERT_NOTIFICATION_ID)
         }
@@ -131,7 +113,6 @@ class GuardianForegroundService : Service() {
                     val ctx = this@GuardianForegroundService
                     val missing = PermissionManager.missingCritical(ctx)
 
-                    // BUG-05: detect "settings says enabled but service is dead".
                     val accSettingsOn = PermissionManager.isAccessibilityEnabled(ctx)
                     val accReallyRunning = GuardianAccessibilityService.isRunning
                     val accDegraded = accSettingsOn && !accReallyRunning
@@ -139,10 +120,8 @@ class GuardianForegroundService : Service() {
                     val degradedCount = missing.size + (if (accDegraded) 1 else 0)
 
                     val nm = ctx.getSystemService(NotificationManager::class.java)
-                    // Foreground notification stays on its own channel (BUG-14).
                     nm?.notify(NOTIFICATION_ID, buildForegroundNotification(degradedCount))
 
-                    // Separate high-importance heads-up alert when degraded.
                     if (degradedCount > 0) {
                         nm?.notify(
                             ALERT_NOTIFICATION_ID,
@@ -175,7 +154,6 @@ class GuardianForegroundService : Service() {
         }
     }
 
-    /** Persistent foreground notification (low importance, never makes a sound). */
     private fun buildForegroundNotification(missingCount: Int): Notification {
         val openMain = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
@@ -202,11 +180,6 @@ class GuardianForegroundService : Service() {
             .build()
     }
 
-    /**
-     * BUG-14: separate high-importance heads-up alert notification. Posted on
-     * the alerts channel — IMPORTANCE_HIGH means it actually pops up and
-     * makes a sound on Android 8+.
-     */
     private fun buildAlertNotification(missingCount: Int, accessibilityDegraded: Boolean): Notification {
         val openPerms = PendingIntent.getActivity(
             this, 2, Intent(this, PermissionsActivity::class.java),

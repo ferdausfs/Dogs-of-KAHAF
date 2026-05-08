@@ -13,12 +13,12 @@ import javax.inject.Singleton
 private val Context.dataStore by preferencesDataStore(name = "guardian_prefs")
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-12 → added KEY_RULES_VERSION counter. Bumped by AppListViewModel /
- *    KeywordViewModel after every rule mutation. MainActivity reads its
- *    cached version on resume and only triggers RulesEngine.reload() when
- *    the on-disk version differs — no more spurious DB queries on every
- *    activity resume.
+ * v9 (2.0.0):
+ *  • P4-C → KEY_PROTECTION_ENABLED master switch (default true). The
+ *    AccessibilityService skips all processing when this is false, allowing
+ *    a quick FAB toggle from the dashboard without going into Settings.
+ *
+ *  Earlier v8 BUG-12 KEY_RULES_VERSION counter preserved.
  */
 @Singleton
 class GuardianPreferences @Inject constructor(
@@ -32,19 +32,19 @@ class GuardianPreferences @Inject constructor(
         val KEY_AI_THRESHOLD   = floatPreferencesKey("ai_threshold")
         val KEY_FIRST_RUN      = booleanPreferencesKey("first_run")
 
-        // ── Opposite-gender NSFW filter ────────────────────────────────────
-        // "MALE"   → block FEMALE NSFW
-        // "FEMALE" → block MALE NSFW
-        // "NONE"   → feature disabled (default)
+        // Opposite-gender NSFW filter
         val KEY_USER_GENDER    = stringPreferencesKey("user_gender")
 
         const val GENDER_MALE   = "MALE"
         const val GENDER_FEMALE = "FEMALE"
         const val GENDER_NONE   = "NONE"
 
-        // BUG-12: monotonically-increasing counter; bumped on every rule
-        // mutation (block/whitelist/keyword add/delete).
+        // BUG-12: monotonically-increasing rules version counter.
         val KEY_RULES_VERSION  = intPreferencesKey("rules_version")
+
+        // P4-C: master protection switch (FAB quick toggle on dashboard).
+        // Default true to preserve existing behaviour for upgraded installs.
+        val KEY_PROTECTION_ENABLED = booleanPreferencesKey("protection_enabled")
     }
 
     val keywordFilterEnabled: Flow<Boolean> =
@@ -58,13 +58,15 @@ class GuardianPreferences @Inject constructor(
     val isFirstRun: Flow<Boolean> =
         context.dataStore.data.map { it[KEY_FIRST_RUN] ?: true }
 
-    /** User-selected gender. Default = NONE → feature is OFF. */
     val userGender: Flow<String> =
         context.dataStore.data.map { it[KEY_USER_GENDER] ?: GENDER_NONE }
 
-    /** BUG-12: current rules version. Default 0. */
     val rulesVersion: Flow<Int> =
         context.dataStore.data.map { it[KEY_RULES_VERSION] ?: 0 }
+
+    /** P4-C: master protection switch. Default true. */
+    val protectionEnabled: Flow<Boolean> =
+        context.dataStore.data.map { it[KEY_PROTECTION_ENABLED] ?: true }
 
     suspend fun setKeywordFilter(v: Boolean) = context.dataStore.edit { it[KEY_KEYWORD_FILTER] = v }
     suspend fun setAiDetection(v: Boolean)   = context.dataStore.edit { it[KEY_AI_DETECTION] = v }
@@ -72,7 +74,6 @@ class GuardianPreferences @Inject constructor(
     suspend fun setAiThreshold(v: Float)     = context.dataStore.edit { it[KEY_AI_THRESHOLD] = v }
     suspend fun setFirstRun(v: Boolean)      = context.dataStore.edit { it[KEY_FIRST_RUN] = v }
 
-    /** Persist user gender. Pass [GENDER_MALE], [GENDER_FEMALE], or [GENDER_NONE]. */
     suspend fun setUserGender(v: String) = context.dataStore.edit {
         it[KEY_USER_GENDER] = when (v) {
             GENDER_MALE, GENDER_FEMALE, GENDER_NONE -> v
@@ -80,13 +81,18 @@ class GuardianPreferences @Inject constructor(
         }
     }
 
-    /** BUG-12: snapshot read for synchronous-style version compare. */
     suspend fun currentRulesVersion(): Int = rulesVersion.first()
 
-    /** BUG-12: increment the rules version. Safe across processes — DataStore
-     *  serialises edits, so concurrent bumps never lose updates. */
     suspend fun bumpRulesVersion() = context.dataStore.edit {
         val curr = it[KEY_RULES_VERSION] ?: 0
         it[KEY_RULES_VERSION] = curr + 1
+    }
+
+    /** P4-C: snapshot read for guard checks in the AccessibilityService. */
+    suspend fun currentProtectionEnabled(): Boolean = protectionEnabled.first()
+
+    /** P4-C: persist the master protection switch. */
+    suspend fun setProtectionEnabled(v: Boolean) = context.dataStore.edit {
+        it[KEY_PROTECTION_ENABLED] = v
     }
 }

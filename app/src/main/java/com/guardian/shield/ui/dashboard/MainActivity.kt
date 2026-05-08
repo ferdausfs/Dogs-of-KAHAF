@@ -3,8 +3,12 @@ package com.guardian.shield.ui.dashboard
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.os.Bundle
+import android.os.Environment
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.accessibility.AccessibilityManager
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -26,15 +30,19 @@ import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-12 → onResume only triggers RulesEngine.reload() when the on-disk
- *    rulesVersion has actually advanced past our cached value. Previously
- *    every resume (including ones from system UI / overlays / settings) hit
- *    the DB.
+ * v9 (2.0.0):
+ *  • P4-B → renders block-stats card (totalBlocks / aiBlocks / kwBlocks / topApp).
+ *  • P4-C → FAB toggles master protection switch.
+ *  • P4-D → "Export Log" menu writes CSV to public Downloads.
+ *
+ * Earlier v8 BUG-12 still applies (cached rules version skip on resume).
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -46,8 +54,6 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var prefs: GuardianPreferences
 
     private var unlocked = false
-
-    /** BUG-12: cached rules version. -1 = not yet seen → first resume reloads. */
     private var cachedRulesVersion: Int = -1
 
     private val pinSetupLauncher: ActivityResultLauncher<Intent> =
@@ -99,15 +105,80 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnClear.setOnClickListener { vm.clearAll() }
 
+        // P4-C: FAB → master toggle.
+        binding.fabToggle.setOnClickListener { vm.toggleProtection() }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.ui.collect { state ->
                     adapter.submit(state.recent)
                     binding.tvTodayCount.text = state.todayCount.toString()
                     binding.tvProtectionStatus.text = getString(
-                        if (state.protectionActive) R.string.protection_active else R.string.protection_inactive
+                        when {
+                            !state.protectionEnabled -> R.string.protection_paused
+                            state.protectionActive   -> R.string.protection_active
+                            else                     -> R.string.protection_inactive
+                        }
                     )
+                    // P4-B: stats card.
+                    binding.tvStatsTotal.text   = state.stats.totalBlocks.toString()
+                    binding.tvStatsAi.text      = state.stats.aiBlocks.toString()
+                    binding.tvStatsKeyword.text = state.stats.keywordBlocks.toString()
+                    binding.tvStatsTopApp.text  = state.stats.topApp ?: "—"
+                    // P4-C: FAB icon.
+                    val iconRes = if (state.protectionEnabled)
+                        R.drawable.ic_shield_on else R.drawable.ic_shield_off
+                    runCatching { binding.fabToggle.setImageResource(iconRes) }
                 }
+            }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_dashboard, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_export_log -> {
+                exportLog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    /** P4-D: write all block events to a CSV in public Downloads. */
+    private fun exportLog() {
+        lifecycleScope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching {
+                    val events = vm.getAllEvents()
+                    val csv = buildString {
+                        appendLine("timestamp,package,reason,matched_term")
+                        events.forEach { e ->
+                            val safeTerm = (e.matchedTerm ?: "").replace(',', ' ').replace('\n', ' ')
+                            appendLine("${e.timestamp},${e.packageName},${e.reason.name},$safeTerm")
+                        }
+                    }
+                    val downloads = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS
+                    )
+                    if (!downloads.exists()) downloads.mkdirs()
+                    val file = File(downloads, "guardian_log_${System.currentTimeMillis()}.csv")
+                    file.writeText(csv)
+                    file.absolutePath
+                }
+            }
+            outcome.onSuccess { path ->
+                Toast.makeText(this@MainActivity, "Exported: $path", Toast.LENGTH_LONG).show()
+            }.onFailure {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Export failed: ${it.message ?: "unknown"}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -118,7 +189,6 @@ class MainActivity : AppCompatActivity() {
         vm.setProtectionActive(active)
         if (active) {
             GuardianForegroundService.start(this)
-            // BUG-12: only reload rules when the on-disk version moved.
             lifecycleScope.launch {
                 runCatching {
                     val current = prefs.currentRulesVersion()

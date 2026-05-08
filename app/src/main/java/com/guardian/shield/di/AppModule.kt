@@ -20,12 +20,16 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideDb(@ApplicationContext context: Context): GuardianDatabase =
         Room.databaseBuilder(context, GuardianDatabase::class.java, "guardian.db")
+            // v9 (2.0.0): AutoMigration(1 → 2) handles the new schedule_rules
+            // table; we still keep destructive fallback as a safety net for
+            // unforeseen schema drift on user devices.
             .fallbackToDestructiveMigration()
             .build()
 
     @Provides fun appRuleDao(db: GuardianDatabase) = db.appRuleDao()
     @Provides fun keywordDao(db: GuardianDatabase) = db.keywordDao()
     @Provides fun blockEventDao(db: GuardianDatabase) = db.blockEventDao()
+    @Provides fun scheduleRuleDao(db: GuardianDatabase) = db.scheduleRuleDao()
 }
 
 @Module
