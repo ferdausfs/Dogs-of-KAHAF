@@ -14,14 +14,22 @@ import timber.log.Timber
  *    triggers, but the call must still be inside a try/catch because some OEMs
  *    are stricter than AOSP. We also accept LOCKED_BOOT_COMPLETED to start
  *    earlier on devices that use Direct Boot.
+ *
+ *  v2 update:
+ *   - Also restart the protection service on MY_PACKAGE_REPLACED /
+ *     PACKAGE_REPLACED so an app update never leaves the user unprotected.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
-        if (action != Intent.ACTION_BOOT_COMPLETED &&
-            action != Intent.ACTION_LOCKED_BOOT_COMPLETED) return
+        val accepted = action == Intent.ACTION_BOOT_COMPLETED ||
+                action == Intent.ACTION_LOCKED_BOOT_COMPLETED ||
+                action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+                (action == Intent.ACTION_PACKAGE_REPLACED &&
+                        intent.dataString?.contains(context.packageName) == true)
+        if (!accepted) return
         runCatching {
             GuardianForegroundService.start(context)
-        }.onFailure { Timber.w(it, "Failed to start service on boot") }
+        }.onFailure { Timber.w(it, "Failed to start service for action=$action") }
     }
 }

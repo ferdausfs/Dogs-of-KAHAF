@@ -10,4 +10,8 @@
     <string name="stay_strong">Stay strong. You\'ve got this.</string>
     <string name="go_home">Go Home</string>
     <string name="request_unlock">Request Timed Unlock</string>
+
+    <!-- v2: Permission Health + Device Admin strings -->
+    <string name="permission_health">Permission Health</string>
+    <string name="device_admin_description">Activate to prevent casual uninstall and stop the OS from killing Guardian Shield in the background.</string>
 </resources>

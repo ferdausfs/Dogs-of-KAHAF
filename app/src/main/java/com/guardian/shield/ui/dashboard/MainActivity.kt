@@ -18,9 +18,11 @@ import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.SettingsActivity
 import com.guardian.shield.ui.setup.PinSetupActivity
 import com.guardian.shield.ui.setup.PinVerifyActivity
+import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -36,6 +38,12 @@ import javax.inject.Inject
  *               • If PIN set → PinVerify is launched as ActivityResult; root view
  *                 is hidden until success. On cancellation we finish().
  *            The dashboard UI is genuinely gated.
+ *
+ *  v2 update:
+ *   - Added a "Permission Health" button + a live banner showing how many
+ *     critical permissions are currently missing. Re-checked on every resume.
+ *     This is the single most direct fix for the user's report:
+ *       "permission auto remove hoy / sob thik ase kintu app kaj kore na".
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -88,8 +96,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.btnSettings.setOnClickListener {
-            // Settings still requires PIN (re-verify each time) — see SettingsActivity.
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        // v2: new Permission Health entry-point.
+        binding.btnPermissions.setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
         }
         binding.btnClear.setOnClickListener { vm.clearAll() }
 
@@ -117,6 +128,25 @@ class MainActivity : AppCompatActivity() {
         binding.btnEnableAccessibility.text = getString(
             if (active) R.string.accessibility_enabled else R.string.enable_accessibility
         )
+        refreshPermissionBanner()
+    }
+
+    /**
+     * v2: live banner — shows the user immediately if any critical permission
+     * has been silently revoked (Auto-revoke / Battery Saver / OEM kill).
+     */
+    private fun refreshPermissionBanner() {
+        val missing = PermissionManager.missingCritical(this)
+        if (missing.isEmpty()) {
+            binding.tvPermissionWarning.visibility = View.GONE
+        } else {
+            binding.tvPermissionWarning.visibility = View.VISIBLE
+            binding.tvPermissionWarning.text =
+                "⚠ ${missing.size} permission(s) missing — tap to fix"
+            binding.tvPermissionWarning.setOnClickListener {
+                startActivity(Intent(this, PermissionsActivity::class.java))
+            }
+        }
     }
 
     private fun isAccessibilityEnabled(): Boolean {

@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.guardian.shield.databinding.ActivitySettingsBinding
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.PinManager
+import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -67,6 +68,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnApps.setOnClickListener { startActivity(Intent(this, AppListActivity::class.java)) }
         binding.btnKeywords.setOnClickListener { startActivity(Intent(this, KeywordActivity::class.java)) }
         binding.btnUploadModel.setOnClickListener { pickModel.launch(arrayOf("*/*")) }
+        // v2: open Permission Health from the new Persistence card.
+        binding.btnPermissionHealth.setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
 
         binding.swKeyword.setOnCheckedChangeListener { _, v -> vm.setKeywordFilter(v) }
         binding.swAi.setOnCheckedChangeListener { _, v -> vm.setAiDetection(v) }

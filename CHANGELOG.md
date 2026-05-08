@@ -90,15 +90,82 @@ Play Store rejects `QUERY_ALL_PACKAGES` for most apps. Added a `<queries>` eleme
 
 ---
 
+## 🟢 v2 — Persistence, Permission Health, Admin-level survival
+
+User report (verbatim):
+> *"app ta update korte hobe... khubi sabdane kono kiso nosto na kore... akhon app abloi kaj kore.. kintu maje maje permission auto remove hoy na not working ba emono hoy sob thik ase kintu app kaj kore na... app take admin level e permission deb jeno jokhon jekhene dorkaj kaj kore"*
+
+Three independent root causes were identified:
+
+| # | Why it fails | Where it gets fixed |
+|---|---|---|
+| A | Android 11+ silently auto-revokes runtime permissions for apps the user hasn't opened in ~3 months | `REQUEST_DISABLE_APP_HIBERNATION` permission + Permission Health screen |
+| B | OEM Battery Savers (MIUI / ColorOS / FunTouch / Realme / OneUI) kill the foreground service in the background → "sob thik ase kintu kaj kore na" | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + Watchdog + onTaskRemoved self-restart |
+| C | Casual uninstall — user disables the app in 3 taps | New `GuardianDeviceAdminReceiver` ("admin-level permission") |
+
+### 20. NEW — `PermissionManager.kt` (`util/`)
+Single source of truth for the live status of every permission Guardian needs. Returns a `snapshot()` list of seven keys: Accessibility, Overlay, Usage Stats, Battery Unrestricted, Notifications, Auto-Revoke Disabled, Device Admin. For every key it knows the canonical settings intent so we can deep-link the user to the exact OS page.
+
+### 21. NEW — `PermissionsActivity` ("Permission Health")
+Brand-new optional screen that lists every permission with live GRANTED / MISSING badges and a one-tap **Grant** button per row. Re-renders on `onResume()` so coming back from system settings updates the state instantly. Linked from both:
+- a new entry-point button on the dashboard, and
+- a new "Persistence" card in Settings.
+
+A live red banner on the dashboard now warns the user the moment any critical permission is missing — directly addresses *"permission auto remove hoy"*.
+
+### 22. NEW — `GuardianDeviceAdminReceiver` + `xml/device_admin.xml`
+Optional Device Admin component. Once activated:
+- The app cannot be uninstalled normally (the OS forces the user to disable admin first).
+- Many OEMs (MIUI / ColorOS / FunTouch / Realme UI) treat device-admin apps as "protected" and stop killing them in the background, which directly fixes *"sob thik ase kintu app kaj kore na"*.
+
+We deliberately ask only for the bare-minimum `force-lock` policy — no password / camera / wipe policies — to keep this Play-policy-friendly and non-intrusive. Activation is **completely optional** — every other feature works without it.
+
+### 23. `GuardianForegroundService.kt` — Watchdog + self-restart
+- **Watchdog**: every 30 s the service re-checks all critical permissions. If anything is missing, the persistent notification flips to high-priority **"⚠ N permission(s) missing — tap to fix"** that opens `PermissionsActivity` directly.
+- **`onTaskRemoved`**: when the user (or an OEM cleaner) swipes the app away, the service immediately re-launches itself so protection never silently dies.
+- A second, high-importance notification channel (`guardian_alerts`) is registered for future degraded-state alerts.
+
+### 24. `BootReceiver.kt` — survive app updates
+Now also fires on `MY_PACKAGE_REPLACED` and `PACKAGE_REPLACED`, so the protection service is restarted automatically right after the user installs an update — no need to reopen the app.
+
+### 25. `MainActivity.kt` — live permission banner
+On every `onResume()` the dashboard re-checks `PermissionManager.missingCritical(this)`. If anything has been silently revoked (auto-revoke / battery saver / OEM kill), a red banner appears at the top of the dashboard with one-tap navigation to Permission Health.
+
+### 26. `AndroidManifest.xml` — three new permissions + admin receiver
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — to ask for unrestricted battery
+- `REQUEST_DISABLE_APP_HIBERNATION` — to disable Android 12+ auto-revoke
+- `BIND_DEVICE_ADMIN` — required by the new admin receiver
+- New activity, receiver, and `MY_PACKAGE_REPLACED` filter registered
+
+### 27. Existing flows untouched
+The whole v2 update is purely **additive**. No existing class signature changed, no DI binding moved, no DB schema touched, no existing string renamed. If the v2 features are never enabled, the app behaves exactly like v1.
+
+---
+
 ## How to deploy
 
 1. Replace your repo content with the files in this archive.
 2. Push to GitHub — the existing `Build Debug APK` workflow will produce a new APK.
 3. Install over the previous version (no data migration needed — DB schema unchanged).
-4. **Important for AI to actually work:**
-   - In-app: Settings → AI Screen Detection → Upload Model
-   - Recommended models: NSFWJS converted to TFLite (224×224, output `[1,5]`),
-     or any GantMan-style 2-class classifier (output `[1,2]`).
-   - Threshold 0.6–0.75 is a good starting point.
+
+### After install — recommended one-time setup
+
+Open Guardian Shield → tap the new **Permission Health** button → grant in this order:
+
+1. **Accessibility Service** (already had this — but re-check, OEMs sometimes drop it)
+2. **Display over other apps** (overlay)
+3. **Unrestricted battery** ⟵ this single toggle fixes most "sob thik ase kintu kaj kore na" cases
+4. **Notifications** (Android 13+)
+5. **Disable permission auto-reset** ⟵ stops "permission auto remove hoy" on Android 11+
+6. **Device admin** ⟵ uninstall protection + better OEM survival
+
+After all six are GRANTED, the red banner on the dashboard disappears and the persistent notification stays at "Protection Active" — that's how you know everything is wired up correctly.
+
+### AI detection (unchanged from v1)
+
+- In-app: Settings → AI Screen Detection → Upload Model
+- Recommended models: NSFWJS converted to TFLite (224×224, output `[1,5]`),
+  or any GantMan-style 2-class classifier (output `[1,2]`).
+- Threshold 0.6–0.75 is a good starting point.
 
 If after this update AI still doesn't catch anything, the root cause is almost certainly the model file itself (wrong input shape / quantization). Send `adb logcat | grep TFLite` and we can debug from the inference logs.
