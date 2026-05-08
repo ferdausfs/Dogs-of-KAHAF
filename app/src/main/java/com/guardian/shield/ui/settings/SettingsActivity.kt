@@ -23,10 +23,22 @@ import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.viewmodel.SettingsEvent
 import com.guardian.shield.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 
+/**
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-13 → legacy combined-model import is now performed on
+ *    Dispatchers.IO via viewModelScope-equivalent lifecycleScope. We also
+ *    do the same TFLite "TFL3" header sniff used by ModelImportManager so
+ *    junk files are rejected, and update the on-screen status to "Importing…"
+ *    while the copy runs. Previously a 150 MB file would ANR on Main.
+ */
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
 
@@ -78,11 +90,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.root.visibility = View.VISIBLE
         }
 
-        binding.btnApps.setOnClickListener { startActivity(Intent(this, AppListActivity::class.java)) }
-        binding.btnKeywords.setOnClickListener { startActivity(Intent(this, KeywordActivity::class.java)) }
+        binding.btnApps.setOnClickListener {
+            runCatching { startActivity(Intent(this, AppListActivity::class.java)) }
+        }
+        binding.btnKeywords.setOnClickListener {
+            runCatching { startActivity(Intent(this, KeywordActivity::class.java)) }
+        }
         binding.btnUploadModel.setOnClickListener { pickLegacyModel.launch(arrayOf("*/*")) }
         binding.btnPermissionHealth.setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java))
+            runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
         }
 
         // ── New "AI Models" section listeners ──
@@ -247,15 +263,83 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** Legacy combined-model copy (kept for back-compat with existing flow). */
+    /**
+     * BUG-13: legacy combined-model copy now runs on Dispatchers.IO with
+     *         on-screen progress and TFLite header validation. Previously
+     *         this ran on the Main thread → guaranteed ANR for >50 MB models.
+     */
     private fun copyLegacyModel(uri: Uri) {
-        runCatching {
-            val out = File(filesDir, AiDetector.MODEL_FILE)
-            contentResolver.openInputStream(uri)?.use { input ->
-                out.outputStream().use { input.copyTo(it) }
+        binding.btnUploadModel.isEnabled = false
+        binding.tvModelStatus.text = "Importing…"
+        lifecycleScope.launch {
+            val outcome: Result<Long> = withContext(Dispatchers.IO) {
+                runCatching {
+                    val target = File(filesDir, AiDetector.MODEL_FILE)
+                    val tmp = File(filesDir, "${AiDetector.MODEL_FILE}.tmp")
+                    if (tmp.exists()) tmp.delete()
+
+                    val input = contentResolver.openInputStream(uri)
+                        ?: throw IOException("Could not open the selected file")
+
+                    var copied = 0L
+                    input.use { inp ->
+                        tmp.outputStream().use { out ->
+                            val buf = ByteArray(8 * 1024)
+                            var read = inp.read(buf)
+                            while (read != -1) {
+                                out.write(buf, 0, read)
+                                copied += read
+                                if (copied > 500L * 1024 * 1024) {
+                                    throw IOException("File too large (>500 MB)")
+                                }
+                                read = inp.read(buf)
+                            }
+                            out.flush()
+                            runCatching { out.fd.sync() }
+                        }
+                    }
+                    if (copied < 1024L) {
+                        tmp.delete()
+                        throw IOException("File too small to be a valid TFLite model")
+                    }
+                    if (!isValidTfliteFile(tmp)) {
+                        tmp.delete()
+                        throw IOException("Not a valid TFLite model (header check failed)")
+                    }
+                    if (target.exists() && !target.delete()) {
+                        tmp.delete()
+                        throw IOException("Could not replace previous model")
+                    }
+                    if (!tmp.renameTo(target)) {
+                        tmp.delete()
+                        throw IOException("Could not finalise model file")
+                    }
+                    copied
+                }
             }
-            vm.refresh()
-            binding.tvModelStatus.text = "Model loaded ✓"
-        }.onFailure { binding.tvModelStatus.text = "Failed: ${it.message}" }
+
+            binding.btnUploadModel.isEnabled = true
+            outcome.onSuccess {
+                vm.refresh()
+                binding.tvModelStatus.text = "Model loaded ✓"
+                toast("Legacy model imported ✓")
+            }.onFailure {
+                Timber.e(it, "Legacy model import failed")
+                binding.tvModelStatus.text = "Failed: ${it.message ?: "unknown error"}"
+            }
+        }
     }
+
+    /** TFLite FlatBuffer identifier "TFL3" lives at byte offset 4. */
+    private fun isValidTfliteFile(file: File): Boolean = runCatching {
+        file.inputStream().use { input ->
+            val header = ByteArray(8)
+            val read = input.read(header)
+            if (read < 8) return@runCatching false
+            header[4] == 'T'.code.toByte() &&
+                header[5] == 'F'.code.toByte() &&
+                header[6] == 'L'.code.toByte() &&
+                header[7] == '3'.code.toByte()
+        }
+    }.getOrDefault(false)
 }

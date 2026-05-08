@@ -14,4 +14,10 @@
     <!-- v2: Permission Health + Device Admin strings -->
     <string name="permission_health">Permission Health</string>
     <string name="device_admin_description">Activate to prevent casual uninstall and stop the OS from killing Guardian Shield in the background.</string>
+
+    <!-- v8: degraded-state notification copy (BUG-05 / BUG-14) -->
+    <string name="protection_degraded_title">Guardian Shield needs attention</string>
+    <string name="protection_degraded_short">⚠ %1$d issue(s) — tap to fix</string>
+    <string name="protection_degraded_long">%1$d critical permission(s) are missing or have been revoked. Tap to restore protection.</string>
+    <string name="protection_degraded_accessibility">Accessibility service is not currently running. Tap to re-enable Guardian Shield protection.</string>
 </resources>

@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.guardian.shield.R
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.PinManager
@@ -29,21 +30,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * FIX-LOG (vs original):
- *  - BUG #5: PIN gate did not actually protect anything — MainActivity rendered
- *            FIRST, then PinVerifyActivity was launched on top. Anyone could press
- *            HOME and re-enter without verifying. Now:
- *               • If no PIN set → PinSetup is launched as ActivityResult; we keep
- *                 the root view hidden until result returns.
- *               • If PIN set → PinVerify is launched as ActivityResult; root view
- *                 is hidden until success. On cancellation we finish().
- *            The dashboard UI is genuinely gated.
- *
- *  v2 update:
- *   - Added a "Permission Health" button + a live banner showing how many
- *     critical permissions are currently missing. Re-checked on every resume.
- *     This is the single most direct fix for the user's report:
- *       "permission auto remove hoy / sob thik ase kintu app kaj kore na".
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-12 → onResume only triggers RulesEngine.reload() when the on-disk
+ *    rulesVersion has actually advanced past our cached value. Previously
+ *    every resume (including ones from system UI / overlays / settings) hit
+ *    the DB.
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -52,8 +43,12 @@ class MainActivity : AppCompatActivity() {
     private val vm: DashboardViewModel by viewModels()
     @Inject lateinit var pinManager: PinManager
     @Inject lateinit var rulesEngine: RulesEngine
+    @Inject lateinit var prefs: GuardianPreferences
 
     private var unlocked = false
+
+    /** BUG-12: cached rules version. -1 = not yet seen → first resume reloads. */
+    private var cachedRulesVersion: Int = -1
 
     private val pinSetupLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -79,7 +74,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        // BUG #5 fix — hide UI until PIN is verified.
         binding.root.visibility = View.INVISIBLE
 
         if (!pinManager.isPinSet()) {
@@ -93,14 +87,15 @@ class MainActivity : AppCompatActivity() {
         binding.rvEvents.adapter = adapter
 
         binding.btnEnableAccessibility.setOnClickListener {
-            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
         }
         binding.btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            runCatching { startActivity(Intent(this, SettingsActivity::class.java)) }
         }
-        // v2: new Permission Health entry-point.
         binding.btnPermissions.setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java))
+            runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
         }
         binding.btnClear.setOnClickListener { vm.clearAll() }
 
@@ -123,7 +118,16 @@ class MainActivity : AppCompatActivity() {
         vm.setProtectionActive(active)
         if (active) {
             GuardianForegroundService.start(this)
-            lifecycleScope.launch { rulesEngine.reload() }
+            // BUG-12: only reload rules when the on-disk version moved.
+            lifecycleScope.launch {
+                runCatching {
+                    val current = prefs.currentRulesVersion()
+                    if (current != cachedRulesVersion) {
+                        cachedRulesVersion = current
+                        rulesEngine.reload()
+                    }
+                }
+            }
         }
         binding.btnEnableAccessibility.text = getString(
             if (active) R.string.accessibility_enabled else R.string.enable_accessibility
@@ -131,10 +135,6 @@ class MainActivity : AppCompatActivity() {
         refreshPermissionBanner()
     }
 
-    /**
-     * v2: live banner — shows the user immediately if any critical permission
-     * has been silently revoked (Auto-revoke / Battery Saver / OEM kill).
-     */
     private fun refreshPermissionBanner() {
         val missing = PermissionManager.missingCritical(this)
         if (missing.isEmpty()) {
@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvPermissionWarning.text =
                 "⚠ ${missing.size} permission(s) missing — tap to fix"
             binding.tvPermissionWarning.setOnClickListener {
-                startActivity(Intent(this, PermissionsActivity::class.java))
+                runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
             }
         }
     }

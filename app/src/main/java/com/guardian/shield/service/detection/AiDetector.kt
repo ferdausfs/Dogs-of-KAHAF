@@ -9,6 +9,7 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -27,8 +28,15 @@ import javax.inject.Singleton
 import kotlin.math.min
 
 /**
- * Loads & runs two TFLite models:
- *   • [MODEL_FILE]            — legacy combined "guardian" NSFW model (kept for back-compat)
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-04 → close() now serialises with active inference by acquiring
+ *    inferenceLock via runBlocking before nulling the interpreters. This
+ *    prevents the JNI native crash where a model re-import (or service
+ *    teardown) raced with an in-flight Interpreter.run() and called close()
+ *    on a live native handle.
+ *
+ * Loads & runs three TFLite models:
+ *   • [MODEL_FILE]            — legacy combined "guardian" NSFW model (back-compat)
  *   • [NSFW_MODEL_FILE]       — dedicated NSFW probability head (single float / 2-class output)
  *   • [GENDER_MODEL_FILE]     — gender classifier → [male_prob, female_prob]
  *
@@ -36,6 +44,7 @@ import kotlin.math.min
  *   - All loads are wrapped in try/catch — a missing/corrupt model NEVER crashes the app.
  *   - Inference is mutex-guarded (no concurrent runs), and a coarse [inferenceInFlight] flag
  *     short-circuits re-entrant calls coming through different paths.
+ *   - close() is serialised against active inference (BUG-04).
  *   - Bitmaps created internally are recycled in `finally`; the caller's bitmap is never
  *     recycled by us.
  *   - All inference runs on Dispatchers.Default; never on Main.
@@ -81,7 +90,7 @@ class AiDetector @Inject constructor(
     )
 
     // Legacy interpreter — keeps existing isUnsafe() working unchanged.
-    private var interpreter: Interpreter? = null
+    @Volatile private var interpreter: Interpreter? = null
     private var outputClasses: Int = 2
 
     // New pipeline interpreters.
@@ -447,13 +456,35 @@ class AiDetector @Inject constructor(
         runCatching { if (!b.isRecycled) b.recycle() }
     }
 
-    /** Idempotent. Safe to call multiple times. Never throws. */
+    /**
+     * BUG-04: Idempotent and now SAFE w.r.t. concurrent inference.
+     *
+     * Without serialisation, `close()` could call `interpreter?.close()` while
+     * another thread was mid-`Interpreter.run()` → JNI native crash that
+     * silently terminates the AccessibilityService. We acquire `inferenceLock`
+     * via runBlocking (this method is NOT a suspend function) so any active
+     * inference completes before we tear down native handles.
+     *
+     * Safe to call multiple times. Never throws.
+     */
     fun close() {
-        runCatching { interpreter?.close() }
-        runCatching { nsfwInterpreter?.close() }
-        runCatching { genderInterpreter?.close() }
-        interpreter = null
-        nsfwInterpreter = null
-        genderInterpreter = null
+        runCatching {
+            runBlocking {
+                inferenceLock.withLock {
+                    runCatching { interpreter?.close() }
+                    runCatching { nsfwInterpreter?.close() }
+                    runCatching { genderInterpreter?.close() }
+                    interpreter = null
+                    nsfwInterpreter = null
+                    genderInterpreter = null
+                    // Allow the next ensureLoaded() / ensureGenderPipelineLoaded()
+                    // to actually re-create the interpreters from the new file.
+                    nsfwLoadAttempted = false
+                    genderLoadAttempted = false
+                    nsfwLoadFailed = false
+                    genderLoadFailed = false
+                }
+            }
+        }.onFailure { Timber.w(it, "AiDetector.close() failed (suppressed)") }
     }
 }

@@ -14,8 +14,9 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        // v8 stability pass — bumped for over-install on top of v7.
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     buildTypes {

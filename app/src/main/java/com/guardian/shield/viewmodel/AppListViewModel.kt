@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.AppRule
 import com.guardian.shield.domain.usecase.DeleteAppRuleUseCase
 import com.guardian.shield.domain.usecase.GetAppRulesUseCase
@@ -20,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -36,12 +36,24 @@ data class InstalledApp(
     val isAlwaysAllowed: Boolean
 )
 
+/**
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-11 → toggleBlock / toggleWhitelist no longer call full load() after
+ *    every toggle. We mutate the in-memory list entry for the changed package
+ *    only. A full load() takes 200–500ms on a phone with 200+ apps and caused
+ *    a visible RecyclerView flicker on every tap. Full load is still done on
+ *    init() and on the explicit refresh() call.
+ *  • BUG-12 → after every rule mutation we bump prefs.rulesVersion so
+ *    MainActivity.onResume can detect when a real change happened and skip
+ *    the spurious RulesEngine.reload() on unrelated resumes.
+ */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val getRules: GetAppRulesUseCase,
     private val upsert: UpsertAppRuleUseCase,
-    private val delete: DeleteAppRuleUseCase
+    private val delete: DeleteAppRuleUseCase,
+    private val prefs: GuardianPreferences
 ) : ViewModel() {
 
     private val allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
@@ -66,6 +78,7 @@ class AppListViewModel @Inject constructor(
         searchQuery.value = query
     }
 
+    /** Full reload — used on init() and explicit user refresh only. */
     fun load() = viewModelScope.launch {
         val rules = getRules().first().associateBy { it.packageName }
         val installed = withContext(Dispatchers.IO) {
@@ -106,19 +119,23 @@ class AppListViewModel @Inject constructor(
         val curr = app.rule
         val nextBlocked = !(curr?.isBlocked ?: false)
         val nextWhitelisted = curr?.isWhitelisted ?: false
-        if (!nextBlocked && !nextWhitelisted) {
+        val newRule = if (!nextBlocked && !nextWhitelisted) {
             delete(app.pkg)
+            null
         } else {
-            upsert(
-                AppRule(
-                    packageName = app.pkg,
-                    appName = app.name,
-                    isBlocked = nextBlocked,
-                    isWhitelisted = nextWhitelisted
-                )
+            val r = AppRule(
+                packageName = app.pkg,
+                appName = app.name,
+                isBlocked = nextBlocked,
+                isWhitelisted = nextWhitelisted
             )
+            upsert(r)
+            r
         }
-        load()
+        // BUG-11: in-memory patch instead of full load().
+        patchInMemory(app.pkg, newRule)
+        // BUG-12: signal that rules actually changed.
+        runCatching { prefs.bumpRulesVersion() }
         notifyRulesChanged()
     }
 
@@ -127,20 +144,37 @@ class AppListViewModel @Inject constructor(
         val curr = app.rule
         val nextWhitelisted = !(curr?.isWhitelisted ?: false)
         val nextBlocked = if (nextWhitelisted) false else (curr?.isBlocked ?: false)
-        if (!nextBlocked && !nextWhitelisted) {
+        val newRule = if (!nextBlocked && !nextWhitelisted) {
             delete(app.pkg)
+            null
         } else {
-            upsert(
-                AppRule(
-                    packageName = app.pkg,
-                    appName = app.name,
-                    isBlocked = nextBlocked,
-                    isWhitelisted = nextWhitelisted
-                )
+            val r = AppRule(
+                packageName = app.pkg,
+                appName = app.name,
+                isBlocked = nextBlocked,
+                isWhitelisted = nextWhitelisted
             )
+            upsert(r)
+            r
         }
-        load()
+        patchInMemory(app.pkg, newRule)
+        runCatching { prefs.bumpRulesVersion() }
         notifyRulesChanged()
+    }
+
+    /**
+     * BUG-11 helper — replace just the single changed entry in [allApps] in
+     * O(n) instead of doing a full PackageManager re-scan. Preserves the
+     * existing sort order by leaving items in place; the user already saw
+     * the list in this order so we don't shuffle on every toggle.
+     */
+    private fun patchInMemory(pkg: String, newRule: AppRule?) {
+        val current = allApps.value
+        val idx = current.indexOfFirst { it.pkg == pkg }
+        if (idx < 0) return
+        val updated = current.toMutableList()
+        updated[idx] = updated[idx].copy(rule = newRule)
+        allApps.value = updated
     }
 
     private fun notifyRulesChanged() {

@@ -18,32 +18,48 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * FIX-LOG (vs original):
- *  - BUG #7 / #12: launching the BlockOverlayActivity from background on
- *    Android 10+ (and especially MIUI / ColorOS / FunTouchOS) is unreliable.
- *    We now (a) ALWAYS go HOME first to evict the offending app from the
- *    foreground, and (b) launch the overlay with ActivityOptions / a clean
- *    new task — which is the documented escape hatch for accessibility
- *    services to start an Activity from background.
- *  - Catch + log every Intent dispatch so a failure on one OEM does not
- *    silently break the entire block path.
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-10 → de-dupe throttle is now a per-package map. Previously, a
+ *    single (pkg, ts) pair was tracked, so rapid alternation between two
+ *    blocked packages bypassed the throttle entirely → overlay launched
+ *    5–10 times/sec. Capped at MAX_THROTTLE_MAP entries with oldest-out
+ *    eviction (same pattern as GuardianAccessibilityService).
+ *
+ *  Existing behavior preserved:
+ *   - HOME → overlay → log order is unchanged (must NEVER reorder).
+ *   - Each Intent dispatch is wrapped in runCatching for OEM resilience.
  */
 @Singleton
 class BlockingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val logEvent: LogBlockEventUseCase
 ) {
+    companion object {
+        private const val THROTTLE_MS = 800L
+        private const val MAX_THROTTLE_MAP = 50
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var lastBlockMs = 0L
-    private var lastBlockedPkg: String? = null
+
+    // BUG-10: per-package timestamp map.
+    private val lastBlockByPkg = HashMap<String, Long>()
 
     fun block(packageName: String, reason: BlockReason, term: String? = null) {
         val now = System.currentTimeMillis()
-        // De-dupe rapid repeats but allow re-blocking when the offending
-        // package changes (was: bare 800ms global throttle).
-        if (packageName == lastBlockedPkg && now - lastBlockMs < 800) return
-        lastBlockMs = now
-        lastBlockedPkg = packageName
+
+        // Per-package throttle.
+        synchronized(lastBlockByPkg) {
+            val last = lastBlockByPkg[packageName] ?: 0L
+            if (now - last < THROTTLE_MS) return
+            // Evict oldest if cap reached and this is a new key.
+            if (lastBlockByPkg.size >= MAX_THROTTLE_MAP &&
+                !lastBlockByPkg.containsKey(packageName)
+            ) {
+                val oldestKey = lastBlockByPkg.minByOrNull { it.value }?.key
+                if (oldestKey != null) lastBlockByPkg.remove(oldestKey)
+            }
+            lastBlockByPkg[packageName] = now
+        }
 
         // 1. Evict the offending app from the foreground.
         runCatching {
