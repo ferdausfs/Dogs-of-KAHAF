@@ -10,11 +10,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * v15 (2.1.5) STABILITY PATCH 5:
+ *  • FIX-5: prefs is now `by lazy`, deferring the EncryptedSharedPreferences
+ *    creation (which performs Keystore I/O and can block 2–10 seconds on
+ *    broken-Keystore devices) until the first actual read/write. Every
+ *    caller already wraps its access in runCatching, and the new
+ *    MainActivity / SettingsActivity startup path explicitly invokes
+ *    PinManager.isPinSet() from a background coroutine, so the lazy
+ *    init runs off the main thread → no more startup ANR.
+ *
  * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: EncryptedSharedPreferences.create can throw on devices
- *    with broken Keystore implementations (some Mediatek / older Huawei
- *    builds and after factory-reset where the master key was lost).
- *    Previously this killed the app at startup. Now we:
+ *  • EncryptedSharedPreferences.create can throw on devices with broken
+ *    Keystore implementations (some Mediatek / older Huawei builds and
+ *    after factory-reset where the master key was lost). Previously this
+ *    killed the app at startup. Now we:
  *      1. Try EncryptedSharedPreferences first (preferred path).
  *      2. On failure, attempt to delete the corrupted prefs file and
  *         re-create. (Common Keystore reset recovery.)
@@ -26,7 +35,12 @@ import javax.inject.Singleton
 class SecureStorage @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val prefs: SharedPreferences = createPreferences(context)
+    /**
+     * v15 (FIX-5): Lazy initialisation defers Keystore work to the first
+     * access. Callers that touch this from a background coroutine (via
+     * runCatching) won't block the main thread.
+     */
+    private val prefs: SharedPreferences by lazy { createPreferences(context) }
 
     private fun createPreferences(ctx: Context): SharedPreferences {
         return runCatching { buildEncrypted(ctx) }

@@ -85,10 +85,21 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.root.visibility = View.INVISIBLE
-        if (pinManager.isPinSet()) {
-            pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        } else {
-            binding.root.visibility = View.VISIBLE
+        // v15 (2.1.5) FIX-5: pinManager.isPinSet() may trigger lazy
+        // EncryptedSharedPreferences creation which performs Keystore I/O.
+        // Move it off the main thread to avoid potential ANR on slow
+        // / broken-Keystore devices (MediaTek, some Huawei).
+        lifecycleScope.launch {
+            val pinSet = withContext(Dispatchers.IO) {
+                runCatching { pinManager.isPinSet() }.getOrDefault(false)
+            }
+            if (pinSet) {
+                runCatching {
+                    pinVerify.launch(Intent(this@SettingsActivity, PinVerifyActivity::class.java))
+                }.onFailure { Timber.w(it, "Failed to launch PinVerifyActivity") }
+            } else {
+                binding.root.visibility = View.VISIBLE
+            }
         }
 
         binding.btnApps.setOnClickListener {

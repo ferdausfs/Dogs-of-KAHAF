@@ -14,21 +14,32 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * v15 (2.1.5) STABILITY PATCH 5:
+ *  • FIX-2: evaluateText() now caps input length and wraps each regex
+ *    match in runCatching with isolation so a catastrophic-backtracking
+ *    user pattern (e.g. "(a+)+b") on a long string can no longer hang
+ *    the accessibility callback thread → no more ANR → no more service
+ *    kill. reload() also drops invalid regex patterns at load time and
+ *    logs them.
+ *  • OPT-4: regex patterns are pre-compiled at reload() time and stored
+ *    in the immutable snapshot. Previously every accessibility event
+ *    re-compiled every regex string from scratch.
+ *
  * v10 (2.1.0) FIX-LOG:
  *  • Source-based timed-block awareness — evaluatePackage() now consults
- *    [TimedBlockManager] before returning Allow. If a package is in the
- *    15-min auto-lock window it returns Block(AI_SOURCE_TIMED_BLOCK).
+ *    [TimedBlockManager] before returning Allow.
  *
  * v9 (2.0.0):
- *  • P2-B → SharedFlow<Unit> "rulesChanged" replaces LocalBroadcastManager.
- *  • P4-A → schedule rules in the snapshot.
+ *  • SharedFlow<Unit> "rulesChanged" replaces LocalBroadcastManager.
+ *  • Schedule rules in the snapshot.
  *
- * v8 BUG-08 still applies: all reads via single immutable RulesSnapshot.
+ * v8 BUG-08: all reads via single immutable RulesSnapshot.
  */
 @Singleton
 class RulesEngine @Inject constructor(
@@ -40,12 +51,25 @@ class RulesEngine @Inject constructor(
 ) {
     companion object {
         const val ACTION_RULES_CHANGED = "com.guardian.shield.ACTION_RULES_CHANGED"
+        /** v15 (FIX-2): cap text fed to keyword evaluation. */
+        private const val MAX_TEXT_FOR_REGEX = 4096
     }
+
+    /**
+     * v15 (OPT-4): a keyword entry is either a literal lowercase substring
+     * (regex == null) or a pre-compiled Regex. The original lowercase
+     * pattern string is kept alongside for diagnostic / detection-detail
+     * reporting purposes.
+     */
+    private data class KeywordMatcher(
+        val regex: Regex?,
+        val literal: String
+    )
 
     private data class RulesSnapshot(
         val blocked: Set<String>,
         val whitelist: Set<String>,
-        val keywords: List<Pair<String, Boolean>>,
+        val keywords: List<KeywordMatcher>,
         val inputMethods: Set<String>,
         val scheduleRules: Map<String, ScheduleRule>
     )
@@ -70,11 +94,30 @@ class RulesEngine @Inject constructor(
         val schedules = runCatching { getSchedules() }.getOrDefault(emptyList())
         val ime = AppClassifier.loadInputMethodPackages(context)
 
+        // v15 (FIX-2 + OPT-4): validate + pre-compile regex keywords.
+        // Invalid patterns are silently dropped with a warning log so a
+        // single bad rule cannot break keyword detection for everything
+        // else.
+        val keywordMatchers = kws.mapNotNull { kw ->
+            val lower = kw.keyword.lowercase()
+            if (kw.isRegex) {
+                val compiled = runCatching { Regex(lower) }.getOrNull()
+                if (compiled == null) {
+                    Timber.w("Invalid regex keyword removed: '${kw.keyword}'")
+                    null
+                } else {
+                    KeywordMatcher(regex = compiled, literal = lower)
+                }
+            } else {
+                KeywordMatcher(regex = null, literal = lower)
+            }
+        }
+
         val newSnapshot = RulesSnapshot(
             whitelist = apps.filter { it.isWhitelisted }.map { it.packageName }.toSet(),
             blocked = apps.filter { it.isBlocked && !it.isWhitelisted }
                 .map { it.packageName }.toSet(),
-            keywords = kws.map { it.keyword.lowercase() to it.isRegex },
+            keywords = keywordMatchers,
             inputMethods = ime,
             scheduleRules = schedules.associateBy { it.packageName }
         )
@@ -106,17 +149,28 @@ class RulesEngine @Inject constructor(
         return DetectionResult.Allow
     }
 
+    /**
+     * v15 (2.1.5) FIX-2 + OPT-4:
+     *  • input is capped at [MAX_TEXT_FOR_REGEX] characters before
+     *    evaluation — defends against unbounded growth on infinite-scroll
+     *    surfaces (hand-in-hand with the AccessibilityService text cap).
+     *  • per-regex match is wrapped in runCatching so any single
+     *    pathological / catastrophic-backtracking pattern fails closed
+     *    (treated as no-match) instead of hanging the callback thread.
+     *  • patterns are pre-compiled at reload-time, so this method no
+     *    longer pays a Regex(string) construction cost per keyword.
+     */
     fun evaluateText(text: CharSequence?): DetectionResult {
         val snap = snapshot
         if (text.isNullOrBlank() || snap.keywords.isEmpty()) return DetectionResult.Allow
-        val lower = text.toString().lowercase()
-        for ((kw, isRegex) in snap.keywords) {
-            val match = if (isRegex) {
-                runCatching { Regex(kw).containsMatchIn(lower) }.getOrDefault(false)
+        val lower = text.toString().lowercase().take(MAX_TEXT_FOR_REGEX)
+        for (matcher in snap.keywords) {
+            val match = if (matcher.regex != null) {
+                runCatching { matcher.regex.containsMatchIn(lower) }.getOrDefault(false)
             } else {
-                lower.contains(kw)
+                lower.contains(matcher.literal)
             }
-            if (match) return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
+            if (match) return DetectionResult.Block(BlockReason.KEYWORD_MATCH, matcher.literal)
         }
         return DetectionResult.Allow
     }

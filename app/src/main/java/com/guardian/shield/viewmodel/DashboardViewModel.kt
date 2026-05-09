@@ -13,18 +13,19 @@ import java.util.Calendar
 import javax.inject.Inject
 
 /**
- * v13 (2.1.3) STABILITY PATCH 3:
- *  • CRITICAL FIX: todayStats no longer freezes at the midnight captured
- *    when the ViewModel was constructed. The boundary is recomputed via a
- *    flatMapLatest on a tick flow (`midnightTrigger`) that re-emits when
- *    the system date crosses midnight.
- *  • CRITICAL FIX: toggleProtection() no longer reads via the 2 s-bounded
- *    currentProtectionEnabled() — that could default to `true` on a slow
- *    DataStore and incorrectly toggle. We now keep a @Volatile cache of
- *    the latest emitted value and toggle off that.
+ * v15 (2.1.5) STABILITY PATCH 5:
+ *  • OPT-2: removed the per-emission countToday() DB query. todayCount is
+ *    now driven directly by the [todayStats] StateFlow (which already
+ *    aggregates totalBlocks from observeSinceUC). On a busy block-flow
+ *    this saves one full COUNT(*) round-trip per Room emission.
  *
- * v9 (2.0.0):
- *  • P4-B / P4-C / P4-D — kept as-is.
+ * v13 (2.1.3) STABILITY PATCH 3:
+ *  • todayStats no longer freezes at the midnight captured at construction
+ *    time. The boundary is recomputed via a flatMapLatest on a tick flow
+ *    (`midnightTrigger`) that re-emits when the system date crosses
+ *    midnight.
+ *  • toggleProtection() uses a @Volatile cache of the latest emission
+ *    instead of a 2 s-bounded DataStore read.
  */
 data class BlockStats(
     val totalBlocks: Int = 0,
@@ -47,7 +48,6 @@ data class DashboardUi(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getEvents: GetBlockEventsUseCase,
-    private val countToday: CountTodayBlocksUseCase,
     private val clearEvents: ClearBlockEventsUseCase,
     private val getAllEventsUC: GetAllBlockEventsUseCase,
     private val observeSinceUC: ObserveBlockEventsSinceUseCase,
@@ -57,20 +57,10 @@ class DashboardViewModel @Inject constructor(
     private val _ui = MutableStateFlow(DashboardUi())
     val ui: StateFlow<DashboardUi> = _ui.asStateFlow()
 
-    /**
-     * v13: Volatile cache of the latest protectionEnabled emission so the
-     * FAB toggle doesn't have to await a fresh DataStore read.
-     */
     @Volatile private var protectionEnabledCache: Boolean = true
 
-    /**
-     * v13: re-emits whenever the system day rolls over so [todayStats]
-     * recomputes its midnight boundary instead of staying stuck on the
-     * boundary captured at ViewModel-init time.
-     */
     private val midnightTrigger = MutableStateFlow(todayMidnightMs())
 
-    /** v13: live-aggregated stats for *today*, with a self-refreshing window. */
     val todayStats: StateFlow<BlockStats> = midnightTrigger
         .flatMapLatest { since -> observeSinceUC(since).map { aggregate(it) } }
         .stateIn(viewModelScope, SharingStarted.Lazily, BlockStats())
@@ -78,13 +68,17 @@ class DashboardViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             getEvents(50).collect { evts ->
-                _ui.update { it.copy(recent = evts, todayCount = countToday()) }
-                // Cheap opportunistic midnight check on every emission.
+                // v15 (OPT-2): todayCount is now driven by todayStats below.
+                _ui.update { it.copy(recent = evts) }
                 refreshMidnightIfRolledOver()
             }
         }
         viewModelScope.launch {
-            todayStats.collect { stats -> _ui.update { it.copy(stats = stats) } }
+            // v15 (OPT-2): drive both stats AND todayCount from the same
+            // aggregated flow → one source of truth, one query.
+            todayStats.collect { stats ->
+                _ui.update { it.copy(stats = stats, todayCount = stats.totalBlocks) }
+            }
         }
         viewModelScope.launch {
             prefs.protectionEnabled.collect { v ->
@@ -96,17 +90,11 @@ class DashboardViewModel @Inject constructor(
 
     fun setProtectionActive(active: Boolean) {
         _ui.update { it.copy(protectionActive = active) }
-        // Lifecycle-driven midnight refresh: the user reopening the app
-        // after midnight will re-bucket "today".
         refreshMidnightIfRolledOver()
     }
 
     fun clearAll() = viewModelScope.launch { clearEvents() }
 
-    /**
-     * v13: toggles using the cached value instead of a bounded read that
-     * could default to `true` and produce a wrong flip.
-     */
     fun toggleProtection() = viewModelScope.launch {
         prefs.setProtectionEnabled(!protectionEnabledCache)
     }

@@ -151,9 +151,14 @@ class GuardianForegroundService : Service() {
             while (isActive) {
                 runCatching {
                     val ctx = this@GuardianForegroundService
-                    val missing = PermissionManager.missingCritical(ctx)
+                    // v15 (2.1.5) HARD-1: each system-service call wrapped
+                    // individually so a single hung binder thread can't
+                    // poison the rest of the watchdog tick.
+                    val missing = runCatching { PermissionManager.missingCritical(ctx) }
+                        .getOrDefault(emptyList())
 
-                    val accSettingsOn = PermissionManager.isAccessibilityEnabled(ctx)
+                    val accSettingsOn = runCatching { PermissionManager.isAccessibilityEnabled(ctx) }
+                        .getOrDefault(false)
                     val accReallyRunning = GuardianAccessibilityService.isRunning
                     val accDegraded = accSettingsOn && !accReallyRunning
 

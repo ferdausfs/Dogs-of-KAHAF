@@ -70,6 +70,8 @@ class GuardianAccessibilityService : AccessibilityService() {
         private const val AI_FOLLOW_UP_MS = GuardianConstants.AI_FOLLOW_UP_MS
         private const val SCREEN_OFF_PERIODIC_MS = GuardianConstants.SCREEN_OFF_PERIODIC_MS
         private const val MAX_AI_SCAN_MAP = GuardianConstants.MAX_AI_SCAN_MAP
+        /** v15 (FIX-3): hard cap on the accumulated visible-text length. */
+        private const val MAX_TEXT_LENGTH = 8192
 
         private const val EXPLICIT_DEBOUNCE_MS = GuardianConstants.EXPLICIT_DEBOUNCE_MS
         private const val EXPLICIT_CONFIRM_COUNT = GuardianConstants.EXPLICIT_CONFIRM_COUNT
@@ -368,6 +370,13 @@ class GuardianAccessibilityService : AccessibilityService() {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String, force: Boolean = false) {
         if (!canScreenshotCapability) return
+        // v15 (2.1.5) OPT-1: skip the AI scan entirely for whitelisted /
+        // always-allowed apps. canBlock() is the single source of truth
+        // (it already covers whitelist + always-allowed packages).
+        // Previously the periodic scanner kept invoking screenshot capture
+        // and TFLite inference even on these apps — heavy CPU/GPU drain on
+        // low-end devices for no useful work.
+        if (!rulesEngine.canBlock(pkg)) return
         val now = System.currentTimeMillis()
         val last = lastScanTimeFor(pkg)
         if (!force && now - last < AI_THROTTLE_MS) return
@@ -551,6 +560,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         synchronized(explicitHits) { explicitHits.remove(pkg) }
     }
 
+    /**
+     * v15 (2.1.5) FIX-3: cap accumulated text length to MAX_TEXT_LENGTH.
+     * On apps with long feed content (Twitter/X, infinite-scroll readers)
+     * the StringBuilder could grow to hundreds of KB on a single pass,
+     * causing GC pressure and the occasional OOM during keyword regex
+     * evaluation. We now early-exit traversal once the cap is hit and
+     * truncate the returned String to the same cap.
+     */
     private fun collectVisibleText(root: AccessibilityNodeInfo?): String? {
         root ?: return null
         val sb = StringBuilder(512)
@@ -560,6 +577,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         var nodes = 0
         try {
             while (queue.isNotEmpty() && nodes < 250) {
+                if (sb.length >= MAX_TEXT_LENGTH) break
                 val node = queue.removeFirst()
                 runCatching { node.text?.let { sb.append(it).append(' ') } }
                 runCatching { node.contentDescription?.let { sb.append(it).append(' ') } }
@@ -579,7 +597,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         } finally {
             for (n in toRecycle) runCatching { n.recycle() }
         }
-        return sb.toString().takeIf { it.isNotBlank() }
+        return sb.toString().take(MAX_TEXT_LENGTH).takeIf { it.isNotBlank() }
     }
 
     override fun onInterrupt() = Unit

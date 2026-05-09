@@ -345,9 +345,18 @@ class AiDetector @Inject constructor(
         return boosted.coerceIn(0.30f, 0.95f)
     }
 
+    /**
+     * v15 (2.1.5) FIX-6: recycled-bitmap guard now runs BEFORE
+     * ensureLoaded() so a fast service-restart race that hands us a
+     * stale (already-recycled) bitmap can never reach a TFLite call.
+     * The outer runCatching downstream catches the rest.
+     */
     suspend fun classify(bitmap: Bitmap, packageName: String? = null): ClassificationResult {
+        if (bitmap.isRecycled) {
+            Timber.w("classify() called with recycled bitmap for ${packageName ?: "<null>"} — skipping")
+            return ClassificationResult.SAFE
+        }
         if (!ensureLoaded()) return ClassificationResult.SAFE
-        if (bitmap.isRecycled) return ClassificationResult.SAFE
         val threshold = effectiveThresholdFor(packageName)
 
         return inferenceLock.withLock {

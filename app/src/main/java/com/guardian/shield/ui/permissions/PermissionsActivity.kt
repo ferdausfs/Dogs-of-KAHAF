@@ -65,6 +65,10 @@ class PermissionsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // v15 (2.1.5): force a fresh permission read when the user comes
+        // back from the system settings screen — the 10 s snapshot cache
+        // would otherwise show stale "missing" rows.
+        PermissionManager.invalidateCache()
         if (binding.root.visibility == View.VISIBLE) render()
     }
 

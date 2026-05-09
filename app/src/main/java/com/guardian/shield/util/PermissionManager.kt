@@ -17,6 +17,15 @@ import androidx.core.app.NotificationManagerCompat
 import com.guardian.shield.admin.GuardianDeviceAdminReceiver
 
 /**
+ * v15 (2.1.5) STABILITY PATCH 5:
+ *  • OPT-3: snapshot() results are now cached for [CACHE_TTL_MS]
+ *    milliseconds. The foreground service watchdog runs every 45 s and
+ *    every tick previously made 7 IPC system-service calls back-to-back
+ *    (some of these — AppOps, DevicePolicy, PowerManager — block on slow
+ *    binder threads on aggressive OEMs). With a 10 s cache, the watchdog
+ *    pays the IPC cost at most once per tick, and any callers that ask
+ *    in the same window get a near-zero-cost lookup.
+ *
  * Centralised permission status + intents.
  *
  *  WHY this file exists:
@@ -25,9 +34,6 @@ import com.guardian.shield.admin.GuardianDeviceAdminReceiver
  *    OEMs the Accessibility service gets disabled by Battery Saver. We need
  *    ONE place that knows the status of every permission the app cares
  *    about, so the UI can re-prompt the user the moment something is off.
- *
- *  This file does NOT change any existing logic — it is read-only checks +
- *  intent factories. Existing flows keep working unchanged.
  */
 object PermissionManager {
 
@@ -43,7 +49,32 @@ object PermissionManager {
 
     data class Status(val key: PermissionKey, val granted: Boolean, val critical: Boolean)
 
-    fun snapshot(ctx: Context): List<Status> = listOf(
+    // v15 (OPT-3): simple snapshot cache.
+    private const val CACHE_TTL_MS = 10_000L
+    @Volatile private var lastSnapshot: List<Status>? = null
+    @Volatile private var lastSnapshotTime: Long = 0L
+
+    /**
+     * v15 (OPT-3): cached for up to 10 s. Callers that explicitly need a
+     * fresh read after granting a permission should call [invalidateCache].
+     */
+    fun snapshot(ctx: Context): List<Status> {
+        val now = System.currentTimeMillis()
+        val cached = lastSnapshot
+        if (cached != null && now - lastSnapshotTime < CACHE_TTL_MS) return cached
+        val fresh = buildSnapshot(ctx)
+        lastSnapshot = fresh
+        lastSnapshotTime = now
+        return fresh
+    }
+
+    /** Forces the next [snapshot] call to rebuild from system services. */
+    fun invalidateCache() {
+        lastSnapshot = null
+        lastSnapshotTime = 0L
+    }
+
+    private fun buildSnapshot(ctx: Context): List<Status> = listOf(
         Status(PermissionKey.ACCESSIBILITY,        isAccessibilityEnabled(ctx),        critical = true),
         Status(PermissionKey.OVERLAY,              canDrawOverlays(ctx),               critical = true),
         Status(PermissionKey.USAGE_STATS,          hasUsageStats(ctx),                 critical = false),
@@ -58,11 +89,11 @@ object PermissionManager {
 
     // ----------------------------- checks --------------------------------
 
-    fun isAccessibilityEnabled(ctx: Context): Boolean {
+    fun isAccessibilityEnabled(ctx: Context): Boolean = runCatching {
         val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-        return am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
+        am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
             .any { it.id.contains(ctx.packageName) }
-    }
+    }.getOrDefault(false)
 
     fun canDrawOverlays(ctx: Context): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(ctx) else true
@@ -84,14 +115,15 @@ object PermissionManager {
         mode == AppOpsManager.MODE_ALLOWED
     }.getOrDefault(false)
 
-    fun isIgnoringBatteryOptimisations(ctx: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+    fun isIgnoringBatteryOptimisations(ctx: Context): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return@runCatching true
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
-        return pm.isIgnoringBatteryOptimizations(ctx.packageName)
-    }
+        pm.isIgnoringBatteryOptimizations(ctx.packageName)
+    }.getOrDefault(false)
 
-    fun notificationsEnabled(ctx: Context): Boolean =
+    fun notificationsEnabled(ctx: Context): Boolean = runCatching {
         NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+    }.getOrDefault(false)
 
     /**
      * On Android 11+ (API 30), the OS auto-revokes runtime permissions for
@@ -106,10 +138,10 @@ object PermissionManager {
             .getOrDefault(false)
     }
 
-    fun isDeviceAdminActive(ctx: Context): Boolean {
+    fun isDeviceAdminActive(ctx: Context): Boolean = runCatching {
         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        return dpm.isAdminActive(GuardianDeviceAdminReceiver.componentName(ctx))
-    }
+        dpm.isAdminActive(GuardianDeviceAdminReceiver.componentName(ctx))
+    }.getOrDefault(false)
 
     // ----------------------------- intents -------------------------------
 

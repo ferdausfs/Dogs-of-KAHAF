@@ -44,14 +44,22 @@ import java.io.File
 import javax.inject.Inject
 
 /**
+ * v15 (2.1.5) STABILITY PATCH 5:
+ *  • FIX-1: onResume() no longer starts the foreground service or reloads
+ *    rules until the user has authenticated (PIN unlocked). Calling
+ *    startForegroundService() while the app is not yet in the foreground
+ *    on Android 12+ throws IllegalStateException. The PIN flow runs as
+ *    a separate launched activity, which means MainActivity is briefly
+ *    in the background — exactly the trigger condition.
+ *  • FIX-5: pinManager.isPinSet() is now invoked from a background
+ *    coroutine; the lazy SecureStorage init can perform Keystore-bound
+ *    work that blocks the main thread on slow devices.
+ *
  * v12 (2.1.2):
  *  • DEFENSIVE: notification permission is now also requested when user
- *    re-opens the app and protection is degraded (in case they revoked it
- *    after first launch).
- *  • DEFENSIVE: every collect block runCatching-wrapped — adapter.submit
- *    can throw on adapter race during config-change.
- *  • Permission warning click now also offers to open Permissions screen
- *    even if no PIN is set (previously it would silently fail on first run).
+ *    re-opens the app and protection is degraded.
+ *  • DEFENSIVE: every collect block runCatching-wrapped.
+ *  • Permission warning click also offers Permissions screen on first run.
  *
  * v11 (2.1.1):
  *  • POST_NOTIFICATIONS is requested at first launch on Android 13+.
@@ -71,12 +79,17 @@ class MainActivity : AppCompatActivity() {
 
     private val pinSetupLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            if (res.resultCode == RESULT_OK || pinManager.isPinSet()) {
-                unlocked = true
-                binding.root.visibility = View.VISIBLE
-                maybeRequestNotificationPermission()
-            } else {
-                finish()
+            lifecycleScope.launch {
+                val pinNowSet = withContext(Dispatchers.IO) {
+                    runCatching { pinManager.isPinSet() }.getOrDefault(false)
+                }
+                if (res.resultCode == RESULT_OK || pinNowSet) {
+                    unlocked = true
+                    binding.root.visibility = View.VISIBLE
+                    maybeRequestNotificationPermission()
+                } else {
+                    finish()
+                }
             }
         }
 
@@ -108,10 +121,24 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.root.visibility = View.INVISIBLE
 
-        if (!pinManager.isPinSet()) {
-            pinSetupLauncher.launch(Intent(this, PinSetupActivity::class.java))
-        } else {
-            pinVerifyLauncher.launch(Intent(this, PinVerifyActivity::class.java))
+        // v15 (FIX-5): pinManager.isPinSet() may trigger lazy
+        // EncryptedSharedPreferences creation, which performs Keystore I/O
+        // and can block the main thread for several seconds on broken-
+        // Keystore devices. Move the check off the main thread and only
+        // launch the PIN activity once we have an answer.
+        lifecycleScope.launch {
+            val pinSet = withContext(Dispatchers.IO) {
+                runCatching { pinManager.isPinSet() }.getOrDefault(false)
+            }
+            if (!pinSet) {
+                runCatching {
+                    pinSetupLauncher.launch(Intent(this@MainActivity, PinSetupActivity::class.java))
+                }.onFailure { Timber.w(it, "Failed to launch PinSetupActivity") }
+            } else {
+                runCatching {
+                    pinVerifyLauncher.launch(Intent(this@MainActivity, PinVerifyActivity::class.java))
+                }.onFailure { Timber.w(it, "Failed to launch PinVerifyActivity") }
+            }
         }
 
         val adapter = BlockEventAdapter()
@@ -249,11 +276,20 @@ class MainActivity : AppCompatActivity() {
         return "Downloads/$fileName"
     }
 
+    /**
+     * v15 (2.1.5) FIX-1: Only run service/rules logic AFTER the user has
+     * authenticated (PIN unlocked). On Android 12+, calling
+     * startForegroundService() while the app is not in the foreground
+     * (which is briefly the case while the PIN activity is on top)
+     * throws IllegalStateException. The alarm-retry path masked this,
+     * but the service frequently never started cleanly.
+     */
     override fun onResume() {
         super.onResume()
         val active = isAccessibilityEnabled()
         vm.setProtectionActive(active)
-        if (active) {
+
+        if (unlocked && active) {
             GuardianForegroundService.start(this)
             lifecycleScope.launch {
                 runCatching {
@@ -265,10 +301,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
         binding.btnEnableAccessibility.text = getString(
             if (active) R.string.accessibility_enabled else R.string.enable_accessibility
         )
-        refreshPermissionBanner()
+        if (unlocked) refreshPermissionBanner()
     }
 
     private fun refreshPermissionBanner() {

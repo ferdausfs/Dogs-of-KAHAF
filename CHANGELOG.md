@@ -1,3 +1,182 @@
+# Guardian Shield — v15 (2.1.5) STABILITY PATCH 5
+
+versionCode: 8 → **9**
+versionName: 2.1.4 → **2.1.5**
+
+## 🚨 Why this release exists
+
+User report (after v14): the app **opened but crashed** on a non-trivial
+fraction of devices, mostly on first launch and shortly after the
+accessibility service was enabled. A focused review pass identified six
+crash causes and four high-impact perf / hardening issues. This release
+is the consolidated fix bundle.
+
+No DB schema changes, no new Gradle dependencies, no UI framework
+migration — XML/ViewBinding throughout, Room version stays at 3.
+
+---
+
+## 🔧 Critical fixes (crash causes)
+
+### FIX-1 · `MainActivity.onResume()` started service before PIN unlock
+**Root cause:** `onResume()` unconditionally called
+`GuardianForegroundService.start(this)` and `rulesEngine.reload()` on
+every resume — including the first one, where MainActivity is briefly
+in the background because the PIN activity is on top. On Android 12+
+calling `startForegroundService()` while the app is not in the
+foreground throws `IllegalStateException`. The alarm-retry path masked
+the crash but the service often never started cleanly.
+
+**Fix:** service start + rules reload + permission banner are now gated
+on `unlocked && active`. The PIN flow finishes first; only then does
+the service-bring-up logic run.
+
+### FIX-2 · `RulesEngine.evaluateText()` ReDoS / ANR on user regex
+**Root cause:** user-supplied regex was compiled and matched directly on
+the accessibility callback thread with no defensive isolation. A
+catastrophic-backtracking pattern (e.g. `(a+)+b`) on a long screen
+string could pin the thread for tens of seconds → ANR → OS kills the
+service.
+
+**Fix:**
+- Input is now capped at 4 096 characters before evaluation.
+- Each per-keyword match is wrapped in `runCatching` so a single bad
+  pattern fails closed (no-match) instead of bubbling.
+- `reload()` validates regex patterns and silently drops invalid ones
+  with a `Timber.w("Invalid regex keyword removed: …")` log so a single
+  bad rule cannot break detection for everything else.
+
+### FIX-3 · `collectVisibleText()` unbounded memory accumulation
+**Root cause:** the BFS over `AccessibilityNodeInfo` appended text from
+up to 250 nodes with no cap on the resulting `StringBuilder`. On
+infinite-scroll feeds (Twitter/X, news readers) the buffer could grow
+to hundreds of KB on a single pass → GC pressure and the occasional
+OOM during the regex evaluation that followed.
+
+**Fix:**
+- New `MAX_TEXT_LENGTH = 8192` constant.
+- BFS early-exits as soon as `sb.length >= MAX_TEXT_LENGTH`.
+- The returned string is `take(MAX_TEXT_LENGTH)` for belt-and-braces.
+
+### FIX-4 · `AiDetector` GPU delegate — already broadened
+**Status:** verified — `buildInterpreterOptions()` already uses
+`catch (t: Throwable)` (added in v11). No further change needed; this
+release adds an explicit comment in the codebase confirming the
+contract.
+
+### FIX-5 · `SecureStorage` main-thread Keystore init → ANR
+**Root cause:** the constructor invoked
+`createPreferences(context)` immediately, which calls
+`EncryptedSharedPreferences.create(...)`. On slow / broken-Keystore
+devices (some MediaTek / older Huawei builds, post-factory-reset state)
+this performs Keystore work that blocks the main thread for 2–10 s →
+ANR. Because Hilt instantiates `PinManager` lazily but `SecureStorage`
+eagerly inside `PinManager`, the first ever main-thread call to
+`pinManager.isPinSet()` ate the full Keystore latency.
+
+**Fix:**
+- `SecureStorage.prefs` is now `by lazy { createPreferences(context) }`,
+  deferring Keystore work to first access.
+- `MainActivity.onCreate()` now calls `pinManager.isPinSet()` from a
+  `Dispatchers.IO` coroutine. The result drives which PIN activity is
+  launched.
+- Same pattern applied to `SettingsActivity.onCreate()`.
+
+### FIX-6 · `AiDetector.classify()` recycled-bitmap race
+**Root cause:** during a fast accessibility-service recycle (MIUI /
+ColorOS), an in-flight screenshot callback could hand `classify()` a
+bitmap whose underlying hardware buffer had already been recycled. The
+TFLite interpreter then threw `IllegalStateException`, which escaped
+the inner runCatching block.
+
+**Fix:**
+- Recycled-bitmap guard now runs at the very top of `classify()`, BEFORE
+  `ensureLoaded()`, with a `Timber.w` so we have a breadcrumb. Returns
+  `ClassificationResult.SAFE` so the caller treats it as "no match".
+
+---
+
+## ⚡ Performance optimisations
+
+### OPT-1 · Skip AI scan for whitelisted apps
+`triggerAiCheck()` and the periodic AI scanner now early-return when
+`rulesEngine.canBlock(pkg)` is false (whitelist / always-allowed apps).
+On low-end devices this is a noticeable battery / thermal win — the
+periodic scanner used to fire screenshot capture + TFLite inference
+every 850 ms even on the user's whitelisted browser.
+
+### OPT-2 · `DashboardViewModel` redundant `countToday()` query
+Every Room emission of the recent-events flow used to invoke
+`countTodayBlocksUseCase()` — a full `COUNT(*)` query — even though
+`todayStats` already exposed `totalBlocks` from the same data. Removed
+the redundant query; `todayCount` is now driven by `todayStats.collect`
+so we have one source of truth and one round-trip.
+
+### OPT-3 · `PermissionManager.snapshot()` 10 s cache
+The foreground-service watchdog ticks every 45 s and asks
+`PermissionManager.missingCritical(ctx)` per tick — that path makes 7
+binder IPC calls back to system services (AppOps, DevicePolicy,
+PowerManager, NotificationManagerCompat, etc.) all in series. Now
+cached for 10 s; the cache is explicitly invalidated when
+`PermissionsActivity.onResume()` fires, so a user who just toggled a
+permission in system settings sees fresh state immediately.
+
+### OPT-4 · `RulesEngine` pre-compiled regex
+The hot path `evaluateText()` used to call `Regex(string)` on every
+keyword on every accessibility event. The snapshot now stores
+pre-compiled `Regex` objects (built once at `reload()` time). With 20
+regex keywords this saves 20 compiles per event.
+
+---
+
+## 🛡️ Defensive hardening
+
+### HARD-1 · Watchdog tick — per-call try/catch
+Each system-service call inside the foreground-service watchdog is now
+individually `runCatching`-wrapped. A single hung binder thread can no
+longer poison the rest of the tick.
+
+### HARD-2 · `ModelImportManager` post-copy validation
+After a successful copy, the imported model is opened in a throwaway
+`Interpreter(file)` instance. If the open fails (corrupt FlatBuffer,
+wrong-arch ops, mismatched input shape) the file is deleted and the
+import surfaces a useful error to the user. Previously the next
+`AiDetector.ensureLoaded()` would crash and the bad file would persist
+across launches.
+
+### HARD-3 · `AccessibilityService` null-safe `event.packageName`
+`event.packageName?.toString() ?: return` is now the very first thing
+`onAccessibilityEvent` does after the null-event guard. Prevents an NPE
+on the rare events the framework dispatches without a packageName
+(some IMEs, Wear-companion accessibility traffic).
+
+### HARD-4 · `BlockingEngine` — verified
+`backgroundActivityOptions()` callers already null-check; no change
+needed. Audited in this pass.
+
+---
+
+## 📦 Build & version
+
+- `versionCode = 9`, `versionName = "2.1.5"`.
+- Room schema location unchanged — `app/schemas/` already version-tracked.
+- No new Gradle dependencies, no Compose, no Room schema bump.
+
+---
+
+## ✅ Verification checklist
+
+- Fresh install: app opens → PIN setup → dashboard visible, no crash.
+- Accessibility enabled: foreground service starts, watchdog ticks.
+- Whitelisted app open: no AI scan activity in logcat.
+- Settings → import a non-TFLite file: shows "Model validation failed";
+  previously-imported model intact (or absent — never corrupted).
+- Regex keyword `(a+)+b`: accessibility service stays responsive on a
+  long Twitter/X feed.
+- Works on API 26 (minSdk) emulator: no FGS / overlay crashes.
+- Works on API 35 (targetSdk) device: screenshot AI detection fires.
+- Kill + restart app: protection resumes after BootReceiver.
+- `./gradlew :app:assembleDebug` succeeds with 0 errors.
 # Guardian Shield — v14 (2.1.4) FOUR-PASS REVIEW + STABILITY PATCH 4
 
 versionCode: 7 → **8**

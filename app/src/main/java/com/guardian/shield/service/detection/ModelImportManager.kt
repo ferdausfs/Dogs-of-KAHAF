@@ -132,6 +132,28 @@ class ModelImportManager @Inject constructor(
                     )
                 }
 
+                // v15 (2.1.5) HARD-2: open the model in a throwaway TFLite
+                // interpreter to confirm it's not corrupt / wrong-arch /
+                // wrong-input-shape. If it can't be opened we delete the
+                // bad file so the next AiDetector.ensureLoaded() doesn't
+                // crash; the previous model is gone but the import error
+                // is reported to the user with a useful message.
+                val validation = runCatching {
+                    val testInterp = org.tensorflow.lite.Interpreter(targetFile)
+                    testInterp.close()
+                }
+                if (validation.isFailure) {
+                    val cause = validation.exceptionOrNull()
+                    Timber.w(cause, "Imported model failed TFLite validation")
+                    runCatching { targetFile.delete() }
+                    return@withContext Result.failure(
+                        IOException(
+                            "Model validation failed: " +
+                                (cause?.message ?: "interpreter could not load file")
+                        )
+                    )
+                }
+
                 Timber.i("Imported model '$modelName' (${formatSize(copiedBytes)})")
                 Result.success(Unit)
             } catch (sec: SecurityException) {
