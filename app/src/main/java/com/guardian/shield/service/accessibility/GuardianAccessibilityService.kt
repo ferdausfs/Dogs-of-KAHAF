@@ -135,7 +135,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         // here and would otherwise throw on every takeScreenshot() call.
         canScreenshotCapability = runCatching {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                canTakeScreenshot()
+                (serviceInfo?.canTakeScreenshot == true)
         }.getOrDefault(false)
         Timber.i("canTakeScreenshot capability=$canScreenshotCapability")
 
