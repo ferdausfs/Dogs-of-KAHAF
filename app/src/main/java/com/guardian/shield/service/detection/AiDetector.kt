@@ -36,15 +36,24 @@ import javax.inject.Singleton
 import kotlin.math.min
 
 /**
- * v13 (2.1.3) STABILITY PATCH 3:
- *  • CRITICAL FIX: outputClasses no longer `coerceAtLeast(2)`. The previous
- *    code allocated FloatArray(2) for a 1-output sigmoid model → TFLite
- *    native crash (size mismatch). Now we honour the model's true output
- *    shape and added an explicit 1-output branch to runLegacyInference().
- *  • DEFENSIVE: outputClasses bound to a sane range [1, 32] in case a
- *    malformed model reports 0 or huge values.
+ * v14 (2.1.4) STABILITY PATCH 4:
+ *  • CRITICAL FIX: startPrefsCache() now uses the process-lifetime
+ *    Scopes.appDefault scope instead of the caller's scope. Previously
+ *    the accessibility service passed its own scope — when the service
+ *    died, the scope cancelled and the preference collectors stopped
+ *    forever. The `prefsCacheStarted` flag then blocked any new service
+ *    from re-registering, so cachedAiEnabled / cachedUserGender /
+ *    cachedSensitivity / cachedAiThreshold became permanently stale
+ *    (manifested as "I toggled AI off/on but nothing changed").
+ *  • DEFENSIVE: the scope parameter is now ignored — kept only for
+ *    source compatibility with existing callers (no API break).
  *
- * v11 (2.1.1) — kept verbatim:
+ * v13 (2.1.3):
+ *  • outputClasses no longer `coerceAtLeast(2)`. 1-output sigmoid models
+ *    now have their own branch in runLegacyInference().
+ *  • outputClasses bound to a sane range [1, 32].
+ *
+ * v11 (2.1.1):
  *  • close() split into closeAsync()/closeSuspend()/close() (no main-thread runBlocking).
  *  • outputClasses @Volatile.
  *  • GPU delegate construction protected with try/catch (Adreno UnsatisfiedLinkError).
@@ -112,26 +121,34 @@ class AiDetector @Inject constructor(
         private set
     @Volatile private var prefsCacheStarted = false
 
+    /**
+     * v14 (2.1.4): scope parameter is now ignored — kept for binary/source
+     * compatibility. Collectors are launched on the process-lifetime
+     * [com.guardian.shield.util.Scopes.appDefault] scope so they survive
+     * accessibility-service teardown and restart.
+     */
+    @Suppress("UNUSED_PARAMETER")
     @Synchronized
     fun startPrefsCache(scope: CoroutineScope) {
         if (prefsCacheStarted) return
         prefsCacheStarted = true
-        scope.launch {
+        val singleton = com.guardian.shield.util.Scopes.appDefault
+        singleton.launch {
             runCatching {
                 prefs.aiDetectionEnabled.collect { cachedAiEnabled = it }
             }.onFailure { Timber.w(it, "aiDetectionEnabled collector failed") }
         }
-        scope.launch {
+        singleton.launch {
             runCatching {
                 prefs.userGender.collect { cachedUserGender = it }
             }.onFailure { Timber.w(it, "userGender collector failed") }
         }
-        scope.launch {
+        singleton.launch {
             runCatching {
                 prefs.sensitivity.collect { cachedSensitivity = it }
             }.onFailure { Timber.w(it, "sensitivity collector failed") }
         }
-        scope.launch {
+        singleton.launch {
             runCatching {
                 prefs.aiThreshold.collect { cachedAiThreshold = it }
             }.onFailure { Timber.w(it, "aiThreshold collector failed") }

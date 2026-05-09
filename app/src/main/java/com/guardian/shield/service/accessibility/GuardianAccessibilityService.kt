@@ -37,18 +37,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * v13 (2.1.3) STABILITY PATCH 3:
- *  • CRITICAL FIX: aiInFlight reset race fully resolved. Previous v12
- *    structure released the flag in `finally` even though takeScreenshot()
- *    is async — the callback would later double-reset, opening a window
- *    where a new check could acquire the flag and then have its in-flight
- *    state cleared by the stale callback. Now: `screenshotInvoked` tracks
- *    whether takeScreenshot returned successfully. If yes, the callback
- *    owns the flag-release; if no (sync exception), `finally` releases.
- *  • DEFENSIVE: callback-side coroutine launches now use Scopes.appIo so
- *    they survive a service onDestroy that races with a screenshot reply.
+ * v14 (2.1.4) STABILITY PATCH 4:
+ *  • CRITICAL FIX: onDestroy() now cancels `scope` BEFORE asking AiDetector
+ *    to tear down. Previously the service-scope was cancelled AFTER
+ *    closeAsync fired on Scopes.appIo, which allowed in-flight screenshot
+ *    callbacks (already launched on Scopes.appDefault) to enqueue fresh
+ *    classify() work while teardown ran — a narrow but crashy race on
+ *    OEMs that recycle the accessibility service quickly (MIUI, ColorOS).
+ *  • DEFENSIVE: AiDetector.startPrefsCache() is now scope-agnostic (it
+ *    uses the singleton Scopes.appDefault internally). The scope we pass
+ *    here is ignored but we keep the call for source compatibility.
  *
- * v12 (2.1.2) — kept verbatim:
+ * v13 (2.1.3):
+ *  • aiInFlight reset race resolved via `screenshotInvoked` local.
+ *  • Callback uses Scopes.appDefault so a racing onDestroy can't strand
+ *    the in-flight flag.
+ *
+ * v12 (2.1.2):
  *  • Cached canScreenshotCapability at connect-time; SecurityException self-disable.
  *  • mainExecutor null-check.
  *  • Shared Scopes.appIo for AI teardown.
@@ -579,13 +584,21 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        // v14: cancel our scope FIRST so no in-flight screenshot launch can
+        // enqueue fresh classify() work after teardown starts. (Callbacks
+        // that are ALREADY on Scopes.appDefault will finish harmlessly
+        // since AiDetector singletons outlive the service.)
         runCatching { periodicJob?.cancel() }
+        runCatching { scope.cancel() }
         if (screenReceiverRegistered) {
             runCatching { unregisterReceiver(screenStateReceiver) }
             screenReceiverRegistered = false
         }
         runCatching { aiDetector.closeAsync(Scopes.appIo) }
-        runCatching { scope.cancel() }
-        super.onDestroy()
+        try {
+            super.onDestroy()
+        } catch (t: Throwable) {
+            Timber.w(t, "super.onDestroy threw — suppressed")
+        }
     }
 }

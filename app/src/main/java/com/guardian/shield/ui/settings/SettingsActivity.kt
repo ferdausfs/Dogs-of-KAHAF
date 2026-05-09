@@ -312,73 +312,82 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     /**
-     * v12 (2.1.2): legacy combined-model import.
-     *  • CRITICAL FIX: closes the live TFLite interpreter (via the
-     *    ViewModel's IO-dispatched closeSuspend) BEFORE overwriting the
-     *    file, otherwise the mapped ByteBuffer pinned the old file
-     *    descriptor and the new file would not be picked up until restart.
+     * v14 (2.1.4): outer try/finally guarantees the Upload button is
+     * always re-enabled, even if the coroutine is cancelled (e.g. user
+     * rotates the device mid-import). Previously a CancellationException
+     * bubbled past the assignment and the button stayed greyed out
+     * forever — user had to kill/relaunch the app to import again.
+     *
+     * v12 (2.1.2):
+     *  • closes the live TFLite interpreter before overwriting the file,
+     *    otherwise the mapped ByteBuffer pinned the old file descriptor
+     *    and the new file would not be picked up until restart.
      */
     private fun copyLegacyModel(uri: Uri) {
         binding.btnUploadModel.isEnabled = false
         binding.tvModelStatus.text = "Importing…"
         lifecycleScope.launch {
-            // v12: close the live interpreter first.
-            runCatching { vm.closeAiInterpreter() }
+            try {
+                // v12: close the live interpreter first.
+                runCatching { vm.closeAiInterpreter() }
 
-            val outcome: Result<Long> = withContext(Dispatchers.IO) {
-                runCatching {
-                    val target = File(filesDir, AiDetector.MODEL_FILE)
-                    val tmp = File(filesDir, "${AiDetector.MODEL_FILE}.tmp")
-                    if (tmp.exists()) tmp.delete()
+                val outcome: Result<Long> = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val target = File(filesDir, AiDetector.MODEL_FILE)
+                        val tmp = File(filesDir, "${AiDetector.MODEL_FILE}.tmp")
+                        if (tmp.exists()) tmp.delete()
 
-                    val input = contentResolver.openInputStream(uri)
-                        ?: throw IOException("Could not open the selected file")
+                        val input = contentResolver.openInputStream(uri)
+                            ?: throw IOException("Could not open the selected file")
 
-                    var copied = 0L
-                    input.use { inp ->
-                        tmp.outputStream().use { out ->
-                            val buf = ByteArray(8 * 1024)
-                            var read = inp.read(buf)
-                            while (read != -1) {
-                                out.write(buf, 0, read)
-                                copied += read
-                                if (copied > 500L * 1024 * 1024) {
-                                    throw IOException("File too large (>500 MB)")
+                        var copied = 0L
+                        input.use { inp ->
+                            tmp.outputStream().use { out ->
+                                val buf = ByteArray(8 * 1024)
+                                var read = inp.read(buf)
+                                while (read != -1) {
+                                    out.write(buf, 0, read)
+                                    copied += read
+                                    if (copied > 500L * 1024 * 1024) {
+                                        throw IOException("File too large (>500 MB)")
+                                    }
+                                    read = inp.read(buf)
                                 }
-                                read = inp.read(buf)
+                                out.flush()
+                                runCatching { out.fd.sync() }
                             }
-                            out.flush()
-                            runCatching { out.fd.sync() }
                         }
+                        if (copied < 1024L) {
+                            tmp.delete()
+                            throw IOException("File too small to be a valid TFLite model")
+                        }
+                        if (!isValidTfliteFile(tmp)) {
+                            tmp.delete()
+                            throw IOException("Not a valid TFLite model (header check failed)")
+                        }
+                        if (target.exists() && !target.delete()) {
+                            tmp.delete()
+                            throw IOException("Could not replace previous model")
+                        }
+                        if (!tmp.renameTo(target)) {
+                            tmp.delete()
+                            throw IOException("Could not finalise model file")
+                        }
+                        copied
                     }
-                    if (copied < 1024L) {
-                        tmp.delete()
-                        throw IOException("File too small to be a valid TFLite model")
-                    }
-                    if (!isValidTfliteFile(tmp)) {
-                        tmp.delete()
-                        throw IOException("Not a valid TFLite model (header check failed)")
-                    }
-                    if (target.exists() && !target.delete()) {
-                        tmp.delete()
-                        throw IOException("Could not replace previous model")
-                    }
-                    if (!tmp.renameTo(target)) {
-                        tmp.delete()
-                        throw IOException("Could not finalise model file")
-                    }
-                    copied
                 }
-            }
 
-            binding.btnUploadModel.isEnabled = true
-            outcome.onSuccess {
-                vm.refresh()
-                binding.tvModelStatus.text = "Model loaded ✓"
-                toast("Legacy model imported ✓")
-            }.onFailure {
-                Timber.e(it, "Legacy model import failed")
-                binding.tvModelStatus.text = "Failed: ${it.message ?: "unknown error"}"
+                outcome.onSuccess {
+                    vm.refresh()
+                    binding.tvModelStatus.text = "Model loaded ✓"
+                    toast("Legacy model imported ✓")
+                }.onFailure {
+                    Timber.e(it, "Legacy model import failed")
+                    binding.tvModelStatus.text = "Failed: ${it.message ?: "unknown error"}"
+                }
+            } finally {
+                // v14: always re-enable the button, even on cancellation.
+                runCatching { binding.btnUploadModel.isEnabled = true }
             }
         }
     }

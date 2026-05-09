@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  v14 (2.1.4): xmlns:tools hoisted to the root element. Previously the
+  tools namespace was declared on two inner TextView elements, which is
+  valid XML but inconsistent and caused lint false-positives on some
+  Android Studio versions.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -9,7 +16,8 @@
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:hint="Package name (e.g. com.instagram.android)"
         android:inputType="text"
-        android:fontFamily="monospace"/>
+        android:fontFamily="monospace"
+        tools:ignore="Autofill,LabelFor,TextFields"/>
 
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -17,17 +25,18 @@
         android:gravity="center_vertical">
         <TextView
             android:layout_width="60dp" android:layout_height="wrap_content"
-            android:text="Start"/>
+            android:text="Start"
+            tools:ignore="HardcodedText"/>
         <TextView android:id="@+id/tvStart"
             android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content"
             android:textSize="16sp" android:textStyle="bold"
-            tools:ignore="HardcodedText"
-            xmlns:tools="http://schemas.android.com/tools"
-            android:text="22:00"/>
+            android:text="22:00"
+            tools:ignore="HardcodedText"/>
         <Button android:id="@+id/btnStart"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Pick"/>
+            android:text="Pick"
+            tools:ignore="HardcodedText"/>
     </LinearLayout>
 
     <LinearLayout
@@ -36,22 +45,24 @@
         android:gravity="center_vertical">
         <TextView
             android:layout_width="60dp" android:layout_height="wrap_content"
-            android:text="End"/>
+            android:text="End"
+            tools:ignore="HardcodedText"/>
         <TextView android:id="@+id/tvEnd"
             android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content"
             android:textSize="16sp" android:textStyle="bold"
-            xmlns:tools="http://schemas.android.com/tools"
-            tools:ignore="HardcodedText"
-            android:text="06:00"/>
+            android:text="06:00"
+            tools:ignore="HardcodedText"/>
         <Button android:id="@+id/btnEnd"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Pick"/>
+            android:text="Pick"
+            tools:ignore="HardcodedText"/>
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textSize="12sp"
-        android:text="Rule applies every day. Overnight ranges (e.g. 22:00–06:00) are supported."/>
+        android:text="Rule applies every day. Overnight ranges (e.g. 22:00–06:00) are supported."
+        tools:ignore="HardcodedText"/>
 </LinearLayout>

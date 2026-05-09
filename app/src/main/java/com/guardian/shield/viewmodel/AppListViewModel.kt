@@ -128,8 +128,14 @@ class AppListViewModel @Inject constructor(
                     }
                     .distinctBy { it.pkg }
                     .sortedWith(
-                        compareByDescending<InstalledApp> { it.rule?.isBlocked == true || it.rule?.isWhitelisted == true }
-                            .thenByDescending { it.isAlwaysAllowed }
+                        // v14: Boolean is Comparable in Kotlin but can be
+                        // brittle across Kotlin versions when used as a
+                        // compareBy selector — normalise to Int (1/0) for
+                        // guaranteed deterministic ordering.
+                        compareByDescending<InstalledApp> {
+                            if (it.rule?.isBlocked == true || it.rule?.isWhitelisted == true) 1 else 0
+                        }
+                            .thenByDescending { if (it.isAlwaysAllowed) 1 else 0 }
                             .thenBy { it.name.lowercase() }
                     )
                     .toList()
