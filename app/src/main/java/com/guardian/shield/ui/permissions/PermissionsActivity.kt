@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.guardian.shield.databinding.ActivityPermissionsBinding
 import com.guardian.shield.databinding.ItemPermissionBinding
 import com.guardian.shield.service.detection.PinManager
@@ -15,6 +16,10 @@ import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.util.PermissionManager.PermissionKey
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -49,30 +54,56 @@ class PermissionsActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { render() }
 
+    // v16 (2.1.6) NEW-FIX-6: guards against config-change re-entering
+    // onResume()/render() before onCreate() finishes binding inflation.
+    @Volatile private var bindingReady = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPermissionsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        bindingReady = true
         binding.root.visibility = View.INVISIBLE
 
-        if (pinManager.isPinSet()) {
-            pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        } else {
-            binding.root.visibility = View.VISIBLE
-            render()
+        // v16 (NEW-FIX-6): pinManager.isPinSet() can perform Keystore I/O
+        // on first call — move off the main thread (consistent with v15's
+        // FIX-5 in MainActivity / SettingsActivity, which v15 missed for
+        // PermissionsActivity / Schedule / Keyword / AppList).
+        lifecycleScope.launch {
+            val pinSet = withContext(Dispatchers.IO) {
+                runCatching { pinManager.isPinSet() }.getOrDefault(false)
+            }
+            if (pinSet) {
+                runCatching {
+                    pinVerify.launch(Intent(this@PermissionsActivity, PinVerifyActivity::class.java))
+                }.onFailure { Timber.w(it, "Failed to launch PinVerifyActivity") }
+            } else {
+                binding.root.visibility = View.VISIBLE
+                render()
+            }
         }
     }
 
+    /**
+     * v16 (2.1.6) NEW-OPT-2: explicit cache invalidation on every resume.
+     * Without this, a user who tapped "Grant" → toggled the permission in
+     * system settings → returned within the 10 s snapshot TTL would still
+     * see the stale "MISSING" row, leading to a confusing UX ("I granted
+     * it, why does it still say missing?"). Calling invalidateCache()
+     * unconditionally here is cheap and guarantees the next snapshot()
+     * call rebuilds from the live system services.
+     */
     override fun onResume() {
         super.onResume()
-        // v15 (2.1.5): force a fresh permission read when the user comes
-        // back from the system settings screen — the 10 s snapshot cache
-        // would otherwise show stale "missing" rows.
+        if (!bindingReady) return // v16 NEW-FIX-6
         PermissionManager.invalidateCache()
-        if (binding.root.visibility == View.VISIBLE) render()
+        runCatching {
+            if (binding.root.visibility == View.VISIBLE) render()
+        }.onFailure { Timber.w(it, "PermissionsActivity onResume render failed") }
     }
 
     private fun render() {
+        if (!bindingReady) return // v16 NEW-FIX-6
         binding.container.removeAllViews()
         val statuses = PermissionManager.snapshot(this)
         val missingCritical = statuses.count { it.critical && !it.granted }

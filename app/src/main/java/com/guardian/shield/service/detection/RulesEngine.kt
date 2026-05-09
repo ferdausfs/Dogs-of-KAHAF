@@ -16,6 +16,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.util.Calendar
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,6 +57,24 @@ class RulesEngine @Inject constructor(
         const val ACTION_RULES_CHANGED = "com.guardian.shield.ACTION_RULES_CHANGED"
         /** v15 (FIX-2): cap text fed to keyword evaluation. */
         private const val MAX_TEXT_FOR_REGEX = 4096
+        /** v16 (NEW-HARD-2): max wall-clock per regex match. */
+        private const val REGEX_TIMEOUT_MS = 200L
+    }
+
+    /**
+     * v16 (2.1.6) NEW-HARD-2: dedicated single-thread executor for regex
+     * matching. Required so we can apply a true wall-clock timeout via
+     * FutureTask.get() — runCatching cannot interrupt a thread stuck in
+     * catastrophic backtracking (e.g. "(a+)+b"). The thread is a daemon
+     * so it never blocks JVM shutdown, and runs at one notch below normal
+     * priority so a misbehaving regex can't starve the accessibility
+     * callback thread.
+     */
+    private val regexExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "guardian-regex").apply {
+            isDaemon = true
+            priority = (Thread.NORM_PRIORITY - 1).coerceAtLeast(Thread.MIN_PRIORITY)
+        }
     }
 
     /**
@@ -166,13 +188,37 @@ class RulesEngine @Inject constructor(
         val lower = text.toString().lowercase().take(MAX_TEXT_FOR_REGEX)
         for (matcher in snap.keywords) {
             val match = if (matcher.regex != null) {
-                runCatching { matcher.regex.containsMatchIn(lower) }.getOrDefault(false)
+                // v16 (NEW-HARD-2): true wall-clock timeout via FutureTask.
+                // runCatching cannot interrupt catastrophic backtracking;
+                // a separate thread + future.get(timeout) can.
+                matchRegexWithTimeout(matcher.regex, lower, matcher.literal)
             } else {
                 lower.contains(matcher.literal)
             }
             if (match) return DetectionResult.Block(BlockReason.KEYWORD_MATCH, matcher.literal)
         }
         return DetectionResult.Allow
+    }
+
+    private fun matchRegexWithTimeout(
+        regex: Regex,
+        haystack: String,
+        literal: String
+    ): Boolean {
+        val task = FutureTask<Boolean> { regex.containsMatchIn(haystack) }
+        return try {
+            regexExecutor.execute(task)
+            task.get(REGEX_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        } catch (t: TimeoutException) {
+            // Catastrophic backtracking suspected — cancel + log, treat as no-match.
+            runCatching { task.cancel(true) }
+            Timber.w("Regex '$literal' timed out after ${REGEX_TIMEOUT_MS}ms — treating as no-match")
+            false
+        } catch (t: Throwable) {
+            runCatching { task.cancel(true) }
+            Timber.w(t, "Regex '$literal' evaluation failed — treating as no-match")
+            false
+        }
     }
 
     fun isWhitelisted(pkg: String): Boolean = snapshot.whitelist.contains(pkg)

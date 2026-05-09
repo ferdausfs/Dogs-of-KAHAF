@@ -567,6 +567,17 @@ class GuardianAccessibilityService : AccessibilityService() {
      * causing GC pressure and the occasional OOM during keyword regex
      * evaluation. We now early-exit traversal once the cap is hit and
      * truncate the returned String to the same cap.
+     *
+     * v16 (2.1.6) NEW-FIX-4: drain remaining queue + descendants on early-exit.
+     *  Previously when MAX_TEXT_LENGTH or the 250-node cap fired, the
+     *  remaining nodes in `queue` were added to toRecycle, but their
+     *  un-explored children were never collected. Those orphan child
+     *  AccessibilityNodeInfo references leaked into the system pool and
+     *  on aggressive OEMs (MIUI / ColorOS) the OS watchdog killed the
+     *  accessibility service after ~30 minutes of use. We now do an
+     *  iterative BFS drain that collects every descendant of every queued
+     *  node into toRecycle. Iterative (not recursive) avoids stack
+     *  overflow on deep view trees inside the accessibility callback path.
      */
     private fun collectVisibleText(root: AccessibilityNodeInfo?): String? {
         root ?: return null
@@ -589,8 +600,19 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
                 nodes++
             }
-            for (n in queue) {
+            // v16 (NEW-FIX-4): drain remaining queue AND their descendants.
+            val drain: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque(queue)
+            while (drain.isNotEmpty()) {
+                val n = drain.removeFirst()
                 if (n !== root) toRecycle.add(n)
+                val childCount = runCatching { n.childCount }.getOrDefault(0)
+                for (i in 0 until childCount) {
+                    val child = runCatching { n.getChild(i) }.getOrNull() ?: continue
+                    if (child !== root && !toRecycle.contains(child)) {
+                        toRecycle.add(child)
+                        drain.add(child)
+                    }
+                }
             }
         } catch (t: Throwable) {
             Timber.w(t, "collectVisibleText traversal failed")

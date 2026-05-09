@@ -1,7 +1,9 @@
 package com.guardian.shield.ui.overlay
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.activity.OnBackPressedCallback
@@ -74,14 +76,41 @@ class BlockOverlayActivity : AppCompatActivity() {
         runCatching { finish() }
     }
 
-    @Suppress("DEPRECATION")
+    /**
+     * v16 (2.1.6) NEW-FIX-2:
+     *  Wraps the entire vibrate() call in runCatching AND adds an explicit
+     *  Build.VERSION_CODES.O guard before referencing VibrationEffect.
+     *  On API 26 (Go edition / stripped builds) the JVM resolves
+     *  VibrationEffect at method-load time, not at call time. If the class
+     *  is missing from the class loader, the resolve itself throws
+     *  NoClassDefFoundError BEFORE runCatching can catch it.
+     *  Wrapping the body inside an api-26-guarded branch isolates the class
+     *  reference into a method that is only loaded on API 26+, making the
+     *  outer runCatching effective at catching unexpected NoClassDefFound.
+     */
     private fun vibrate() = runCatching {
-        val v: Vibrator? = if (android.os.Build.VERSION.SDK_INT >= 31) {
+        @Suppress("DEPRECATION")
+        val v: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
             (getSystemService(VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
         } else {
             getSystemService(VIBRATOR_SERVICE) as? Vibrator
         }
-        v?.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        v ?: return@runCatching
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrateOreo(v)
+        } else {
+            @Suppress("DEPRECATION")
+            v.vibrate(180)
+        }
+    }.onFailure { Timber.w(it, "vibrate() failed (suppressed)") }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    private fun vibrateOreo(v: Vibrator) {
+        runCatching {
+            v.vibrate(
+                VibrationEffect.createOneShot(180, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        }.onFailure { Timber.w(it, "VibrationEffect.createOneShot failed (suppressed)") }
     }
 
     override fun onDestroy() {

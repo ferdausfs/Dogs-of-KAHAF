@@ -430,19 +430,38 @@ class AiDetector @Inject constructor(
     suspend fun isUnsafe(bitmap: Bitmap): Boolean =
         classify(bitmap, packageName = null).tier.shouldBlock()
 
+    /**
+     * v16 (2.1.6) NEW-FIX-5: deadlock prevention.
+     *
+     *  Previously ensureGenderPipelineLoaded() (a @Synchronized method on the
+     *  AiDetector instance monitor) was called BEFORE acquiring inferenceLock.
+     *  Meanwhile classify() acquires inferenceLock and from inside it calls
+     *  ensureLoaded() (also @Synchronized on the same monitor). Two coroutines
+     *  racing the two entry points produced a classic A-B / B-A deadlock:
+     *      classify():            holds inferenceLock → wants AiDetector monitor
+     *      isOppositeGenderNsfw: holds AiDetector monitor → wants inferenceLock
+     *
+     *  Fix: acquire inferenceLock FIRST, then call the @Synchronized loader
+     *  from inside the lock. ensureGenderPipelineLoaded(), ensureLoaded(),
+     *  loadNsfwIfNeeded() and loadGenderIfNeeded() do NOT call
+     *  inferenceLock.withLock internally, so the resulting lock order
+     *  (inferenceLock → AiDetector monitor) is consistent across all entry
+     *  points and deadlock-free.
+     */
     suspend fun isOppositeGenderNsfw(bitmap: Bitmap?, userGender: String): Boolean {
         if (bitmap == null || bitmap.isRecycled) return false
         if (userGender == GENDER_NONE) return false
         if (userGender != GENDER_MALE && userGender != GENDER_FEMALE) return false
-
-        if (!ensureGenderPipelineLoaded()) return false
-        val nsfw = nsfwInterpreter ?: return false
 
         if (!inferenceInFlight.compareAndSet(false, true)) return false
 
         return try {
             inferenceLock.withLock {
                 withContext(Dispatchers.Default) {
+                    // v16 (NEW-FIX-5): moved INSIDE the lock to fix deadlock.
+                    if (!ensureGenderPipelineLoaded()) return@withContext false
+                    val nsfw = nsfwInterpreter ?: return@withContext false
+                    if (bitmap.isRecycled) return@withContext false
                     runOppositeGenderInference(bitmap, nsfw, userGender)
                 }
             }

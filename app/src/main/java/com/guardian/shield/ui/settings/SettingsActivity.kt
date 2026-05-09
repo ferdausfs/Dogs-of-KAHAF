@@ -176,8 +176,25 @@ class SettingsActivity : AppCompatActivity() {
                     runCatching {
                         binding.swKeyword.isChecked = s.keywordFilter
                         binding.swAi.isChecked = s.aiDetection
-                        binding.sliderDelay.value = s.delaySeconds.toFloat().coerceIn(5f, 120f)
-                        binding.sliderThreshold.value = s.aiThreshold.coerceIn(0.1f, 0.95f)
+                        // v16 (2.1.6) NEW-FIX-3: use the slider's actual
+                        // valueFrom / valueTo bounds (read live from the
+                        // inflated XML view) instead of hardcoded floats.
+                        // This prevents IllegalStateException on certain
+                        // EMUI / MIUI builds when an upgraded DataStore
+                        // value falls outside a slider range that was
+                        // tightened in a later XML revision.
+                        runCatching {
+                            val from = binding.sliderDelay.valueFrom
+                            val to = binding.sliderDelay.valueTo
+                            binding.sliderDelay.value =
+                                s.delaySeconds.toFloat().coerceIn(from, to)
+                        }.onFailure { Timber.w(it, "sliderDelay set failed") }
+                        runCatching {
+                            val from = binding.sliderThreshold.valueFrom
+                            val to = binding.sliderThreshold.valueTo
+                            binding.sliderThreshold.value =
+                                s.aiThreshold.coerceIn(from, to)
+                        }.onFailure { Timber.w(it, "sliderThreshold set failed") }
                         binding.tvModelStatus.text = when {
                             s.modelLoaded -> "Model loaded ✓"
                             s.aiDetection -> "⚠️ AI is ON but no model uploaded — detection will NOT work"

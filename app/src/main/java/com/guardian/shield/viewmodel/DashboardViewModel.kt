@@ -61,7 +61,18 @@ class DashboardViewModel @Inject constructor(
 
     private val midnightTrigger = MutableStateFlow(todayMidnightMs())
 
+    /**
+     * v16 (2.1.6) NEW-OPT-1: only re-subscribe to the Room flow when the
+     * midnight boundary actually changes (i.e. once a day). Without
+     * distinctUntilChanged() rapid setProtectionActive() calls (e.g.
+     * accessibility toggle) re-emit the SAME midnight timestamp, and
+     * flatMapLatest cancels + restarts the observeSinceUC subscription on
+     * each emission. Room's InvalidationTracker on API 26 occasionally
+     * threw "attempt to re-open an already-closed object" on rapid
+     * re-subscribe — fixed here.
+     */
     val todayStats: StateFlow<BlockStats> = midnightTrigger
+        .distinctUntilChanged()
         .flatMapLatest { since -> observeSinceUC(since).map { aggregate(it) } }
         .stateIn(viewModelScope, SharingStarted.Lazily, BlockStats())
 

@@ -83,6 +83,19 @@ class GuardianForegroundService : Service() {
     private val scope: CoroutineScope = Scopes.default()
     private var watchdogJob: Job? = null
 
+    /**
+     * v16 (2.1.6) NEW-HARD-1: tri-state foreground-start result.
+     *
+     *  Background-start denial on API 31+ is a permanent condition for the
+     *  current launch attempt — retrying via the alarm receiver simply
+     *  produces the same exception, leading to an infinite retry loop that
+     *  drains the battery. We now distinguish:
+     *      STARTED              → watchdog
+     *      FAILED_TRANSIENT     → schedule a retry alarm (legacy behaviour)
+     *      FAILED_BG_DENIED     → do NOT retry; wait for user interaction
+     */
+    private enum class FgStartResult { STARTED, FAILED_TRANSIENT, FAILED_BG_DENIED }
+
     override fun onCreate() {
         super.onCreate()
         runCatching { createChannels() }.onFailure {
@@ -90,17 +103,21 @@ class GuardianForegroundService : Service() {
         }
 
         val notif = buildForegroundNotification(missingCount = 0)
-        val started = startForegroundSafely(notif)
-        if (!started) {
-            Timber.w("startForegroundSafely returned false — stopping self, retry will be scheduled")
-            runCatching { scheduleRetryAlarm(applicationContext) }
-            stopSelf()
-            return
+        when (startForegroundSafely(notif)) {
+            FgStartResult.STARTED -> startWatchdog()
+            FgStartResult.FAILED_TRANSIENT -> {
+                Timber.w("startForegroundSafely transient failure — scheduling retry")
+                runCatching { scheduleRetryAlarm(applicationContext) }
+                stopSelf()
+            }
+            FgStartResult.FAILED_BG_DENIED -> {
+                Timber.w("startForegroundSafely denied (bg-start) — not retrying, waiting for user interaction")
+                stopSelf()
+            }
         }
-        startWatchdog()
     }
 
-    private fun startForegroundSafely(notif: Notification): Boolean {
+    private fun startForegroundSafely(notif: Notification): FgStartResult {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(
@@ -110,10 +127,16 @@ class GuardianForegroundService : Service() {
             } else {
                 startForeground(NOTIFICATION_ID, notif)
             }
-            true
+            FgStartResult.STARTED
         } catch (t: Throwable) {
-            Timber.e(t, "startForeground rejected: ${t.javaClass.simpleName}")
-            false
+            // v16 (NEW-HARD-1): detect ForegroundServiceStartNotAllowedException
+            // by simple-name string compare (avoids hard class reference
+            // for builds that don't have the class on API < 31).
+            val isBgDenied = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                t is IllegalStateException &&
+                t.javaClass.simpleName == "ForegroundServiceStartNotAllowedException"
+            Timber.e(t, "startForeground rejected (bgDenied=$isBgDenied): ${t.javaClass.simpleName}")
+            if (isBgDenied) FgStartResult.FAILED_BG_DENIED else FgStartResult.FAILED_TRANSIENT
         }
     }
 

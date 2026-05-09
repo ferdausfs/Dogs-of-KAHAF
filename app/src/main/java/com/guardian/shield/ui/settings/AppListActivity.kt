@@ -16,7 +16,10 @@ import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.viewmodel.AppListViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -39,10 +42,18 @@ class AppListActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.root.visibility = View.INVISIBLE
 
-        if (pinManager.isPinSet()) {
-            pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        } else {
-            binding.root.visibility = View.VISIBLE
+        // v16 (2.1.6) NEW-FIX-6: move isPinSet() off the main thread.
+        lifecycleScope.launch {
+            val pinSet = withContext(Dispatchers.IO) {
+                runCatching { pinManager.isPinSet() }.getOrDefault(false)
+            }
+            if (pinSet) {
+                runCatching {
+                    pinVerify.launch(Intent(this@AppListActivity, PinVerifyActivity::class.java))
+                }.onFailure { Timber.w(it, "Failed to launch PinVerifyActivity") }
+            } else {
+                binding.root.visibility = View.VISIBLE
+            }
         }
 
         val adapter = AppListAdapter(

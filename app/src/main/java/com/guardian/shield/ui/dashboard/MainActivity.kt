@@ -76,6 +76,12 @@ class MainActivity : AppCompatActivity() {
 
     private var unlocked = false
     private var cachedRulesVersion: Int = -1
+    // v16 (2.1.6) NEW-FIX-1: guards binding access on every onResume() —
+    // a configuration change (locale / font-size / rotation) while the PIN
+    // activity is on top can re-enter onResume() before onCreate() finishes
+    // re-inflating the binding, which previously crashed with
+    // UninitializedPropertyAccessException at binding.tvPermissionWarning.
+    @Volatile private var bindingReady = false
 
     private val pinSetupLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -119,6 +125,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        bindingReady = true   // v16 (NEW-FIX-1)
         binding.root.visibility = View.INVISIBLE
 
         // v15 (FIX-5): pinManager.isPinSet() may trigger lazy
@@ -286,6 +293,10 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // v16 (2.1.6) NEW-FIX-1: bail out if the binding hasn't been
+        // inflated yet (can happen on a config change that re-enters
+        // onResume() before onCreate() finishes).
+        if (!bindingReady) return
         val active = isAccessibilityEnabled()
         vm.setProtectionActive(active)
 
@@ -302,25 +313,31 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnEnableAccessibility.text = getString(
-            if (active) R.string.accessibility_enabled else R.string.enable_accessibility
-        )
+        runCatching {
+            binding.btnEnableAccessibility.text = getString(
+                if (active) R.string.accessibility_enabled else R.string.enable_accessibility
+            )
+        }
         if (unlocked) refreshPermissionBanner()
     }
 
     private fun refreshPermissionBanner() {
-        val missing = runCatching { PermissionManager.missingCritical(this) }
-            .getOrDefault(emptyList())
-        if (missing.isEmpty()) {
-            binding.tvPermissionWarning.visibility = View.GONE
-        } else {
-            binding.tvPermissionWarning.visibility = View.VISIBLE
-            binding.tvPermissionWarning.text =
-                "⚠ ${missing.size} permission(s) missing — tap to fix"
-            binding.tvPermissionWarning.setOnClickListener {
-                safeStartActivity(Intent(this, PermissionsActivity::class.java))
+        // v16 (NEW-FIX-1): never touch binding before it's ready.
+        if (!bindingReady) return
+        runCatching {
+            val missing = runCatching { PermissionManager.missingCritical(this) }
+                .getOrDefault(emptyList())
+            if (missing.isEmpty()) {
+                binding.tvPermissionWarning.visibility = View.GONE
+            } else {
+                binding.tvPermissionWarning.visibility = View.VISIBLE
+                binding.tvPermissionWarning.text =
+                    "⚠ ${missing.size} permission(s) missing — tap to fix"
+                binding.tvPermissionWarning.setOnClickListener {
+                    safeStartActivity(Intent(this, PermissionsActivity::class.java))
+                }
             }
-        }
+        }.onFailure { Timber.w(it, "refreshPermissionBanner failed") }
     }
 
     private fun isAccessibilityEnabled(): Boolean = runCatching {

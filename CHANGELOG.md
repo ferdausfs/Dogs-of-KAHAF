@@ -1,3 +1,143 @@
+# Guardian Shield — v16 (2.1.6) POST-PATCH CRASH FIX
+
+versionCode: 9 → **10**
+versionName: 2.1.5 → **2.1.6**
+
+## 🚨 Why this release exists
+
+After v15 (2.1.5) shipped, a follow-up code review uncovered a fresh
+batch of latent crash + ANR + leak conditions that the previous patch
+bundle had missed. This release is the consolidated fix bundle for those.
+
+No DB schema changes, no new Gradle dependencies. Room version stays at 3.
+XML / ViewBinding throughout — no Compose migration.
+
+---
+
+## 🔧 Critical fixes (crash causes)
+
+### NEW-FIX-1 · `MainActivity.onResume()` — UninitializedPropertyAccessException on config-change
+**Root cause:** A configuration change (locale switch, font-size, rotation)
+while the PIN activity was on top could re-enter `MainActivity.onResume()`
+before `onCreate()` finished re-inflating the binding. With `unlocked=true`
+carried from the previous instance, the `refreshPermissionBanner()` guard
+passed and `binding.tvPermissionWarning` was accessed on an uninitialised
+`lateinit var`. **Fix:** added a `bindingReady` volatile flag set after
+binding inflation, and guarded `onResume()` + `refreshPermissionBanner()`
+with it. Every `binding.*` access in those paths is now also wrapped in
+`runCatching`.
+
+### NEW-FIX-2 · `BlockOverlayActivity.vibrate()` — `NoClassDefFoundError` on API 26 stripped builds
+**Root cause:** `VibrationEffect.createOneShot()` was inside `runCatching`,
+but the `VibrationEffect` class reference itself was at method-load time.
+On API 26 Go-edition / heavily-stripped builds the class resolution can
+throw `NoClassDefFoundError` BEFORE `runCatching` becomes effective.
+**Fix:** added an explicit `Build.VERSION.SDK_INT >= Build.VERSION_CODES.O`
+branch and isolated the `VibrationEffect` reference into a
+`@RequiresApi(O)` helper method (`vibrateOreo`) so the class is only
+resolved on devices that have it. Outer `runCatching` now actually catches
+any residual `NoClassDefFoundError`.
+
+### NEW-FIX-3 · `SettingsActivity` — slider crash on schema mismatch
+**Root cause:** `binding.sliderDelay.value = … coerceIn(5f, 120f)` used
+hardcoded floats. If a user upgraded from a build with different XML
+slider bounds, the DataStore value could fall outside the new XML range
+and throw `IllegalStateException` deep inside Material's `ensureLayout()`
+on Huawei/EMUI. **Fix:** read live `valueFrom` / `valueTo` from the
+inflated view and `coerceIn` against those, then wrap each setter in its
+own `runCatching`.
+
+### NEW-FIX-4 · `collectVisibleText()` — `AccessibilityNodeInfo` leak on early-exit
+**Root cause:** When the `MAX_TEXT_LENGTH` or 250-node early-exit fired,
+the nodes still in `queue` were added to `toRecycle`, but their
+un-explored children were never collected. Those orphan nodes leaked into
+the system pool; on MIUI/ColorOS the OS watchdog killed the accessibility
+service after ~30 minutes. **Fix:** replaced the post-loop one-liner with
+an iterative BFS drain that recursively collects every descendant of
+every queued node into `toRecycle` before recycling.
+
+### NEW-FIX-6 · `isPinSet()` synchronous main-thread calls in 4 missed activities (self-review find)
+**Root cause:** v15's FIX-5 moved `pinManager.isPinSet()` off the main
+thread for `MainActivity` and `SettingsActivity`, but missed four other
+activities that perform the same synchronous main-thread call:
+`PermissionsActivity`, `ScheduleActivity`, `KeywordActivity`, and
+`AppListActivity`. On broken-Keystore devices (some MediaTek / Huawei)
+the lazy `EncryptedSharedPreferences` initialisation can stall the main
+thread for seconds → ANR → OS kill before the activity even draws.
+**Fix:** all four activities now perform `isPinSet()` inside a
+`Dispatchers.IO` block via `lifecycleScope`, then dispatch the PIN-verify
+launcher on the main thread. `PermissionsActivity` also picked up the
+same `bindingReady` config-change guard as `MainActivity`.
+
+### NEW-FIX-5 · `AiDetector.isOppositeGenderNsfw()` — A-B / B-A deadlock with `classify()`
+**Root cause:** `isOppositeGenderNsfw()` called the `@Synchronized`
+`ensureGenderPipelineLoaded()` (acquires AiDetector monitor) BEFORE
+grabbing `inferenceLock`. Meanwhile `classify()` held `inferenceLock` and
+called the `@Synchronized` `ensureLoaded()` (also wants AiDetector
+monitor). Two coroutines racing the entry points produced a classic A-B /
+B-A deadlock. **Fix:** acquire `inferenceLock` first, then call the
+loader from inside the lock. Lock order is now consistent
+(`inferenceLock → AiDetector monitor`) across all entry points.
+
+---
+
+## ⚡ Stability hardening
+
+### NEW-HARD-1 · `GuardianForegroundService` — infinite retry loop on bg-start denial
+**Root cause:** On API 31+, `startForeground()` from a background-launched
+service throws `ForegroundServiceStartNotAllowedException`. The previous
+code caught it but always called `scheduleRetryAlarm()`, which fired
+`BootReceiver` → `start()` → same exception → infinite battery-draining
+loop. **Fix:** `startForegroundSafely()` now returns a tri-state
+(`STARTED` / `FAILED_TRANSIENT` / `FAILED_BG_DENIED`). Background-denied
+launches no longer schedule a retry — the service waits for a real user
+interaction (which counts as a foreground launch) instead.
+
+### NEW-HARD-2 · `RulesEngine.evaluateText()` — true wall-clock timeout for regex
+**Root cause:** `runCatching` cannot interrupt a thread stuck in
+catastrophic regex backtracking (e.g. user keyword `(a+)+b` on a 4 KB
+screen string). The accessibility callback thread would hang for tens of
+seconds → ANR → service kill. **Fix:** added a dedicated single-thread
+daemon executor (`guardian-regex`, NORM_PRIORITY-1) and run each regex
+match via `FutureTask.get(200ms)`. On timeout we cancel the task with
+`interrupt=true` and treat the keyword as no-match. Well below the 5 s
+ANR threshold, generous for any legitimate regex.
+
+---
+
+## 🚀 Optimisations
+
+### NEW-OPT-1 · `DashboardViewModel.todayStats` — Room re-open crash on rapid re-subscribe
+**Root cause:** `setProtectionActive()` is called from `onResume()`
+(e.g. accessibility toggle) and re-emits to `midnightTrigger`. Without
+`distinctUntilChanged()`, `flatMapLatest` cancelled and re-started the
+`observeSinceUC` Flow on every emission. Room's `InvalidationTracker`
+occasionally threw `IllegalStateException: attempt to re-open an
+already-closed object` on API 26 under rapid subscribe/unsubscribe.
+**Fix:** added `distinctUntilChanged()` upstream of `flatMapLatest`. The
+Room flow now restarts only when the midnight timestamp actually changes
+(once a day).
+
+### NEW-OPT-2 · `PermissionsActivity.onResume()` — stale 10 s snapshot cache
+**Root cause:** v15's OPT-3 cached `PermissionManager.snapshot()` for 10 s.
+Users who granted a permission in system settings and returned within
+that window saw stale "MISSING" rows. **Fix:** call
+`PermissionManager.invalidateCache()` unconditionally at the top of
+`onResume()` so the next `snapshot()` always rebuilds from live system
+services.
+
+---
+
+## 📦 Build
+
+- versionCode 9 → **10**
+- versionName 2.1.5 → **2.1.6**
+- No new Gradle dependencies (`FutureTask` / `Executors` are in
+  `java.util.concurrent`, already on the classpath).
+- Room schema version unchanged (3).
+
+---
+
 # Guardian Shield — v15 (2.1.5) STABILITY PATCH 5
 
 versionCode: 8 → **9**
