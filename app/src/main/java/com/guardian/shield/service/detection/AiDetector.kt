@@ -47,6 +47,14 @@ import kotlin.math.min
  *  • P2-A → close() now uses withTimeoutOrNull(2 s) to prevent ANR if the
  *           inference lock is held by a long-running run.
  *
+ * v9 COMPILE FIX:
+ *  • GpuDelegate.Options removed from buildInterpreterOptions().
+ *    tensorflow-lite-gpu:2.16.1 splits GpuDelegateFactory.Options into a
+ *    separate tensorflow-lite-gpu-api artifact that is declared compileOnly
+ *    in the library POM, so downstream consumers cannot resolve it.
+ *    Using GpuDelegate() no-arg constructor avoids the unresolvable supertype
+ *    while keeping full GPU acceleration.
+ *
  * Earlier v8 stability guarantees (preserved):
  *   - Loads are wrapped in try/catch — missing/corrupt model never crashes.
  *   - Inference is mutex-guarded; coarse [inferenceInFlight] short-circuits
@@ -175,6 +183,11 @@ class AiDetector @Inject constructor(
     /**
      * P1-A: build interpreter options with GPU delegate first, CPU fallback.
      * We hand back the GpuDelegate (if any) so the caller can null it on close().
+     *
+     * COMPILE FIX: GpuDelegate.Options was removed because its supertype
+     * GpuDelegateFactory.Options (in tensorflow-lite-gpu-api) is not
+     * transitively resolved when using tensorflow-lite-gpu:2.16.1.
+     * GpuDelegate() no-arg constructor provides the same GPU acceleration.
      */
     private data class BuiltOptions(val options: Interpreter.Options, val gpu: GpuDelegate?)
 
@@ -184,8 +197,9 @@ class AiDetector @Inject constructor(
         val gpu: GpuDelegate? = runCatching {
             val compat = CompatibilityList()
             if (compat.isDelegateSupportedOnThisDevice) {
-                val gpuOpts = GpuDelegate.Options().apply { setPrecisionLossAllowed(true) }
-                val delegate = GpuDelegate(gpuOpts)
+                // No-arg constructor — avoids GpuDelegateFactory.Options
+                // supertype resolution issue with tensorflow-lite-gpu:2.16.1.
+                val delegate = GpuDelegate()
                 opts.addDelegate(delegate)
                 Timber.i("TFLite[$label]: GPU delegate enabled")
                 delegate
