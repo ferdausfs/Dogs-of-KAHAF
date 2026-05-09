@@ -15,8 +15,8 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.1.6"
+        versionCode = 11
+        versionName = "2.1.7"
 
         vectorDrawables.useSupportLibrary = true
     }

@@ -7,12 +7,35 @@ import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.usecase.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
 /**
+ * v17 (2.1.7) BUILD-FIX:
+ *  • Kotlin coroutines 1.8.x makes `distinctUntilChanged()` on a StateFlow
+ *    a hard compile error (StateFlow already de-dupes by equals).
+ *    Fix: upcast `midnightTrigger` to a plain `Flow<Long>` first, so
+ *    `distinctUntilChanged()` resolves to the regular Flow extension.
+ *    Behaviour preserved: flatMapLatest will still only re-subscribe on
+ *    actual midnight rollovers.
+ *  • Wildcard `kotlinx.coroutines.flow.*` import replaced with explicit
+ *    imports — avoids accidentally importing the deprecated
+ *    `StateFlow.distinctUntilChanged` overload.
+ *  • Added @OptIn(ExperimentalCoroutinesApi::class) for `flatMapLatest`
+ *    locally — defensive even though the project also opts-in globally.
+ *
  * v15 (2.1.5) STABILITY PATCH 5:
  *  • OPT-2: removed the per-emission countToday() DB query. todayCount is
  *    now driven directly by the [todayStats] StateFlow (which already
@@ -45,6 +68,7 @@ data class DashboardUi(
     val stats: BlockStats = BlockStats()
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getEvents: GetBlockEventsUseCase,
@@ -71,7 +95,7 @@ class DashboardViewModel @Inject constructor(
      * threw "attempt to re-open an already-closed object" on rapid
      * re-subscribe — fixed here.
      */
-    val todayStats: StateFlow<BlockStats> = midnightTrigger
+    val todayStats: StateFlow<BlockStats> = (midnightTrigger as Flow<Long>)
         .distinctUntilChanged()
         .flatMapLatest { since -> observeSinceUC(since).map { aggregate(it) } }
         .stateIn(viewModelScope, SharingStarted.Lazily, BlockStats())
