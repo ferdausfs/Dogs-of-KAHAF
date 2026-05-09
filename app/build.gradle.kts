@@ -3,7 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
-    id("kotlin-parcelize")
+    // v13 (2.1.3): kotlin-parcelize removed — no @Parcelize anywhere in the
+    // codebase, the plugin only added build time + dependency surface.
 }
 
 android {
@@ -14,8 +15,8 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.1.2"
+        versionCode = 7
+        versionName = "2.1.3"
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -52,6 +53,8 @@ android {
         resources.excludes += "/META-INF/DEPENDENCIES"
         resources.excludes += "/META-INF/LICENSE*"
         resources.excludes += "/META-INF/NOTICE*"
+        resources.excludes += "/META-INF/INDEX.LIST"
+        resources.excludes += "/META-INF/io.netty.versions.properties"
         jniLibs {
             useLegacyPackaging = false
         }

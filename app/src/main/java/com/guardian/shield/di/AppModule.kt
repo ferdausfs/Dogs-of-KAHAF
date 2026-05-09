@@ -16,12 +16,14 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • Migration v1→v2 and v2→v3 are now wrapped with IF NOT EXISTS so a
- *    re-run on a partially-migrated DB does not crash.
- *  • fallbackToDestructiveMigrationOnDowngrade() added so downgrading
- *    (e.g. test debug → prod release) doesn't crash with
- *    IllegalStateException.
+ * v13 (2.1.3) STABILITY PATCH 3:
+ *  • IF NOT EXISTS migrations + downgrade fallback — kept verbatim from v11.
+ *  • NB: we deliberately keep the no-arg `fallbackToDestructiveMigration()`
+ *    form because the `dropAllTables: Boolean` overload was only added in
+ *    Room 2.7.0+. We're pinned to 2.6.1, where calling the new overload
+ *    would FAIL TO COMPILE. The no-arg form has the exact same effect for
+ *    our purposes (drops all tables on schema mismatch); it just produces
+ *    a deprecation warning, which we accept until we bump Room.
  */
 
 private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -65,6 +67,7 @@ private val MIGRATION_2_3 = object : Migration(2, 3) {
 object DatabaseModule {
 
     @Provides @Singleton
+    @Suppress("DEPRECATION") // v13: see file-level note about Room 2.6.1.
     fun provideDb(@ApplicationContext context: Context): GuardianDatabase =
         Room.databaseBuilder(context, GuardianDatabase::class.java, "guardian.db")
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3)

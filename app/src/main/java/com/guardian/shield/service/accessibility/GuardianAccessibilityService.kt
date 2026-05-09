@@ -37,29 +37,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * v12 (2.1.2) FULL OPTIMISATION + STABILITY:
- *  • CRITICAL FIX: aiDetector.closeAsync(Scopes.io()) used a one-shot scope
- *    that was created and immediately leaked. Switched to the shared
- *    Scopes.appIo (process-lifetime) so onDestroy returns instantly AND
- *    the teardown actually runs to completion.
- *  • CRITICAL FIX: takeScreenshot() now first checks
- *    serviceInfo.canTakeScreenshot — some custom Android ROMs return false
- *    here and throw SecurityException on the call. Now we silently skip
- *    AI screenshot scan in that case (text scanning still works).
- *  • CRITICAL FIX: mainExecutor can be null on some service contexts
- *    pre-API 28 — defensive null-check + fallback.
- *  • CRITICAL FIX: aiInFlight flag was reset twice in some failure paths
- *    (returned-early when aiEnabled=false set it once, then the outer
- *    finally set it again → race window where two checks could run in
- *    parallel). Cleaned up.
- *  • DEFENSIVE: rootInActiveWindow can throw on disconnected service —
- *    now wrapped in runCatching everywhere it's read.
+ * v13 (2.1.3) STABILITY PATCH 3:
+ *  • CRITICAL FIX: aiInFlight reset race fully resolved. Previous v12
+ *    structure released the flag in `finally` even though takeScreenshot()
+ *    is async — the callback would later double-reset, opening a window
+ *    where a new check could acquire the flag and then have its in-flight
+ *    state cleared by the stale callback. Now: `screenshotInvoked` tracks
+ *    whether takeScreenshot returned successfully. If yes, the callback
+ *    owns the flag-release; if no (sync exception), `finally` releases.
+ *  • DEFENSIVE: callback-side coroutine launches now use Scopes.appIo so
+ *    they survive a service onDestroy that races with a screenshot reply.
  *
- * v11 (2.1.1) — kept:
- *  • Receiver registration with RECEIVER_NOT_EXPORTED on API 33+.
- *  • Top-level try/catch around onAccessibilityEvent body.
- *  • All node.text / contentDescription / childCount in runCatching.
- *  • screenStateReceiver.onReceive hardened.
+ * v12 (2.1.2) — kept verbatim:
+ *  • Cached canScreenshotCapability at connect-time; SecurityException self-disable.
+ *  • mainExecutor null-check.
+ *  • Shared Scopes.appIo for AI teardown.
+ *  • safeRootInActiveWindow() helper.
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
@@ -98,7 +91,6 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     @Volatile private var screenReceiverRegistered = false
 
-    /** v12: cached at connect-time so we don't query serviceInfo every screenshot. */
     @Volatile private var canScreenshotCapability: Boolean = false
 
     private val explicitHits = HashMap<String, ArrayDeque<Long>>()
@@ -131,8 +123,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         isRunning = true
         Timber.i("GuardianAccessibilityService connected")
 
-        // v12: cache screenshot capability once. Some ROMs return false
-        // here and would otherwise throw on every takeScreenshot() call.
         canScreenshotCapability = runCatching {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 (serviceInfo?.canTakeScreenshot == true)
@@ -318,7 +308,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** v12: rootInActiveWindow can throw on a disconnecting service. */
     private fun safeRootInActiveWindow(): AccessibilityNodeInfo? =
         runCatching { rootInActiveWindow }.getOrNull()
 
@@ -353,6 +342,22 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * v13 (2.1.3) FIX: aiInFlight reset race resolved.
+     *
+     * The critical invariant is: aiInFlight must be reset exactly once per
+     * compareAndSet(false, true). The previous v12 code released the flag
+     * in `finally` (synchronously after takeScreenshot returned) AND inside
+     * the async screenshot callback. Between those two resets a new
+     * triggerAiCheck could grab the flag, then the stale callback would
+     * clear it.
+     *
+     * New rule:
+     *   • If takeScreenshot returns without throwing → callback owns the
+     *     reset. `finally` does NOT touch the flag.
+     *   • If takeScreenshot throws synchronously → callback will never
+     *     fire, so `finally` releases the flag.
+     */
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String, force: Boolean = false) {
         if (!canScreenshotCapability) return
@@ -364,168 +369,155 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (!aiInFlight.compareAndSet(false, true)) return
 
         scope.launch {
-            // v12: single source-of-truth for resetting the flag.
-            var flagReleased = false
-            fun releaseFlag() {
-                if (!flagReleased) {
-                    flagReleased = true
-                    aiInFlight.set(false)
-                }
-            }
+            // v13: track whether the screenshot was actually invoked.
+            var screenshotInvoked = false
 
             try {
                 val aiEnabled = aiDetector.cachedAiEnabled
                 if (!aiEnabled) {
-                    releaseFlag(); return@launch
+                    return@launch  // finally below will release.
                 }
 
                 val userGender = aiDetector.cachedUserGender
                 val genderFeatureOn = userGender != GENDER_NONE && aiDetector.isNsfwModelAvailable()
                 val legacyOn        = aiDetector.isModelAvailable()
 
-                if (!genderFeatureOn && !legacyOn) {
-                    releaseFlag(); return@launch
-                }
-
+                if (!genderFeatureOn && !legacyOn) return@launch
                 if (genderFeatureOn) aiDetector.ensureGenderPipelineLoaded()
                 if (legacyOn)        aiDetector.ensureLoaded()
 
-                if (!rulesEngine.canBlock(pkg)) {
-                    releaseFlag(); return@launch
-                }
+                if (!rulesEngine.canBlock(pkg)) return@launch
 
-                val callbackTookOver = AtomicBoolean(false)
-
-                // v12: mainExecutor can be null on a destroying service.
                 val executor = runCatching { mainExecutor }.getOrNull()
                 if (executor == null) {
                     Timber.w("mainExecutor unavailable — skipping screenshot scan")
-                    releaseFlag(); return@launch
+                    return@launch
                 }
 
-                try {
-                    withContext(Dispatchers.Main) {
-                        try {
-                            takeScreenshot(
-                                Display.DEFAULT_DISPLAY,
-                                executor,
-                                object : TakeScreenshotCallback {
-                                    override fun onSuccess(screenshot: ScreenshotResult) {
-                                        callbackTookOver.set(true)
-                                        scope.launch(Dispatchers.Default) {
-                                            var bmp: Bitmap? = null
-                                            try {
-                                                bmp = Bitmap.wrapHardwareBuffer(
-                                                    screenshot.hardwareBuffer,
-                                                    screenshot.colorSpace
-                                                )?.copy(Bitmap.Config.ARGB_8888, false)
-                                                runCatching { screenshot.hardwareBuffer.close() }
+                withContext(Dispatchers.Main) {
+                    try {
+                        takeScreenshot(
+                            Display.DEFAULT_DISPLAY,
+                            executor,
+                            object : TakeScreenshotCallback {
+                                override fun onSuccess(screenshot: ScreenshotResult) {
+                                    // v13: callback runs in app's Default scope so a
+                                    // racing onDestroy can't strand the flag.
+                                    // Belt-and-braces: if launch itself ever throws,
+                                    // we still release the buffer + flag inline.
+                                    val launched = runCatching {
+                                    Scopes.appDefault.launch {
+                                        var bmp: Bitmap? = null
+                                        try {
+                                            bmp = Bitmap.wrapHardwareBuffer(
+                                                screenshot.hardwareBuffer,
+                                                screenshot.colorSpace
+                                            )?.copy(Bitmap.Config.ARGB_8888, false)
+                                            runCatching { screenshot.hardwareBuffer.close() }
 
-                                                val safeBmp = bmp ?: return@launch
+                                            val safeBmp = bmp ?: return@launch
 
-                                                var blocked = false
-                                                if (genderFeatureOn) {
-                                                    val hit = runCatching {
-                                                        aiDetector.isOppositeGenderNsfw(safeBmp, userGender)
-                                                    }.onFailure {
-                                                        Timber.e(it, "isOppositeGenderNsfw threw")
-                                                    }.getOrDefault(false)
+                                            var blocked = false
+                                            if (genderFeatureOn) {
+                                                val hit = runCatching {
+                                                    aiDetector.isOppositeGenderNsfw(safeBmp, userGender)
+                                                }.onFailure {
+                                                    Timber.e(it, "isOppositeGenderNsfw threw")
+                                                }.getOrDefault(false)
 
-                                                    if (hit) {
-                                                        Timber.d("AI flagged opposite-gender NSFW in $pkg")
-                                                        withContext(Dispatchers.Main) {
-                                                            blockingEngine.block(
-                                                                pkg,
-                                                                BlockReason.AI_DETECTION,
-                                                                "AI detected opposite-gender NSFW content"
-                                                            )
-                                                        }
-                                                        blocked = true
+                                                if (hit) {
+                                                    Timber.d("AI flagged opposite-gender NSFW in $pkg")
+                                                    withContext(Dispatchers.Main) {
+                                                        blockingEngine.block(
+                                                            pkg,
+                                                            BlockReason.AI_DETECTION,
+                                                            "AI detected opposite-gender NSFW content"
+                                                        )
                                                     }
+                                                    blocked = true
                                                 }
-
-                                                if (!blocked && legacyOn) {
-                                                    val classifyResult = runCatching {
-                                                        aiDetector.classify(safeBmp, pkg)
-                                                    }.onFailure {
-                                                        Timber.e(it, "classify() threw")
-                                                    }.getOrDefault(
-                                                        com.guardian.shield.domain.model.ClassificationResult.SAFE
-                                                    )
-
-                                                    when (classifyResult.tier) {
-                                                        ContentTier.SUGGESTIVE -> {
-                                                            Timber.d(
-                                                                "SUGGESTIVE in %s (porn=%.2f hentai=%.2f sexy=%.2f) — log only".format(
-                                                                    pkg,
-                                                                    classifyResult.pornScore,
-                                                                    classifyResult.hentaiScore,
-                                                                    classifyResult.sexyScore
-                                                                )
-                                                            )
-                                                        }
-                                                        ContentTier.EXPLICIT -> {
-                                                            val confirmed = recordExplicitHit(pkg)
-                                                            if (confirmed) {
-                                                                Timber.i(
-                                                                    "EXPLICIT confirmed in %s (porn=%.2f hentai=%.2f combined=%.2f) — blocking".format(
-                                                                        pkg,
-                                                                        classifyResult.pornScore,
-                                                                        classifyResult.hentaiScore,
-                                                                        classifyResult.combinedUnsafeScore
-                                                                    )
-                                                                )
-                                                                handleConfirmedExplicit(pkg)
-                                                            } else {
-                                                                Timber.d(
-                                                                    "EXPLICIT pending (1/$EXPLICIT_CONFIRM_COUNT) in $pkg"
-                                                                )
-                                                            }
-                                                        }
-                                                        ContentTier.NATURAL,
-                                                        ContentTier.SAFE -> Unit
-                                                    }
-                                                }
-                                            } catch (oom: OutOfMemoryError) {
-                                                Timber.e(oom, "OOM in screenshot pipeline")
-                                            } catch (e: Exception) {
-                                                Timber.e(e, "AI screenshot processing error")
-                                            } finally {
-                                                runCatching { if (bmp?.isRecycled == false) bmp.recycle() }
-                                                aiInFlight.set(false)
                                             }
+
+                                            if (!blocked && legacyOn) {
+                                                val classifyResult = runCatching {
+                                                    aiDetector.classify(safeBmp, pkg)
+                                                }.onFailure {
+                                                    Timber.e(it, "classify() threw")
+                                                }.getOrDefault(
+                                                    com.guardian.shield.domain.model.ClassificationResult.SAFE
+                                                )
+
+                                                when (classifyResult.tier) {
+                                                    ContentTier.SUGGESTIVE -> {
+                                                        Timber.d(
+                                                            "SUGGESTIVE in %s (porn=%.2f hentai=%.2f sexy=%.2f) — log only".format(
+                                                                pkg,
+                                                                classifyResult.pornScore,
+                                                                classifyResult.hentaiScore,
+                                                                classifyResult.sexyScore
+                                                            )
+                                                        )
+                                                    }
+                                                    ContentTier.EXPLICIT -> {
+                                                        val confirmed = recordExplicitHit(pkg)
+                                                        if (confirmed) {
+                                                            Timber.i(
+                                                                "EXPLICIT confirmed in %s — blocking".format(pkg)
+                                                            )
+                                                            handleConfirmedExplicit(pkg)
+                                                        } else {
+                                                            Timber.d(
+                                                                "EXPLICIT pending (1/$EXPLICIT_CONFIRM_COUNT) in $pkg"
+                                                            )
+                                                        }
+                                                    }
+                                                    ContentTier.NATURAL,
+                                                    ContentTier.SAFE -> Unit
+                                                }
+                                            }
+                                        } catch (oom: OutOfMemoryError) {
+                                            Timber.e(oom, "OOM in screenshot pipeline")
+                                        } catch (e: Exception) {
+                                            Timber.e(e, "AI screenshot processing error")
+                                        } finally {
+                                            runCatching { if (bmp?.isRecycled == false) bmp.recycle() }
+                                            // v13: SOLE owner of the flag reset
+                                            // when screenshotInvoked==true.
+                                            aiInFlight.set(false)
                                         }
                                     }
-
-                                    override fun onFailure(errorCode: Int) {
-                                        callbackTookOver.set(true)
-                                        Timber.w("takeScreenshot failed: errorCode=$errorCode")
+                                    }
+                                    if (launched.isFailure) {
+                                        Timber.w(launched.exceptionOrNull(), "appDefault.launch failed — releasing flag inline")
+                                        runCatching { screenshot.hardwareBuffer.close() }
                                         aiInFlight.set(false)
                                     }
                                 }
-                            )
-                        } catch (sec: SecurityException) {
-                            // Some ROMs throw even when canTakeScreenshot=true.
-                            Timber.w(sec, "takeScreenshot SecurityException — disabling for this session")
-                            canScreenshotCapability = false
-                            throw sec
-                        } catch (t: Throwable) {
-                            Timber.w(t, "takeScreenshot threw synchronously")
-                            throw t
-                        }
-                    }
-                } finally {
-                    if (!callbackTookOver.get()) {
-                        // Only reset here if the callback never took over.
-                        releaseFlag()
-                    } else {
-                        // Mark as released so outer catch doesn't double-reset.
-                        flagReleased = true
+
+                                override fun onFailure(errorCode: Int) {
+                                    Timber.w("takeScreenshot failed: errorCode=$errorCode")
+                                    aiInFlight.set(false)
+                                }
+                            }
+                        )
+                        // If we reach here without throwing, the callback is
+                        // guaranteed to fire (success or failure) and will
+                        // own the flag-reset. Mark and exit.
+                        screenshotInvoked = true
+                    } catch (sec: SecurityException) {
+                        Timber.w(sec, "takeScreenshot SecurityException — disabling for this session")
+                        canScreenshotCapability = false
+                    } catch (t: Throwable) {
+                        Timber.w(t, "takeScreenshot threw synchronously")
                     }
                 }
             } catch (t: Throwable) {
                 Timber.e(t, "triggerAiCheck error")
-                releaseFlag()
+            } finally {
+                // v13: only release if the callback path did NOT take over.
+                if (!screenshotInvoked) {
+                    aiInFlight.set(false)
+                }
             }
         }
     }
@@ -592,7 +584,6 @@ class GuardianAccessibilityService : AccessibilityService() {
             runCatching { unregisterReceiver(screenStateReceiver) }
             screenReceiverRegistered = false
         }
-        // v12: use shared appIo (no leak) instead of throwaway Scopes.io().
         runCatching { aiDetector.closeAsync(Scopes.appIo) }
         runCatching { scope.cancel() }
         super.onDestroy()

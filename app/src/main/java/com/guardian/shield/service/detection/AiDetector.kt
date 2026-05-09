@@ -36,22 +36,18 @@ import javax.inject.Singleton
 import kotlin.math.min
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: close() is no longer a runBlocking-based call.
- *    Previously close() would runBlocking(Dispatchers.IO) — when called
- *    from SettingsViewModel.viewModelScope (Main dispatcher) this caused
- *    an ANR / crash on import & reset model.  Now there are TWO entry
- *    points:
- *      - closeAsync()  : non-blocking, schedules teardown in background.
- *      - closeBlocking(): only for service onDestroy; never from UI.
- *  • CRITICAL FIX: outputClasses is now @Volatile (memory visibility
- *    race fixed — was being read from worker thread without barrier).
- *  • DEFENSIVE: every TFLite call wrapped in try/catch — TFLite native
- *    can throw IllegalStateException after GC ran on a dead delegate.
- *  • DEFENSIVE: GPU delegate construction protected with extra try/catch
- *    that some Adreno drivers throw UnsatisfiedLinkError on, which is
- *    NOT caught by Throwable on certain Kotlin / JNI combinations.
- *  • Removed unused `kotlinx.coroutines.flow.first` import.
+ * v13 (2.1.3) STABILITY PATCH 3:
+ *  • CRITICAL FIX: outputClasses no longer `coerceAtLeast(2)`. The previous
+ *    code allocated FloatArray(2) for a 1-output sigmoid model → TFLite
+ *    native crash (size mismatch). Now we honour the model's true output
+ *    shape and added an explicit 1-output branch to runLegacyInference().
+ *  • DEFENSIVE: outputClasses bound to a sane range [1, 32] in case a
+ *    malformed model reports 0 or huge values.
+ *
+ * v11 (2.1.1) — kept verbatim:
+ *  • close() split into closeAsync()/closeSuspend()/close() (no main-thread runBlocking).
+ *  • outputClasses @Volatile.
+ *  • GPU delegate construction protected with try/catch (Adreno UnsatisfiedLinkError).
  */
 @Singleton
 class AiDetector @Inject constructor(
@@ -83,7 +79,7 @@ class AiDetector @Inject constructor(
     )
 
     @Volatile private var interpreter: Interpreter? = null
-    /** v11: was non-volatile — caused tearing on multi-core reads. */
+    /** v13: real output dim from the model — no longer coerced upward. */
     @Volatile private var outputClasses: Int = 2
 
     @Volatile private var nsfwInterpreter: Interpreter? = null
@@ -161,10 +157,6 @@ class AiDetector @Inject constructor(
 
     private fun buildInterpreterOptions(label: String): BuiltOptions {
         val opts = Interpreter.Options()
-        // v11: extra Throwable + UnsatisfiedLinkError catch — some Adreno
-        // drivers throw the linker error from native code, which Kotlin's
-        // runCatching DOES catch (Throwable) but we widen the message just
-        // to be explicit.
         val gpu: GpuDelegate? = try {
             val compat = CompatibilityList()
             if (compat.isDelegateSupportedOnThisDevice) {
@@ -207,9 +199,13 @@ class AiDetector @Inject constructor(
             }.also {
                 if (gpu != null) legacyGpuDelegate = gpu
             }
-            outputClasses = created.getOutputTensor(0).shape().last().coerceAtLeast(2)
+            // v13: honour the model's actual output shape. Bound to [1, 32]
+            // so a corrupt model can't OOM us.
+            val rawOut = runCatching { created.getOutputTensor(0).shape().last() }
+                .getOrDefault(2)
+            outputClasses = rawOut.coerceIn(1, 32)
             interpreter = created
-            Timber.i("TFLite (legacy) model loaded — output classes=$outputClasses")
+            Timber.i("TFLite (legacy) model loaded — output classes=$outputClasses (raw=$rawOut)")
             true
         }.onFailure { Timber.e(it, "Failed to create legacy TFLite interpreter") }
             .getOrDefault(false)
@@ -507,6 +503,12 @@ class AiDetector @Inject constructor(
         null
     }
 
+    /**
+     * v13 (2.1.3): added explicit 1-output sigmoid branch to match models
+     * whose final layer is a single scalar. Previously the branch fell into
+     * `else` with `outputClasses` still claimed to be 2 → TFLite size
+     * mismatch crash.
+     */
     private fun runLegacyInference(bitmap: Bitmap): UnsafeScores {
         val current = interpreter ?: return UnsafeScores()
         val processed = preprocess(bitmap) ?: return UnsafeScores()
@@ -514,10 +516,16 @@ class AiDetector @Inject constructor(
 
         return try {
             when (classes) {
+                1 -> {
+                    // Single-scalar sigmoid: probability of UNSAFE.
+                    val out = Array(1) { FloatArray(1) }
+                    current.run(processed.buffer, out)
+                    UnsafeScores(unsafe = out[0][0].coerceIn(0f, 1f))
+                }
                 2 -> {
                     val out = Array(1) { FloatArray(2) }
                     current.run(processed.buffer, out)
-                    UnsafeScores(unsafe = out[0][1].coerceAtLeast(0f))
+                    UnsafeScores(unsafe = out[0][1].coerceIn(0f, 1f))
                 }
                 5 -> {
                     val out = Array(1) { FloatArray(5) }
@@ -532,7 +540,7 @@ class AiDetector @Inject constructor(
                 else -> {
                     val out = Array(1) { FloatArray(classes) }
                     current.run(processed.buffer, out)
-                    UnsafeScores(unsafe = out[0].last().coerceAtLeast(0f))
+                    UnsafeScores(unsafe = out[0].last().coerceIn(0f, 1f))
                 }
             }
         } catch (t: Throwable) {
@@ -584,8 +592,6 @@ class AiDetector @Inject constructor(
 
     /**
      * v11: SAFE non-blocking close for UI / ViewModel callers.
-     * Schedules teardown on a background dispatcher and returns immediately.
-     * Caller should not assume the interpreter is gone synchronously.
      */
     fun closeAsync(scope: CoroutineScope) {
         scope.launch(Dispatchers.IO) {
@@ -594,10 +600,6 @@ class AiDetector @Inject constructor(
         }
     }
 
-    /**
-     * v11: suspend version — preferred entry point. Honours a 2 s timeout
-     * to avoid blocking the caller indefinitely if inference is wedged.
-     */
     suspend fun closeSuspend() {
         runCatching {
             withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
@@ -609,13 +611,7 @@ class AiDetector @Inject constructor(
         }.onFailure { Timber.w(it, "closeSuspend failed (suppressed)") }
     }
 
-    /**
-     * v11: blocking close kept ONLY for service.onDestroy() where
-     * we are NOT on the main thread. The main-thread variant moved to
-     * closeAsync() / closeSuspend(). Internal use only.
-     */
     fun close() {
-        // Best-effort sync teardown; never run from the main thread.
         runCatching { tearDownInterpreters() }
             .onFailure { Timber.w(it, "close() teardown failed") }
     }

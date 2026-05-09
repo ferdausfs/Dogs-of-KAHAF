@@ -25,41 +25,48 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. Set up Gradle (provisions Gradle 8.4 binary, puts `gradle` on PATH)
+      # 3. Set up Gradle 8.7 (AGP 8.5.2 requires Gradle 8.7+)
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: "8.4"
+          gradle-version: "8.7"
 
       # 4. Create local.properties with GitHub Actions SDK path
       - name: Create local.properties
-        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      # 5. ROOT CAUSE FIX: gradle-wrapper.jar is NOT committed to the repo (gitignored).
-      #    ./gradlew fails with "ClassNotFoundException: GradleWrapperMain" without it.
-      #    Fix: use the provisioned `gradle` binary (step 3) to regenerate the wrapper jar.
-      #    This regenerates gradle-wrapper.jar + sets correct version in .properties + makes gradlew executable.
+      # 5. v13 (2.1.3): gradle-wrapper.jar is gitignored in this repo, so
+      #    `./gradlew` would fail with "ClassNotFoundException:
+      #    GradleWrapperMain". Regenerate the wrapper jar from the
+      #    provisioned `gradle` binary (step 3) and make gradlew executable.
       - name: Generate Gradle wrapper jar
         run: |
-          gradle wrapper --gradle-version 8.4 --distribution-type bin
+          gradle wrapper --gradle-version 8.7 --distribution-type bin
           chmod +x gradlew
 
-      # 6. Build Debug APK
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2048m"
+      # 6. Accept Android SDK licenses (avoids first-time license prompt)
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      # 7. Upload APK as downloadable artifact
+      # 7. Build Debug APK
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
+
+      # 8. Upload APK as downloadable artifact
       - name: Upload Debug APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Dogs-of-KAHAF-debug-${{ github.run_number }}
+          name: GuardianShield-debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+          if-no-files-found: warn
 
-      # 8. Print APK info
+      # 9. Print APK info
       - name: APK info
+        if: success()
         run: |
           echo "Build complete!"
-          ls -lh app/build/outputs/apk/debug/
+          ls -lh app/build/outputs/apk/debug/ || echo "(no APK found)"
