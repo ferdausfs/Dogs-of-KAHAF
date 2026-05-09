@@ -81,8 +81,12 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     // P1-A: GPU delegate (3-5x faster inference) — falls back to CPU on
     // unsupported devices.
+    // FIX: tensorflow-lite-gpu-delegate-plugin:0.4.4 removed — it is the
+    // Task Library plugin API (not used here) and conflicts with
+    // tensorflow-lite-gpu:2.16.1 by pulling an incompatible version of
+    // tensorflow-lite-gpu-api, causing GpuDelegateFactory.Options to be
+    // unresolved at compile time.
     implementation("org.tensorflow:tensorflow-lite-gpu:2.16.1")
-    implementation("org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.4")
 
     // P2-B: LocalBroadcastManager removed — replaced by SharedFlow.
     // implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
