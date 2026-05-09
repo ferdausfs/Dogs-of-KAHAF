@@ -1,12 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.GuardianShield" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/cyan_500</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:colorBackground">@color/navy_900</item>
-        <item name="android:windowBackground">@color/navy_900</item>
+    <style name="Theme.GuardianShield" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:ignore="NewApi"
+            xmlns:tools="http://schemas.android.com/tools">true</item>
     </style>
-    <style name="Theme.GuardianShield.Overlay" parent="Theme.GuardianShield">
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowIsTranslucent">false</item>
+
+    <style name="Theme.GuardianShield.Overlay" parent="android:Theme.Material.NoActionBar.TranslucentDecor">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 </resources>

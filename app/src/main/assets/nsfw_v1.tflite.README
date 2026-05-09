@@ -1,0 +1,12 @@
+Place your real `nsfw_v1.tflite` model file in this folder.
+
+Expected format:
+  - Input  : float32 [1, H, W, 3], typically 224x224 (BILINEAR resize)
+  - Output : float32 [1, 4] softmax over (SAFE, NATURAL, SUGGESTIVE, EXPLICIT)
+
+When the model file is missing the app falls back to the StubNsfwClassifier
+(deterministic SAFE), so the build remains green even without a real model.
+
+To switch the live binding from the stub to the TFLite implementation, edit
+`di/RepositoryModule.kt` and bind `TfLiteNsfwClassifier` instead of
+`StubNsfwClassifier`. No other code changes are required.

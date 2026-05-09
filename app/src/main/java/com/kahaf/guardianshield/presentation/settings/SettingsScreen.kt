@@ -1,0 +1,198 @@
+package com.kahaf.guardianshield.presentation.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kahaf.guardianshield.BuildConfig
+import com.kahaf.guardianshield.R
+import com.kahaf.guardianshield.domain.model.ThemeMode
+import com.kahaf.guardianshield.presentation.common.GuardianTopBar
+
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    vm: SettingsViewModel = hiltViewModel()
+) {
+    val app by vm.app.collectAsStateWithLifecycle()
+    val exported by vm.exportedJson.collectAsStateWithLifecycle()
+    val importMsg by vm.importMessage.collectAsStateWithLifecycle()
+    val scroll = rememberScrollState()
+
+    var importDialogOpen by remember { mutableStateOf(false) }
+    var importText by remember { mutableStateOf("") }
+
+    Scaffold(topBar = {
+        GuardianTopBar(stringResource(R.string.set_title), onBack = onBack)
+    }) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(scroll),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(stringResource(R.string.set_theme), fontWeight = FontWeight.Medium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = app.themeMode == ThemeMode.SYSTEM,
+                            onClick = { vm.setTheme(ThemeMode.SYSTEM) },
+                            label = { Text(stringResource(R.string.set_theme_system)) }
+                        )
+                        FilterChip(
+                            selected = app.themeMode == ThemeMode.LIGHT,
+                            onClick = { vm.setTheme(ThemeMode.LIGHT) },
+                            label = { Text(stringResource(R.string.set_theme_light)) }
+                        )
+                        FilterChip(
+                            selected = app.themeMode == ThemeMode.DARK,
+                            onClick = { vm.setTheme(ThemeMode.DARK) },
+                            label = { Text(stringResource(R.string.set_theme_dark)) }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.set_dynamic_color))
+                        Switch(
+                            checked = app.dynamicColor,
+                            onCheckedChange = { vm.setDynamicColor(it) }
+                        )
+                    }
+                }
+            }
+
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.padding(12.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.set_uninstall_protect),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Requires Device Admin (separate confirmation flow).",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = app.uninstallProtection,
+                        onCheckedChange = { vm.setUninstallProtection(it) }
+                    )
+                }
+            }
+
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Configuration", fontWeight = FontWeight.Medium)
+                    Row(
+                        Modifier.padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(onClick = { vm.export() }) {
+                            Text(stringResource(R.string.set_export))
+                        }
+                        Button(onClick = { importDialogOpen = true }) {
+                            Text(stringResource(R.string.set_import))
+                        }
+                    }
+                    importMsg?.let {
+                        Text(it, modifier = Modifier.padding(top = 8.dp))
+                    }
+                }
+            }
+
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(stringResource(R.string.set_about), fontWeight = FontWeight.Medium)
+                    Text(
+                        "${stringResource(R.string.set_version)}: ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})"
+                    )
+                    Text(
+                        "Privacy: 100% on-device. No network permission.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+
+    exported?.let { json ->
+        AlertDialog(
+            onDismissRequest = { vm.clearExport() },
+            confirmButton = {
+                TextButton(onClick = { vm.clearExport() }) { Text("Close") }
+            },
+            title = { Text(stringResource(R.string.set_export)) },
+            text = {
+                Column {
+                    Text(
+                        "Copy the JSON below:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = json,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    )
+                }
+            }
+        )
+    }
+
+    if (importDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { importDialogOpen = false; vm.clearImportMessage() },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.import(importText)
+                    importDialogOpen = false
+                    importText = ""
+                }) { Text(stringResource(R.string.set_import)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { importDialogOpen = false }) { Text("Cancel") }
+            },
+            title = { Text(stringResource(R.string.set_import)) },
+            text = {
+                OutlinedTextField(
+                    value = importText,
+                    onValueChange = { importText = it },
+                    placeholder = { Text("Paste JSON here") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        )
+    }
+}
