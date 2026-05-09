@@ -14,16 +14,17 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        // v10 (2.1.0): Smart Tiered Detection — anti-aggressive policy.
-        //   • Three-tier classification (SAFE / NATURAL / SUGGESTIVE / EXPLICIT).
-        //   • Per-class thresholds (porn / hentai / sexy treated separately).
-        //   • EXPLICIT_DEBOUNCE — block only after 2 consecutive explicit
-        //     detections within 3 s (single-frame false positives suppressed).
-        //   • Source-based 15-min auto-lock for content-source apps.
-        //   • Sensitivity preset (LOW / BALANCED / HIGH).
-        //   • Default threshold 0.7 → 0.78.
-        versionCode = 4
-        versionName = "2.1.0"
+        // v11 (2.1.1): STABILITY PATCH — see CHANGELOG.
+        //   • Fixed AiDetector.close() ANR via runBlocking on Main.
+        //   • Fixed ForegroundServiceStartNotAllowedException crash.
+        //   • Fixed POST_NOTIFICATIONS missing on Android 13+.
+        //   • Fixed background activity launch on Android 14.
+        //   • Fixed EncryptedSharedPreferences crash on broken Keystore.
+        //   • Fixed AppList getInstalledApplications MATCH_ALL crash.
+        //   • Fixed DataStore IOException crash on corrupted prefs.
+        //   • Hardened every BroadcastReceiver / Service / lifecycle handler.
+        versionCode = 5
+        versionName = "2.1.1"
     }
 
     buildTypes {
@@ -47,6 +48,7 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
 }
 
 dependencies {

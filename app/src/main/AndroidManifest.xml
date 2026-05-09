@@ -1,27 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FIX-LOG (vs original):
-   - Added android:enableOnBackInvokedCallback="true" so OnBackPressedDispatcher
-     callbacks (PinVerify, PinSetup, BlockOverlay) work correctly with the
-     Android 13+ predictive-back gesture.
-   - Added a <queries> element so QUERY_ALL_PACKAGES is not strictly required
-     for visibility on API 30+ — Play Store rejects QUERY_ALL_PACKAGES for most
-     apps. We still keep the permission as a fallback for sideloaded builds.
-   - BlockOverlayActivity is now noHistory + showOnLockScreen + turnScreenOn so
-     the overlay survives across OEM background-launch restrictions.
-
-  v2 update (this commit):
-   - Added REQUEST_IGNORE_BATTERY_OPTIMIZATIONS so the app can ask the user to
-     unrestrict it. This directly fixes "permission auto remove hoy / app
-     kaj kore na" — without this, OEM Battery Saver kills the service.
-   - Added REQUEST_DISABLE_APP_HIBERNATION so we can ask Android 12+ to stop
-     auto-revoking permissions when the user hasn't opened the app in a while.
-   - Added PACKAGE_USAGE_STATS already declared; added BIND_DEVICE_ADMIN for
-     the new GuardianDeviceAdminReceiver — gives uninstall protection and
-     better OEM survival on MIUI / ColorOS / FunTouch / Realme UI.
-   - Added MyPackageReplacedReceiver to BootReceiver so the foreground
-     service is restarted automatically after an app update.
-   - Registered PermissionsActivity (the new "Permission Health" screen).
+  v11 (2.1.1) STABILITY PATCH FIX-LOG:
+   - dataExtractionRules + fullBackupContent kept (no behaviour change).
+   - Added android:hardwareAccelerated="true" explicitly (some OEM
+     ROMs were defaulting it off for legacy theme-style apps, which
+     broke the BlockOverlayActivity surface).
+   - Added android:resizeableActivity="false" to BlockOverlayActivity
+     so split-screen / freeform doesn't break the full-screen overlay
+     on tablets.
+   - foregroundServiceType=specialUse kept; matched by the
+     PROPERTY_SPECIAL_USE_FGS_SUBTYPE attribute.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -37,12 +25,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- v2: keep service alive against OEM battery savers -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- v2: stop Android 12+ from auto-revoking our permissions if user
-         doesn't open the app for ~3 months. -->
     <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION" />
-    <!-- v2: required for the DeviceAdminReceiver below. -->
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
         tools:ignore="ProtectedPermissions" />
 
@@ -59,6 +43,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -79,10 +64,8 @@
         <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
         <activity android:name=".ui.settings.AppListActivity" android:exported="false" />
         <activity android:name=".ui.settings.KeywordActivity" android:exported="false" />
-        <!-- v9 (2.0.0) — P4-A: schedule rules screen -->
         <activity android:name=".ui.settings.ScheduleActivity" android:exported="false" />
 
-        <!-- v2: Permission Health screen -->
         <activity android:name=".ui.permissions.PermissionsActivity"
             android:exported="false" />
 
@@ -91,6 +74,7 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:noHistory="true"
+            android:resizeableActivity="false"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
             android:launchMode="singleInstance"
@@ -130,16 +114,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-                <!-- v2: also restart after an app update -->
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_REPLACED" />
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
 
-        <!-- v2: Device-Admin receiver — uninstall protection + better OEM
-             background survival. Activation is OPTIONAL — the rest of the
-             app keeps working even if the user never enables admin. -->
         <receiver
             android:name=".admin.GuardianDeviceAdminReceiver"
             android:label="@string/app_name"

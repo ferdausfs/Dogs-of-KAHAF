@@ -1,9 +1,14 @@
 package com.guardian.shield.ui.dashboard
 
+import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -13,6 +18,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -33,16 +39,20 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
 
 /**
- * v9 (2.0.0):
- *  • P4-B → renders block-stats card (totalBlocks / aiBlocks / kwBlocks / topApp).
- *  • P4-C → FAB toggles master protection switch.
- *  • P4-D → "Export Log" menu writes CSV to public Downloads.
- *
- * Earlier v8 BUG-12 still applies (cached rules version skip on resume).
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • CRITICAL FIX: POST_NOTIFICATIONS is now requested at first launch
+ *    on Android 13+. Without it the foreground service silently fails
+ *    to show its notification and the OS may kill the service.
+ *  • CRITICAL FIX: exportLog() now uses MediaStore on Android 10+
+ *    (legacy Environment.getExternalStoragePublicDirectory write fails
+ *    silently or throws on scoped-storage devices).
+ *  • DEFENSIVE: every startActivity() in click handlers wrapped in
+ *    runCatching with toast feedback.
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -61,6 +71,7 @@ class MainActivity : AppCompatActivity() {
             if (res.resultCode == RESULT_OK || pinManager.isPinSet()) {
                 unlocked = true
                 binding.root.visibility = View.VISIBLE
+                maybeRequestNotificationPermission()
             } else {
                 finish()
             }
@@ -71,8 +82,22 @@ class MainActivity : AppCompatActivity() {
             if (res.resultCode == RESULT_OK) {
                 unlocked = true
                 binding.root.visibility = View.VISIBLE
+                maybeRequestNotificationPermission()
             } else {
                 finishAffinity()
+            }
+        }
+
+    // v11: runtime POST_NOTIFICATIONS request — required on API 33+
+    // for the foreground-service notification to be visible.
+    private val notificationPermissionLauncher: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted) {
+                Toast.makeText(
+                    this,
+                    "Notifications are required for protection to stay active",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
 
@@ -93,43 +118,60 @@ class MainActivity : AppCompatActivity() {
         binding.rvEvents.adapter = adapter
 
         binding.btnEnableAccessibility.setOnClickListener {
-            runCatching {
-                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            }
+            safeStartActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.btnSettings.setOnClickListener {
-            runCatching { startActivity(Intent(this, SettingsActivity::class.java)) }
+            safeStartActivity(Intent(this, SettingsActivity::class.java))
         }
         binding.btnPermissions.setOnClickListener {
-            runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
+            safeStartActivity(Intent(this, PermissionsActivity::class.java))
         }
         binding.btnClear.setOnClickListener { vm.clearAll() }
 
-        // P4-C: FAB → master toggle.
         binding.fabToggle.setOnClickListener { vm.toggleProtection() }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.ui.collect { state ->
-                    adapter.submit(state.recent)
-                    binding.tvTodayCount.text = state.todayCount.toString()
-                    binding.tvProtectionStatus.text = getString(
-                        when {
-                            !state.protectionEnabled -> R.string.protection_paused
-                            state.protectionActive   -> R.string.protection_active
-                            else                     -> R.string.protection_inactive
-                        }
-                    )
-                    // P4-B: stats card.
-                    binding.tvStatsTotal.text   = state.stats.totalBlocks.toString()
-                    binding.tvStatsAi.text      = state.stats.aiBlocks.toString()
-                    binding.tvStatsKeyword.text = state.stats.keywordBlocks.toString()
-                    binding.tvStatsTopApp.text  = state.stats.topApp ?: "—"
-                    // P4-C: FAB icon.
-                    val iconRes = if (state.protectionEnabled)
-                        R.drawable.ic_shield_on else R.drawable.ic_shield_off
-                    runCatching { binding.fabToggle.setImageResource(iconRes) }
+                    runCatching {
+                        adapter.submit(state.recent)
+                        binding.tvTodayCount.text = state.todayCount.toString()
+                        binding.tvProtectionStatus.text = getString(
+                            when {
+                                !state.protectionEnabled -> R.string.protection_paused
+                                state.protectionActive   -> R.string.protection_active
+                                else                     -> R.string.protection_inactive
+                            }
+                        )
+                        binding.tvStatsTotal.text   = state.stats.totalBlocks.toString()
+                        binding.tvStatsAi.text      = state.stats.aiBlocks.toString()
+                        binding.tvStatsKeyword.text = state.stats.keywordBlocks.toString()
+                        binding.tvStatsTopApp.text  = state.stats.topApp ?: "—"
+                        val iconRes = if (state.protectionEnabled)
+                            R.drawable.ic_shield_on else R.drawable.ic_shield_off
+                        binding.fabToggle.setImageResource(iconRes)
+                    }.onFailure { Timber.w(it, "Dashboard UI bind failed") }
                 }
+            }
+        }
+    }
+
+    private fun safeStartActivity(intent: Intent) {
+        runCatching { startActivity(intent) }
+            .onFailure {
+                Timber.w(it, "startActivity failed: ${intent.action ?: intent.component}")
+                Toast.makeText(this, "Could not open that screen", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            runCatching {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -149,7 +191,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** P4-D: write all block events to a CSV in public Downloads. */
+    /**
+     * v11: scoped-storage-aware CSV export.
+     *  • Android 10+ → MediaStore (Downloads collection).
+     *  • Older       → legacy public Downloads dir.
+     */
     private fun exportLog() {
         lifecycleScope.launch {
             val outcome = withContext(Dispatchers.IO) {
@@ -162,13 +208,19 @@ class MainActivity : AppCompatActivity() {
                             appendLine("${e.timestamp},${e.packageName},${e.reason.name},$safeTerm")
                         }
                     }
-                    val downloads = Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                    )
-                    if (!downloads.exists()) downloads.mkdirs()
-                    val file = File(downloads, "guardian_log_${System.currentTimeMillis()}.csv")
-                    file.writeText(csv)
-                    file.absolutePath
+                    val fileName = "guardian_log_${System.currentTimeMillis()}.csv"
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        writeViaMediaStore(fileName, csv)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        val downloads = Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_DOWNLOADS
+                        )
+                        if (!downloads.exists()) downloads.mkdirs()
+                        val file = File(downloads, fileName)
+                        file.writeText(csv)
+                        file.absolutePath
+                    }
                 }
             }
             outcome.onSuccess { path ->
@@ -181,6 +233,24 @@ class MainActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.Q)
+    private fun writeViaMediaStore(fileName: String, csv: String): String {
+        val resolver = contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "text/csv")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw java.io.IOException("MediaStore insert returned null")
+        resolver.openOutputStream(uri).use { out ->
+            out ?: throw java.io.IOException("Could not open output stream")
+            out.write(csv.toByteArray(Charsets.UTF_8))
+            out.flush()
+        }
+        return "Downloads/$fileName"
     }
 
     override fun onResume() {
@@ -214,14 +284,14 @@ class MainActivity : AppCompatActivity() {
             binding.tvPermissionWarning.text =
                 "⚠ ${missing.size} permission(s) missing — tap to fix"
             binding.tvPermissionWarning.setOnClickListener {
-                runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
+                safeStartActivity(Intent(this, PermissionsActivity::class.java))
             }
         }
     }
 
-    private fun isAccessibilityEnabled(): Boolean {
+    private fun isAccessibilityEnabled(): Boolean = runCatching {
         val am = getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
-        return am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
+        am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
             .any { it.id.contains(packageName) }
-    }
+    }.getOrDefault(false)
 }

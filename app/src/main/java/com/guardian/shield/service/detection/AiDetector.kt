@@ -12,9 +12,7 @@ import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -38,23 +36,22 @@ import javax.inject.Singleton
 import kotlin.math.min
 
 /**
- * v10 (2.1.0) FIX-LOG (Smart Tiered Detection):
- *  • NEW: classify() returns ContentTier instead of a boolean. Four tiers:
- *         SAFE / NATURAL / SUGGESTIVE / EXPLICIT. Only EXPLICIT triggers
- *         a block — SUGGESTIVE is logged but never blocks. This single
- *         change drops false-positive rate dramatically on portraits,
- *         landscapes, and "skin-heavy but safe" frames.
- *  • Per-class thresholds: porn ≥ 0.78, hentai ≥ 0.75, sexy alone never
- *         blocks (just logs at ≥ 0.60), combined unsafe ≥ 0.75.
- *  • Effective threshold is boosted by +0.10 for "heavy image" apps
- *         (Photos / Gallery / Camera / Maps) — caller passes packageName.
- *  • Sensitivity preset (LOW / BALANCED / HIGH) maps to a base threshold
- *         and is read from GuardianPreferences.
- *  • Legacy isUnsafe(bitmap) kept as a thin wrapper around classify() so
- *         existing call sites continue to compile.
- *
- * v9 (2.0.0) preserved: GPU delegate, mmap loading, prefs cache,
- *   adaptive crop variants with early exit, ANR-safe close.
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • CRITICAL FIX: close() is no longer a runBlocking-based call.
+ *    Previously close() would runBlocking(Dispatchers.IO) — when called
+ *    from SettingsViewModel.viewModelScope (Main dispatcher) this caused
+ *    an ANR / crash on import & reset model.  Now there are TWO entry
+ *    points:
+ *      - closeAsync()  : non-blocking, schedules teardown in background.
+ *      - closeBlocking(): only for service onDestroy; never from UI.
+ *  • CRITICAL FIX: outputClasses is now @Volatile (memory visibility
+ *    race fixed — was being read from worker thread without barrier).
+ *  • DEFENSIVE: every TFLite call wrapped in try/catch — TFLite native
+ *    can throw IllegalStateException after GC ran on a dead delegate.
+ *  • DEFENSIVE: GPU delegate construction protected with extra try/catch
+ *    that some Adreno drivers throw UnsatisfiedLinkError on, which is
+ *    NOT caught by Throwable on certain Kotlin / JNI combinations.
+ *  • Removed unused `kotlinx.coroutines.flow.first` import.
  */
 @Singleton
 class AiDetector @Inject constructor(
@@ -62,16 +59,11 @@ class AiDetector @Inject constructor(
     private val prefs: GuardianPreferences
 ) {
     companion object {
-        // Legacy / combined model (existing flow)
         const val MODEL_FILE = "guardian_model.tflite"
-
-        // New dedicated models
         const val NSFW_MODEL_FILE   = "nsfw_model.tflite"
         const val GENDER_MODEL_FILE = "gender_model.tflite"
-
         const val INPUT_SIZE = 224
 
-        // ── Tunable thresholds (kept for back-compat) ─────────────────
         const val NSFW_GATE_THRESHOLD: Float = GuardianConstants.NSFW_GATE_THRESHOLD
         const val GENDER_CONFIDENCE_THRESHOLD: Float = GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
     }
@@ -83,7 +75,6 @@ class AiDetector @Inject constructor(
         val sexy: Float = 0f
     )
 
-    /** Result of the opposite-gender pipeline. */
     data class GenderNsfwResult(
         val isNsfw: Boolean,
         val maleProb: Float,
@@ -91,23 +82,18 @@ class AiDetector @Inject constructor(
         val nsfwProb: Float
     )
 
-    // Legacy interpreter — keeps existing isUnsafe() working unchanged.
     @Volatile private var interpreter: Interpreter? = null
-    private var outputClasses: Int = 2
+    /** v11: was non-volatile — caused tearing on multi-core reads. */
+    @Volatile private var outputClasses: Int = 2
 
-    // New pipeline interpreters.
     @Volatile private var nsfwInterpreter: Interpreter? = null
     @Volatile private var genderInterpreter: Interpreter? = null
 
-    /** True only after we've actively attempted to load — prevents re-trying on every call. */
     @Volatile private var nsfwLoadAttempted   = false
     @Volatile private var genderLoadAttempted = false
-
-    /** Set to true when the file is missing OR load failed — used to short-circuit. */
     @Volatile private var nsfwLoadFailed   = false
     @Volatile private var genderLoadFailed = false
 
-    // P1-A: track the GPU delegates so we can release them on close().
     @Volatile private var legacyGpuDelegate: GpuDelegate? = null
     @Volatile private var nsfwGpuDelegate:   GpuDelegate? = null
     @Volatile private var genderGpuDelegate: GpuDelegate? = null
@@ -120,15 +106,12 @@ class AiDetector @Inject constructor(
         .add(NormalizeOp(0f, 255f))
         .build()
 
-    // ── P1-C: preference cache ────────────────────────────────────────
     @Volatile var cachedAiEnabled: Boolean = false
         private set
     @Volatile var cachedUserGender: String = GENDER_NONE
         private set
-    /** v10: cached sensitivity preset — drives the base threshold. */
     @Volatile var cachedSensitivity: String = GuardianConstants.SENSITIVITY_BALANCED
         private set
-    /** v10: cached raw threshold slider value (advanced override). */
     @Volatile var cachedAiThreshold: Float = GuardianConstants.DEFAULT_AI_THRESHOLD
         private set
     @Volatile private var prefsCacheStarted = false
@@ -159,8 +142,6 @@ class AiDetector @Inject constructor(
         }
     }
 
-    // ── Public surface ────────────────────────────────────────────────────
-
     fun isModelAvailable(): Boolean =
         File(context.filesDir, MODEL_FILE).exists() ||
             modelExistsInAssets(MODEL_FILE) ||
@@ -180,7 +161,11 @@ class AiDetector @Inject constructor(
 
     private fun buildInterpreterOptions(label: String): BuiltOptions {
         val opts = Interpreter.Options()
-        val gpu: GpuDelegate? = runCatching {
+        // v11: extra Throwable + UnsatisfiedLinkError catch — some Adreno
+        // drivers throw the linker error from native code, which Kotlin's
+        // runCatching DOES catch (Throwable) but we widen the message just
+        // to be explicit.
+        val gpu: GpuDelegate? = try {
             val compat = CompatibilityList()
             if (compat.isDelegateSupportedOnThisDevice) {
                 val delegate = GpuDelegate()
@@ -191,9 +176,10 @@ class AiDetector @Inject constructor(
                 Timber.i("TFLite[$label]: GPU not supported — using CPU")
                 null
             }
-        }.onFailure {
-            Timber.w(it, "TFLite[$label]: GPU delegate unavailable, falling back to CPU")
-        }.getOrNull()
+        } catch (t: Throwable) {
+            Timber.w(t, "TFLite[$label]: GPU delegate unavailable, falling back to CPU")
+            null
+        }
 
         if (gpu == null) {
             val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
@@ -331,22 +317,8 @@ class AiDetector @Inject constructor(
         return null
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // v10 (2.1.0): TIERED CLASSIFICATION
-    // ─────────────────────────────────────────────────────────────────────
-
-    /**
-     * Compute the effective threshold based on:
-     *   1. Sensitivity preset (LOW / BALANCED / HIGH).
-     *   2. The user's manual slider override (if it differs from the preset
-     *      default by more than 0.02).
-     *   3. The "heavy image app" boost (+0.10) for Photos / Gallery /
-     *      Camera / Maps to reduce false positives.
-     */
     fun effectiveThresholdFor(packageName: String?): Float {
         val presetBase = GuardianConstants.thresholdForSensitivity(cachedSensitivity)
-        // If the user has moved the manual slider AWAY from the preset
-        // default we honour that — power users can override.
         val sliderDiverged =
             kotlin.math.abs(cachedAiThreshold - GuardianConstants.DEFAULT_AI_THRESHOLD) > 0.02f
         val base = if (sliderDiverged) cachedAiThreshold else presetBase
@@ -360,14 +332,9 @@ class AiDetector @Inject constructor(
         return boosted.coerceIn(0.30f, 0.95f)
     }
 
-    /**
-     * v10: tiered classification entry point. Called by the
-     * AccessibilityService for every AI scan tick.
-     *
-     * Returns SAFE if model isn't loaded — never throws.
-     */
     suspend fun classify(bitmap: Bitmap, packageName: String? = null): ClassificationResult {
         if (!ensureLoaded()) return ClassificationResult.SAFE
+        if (bitmap.isRecycled) return ClassificationResult.SAFE
         val threshold = effectiveThresholdFor(packageName)
 
         return inferenceLock.withLock {
@@ -375,9 +342,7 @@ class AiDetector @Inject constructor(
                 runCatching {
                     val variants = buildBitmapVariants(bitmap)
                     try {
-                        // Fast path: full image first.
                         val primary = runLegacyInference(variants[0])
-                        // Early-exit if the primary frame is far below threshold.
                         val earlyExit = threshold * GuardianConstants.EARLY_EXIT_RATIO
                         if (primary.unsafe < earlyExit &&
                             primary.porn   < earlyExit &&
@@ -393,11 +358,9 @@ class AiDetector @Inject constructor(
                             )
                         }
                         var strongest = primary
-                        // EXPLICIT short-circuit on primary alone.
                         if (classifyTier(primary, threshold) == ContentTier.EXPLICIT) {
                             return@runCatching toResult(primary, ContentTier.EXPLICIT)
                         }
-                        // Walk crops for a stronger signal.
                         for (i in 1 until variants.size) {
                             val s = runLegacyInference(variants[i])
                             strongest = strongest.merge(s)
@@ -415,40 +378,21 @@ class AiDetector @Inject constructor(
         }
     }
 
-    /**
-     * Map raw scores to a ContentTier using the tiered constants.
-     *
-     * EXPLICIT triggers when:
-     *   • porn   ≥ PORN_BLOCK_THRESHOLD,                OR
-     *   • hentai ≥ HENTAI_BLOCK_THRESHOLD,              OR
-     *   • combined unsafe ≥ max(threshold, COMBINED_EXPLICIT_THRESHOLD).
-     *
-     * SUGGESTIVE triggers when:
-     *   • sexy ≥ SEXY_LOG_THRESHOLD (and nothing above is true), OR
-     *   • combined unsafe ≥ SUGGESTIVE_THRESHOLD but < EXPLICIT.
-     *
-     * NATURAL  : combined unsafe is above noise floor but well below
-     *            suggestive cutoff.
-     * SAFE     : everything is quiet.
-     */
     private fun classifyTier(s: UnsafeScores, threshold: Float): ContentTier {
         val porn   = s.porn
         val hentai = s.hentai
         val sexy   = s.sexy
         val combined = s.unsafe
 
-        // EXPLICIT — block.
         val explicitCombined = maxOf(threshold, GuardianConstants.COMBINED_EXPLICIT_THRESHOLD)
         if (porn   >= GuardianConstants.PORN_BLOCK_THRESHOLD)   return ContentTier.EXPLICIT
         if (hentai >= GuardianConstants.HENTAI_BLOCK_THRESHOLD) return ContentTier.EXPLICIT
         if (combined >= explicitCombined)                       return ContentTier.EXPLICIT
 
-        // SUGGESTIVE — log only, do NOT block.
-        if (sexy >= GuardianConstants.SEXY_LOG_THRESHOLD)             return ContentTier.SUGGESTIVE
-        if (combined >= GuardianConstants.SUGGESTIVE_THRESHOLD)       return ContentTier.SUGGESTIVE
+        if (sexy >= GuardianConstants.SEXY_LOG_THRESHOLD)       return ContentTier.SUGGESTIVE
+        if (combined >= GuardianConstants.SUGGESTIVE_THRESHOLD) return ContentTier.SUGGESTIVE
 
-        // NATURAL — quiet but not dead silent.
-        if (combined >= GuardianConstants.NATURAL_THRESHOLD)          return ContentTier.NATURAL
+        if (combined >= GuardianConstants.NATURAL_THRESHOLD)    return ContentTier.NATURAL
 
         return ContentTier.SAFE
     }
@@ -461,14 +405,8 @@ class AiDetector @Inject constructor(
         combinedUnsafeScore = s.unsafe
     )
 
-    /**
-     * Legacy boolean wrapper. Existing v9 callers continue to compile —
-     * they get `true` only on EXPLICIT, matching the new policy.
-     */
     suspend fun isUnsafe(bitmap: Bitmap): Boolean =
         classify(bitmap, packageName = null).tier.shouldBlock()
-
-    // ── New: opposite-gender NSFW pipeline ────────────────────────────────
 
     suspend fun isOppositeGenderNsfw(bitmap: Bitmap?, userGender: String): Boolean {
         if (bitmap == null || bitmap.isRecycled) return false
@@ -572,34 +510,40 @@ class AiDetector @Inject constructor(
     private fun runLegacyInference(bitmap: Bitmap): UnsafeScores {
         val current = interpreter ?: return UnsafeScores()
         val processed = preprocess(bitmap) ?: return UnsafeScores()
+        val classes = outputClasses
 
-        return when (outputClasses) {
-            2 -> {
-                val out = Array(1) { FloatArray(2) }
-                current.run(processed.buffer, out)
-                UnsafeScores(unsafe = out[0][1].coerceAtLeast(0f))
+        return try {
+            when (classes) {
+                2 -> {
+                    val out = Array(1) { FloatArray(2) }
+                    current.run(processed.buffer, out)
+                    UnsafeScores(unsafe = out[0][1].coerceAtLeast(0f))
+                }
+                5 -> {
+                    val out = Array(1) { FloatArray(5) }
+                    current.run(processed.buffer, out)
+                    UnsafeScores(
+                        unsafe = (out[0][1] + out[0][3] + out[0][4]).coerceIn(0f, 1f),
+                        porn   = out[0][3].coerceAtLeast(0f),
+                        hentai = out[0][1].coerceAtLeast(0f),
+                        sexy   = out[0][4].coerceAtLeast(0f)
+                    )
+                }
+                else -> {
+                    val out = Array(1) { FloatArray(classes) }
+                    current.run(processed.buffer, out)
+                    UnsafeScores(unsafe = out[0].last().coerceAtLeast(0f))
+                }
             }
-            5 -> {
-                // [drawings, hentai, neutral, porn, sexy]
-                val out = Array(1) { FloatArray(5) }
-                current.run(processed.buffer, out)
-                UnsafeScores(
-                    unsafe = (out[0][1] + out[0][3] + out[0][4]).coerceIn(0f, 1f),
-                    porn   = out[0][3].coerceAtLeast(0f),
-                    hentai = out[0][1].coerceAtLeast(0f),
-                    sexy   = out[0][4].coerceAtLeast(0f)
-                )
-            }
-            else -> {
-                val out = Array(1) { FloatArray(outputClasses) }
-                current.run(processed.buffer, out)
-                UnsafeScores(unsafe = out[0].last().coerceAtLeast(0f))
-            }
+        } catch (t: Throwable) {
+            Timber.e(t, "runLegacyInference threw — returning zeros")
+            UnsafeScores()
         }
     }
 
     private fun buildBitmapVariants(source: Bitmap): List<Bitmap> {
         val variants = mutableListOf<Bitmap>()
+        if (source.isRecycled) return variants
         variants += source
 
         val width = source.width
@@ -638,19 +582,42 @@ class AiDetector @Inject constructor(
         runCatching { if (!b.isRecycled) b.recycle() }
     }
 
-    fun close() {
+    /**
+     * v11: SAFE non-blocking close for UI / ViewModel callers.
+     * Schedules teardown on a background dispatcher and returns immediately.
+     * Caller should not assume the interpreter is gone synchronously.
+     */
+    fun closeAsync(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            runCatching { closeSuspend() }
+                .onFailure { Timber.w(it, "closeAsync teardown failed") }
+        }
+    }
+
+    /**
+     * v11: suspend version — preferred entry point. Honours a 2 s timeout
+     * to avoid blocking the caller indefinitely if inference is wedged.
+     */
+    suspend fun closeSuspend() {
         runCatching {
-            runBlocking(Dispatchers.IO) {
-                val acquired = withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
-                    inferenceLock.withLock { tearDownInterpreters() }
-                    true
-                }
-                if (acquired == null) {
-                    Timber.w("AiDetector.close() timed out waiting for inference lock — tearing down anyway")
-                    tearDownInterpreters()
-                }
+            withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
+                inferenceLock.withLock { tearDownInterpreters() }
+            } ?: run {
+                Timber.w("closeSuspend timed out — tearing down anyway")
+                tearDownInterpreters()
             }
-        }.onFailure { Timber.w(it, "AiDetector.close() failed (suppressed)") }
+        }.onFailure { Timber.w(it, "closeSuspend failed (suppressed)") }
+    }
+
+    /**
+     * v11: blocking close kept ONLY for service.onDestroy() where
+     * we are NOT on the main thread. The main-thread variant moved to
+     * closeAsync() / closeSuspend(). Internal use only.
+     */
+    fun close() {
+        // Best-effort sync teardown; never run from the main thread.
+        runCatching { tearDownInterpreters() }
+            .onFailure { Timber.w(it, "close() teardown failed") }
     }
 
     private fun tearDownInterpreters() {

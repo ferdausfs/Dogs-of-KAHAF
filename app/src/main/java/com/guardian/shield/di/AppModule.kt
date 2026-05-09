@@ -16,9 +16,14 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Manual migration v1 → v2.
- * Adds the `schedule_rules` table (P4-A time-based schedule blocking).
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • Migration v1→v2 and v2→v3 are now wrapped with IF NOT EXISTS so a
+ *    re-run on a partially-migrated DB does not crash.
+ *  • fallbackToDestructiveMigrationOnDowngrade() added so downgrading
+ *    (e.g. test debug → prod release) doesn't crash with
+ *    IllegalStateException.
  */
+
 private val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -39,10 +44,6 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-/**
- * v10 (2.1.0): manual migration v2 → v3.
- * Adds the `timed_blocks` table for the source-based 15-min auto-lock.
- */
 private val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -68,6 +69,7 @@ object DatabaseModule {
         Room.databaseBuilder(context, GuardianDatabase::class.java, "guardian.db")
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides fun appRuleDao(db: GuardianDatabase) = db.appRuleDao()

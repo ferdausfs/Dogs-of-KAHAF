@@ -10,14 +10,13 @@ import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 
 /**
- * FIX-LOG (vs original):
- *  - BUG #9: deprecated onBackPressed() override replaced with
- *    OnBackPressedDispatcher (predictive-back safe).
- *  - Always come back to HOME after the overlay is dismissed via the home
- *    button — previously, finishing the Activity could pop the user back
- *    into the offending app on some OEMs.
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • DEFENSIVE: every onCreate side-effect wrapped in runCatching —
+ *    this Activity is launched from a BroadcastReceiver / Accessibility
+ *    Service context and any exception kills the user-visible block UI.
  */
 @AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
@@ -34,8 +33,8 @@ class BlockOverlayActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        runCatching { setShowWhenLocked(true) }
+        runCatching { setTurnScreenOn(true) }
         vibrate()
 
         val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: "unknown"
@@ -45,13 +44,11 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.btnHome.setOnClickListener { goHomeAndFinish() }
         binding.btnRequestUnlock.setOnClickListener {
-            startActivity(Intent(this, DelayUnlockActivity::class.java))
+            runCatching { startActivity(Intent(this, DelayUnlockActivity::class.java)) }
+                .onFailure { Timber.w(it, "Failed to start DelayUnlockActivity") }
             finish()
         }
 
-        // BUG #9 fix — predictive-back-aware. Back press is intentionally
-        // mapped to "go home" (we never want the user dropped back into the
-        // app we just blocked).
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = goHomeAndFinish()
         })
@@ -64,8 +61,8 @@ class BlockOverlayActivity : AppCompatActivity() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             startActivity(home)
-        }
-        finish()
+        }.onFailure { Timber.w(it, "goHome failed") }
+        runCatching { finish() }
     }
 
     @Suppress("DEPRECATION")

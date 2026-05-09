@@ -10,12 +10,19 @@ import com.guardian.shield.service.detection.ModelImportManager
 import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Per-model UI state for the "AI Models" section in Settings.
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • CRITICAL FIX: importModel() / resetModel() previously called
+ *    `ai.close()` which used runBlocking. From the Main dispatcher this
+ *    blocked the UI thread and triggered the visible "App keeps stopping"
+ *    crash on import. Now we call ai.closeSuspend() inside
+ *    withContext(Dispatchers.IO) — main thread is never blocked.
  */
 data class ModelSlotUi(
     val isImported: Boolean = false,
@@ -31,7 +38,6 @@ data class SettingsUi(
     val modelLoaded: Boolean = false,
     val userGender: String = GENDER_NONE,
     val genderModelAvailable: Boolean = false,
-    /** v10: sensitivity preset — LOW / BALANCED / HIGH. */
     val sensitivity: String = GuardianConstants.SENSITIVITY_BALANCED,
 
     val nsfwModel: ModelSlotUi = ModelSlotUi(),
@@ -110,10 +116,8 @@ class SettingsViewModel @Inject constructor(
     fun setAiThreshold(v: Float)     = viewModelScope.launch { prefs.setAiThreshold(v) }
     fun setUserGender(v: String)     = viewModelScope.launch { prefs.setUserGender(v) }
 
-    /** v10: sensitivity preset setter. Also writes the matching threshold value. */
     fun setSensitivity(level: String) = viewModelScope.launch {
         prefs.setSensitivity(level)
-        // Sync the manual slider so power users can see what the preset chose.
         prefs.setAiThreshold(GuardianConstants.thresholdForSensitivity(level))
     }
 
@@ -125,7 +129,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             busyFlag.value = true
             try {
-                runCatching { ai.close() }
+                // v11 FIX: was `ai.close()` (runBlocking on Main → ANR).
+                // Now: suspend version on IO dispatcher.
+                withContext(Dispatchers.IO) {
+                    runCatching { ai.closeSuspend() }
+                }
                 val result = modelImporter.importModel(uri, modelName)
                 refresh()
                 if (result.isSuccess) {
@@ -146,7 +154,10 @@ class SettingsViewModel @Inject constructor(
 
     fun resetModel(modelName: String) {
         viewModelScope.launch {
-            runCatching { ai.close() }
+            // v11 FIX — same root cause as importModel above.
+            withContext(Dispatchers.IO) {
+                runCatching { ai.closeSuspend() }
+            }
             val removed = modelImporter.deleteModel(modelName)
             refresh()
             if (removed) _events.emit(SettingsEvent.ModelDeleted(modelName))

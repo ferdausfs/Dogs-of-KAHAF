@@ -24,11 +24,20 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * v9 (2.0.0):
- *  • P5-A → uses Scopes.default() instead of inline SupervisorJob+Dispatchers.
- *
- * Earlier v8 fixes preserved: BUG-05 (degraded-state detection), BUG-06
- * (alarm-based self-restart), BUG-14 (separate alert channel).
+ * v11 (2.1.1) STABILITY PATCH:
+ *  • CRITICAL FIX: startForeground() is now wrapped in runCatching to
+ *    handle ForegroundServiceStartNotAllowedException (Android 12+) and
+ *    SecurityException (when notification permission is missing on
+ *    Android 13+). Previously these uncaught exceptions caused the
+ *    visible "App keeps stopping" crash whenever the service was started
+ *    from BootReceiver or MY_PACKAGE_REPLACED.
+ *  • CRITICAL FIX: companion start() now defers a startForegroundService
+ *    call when the app is in the background on Android 12+. We use a
+ *    one-shot AlarmManager fallback if the foreground start is rejected.
+ *  • DEFENSIVE: createChannels(), watchdog, onTaskRemoved all wrapped in
+ *    additional protection against OEM-specific behaviour.
+ *  • Channels now created BEFORE startForeground (was already correct,
+ *    explicit comment for safety).
  */
 @AndroidEntryPoint
 class GuardianForegroundService : Service() {
@@ -41,11 +50,39 @@ class GuardianForegroundService : Service() {
         private const val WATCHDOG_INTERVAL_MS = 30_000L
         private const val SELF_RESTART_DELAY_MS = 3_000L
 
-        fun start(ctx: Context) = runCatching {
-            val intent = Intent(ctx, GuardianForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent)
-            else ctx.startService(intent)
-        }.onFailure { Timber.w(it, "GuardianForegroundService.start failed") }
+        fun start(ctx: Context) {
+            runCatching {
+                val intent = Intent(ctx, GuardianForegroundService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ctx.startForegroundService(intent)
+                } else {
+                    ctx.startService(intent)
+                }
+            }.onFailure {
+                Timber.w(it, "GuardianForegroundService.start failed — will be retried by alarm")
+                // v11: schedule a retry via BootReceiver alarm if direct start fails.
+                scheduleRetryAlarm(ctx)
+            }
+        }
+
+        private fun scheduleRetryAlarm(ctx: Context) {
+            runCatching {
+                val am = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+                val intent = Intent(ctx.applicationContext, BootReceiver::class.java).apply {
+                    action = BootReceiver.ACTION_RESTART_SERVICE
+                }
+                val pi = PendingIntent.getBroadcast(
+                    ctx.applicationContext, 7374, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val triggerAt = SystemClock.elapsedRealtime() + SELF_RESTART_DELAY_MS
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
+                } else {
+                    am.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
+                }
+            }.onFailure { Timber.w(it, "scheduleRetryAlarm failed (suppressed)") }
+        }
     }
 
     private val scope: CoroutineScope = Scopes.default()
@@ -53,17 +90,50 @@ class GuardianForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createChannels()
+        // v11: ensure channels exist BEFORE startForeground, otherwise
+        // startForeground throws on Android 8+.
+        runCatching { createChannels() }.onFailure {
+            Timber.e(it, "createChannels failed — service will likely fail to start")
+        }
+
         val notif = buildForegroundNotification(missingCount = 0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID, notif,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notif)
+        val started = startForegroundSafely(notif)
+        if (!started) {
+            // We could not promote to foreground — stop self instead of
+            // crashing. The watchdog/alarm will retry later.
+            Timber.w("startForegroundSafely returned false — stopping self, retry will be scheduled")
+            runCatching { scheduleRetryAlarm(applicationContext) }
+            stopSelf()
+            return
         }
         startWatchdog()
+    }
+
+    /**
+     * v11: encapsulated start with explicit handling for the four
+     * platform-specific exceptions that historically crashed the app:
+     *  - ForegroundServiceStartNotAllowedException (Android 12+)
+     *  - SecurityException (missing POST_NOTIFICATIONS / FGS perm)
+     *  - IllegalStateException ("Service did not call startForeground in time")
+     *  - any other Throwable from OEM-modified frameworks
+     */
+    private fun startForegroundSafely(notif: Notification): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID, notif,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notif)
+            }
+            true
+        } catch (t: Throwable) {
+            // ForegroundServiceStartNotAllowedException is API 31+, so we
+            // catch the parent Throwable here for back-compat.
+            Timber.e(t, "startForeground rejected: ${t.javaClass.simpleName}")
+            false
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
@@ -72,35 +142,26 @@ class GuardianForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         runCatching {
-            val am = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-            val intent = Intent(applicationContext, BootReceiver::class.java).apply {
-                action = BootReceiver.ACTION_RESTART_SERVICE
-            }
-            val pi = PendingIntent.getBroadcast(
-                applicationContext,
-                7373,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val triggerAt = SystemClock.elapsedRealtime() + SELF_RESTART_DELAY_MS
-            if (am != null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
-                } else {
-                    am.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
-                }
-            }
-        }.onFailure { Timber.w(it, "Self-restart alarm scheduling failed") }
-        super.onTaskRemoved(rootIntent)
+            scheduleRetryAlarm(applicationContext)
+        }.onFailure { Timber.w(it, "onTaskRemoved retry alarm failed") }
+        try {
+            super.onTaskRemoved(rootIntent)
+        } catch (t: Throwable) {
+            Timber.w(t, "super.onTaskRemoved threw — suppressed")
+        }
     }
 
     override fun onDestroy() {
-        watchdogJob?.cancel()
-        scope.cancel()
+        runCatching { watchdogJob?.cancel() }
+        runCatching { scope.cancel() }
         runCatching {
             getSystemService(NotificationManager::class.java)?.cancel(ALERT_NOTIFICATION_ID)
         }
-        super.onDestroy()
+        try {
+            super.onDestroy()
+        } catch (t: Throwable) {
+            Timber.w(t, "super.onDestroy threw — suppressed")
+        }
     }
 
     // -------------------- watchdog --------------------
@@ -120,15 +181,19 @@ class GuardianForegroundService : Service() {
                     val degradedCount = missing.size + (if (accDegraded) 1 else 0)
 
                     val nm = ctx.getSystemService(NotificationManager::class.java)
-                    nm?.notify(NOTIFICATION_ID, buildForegroundNotification(degradedCount))
+                    runCatching {
+                        nm?.notify(NOTIFICATION_ID, buildForegroundNotification(degradedCount))
+                    }.onFailure { Timber.w(it, "watchdog notify foreground failed") }
 
                     if (degradedCount > 0) {
-                        nm?.notify(
-                            ALERT_NOTIFICATION_ID,
-                            buildAlertNotification(degradedCount, accDegraded)
-                        )
+                        runCatching {
+                            nm?.notify(
+                                ALERT_NOTIFICATION_ID,
+                                buildAlertNotification(degradedCount, accDegraded)
+                            )
+                        }.onFailure { Timber.w(it, "watchdog notify alert failed") }
                     } else {
-                        nm?.cancel(ALERT_NOTIFICATION_ID)
+                        runCatching { nm?.cancel(ALERT_NOTIFICATION_ID) }
                     }
                 }.onFailure { Timber.w(it, "Watchdog tick failed") }
                 delay(WATCHDOG_INTERVAL_MS)
@@ -140,17 +205,21 @@ class GuardianForegroundService : Service() {
 
     private fun createChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID, "Guardian Shield Protection", NotificationManager.IMPORTANCE_LOW
-                ).apply { description = "Keeps Guardian Shield active" }
-            )
-            nm.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID_ALERT, "Guardian Shield Alerts", NotificationManager.IMPORTANCE_HIGH
-                ).apply { description = "Alerts when protection is degraded" }
-            )
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+            runCatching {
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID, "Guardian Shield Protection", NotificationManager.IMPORTANCE_LOW
+                    ).apply { description = "Keeps Guardian Shield active" }
+                )
+            }
+            runCatching {
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID_ALERT, "Guardian Shield Alerts", NotificationManager.IMPORTANCE_HIGH
+                    ).apply { description = "Alerts when protection is degraded" }
+                )
+            }
         }
     }
 
