@@ -150,3 +150,12 @@ receives `Array<Any>`; unchecked casts are intentional and suppressed.
 | `app/src/main/res/layout/dialog_schedule_editor.xml` | xmlns:tools hoisted to root |
 | `app/src/main/res/layout/activity_permissions.xml` | xmlns:tools hoisted to root |
 | `CHANGELOG.md` | This file |
+
+## v14-FIXED-5 (2026-05-09)
+
+### 🐛 Build Fix
+- **CRITICAL**: Fixed `Unresolved reference: canTakeScreenshot` compile error in `GuardianAccessibilityService.kt`
+  - `AccessibilityServiceInfo.canTakeScreenshot` does NOT exist as a Kotlin property
+  - Replaced with correct bitmask check: `capabilities and CAPABILITY_CAN_TAKE_SCREENSHOT != 0`
+  - Corrected API level guard from `Build.VERSION_CODES.R` (30) to `Build.VERSION_CODES.S` (31) — `CAPABILITY_CAN_TAKE_SCREENSHOT` requires API 31
+  - Added missing `import android.accessibilityservice.AccessibilityServiceInfo`

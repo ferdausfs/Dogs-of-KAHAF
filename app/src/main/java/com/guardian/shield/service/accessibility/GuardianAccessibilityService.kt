@@ -1,6 +1,7 @@
 package com.guardian.shield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -129,8 +130,9 @@ class GuardianAccessibilityService : AccessibilityService() {
         Timber.i("GuardianAccessibilityService connected")
 
         canScreenshotCapability = runCatching {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                (serviceInfo?.canTakeScreenshot == true)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ((serviceInfo?.capabilities ?: 0) and
+                    AccessibilityServiceInfo.CAPABILITY_CAN_TAKE_SCREENSHOT != 0)
         }.getOrDefault(false)
         Timber.i("canTakeScreenshot capability=$canScreenshotCapability")
 
