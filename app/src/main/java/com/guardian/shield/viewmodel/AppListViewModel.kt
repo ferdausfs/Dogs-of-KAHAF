@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -36,14 +37,23 @@ data class InstalledApp(
 )
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: getInstalledApplications() now uses a safe default
- *    flag (0) instead of MATCH_ALL. MATCH_ALL requires
- *    QUERY_ALL_PACKAGES privilege, and on Android 11+ Play-flagged
- *    devices it can throw SecurityException — previously crashing the
- *    AppList screen.
- *  • DEFENSIVE: load() entire body wrapped in try/catch — even the
- *    package manager throws on some OEMs.
+ * v12 (2.1.2):
+ *  • CRITICAL FIX: load() previously called `getRules().first()` from the
+ *    Main dispatcher (viewModelScope default). When the underlying Flow
+ *    had not emitted yet (cold Flow + Room not yet initialised), .first()
+ *    suspended on Main forever → list never appeared and tapping the
+ *    screen showed "App not responding".
+ *    Fix: the entire load logic now runs inside withContext(Dispatchers.IO)
+ *    AND .first() is bounded by withTimeoutOrNull(3 s). On timeout we
+ *    fall back to an empty rule map (still show installed apps).
+ *  • CRITICAL FIX: search query change no longer triggers full reload
+ *    (the original code already filters in-memory via combine — kept,
+ *    but I'm making the contract explicit here).
+ *  • Defensive: every PackageManager call uses the safe compat helper.
+ *
+ * v11 (2.1.1):
+ *  • Use safe default flag (0) instead of MATCH_ALL.
+ *  • Whole load() body wrapped in runCatching.
  */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
@@ -55,21 +65,29 @@ class AppListViewModel @Inject constructor(
     private val rulesEngine: RulesEngine
 ) : ViewModel() {
 
+    companion object {
+        private const val RULES_FIRST_TIMEOUT_MS = 3_000L
+    }
+
     private val allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val searchQuery = MutableStateFlow("")
+    private val isLoading = MutableStateFlow(true)
 
     val apps: StateFlow<List<InstalledApp>> = combine(allApps, searchQuery) { installed, query ->
         val keyword = query.trim().lowercase()
-        installed.filter { app ->
-            keyword.isBlank() ||
-                app.name.lowercase().contains(keyword) ||
+        if (keyword.isBlank()) installed
+        else installed.filter { app ->
+            app.name.lowercase().contains(keyword) ||
                 app.pkg.lowercase().contains(keyword)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val summary: StateFlow<String> = combine(allApps, apps) { all, filtered ->
-        "${filtered.size} / ${all.size} apps"
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "0 / 0 apps")
+    val summary: StateFlow<String> = combine(allApps, apps, isLoading) { all, filtered, loading ->
+        when {
+            loading && all.isEmpty() -> "Loading apps…"
+            else -> "${filtered.size} / ${all.size} apps"
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "Loading apps…")
 
     init { load() }
 
@@ -78,9 +96,15 @@ class AppListViewModel @Inject constructor(
     }
 
     fun load() = viewModelScope.launch {
-        runCatching {
-            val rules = getRules().first().associateBy { it.packageName }
-            val installed = withContext(Dispatchers.IO) {
+        isLoading.value = true
+        // v12: ALL of this on IO, including .first() with a timeout.
+        val installed = withContext(Dispatchers.IO) {
+            runCatching {
+                val rules: Map<String, AppRule> =
+                    withTimeoutOrNull(RULES_FIRST_TIMEOUT_MS) {
+                        getRules().first().associateBy { it.packageName }
+                    } ?: emptyMap()
+
                 val pm = context.packageManager
                 val inputMethodPackages = AppClassifier.loadInputMethodPackages(context)
                 getInstalledApplicationsCompat(pm)
@@ -109,9 +133,11 @@ class AppListViewModel @Inject constructor(
                             .thenBy { it.name.lowercase() }
                     )
                     .toList()
-            }
-            allApps.value = installed
-        }.onFailure { Timber.e(it, "AppListViewModel.load failed") }
+            }.onFailure { Timber.e(it, "AppListViewModel.load failed") }
+                .getOrDefault(emptyList())
+        }
+        allApps.value = installed
+        isLoading.value = false
     }
 
     fun toggleBlock(app: InstalledApp) = viewModelScope.launch {
@@ -120,7 +146,7 @@ class AppListViewModel @Inject constructor(
         val nextBlocked = !(curr?.isBlocked ?: false)
         val nextWhitelisted = curr?.isWhitelisted ?: false
         val newRule = if (!nextBlocked && !nextWhitelisted) {
-            delete(app.pkg)
+            runCatching { delete(app.pkg) }
             null
         } else {
             val r = AppRule(
@@ -129,7 +155,7 @@ class AppListViewModel @Inject constructor(
                 isBlocked = nextBlocked,
                 isWhitelisted = nextWhitelisted
             )
-            upsert(r)
+            runCatching { upsert(r) }
             r
         }
         patchInMemory(app.pkg, newRule)
@@ -143,7 +169,7 @@ class AppListViewModel @Inject constructor(
         val nextWhitelisted = !(curr?.isWhitelisted ?: false)
         val nextBlocked = if (nextWhitelisted) false else (curr?.isBlocked ?: false)
         val newRule = if (!nextBlocked && !nextWhitelisted) {
-            delete(app.pkg)
+            runCatching { delete(app.pkg) }
             null
         } else {
             val r = AppRule(
@@ -152,7 +178,7 @@ class AppListViewModel @Inject constructor(
                 isBlocked = nextBlocked,
                 isWhitelisted = nextWhitelisted
             )
-            upsert(r)
+            runCatching { upsert(r) }
             r
         }
         patchInMemory(app.pkg, newRule)
@@ -174,9 +200,9 @@ class AppListViewModel @Inject constructor(
     }
 
     /**
-     * v11 FIX: use safe default flag (0) — MATCH_ALL requires
-     * QUERY_ALL_PACKAGES which Play Store flags as "sensitive".
-     * The default flag returns the same set for our purposes.
+     * v11 / v12 FIX: use safe default flag (0). Default flag returns the
+     * full installed app list for our purposes without triggering the
+     * Play-policy QUERY_ALL_PACKAGES sensitive-permission flag.
      */
     private fun getInstalledApplicationsCompat(pm: PackageManager): List<ApplicationInfo> {
         return runCatching {

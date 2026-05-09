@@ -13,10 +13,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • DEFENSIVE: every onCreate side-effect wrapped in runCatching —
- *    this Activity is launched from a BroadcastReceiver / Accessibility
- *    Service context and any exception kills the user-visible block UI.
+ * v12 (2.1.2):
+ *  • Defensive: ViewBinding inflation can fail on theme conflict — try
+ *    block falls back to finish() instead of crashing.
+ *  • Vibrator service can be null on some emulators / Android Auto.
+ *
+ * v11 (2.1.1):
+ *  • setShowWhenLocked / setTurnScreenOn wrapped in runCatching.
  */
 @AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
@@ -27,26 +30,32 @@ class BlockOverlayActivity : AppCompatActivity() {
         const val EXTRA_TERM = "extra_term"
     }
 
-    private lateinit var binding: ActivityBlockOverlayBinding
+    private var binding: ActivityBlockOverlayBinding? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+
+        val b = runCatching { ActivityBlockOverlayBinding.inflate(layoutInflater) }
+            .onFailure { Timber.e(it, "Failed to inflate BlockOverlay layout — finishing") }
+            .getOrNull()
+        if (b == null) { runCatching { finish() }; return }
+        binding = b
+        setContentView(b.root)
+
         runCatching { setShowWhenLocked(true) }
         runCatching { setTurnScreenOn(true) }
         vibrate()
 
         val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: "unknown"
         val term = intent.getStringExtra(EXTRA_TERM)
-        binding.tvBlockedPackage.text = pkg
-        binding.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
+        b.tvBlockedPackage.text = pkg
+        b.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
 
-        binding.btnHome.setOnClickListener { goHomeAndFinish() }
-        binding.btnRequestUnlock.setOnClickListener {
+        b.btnHome.setOnClickListener { goHomeAndFinish() }
+        b.btnRequestUnlock.setOnClickListener {
             runCatching { startActivity(Intent(this, DelayUnlockActivity::class.java)) }
                 .onFailure { Timber.w(it, "Failed to start DelayUnlockActivity") }
-            finish()
+            runCatching { finish() }
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -67,9 +76,16 @@ class BlockOverlayActivity : AppCompatActivity() {
 
     @Suppress("DEPRECATION")
     private fun vibrate() = runCatching {
-        val v = if (android.os.Build.VERSION.SDK_INT >= 31)
-            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-        else getSystemService(VIBRATOR_SERVICE) as Vibrator
-        v.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        val v: Vibrator? = if (android.os.Build.VERSION.SDK_INT >= 31) {
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+        } else {
+            getSystemService(VIBRATOR_SERVICE) as? Vibrator
+        }
+        v?.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+
+    override fun onDestroy() {
+        binding = null
+        super.onDestroy()
     }
 }

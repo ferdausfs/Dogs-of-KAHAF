@@ -37,20 +37,29 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: variable shadowing of `result` removed in
- *    triggerAiCheck — was readable but confusing; renamed to
- *    `classifyResult`.
- *  • CRITICAL FIX: receiver registration now wraps Build.SDK ≥ 33 with
- *    Context.RECEIVER_NOT_EXPORTED defensively — protected broadcasts
- *    SHOULD be exempt but on some Android 14 OEM ROMs (Vivo, Realme) the
- *    OS still throws SecurityException, killing the service.
- *  • DEFENSIVE: bitmap fast-fail when wrapHardwareBuffer returns null.
- *  • DEFENSIVE: every onAccessibilityEvent path wrapped in try/catch —
- *    accessibility threading is hostile and a single uncaught throw
- *    kills the service permanently.
- *  • close() at onDestroy now uses closeSuspend via background scope so
- *    the destroy callback returns quickly.
+ * v12 (2.1.2) FULL OPTIMISATION + STABILITY:
+ *  • CRITICAL FIX: aiDetector.closeAsync(Scopes.io()) used a one-shot scope
+ *    that was created and immediately leaked. Switched to the shared
+ *    Scopes.appIo (process-lifetime) so onDestroy returns instantly AND
+ *    the teardown actually runs to completion.
+ *  • CRITICAL FIX: takeScreenshot() now first checks
+ *    serviceInfo.canTakeScreenshot — some custom Android ROMs return false
+ *    here and throw SecurityException on the call. Now we silently skip
+ *    AI screenshot scan in that case (text scanning still works).
+ *  • CRITICAL FIX: mainExecutor can be null on some service contexts
+ *    pre-API 28 — defensive null-check + fallback.
+ *  • CRITICAL FIX: aiInFlight flag was reset twice in some failure paths
+ *    (returned-early when aiEnabled=false set it once, then the outer
+ *    finally set it again → race window where two checks could run in
+ *    parallel). Cleaned up.
+ *  • DEFENSIVE: rootInActiveWindow can throw on disconnected service —
+ *    now wrapped in runCatching everywhere it's read.
+ *
+ * v11 (2.1.1) — kept:
+ *  • Receiver registration with RECEIVER_NOT_EXPORTED on API 33+.
+ *  • Top-level try/catch around onAccessibilityEvent body.
+ *  • All node.text / contentDescription / childCount in runCatching.
+ *  • screenStateReceiver.onReceive hardened.
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
@@ -89,6 +98,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     @Volatile private var screenReceiverRegistered = false
 
+    /** v12: cached at connect-time so we don't query serviceInfo every screenshot. */
+    @Volatile private var canScreenshotCapability: Boolean = false
+
     private val explicitHits = HashMap<String, ArrayDeque<Long>>()
 
     private val screenStateReceiver = object : BroadcastReceiver() {
@@ -118,6 +130,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
         isRunning = true
         Timber.i("GuardianAccessibilityService connected")
+
+        // v12: cache screenshot capability once. Some ROMs return false
+        // here and would otherwise throw on every takeScreenshot() call.
+        canScreenshotCapability = runCatching {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                (serviceInfo?.canTakeScreenshot == true)
+        }.getOrDefault(false)
+        Timber.i("canTakeScreenshot capability=$canScreenshotCapability")
 
         runCatching { aiDetector.startPrefsCache(scope) }
 
@@ -159,8 +179,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_SCREEN_ON)
             }
-            // Defensive: Android 14 enforces an explicit receiver flag on
-            // some OEM builds even for protected broadcasts.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(screenStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
             } else {
@@ -172,6 +190,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun startPeriodicAiScanner() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        if (!canScreenshotCapability) return
         periodicJob?.cancel()
         periodicJob = scope.launch {
             while (isActive) {
@@ -204,8 +223,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 AccessibilityEvent.TYPE_VIEW_SCROLLED -> handleContentChange(pkg, event)
             }
         } catch (t: Throwable) {
-            // Defensive: never let an event handler throw — accessibility
-            // services that throw are auto-disabled by the OS.
             Timber.e(t, "onAccessibilityEvent crashed — suppressed to keep service alive")
         }
     }
@@ -222,10 +239,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             }
 
             DetectionResult.Allow -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && rulesEngine.canBlock(pkg)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                    canScreenshotCapability &&
+                    rulesEngine.canBlock(pkg)
+                ) {
                     triggerAiCheck(pkg, force = true)
                     scheduleFollowUpScan(pkg)
-                } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R && rulesEngine.canBlock(pkg)) {
+                } else if (rulesEngine.canBlock(pkg)) {
                     scheduleLegacyFollowUpChain(pkg)
                 }
             }
@@ -234,6 +254,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun scheduleFollowUpScan(pkg: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        if (!canScreenshotCapability) return
         scope.launch {
             delay(AI_FOLLOW_UP_MS)
             if (lastForegroundPkg == pkg) {
@@ -250,7 +271,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (lastForegroundPkg != pkg) return@launch
                 if (!rulesEngine.canBlock(pkg)) return@launch
                 try {
-                    val text = collectVisibleText(rootInActiveWindow)
+                    val text = collectVisibleText(safeRootInActiveWindow())
                     if (!text.isNullOrBlank()) {
                         when (val result = rulesEngine.evaluateText(text)) {
                             is DetectionResult.Block -> withContext(Dispatchers.Main) {
@@ -269,7 +290,10 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleContentChange(pkg: String, event: AccessibilityEvent) {
         if (!rulesEngine.canBlock(pkg)) return
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && event.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            canScreenshotCapability &&
+            event.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+        ) {
             triggerAiCheck(pkg)
         }
 
@@ -279,7 +303,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         scope.launch {
             try {
-                val text = collectVisibleText(rootInActiveWindow)
+                val text = collectVisibleText(safeRootInActiveWindow())
                 if (!text.isNullOrBlank()) {
                     when (val result = rulesEngine.evaluateText(text)) {
                         is DetectionResult.Block -> withContext(Dispatchers.Main) {
@@ -293,6 +317,10 @@ class GuardianAccessibilityService : AccessibilityService() {
             }
         }
     }
+
+    /** v12: rootInActiveWindow can throw on a disconnecting service. */
+    private fun safeRootInActiveWindow(): AccessibilityNodeInfo? =
+        runCatching { rootInActiveWindow }.getOrNull()
 
     private fun recordScanTime(pkg: String, now: Long) {
         synchronized(lastAiScanByPkg) {
@@ -327,6 +355,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String, force: Boolean = false) {
+        if (!canScreenshotCapability) return
         val now = System.currentTimeMillis()
         val last = lastScanTimeFor(pkg)
         if (!force && now - last < AI_THROTTLE_MS) return
@@ -335,38 +364,51 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (!aiInFlight.compareAndSet(false, true)) return
 
         scope.launch {
+            // v12: single source-of-truth for resetting the flag.
+            var flagReleased = false
+            fun releaseFlag() {
+                if (!flagReleased) {
+                    flagReleased = true
+                    aiInFlight.set(false)
+                }
+            }
+
             try {
                 val aiEnabled = aiDetector.cachedAiEnabled
                 if (!aiEnabled) {
-                    aiInFlight.set(false)
-                    return@launch
+                    releaseFlag(); return@launch
                 }
 
                 val userGender = aiDetector.cachedUserGender
-
                 val genderFeatureOn = userGender != GENDER_NONE && aiDetector.isNsfwModelAvailable()
                 val legacyOn        = aiDetector.isModelAvailable()
 
                 if (!genderFeatureOn && !legacyOn) {
-                    aiInFlight.set(false)
-                    return@launch
+                    releaseFlag(); return@launch
                 }
 
                 if (genderFeatureOn) aiDetector.ensureGenderPipelineLoaded()
                 if (legacyOn)        aiDetector.ensureLoaded()
 
                 if (!rulesEngine.canBlock(pkg)) {
-                    aiInFlight.set(false)
-                    return@launch
+                    releaseFlag(); return@launch
                 }
 
                 val callbackTookOver = AtomicBoolean(false)
+
+                // v12: mainExecutor can be null on a destroying service.
+                val executor = runCatching { mainExecutor }.getOrNull()
+                if (executor == null) {
+                    Timber.w("mainExecutor unavailable — skipping screenshot scan")
+                    releaseFlag(); return@launch
+                }
+
                 try {
                     withContext(Dispatchers.Main) {
                         try {
                             takeScreenshot(
                                 Display.DEFAULT_DISPLAY,
-                                mainExecutor,
+                                executor,
                                 object : TakeScreenshotCallback {
                                     override fun onSuccess(screenshot: ScreenshotResult) {
                                         callbackTookOver.set(true)
@@ -403,7 +445,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                 }
 
                                                 if (!blocked && legacyOn) {
-                                                    // v11: renamed to avoid shadow of outer `screenshot`.
                                                     val classifyResult = runCatching {
                                                         aiDetector.classify(safeBmp, pkg)
                                                     }.onFailure {
@@ -415,7 +456,8 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                     when (classifyResult.tier) {
                                                         ContentTier.SUGGESTIVE -> {
                                                             Timber.d(
-                                                                "SUGGESTIVE in $pkg (porn=%.2f hentai=%.2f sexy=%.2f) — log only".format(
+                                                                "SUGGESTIVE in %s (porn=%.2f hentai=%.2f sexy=%.2f) — log only".format(
+                                                                    pkg,
                                                                     classifyResult.pornScore,
                                                                     classifyResult.hentaiScore,
                                                                     classifyResult.sexyScore
@@ -426,7 +468,8 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                             val confirmed = recordExplicitHit(pkg)
                                                             if (confirmed) {
                                                                 Timber.i(
-                                                                    "EXPLICIT confirmed in $pkg (porn=%.2f hentai=%.2f combined=%.2f) — blocking".format(
+                                                                    "EXPLICIT confirmed in %s (porn=%.2f hentai=%.2f combined=%.2f) — blocking".format(
+                                                                        pkg,
                                                                         classifyResult.pornScore,
                                                                         classifyResult.hentaiScore,
                                                                         classifyResult.combinedUnsafeScore
@@ -435,14 +478,12 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                                 handleConfirmedExplicit(pkg)
                                                             } else {
                                                                 Timber.d(
-                                                                    "EXPLICIT pending (1/${EXPLICIT_CONFIRM_COUNT}) in $pkg — waiting for confirmation"
+                                                                    "EXPLICIT pending (1/$EXPLICIT_CONFIRM_COUNT) in $pkg"
                                                                 )
                                                             }
                                                         }
                                                         ContentTier.NATURAL,
-                                                        ContentTier.SAFE -> {
-                                                            // Quiet frame — no action.
-                                                        }
+                                                        ContentTier.SAFE -> Unit
                                                     }
                                                 }
                                             } catch (oom: OutOfMemoryError) {
@@ -463,6 +504,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                                     }
                                 }
                             )
+                        } catch (sec: SecurityException) {
+                            // Some ROMs throw even when canTakeScreenshot=true.
+                            Timber.w(sec, "takeScreenshot SecurityException — disabling for this session")
+                            canScreenshotCapability = false
+                            throw sec
                         } catch (t: Throwable) {
                             Timber.w(t, "takeScreenshot threw synchronously")
                             throw t
@@ -470,12 +516,16 @@ class GuardianAccessibilityService : AccessibilityService() {
                     }
                 } finally {
                     if (!callbackTookOver.get()) {
-                        aiInFlight.set(false)
+                        // Only reset here if the callback never took over.
+                        releaseFlag()
+                    } else {
+                        // Mark as released so outer catch doesn't double-reset.
+                        flagReleased = true
                     }
                 }
             } catch (t: Throwable) {
                 Timber.e(t, "triggerAiCheck error")
-                aiInFlight.set(false)
+                releaseFlag()
             }
         }
     }
@@ -542,10 +592,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             runCatching { unregisterReceiver(screenStateReceiver) }
             screenReceiverRegistered = false
         }
-        // v11: schedule async teardown so onDestroy returns quickly. We
-        // do this BEFORE cancelling scope so the launched job has a chance
-        // to run on a fresh non-cancelled scope.
-        runCatching { aiDetector.closeAsync(Scopes.io()) }
+        // v12: use shared appIo (no leak) instead of throwaway Scopes.io().
+        runCatching { aiDetector.closeAsync(Scopes.appIo) }
         runCatching { scope.cancel() }
         super.onDestroy()
     }

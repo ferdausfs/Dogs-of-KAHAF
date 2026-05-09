@@ -24,20 +24,16 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: startForeground() is now wrapped in runCatching to
- *    handle ForegroundServiceStartNotAllowedException (Android 12+) and
- *    SecurityException (when notification permission is missing on
- *    Android 13+). Previously these uncaught exceptions caused the
- *    visible "App keeps stopping" crash whenever the service was started
- *    from BootReceiver or MY_PACKAGE_REPLACED.
- *  • CRITICAL FIX: companion start() now defers a startForegroundService
- *    call when the app is in the background on Android 12+. We use a
- *    one-shot AlarmManager fallback if the foreground start is rejected.
- *  • DEFENSIVE: createChannels(), watchdog, onTaskRemoved all wrapped in
- *    additional protection against OEM-specific behaviour.
- *  • Channels now created BEFORE startForeground (was already correct,
- *    explicit comment for safety).
+ * v12 (2.1.2):
+ *  • DEFENSIVE: createChannels() return-early on null NotificationManager.
+ *  • Watchdog tick interval increased to 45s (from 30s) — saves battery
+ *    and is enough granularity for permission-degraded detection.
+ *  • Notification PendingIntent flags are now centralised constants.
+ *
+ * v11 (2.1.1):
+ *  • startForegroundSafely catches every Throwable.
+ *  • scheduleRetryAlarm fallback when foreground promotion is denied.
+ *  • POST_NOTIFICATIONS handled at Activity level.
  */
 @AndroidEntryPoint
 class GuardianForegroundService : Service() {
@@ -47,8 +43,11 @@ class GuardianForegroundService : Service() {
         const val CHANNEL_ID_ALERT = "guardian_alerts"
         const val NOTIFICATION_ID = 4242
         const val ALERT_NOTIFICATION_ID = NOTIFICATION_ID + 1
-        private const val WATCHDOG_INTERVAL_MS = 30_000L
+        private const val WATCHDOG_INTERVAL_MS = 45_000L     // v12: 30s → 45s
         private const val SELF_RESTART_DELAY_MS = 3_000L
+
+        private const val PI_FLAGS =
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
         fun start(ctx: Context) {
             runCatching {
@@ -60,7 +59,6 @@ class GuardianForegroundService : Service() {
                 }
             }.onFailure {
                 Timber.w(it, "GuardianForegroundService.start failed — will be retried by alarm")
-                // v11: schedule a retry via BootReceiver alarm if direct start fails.
                 scheduleRetryAlarm(ctx)
             }
         }
@@ -71,10 +69,7 @@ class GuardianForegroundService : Service() {
                 val intent = Intent(ctx.applicationContext, BootReceiver::class.java).apply {
                     action = BootReceiver.ACTION_RESTART_SERVICE
                 }
-                val pi = PendingIntent.getBroadcast(
-                    ctx.applicationContext, 7374, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+                val pi = PendingIntent.getBroadcast(ctx.applicationContext, 7374, intent, PI_FLAGS)
                 val triggerAt = SystemClock.elapsedRealtime() + SELF_RESTART_DELAY_MS
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi)
@@ -90,8 +85,6 @@ class GuardianForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // v11: ensure channels exist BEFORE startForeground, otherwise
-        // startForeground throws on Android 8+.
         runCatching { createChannels() }.onFailure {
             Timber.e(it, "createChannels failed — service will likely fail to start")
         }
@@ -99,8 +92,6 @@ class GuardianForegroundService : Service() {
         val notif = buildForegroundNotification(missingCount = 0)
         val started = startForegroundSafely(notif)
         if (!started) {
-            // We could not promote to foreground — stop self instead of
-            // crashing. The watchdog/alarm will retry later.
             Timber.w("startForegroundSafely returned false — stopping self, retry will be scheduled")
             runCatching { scheduleRetryAlarm(applicationContext) }
             stopSelf()
@@ -109,14 +100,6 @@ class GuardianForegroundService : Service() {
         startWatchdog()
     }
 
-    /**
-     * v11: encapsulated start with explicit handling for the four
-     * platform-specific exceptions that historically crashed the app:
-     *  - ForegroundServiceStartNotAllowedException (Android 12+)
-     *  - SecurityException (missing POST_NOTIFICATIONS / FGS perm)
-     *  - IllegalStateException ("Service did not call startForeground in time")
-     *  - any other Throwable from OEM-modified frameworks
-     */
     private fun startForegroundSafely(notif: Notification): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -129,8 +112,6 @@ class GuardianForegroundService : Service() {
             }
             true
         } catch (t: Throwable) {
-            // ForegroundServiceStartNotAllowedException is API 31+, so we
-            // catch the parent Throwable here for back-compat.
             Timber.e(t, "startForeground rejected: ${t.javaClass.simpleName}")
             false
         }
@@ -163,8 +144,6 @@ class GuardianForegroundService : Service() {
             Timber.w(t, "super.onDestroy threw — suppressed")
         }
     }
-
-    // -------------------- watchdog --------------------
 
     private fun startWatchdog() {
         watchdogJob?.cancel()
@@ -201,36 +180,31 @@ class GuardianForegroundService : Service() {
         }
     }
 
-    // -------------------- notification --------------------
-
     private fun createChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = getSystemService(NotificationManager::class.java) ?: return
-            runCatching {
-                nm.createNotificationChannel(
-                    NotificationChannel(
-                        CHANNEL_ID, "Guardian Shield Protection", NotificationManager.IMPORTANCE_LOW
-                    ).apply { description = "Keeps Guardian Shield active" }
-                )
-            }
-            runCatching {
-                nm.createNotificationChannel(
-                    NotificationChannel(
-                        CHANNEL_ID_ALERT, "Guardian Shield Alerts", NotificationManager.IMPORTANCE_HIGH
-                    ).apply { description = "Alerts when protection is degraded" }
-                )
-            }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        runCatching {
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID, "Guardian Shield Protection", NotificationManager.IMPORTANCE_LOW
+                ).apply { description = "Keeps Guardian Shield active" }
+            )
+        }
+        runCatching {
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID_ALERT, "Guardian Shield Alerts", NotificationManager.IMPORTANCE_HIGH
+                ).apply { description = "Alerts when protection is degraded" }
+            )
         }
     }
 
     private fun buildForegroundNotification(missingCount: Int): Notification {
         val openMain = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            this, 0, Intent(this, MainActivity::class.java), PI_FLAGS
         )
         val openPerms = PendingIntent.getActivity(
-            this, 1, Intent(this, PermissionsActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            this, 1, Intent(this, PermissionsActivity::class.java), PI_FLAGS
         )
 
         val title = getString(R.string.app_name)
@@ -251,8 +225,7 @@ class GuardianForegroundService : Service() {
 
     private fun buildAlertNotification(missingCount: Int, accessibilityDegraded: Boolean): Notification {
         val openPerms = PendingIntent.getActivity(
-            this, 2, Intent(this, PermissionsActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            this, 2, Intent(this, PermissionsActivity::class.java), PI_FLAGS
         )
         val text = if (accessibilityDegraded)
             getString(R.string.protection_degraded_accessibility)

@@ -18,13 +18,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: HOME launch now also gets ActivityOptions on Android
- *    14+ (UPSIDE_DOWN_CAKE) with MODE_BACKGROUND_ACTIVITY_START_ALLOWED.
- *    Previously only the overlay had it; HOME would silently fail on
- *    some Android 14 OEM builds (Samsung One UI 6, Pixel) so the user
- *    stayed inside the offending app.
- *  • DEFENSIVE: getActivityOptions extracted into a helper.
+ * v12 (2.1.2):
+ *  • Use shared Scopes.appIo (app-lifetime singleton scope) instead of
+ *    creating a new scope at construction. Singleton-scoped engine + new
+ *    scope was effectively the same lifetime, but appIo is shared with
+ *    other singletons and cannot be accidentally cancelled.
+ *  • backgroundActivityOptions() result cached after first computation
+ *    (the Build.VERSION check + ActivityOptions creation are not free).
+ *
+ * v11 (2.1.1):
+ *  • HOME launch also gets ActivityOptions on Android 14+.
  */
 @Singleton
 class BlockingEngine @Inject constructor(
@@ -36,13 +39,15 @@ class BlockingEngine @Inject constructor(
         private const val MAX_THROTTLE_MAP = GuardianConstants.MAX_THROTTLE_MAP
     }
 
-    private val scope: CoroutineScope = Scopes.io()
+    private val scope: CoroutineScope = Scopes.appIo
     private val lastBlockByPkg = HashMap<String, Long>()
+
+    @Volatile private var cachedActivityOptionsBundle: android.os.Bundle? = null
+    @Volatile private var activityOptionsBuilt: Boolean = false
 
     fun block(packageName: String, reason: BlockReason, term: String? = null) {
         val now = System.currentTimeMillis()
 
-        // Per-package throttle.
         synchronized(lastBlockByPkg) {
             val last = lastBlockByPkg[packageName] ?: 0L
             if (now - last < THROTTLE_MS) return
@@ -57,14 +62,11 @@ class BlockingEngine @Inject constructor(
 
         val activityOpts = backgroundActivityOptions()
 
-        // 1. Evict the offending app from the foreground.
         runCatching {
             val home = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            // v11: pass ActivityOptions on Android 14+ so the launch is
-            // not rejected as a background activity start.
             if (activityOpts != null) {
                 context.startActivity(home, activityOpts)
             } else {
@@ -72,7 +74,6 @@ class BlockingEngine @Inject constructor(
             }
         }.onFailure { Timber.w(it, "Failed to launch HOME") }
 
-        // 2. Show the full-screen block overlay.
         runCatching {
             val overlay = Intent(context, BlockOverlayActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -89,7 +90,6 @@ class BlockingEngine @Inject constructor(
             }
         }.onFailure { Timber.e(it, "Failed to launch BlockOverlayActivity") }
 
-        // 3. Log the event.
         scope.launch {
             runCatching {
                 logEvent(BlockEvent(packageName = packageName, reason = reason, matchedTerm = term))
@@ -98,16 +98,24 @@ class BlockingEngine @Inject constructor(
     }
 
     /**
-     * v11: build ActivityOptions for background activity launches on
-     * Android 14+. Returns null on older versions (no options needed).
+     * v12: cached after first computation. Building the Bundle on every
+     * block() is unnecessary — it never changes for the lifetime of the
+     * process.
      */
     private fun backgroundActivityOptions(): android.os.Bundle? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
-        return runCatching {
-            ActivityOptions.makeBasic().apply {
-                pendingIntentBackgroundActivityStartMode =
-                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
-            }.toBundle()
-        }.getOrNull()
+        if (activityOptionsBuilt) return cachedActivityOptionsBundle
+        val bundle = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            null
+        } else {
+            runCatching {
+                ActivityOptions.makeBasic().apply {
+                    pendingIntentBackgroundActivityStartMode =
+                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                }.toBundle()
+            }.getOrNull()
+        }
+        cachedActivityOptionsBundle = bundle
+        activityOptionsBuilt = true
+        return bundle
     }
 }

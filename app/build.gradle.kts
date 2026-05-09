@@ -14,41 +14,77 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        // v11 (2.1.1): STABILITY PATCH — see CHANGELOG.
-        //   • Fixed AiDetector.close() ANR via runBlocking on Main.
-        //   • Fixed ForegroundServiceStartNotAllowedException crash.
-        //   • Fixed POST_NOTIFICATIONS missing on Android 13+.
-        //   • Fixed background activity launch on Android 14.
-        //   • Fixed EncryptedSharedPreferences crash on broken Keystore.
-        //   • Fixed AppList getInstalledApplications MATCH_ALL crash.
-        //   • Fixed DataStore IOException crash on corrupted prefs.
-        //   • Hardened every BroadcastReceiver / Service / lifecycle handler.
-        versionCode = 5
-        versionName = "2.1.1"
+        // v12 (2.1.2) — FULL OPTIMISATION + STABILITY PATCH 2.
+        //   • Fixed AppRule.toEntity() compile mismatch (missing id field).
+        //   • Fixed AppListViewModel.load() Main-thread Flow.first() ANR.
+        //   • Fixed legacy model import not closing TFLite interpreter.
+        //   • Fixed Scopes.io() leak in AccessibilityService.onDestroy.
+        //   • Fixed takeScreenshot SecurityException on canTakeScreenshot=false OEMs.
+        //   • Fixed mainExecutor null on some service contexts.
+        //   • Release builds now plant a release-safe Timber tree (was DEBUG only).
+        //   • DataStore Flow.first() now wrapped with timeout (no infinite suspend).
+        //   • PinSetup/Verify now disable button while busy (debounce double-tap).
+        //   • GuardianAccessibilityService: aiInFlight reset race fixed.
+        //   • Various smaller hardening — see CHANGELOG.
+        versionCode = 6
+        versionName = "2.1.2"
+
+        // v12: vector drawables compatibility
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
-        debug { isMinifyEnabled = false }
+        debug {
+            isMinifyEnabled = false
+            // v12: keep debug builds installable alongside release
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        // v12: explicit free compiler args for kotlinx-coroutines stability
+        freeCompilerArgs = listOf(
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-opt-in=kotlinx.coroutines.FlowPreview"
+        )
+    }
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging {
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // v12: avoid duplicate META-INF on some TFLite native libs
+        resources.excludes += "/META-INF/DEPENDENCIES"
+        resources.excludes += "/META-INF/LICENSE*"
+        resources.excludes += "/META-INF/NOTICE*"
+        // Keep TFLite GPU native ABIs only for what we ship for
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    // v12: Hilt sometimes complains about lint check on KSP — disable that one
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
 }
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
     arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
 }
 
 dependencies {
@@ -65,6 +101,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.52")

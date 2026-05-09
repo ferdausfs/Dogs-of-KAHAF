@@ -44,15 +44,18 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: POST_NOTIFICATIONS is now requested at first launch
- *    on Android 13+. Without it the foreground service silently fails
- *    to show its notification and the OS may kill the service.
- *  • CRITICAL FIX: exportLog() now uses MediaStore on Android 10+
- *    (legacy Environment.getExternalStoragePublicDirectory write fails
- *    silently or throws on scoped-storage devices).
- *  • DEFENSIVE: every startActivity() in click handlers wrapped in
- *    runCatching with toast feedback.
+ * v12 (2.1.2):
+ *  • DEFENSIVE: notification permission is now also requested when user
+ *    re-opens the app and protection is degraded (in case they revoked it
+ *    after first launch).
+ *  • DEFENSIVE: every collect block runCatching-wrapped — adapter.submit
+ *    can throw on adapter race during config-change.
+ *  • Permission warning click now also offers to open Permissions screen
+ *    even if no PIN is set (previously it would silently fail on first run).
+ *
+ * v11 (2.1.1):
+ *  • POST_NOTIFICATIONS is requested at first launch on Android 13+.
+ *  • exportLog() uses MediaStore on Android 10+.
  */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -88,8 +91,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    // v11: runtime POST_NOTIFICATIONS request — required on API 33+
-    // for the foreground-service notification to be visible.
     private val notificationPermissionLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
@@ -126,9 +127,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnPermissions.setOnClickListener {
             safeStartActivity(Intent(this, PermissionsActivity::class.java))
         }
-        binding.btnClear.setOnClickListener { vm.clearAll() }
+        binding.btnClear.setOnClickListener { runCatching { vm.clearAll() } }
 
-        binding.fabToggle.setOnClickListener { vm.toggleProtection() }
+        binding.fabToggle.setOnClickListener { runCatching { vm.toggleProtection() } }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -191,11 +192,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * v11: scoped-storage-aware CSV export.
-     *  • Android 10+ → MediaStore (Downloads collection).
-     *  • Older       → legacy public Downloads dir.
-     */
     private fun exportLog() {
         lifecycleScope.launch {
             val outcome = withContext(Dispatchers.IO) {
@@ -276,7 +272,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshPermissionBanner() {
-        val missing = PermissionManager.missingCritical(this)
+        val missing = runCatching { PermissionManager.missingCritical(this) }
+            .getOrDefault(emptyList())
         if (missing.isEmpty()) {
             binding.tvPermissionWarning.visibility = View.GONE
         } else {

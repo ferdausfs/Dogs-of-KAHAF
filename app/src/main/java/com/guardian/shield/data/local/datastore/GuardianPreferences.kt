@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
@@ -17,12 +18,17 @@ import javax.inject.Singleton
 private val Context.dataStore by preferencesDataStore(name = "guardian_prefs")
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • DEFENSIVE: every Flow now has a .catch{} that swallows IOException
- *    (DataStore corruption from low-storage / forced power-off) and
- *    emits the default Preferences object. Previously a corrupted file
- *    crashed the app at the first prefs read.
- *  • currentRulesVersion / currentProtectionEnabled wrapped in runCatching.
+ * v12 (2.1.2):
+ *  • CRITICAL FIX: currentRulesVersion() / currentProtectionEnabled() now
+ *    use withTimeoutOrNull(2s) around .first(). Previously, on a freshly
+ *    installed / corrupted DataStore the Flow could *never emit* and the
+ *    suspending caller hung forever — manifested to the user as a frozen
+ *    settings screen.
+ *  • DEFENSIVE: every Flow now also catches generic Throwable (some
+ *    ROMs throw NPE from PreferencesProto deserialisation).
+ *
+ * v11 (2.1.1):
+ *  • Every Flow has .catch{} that swallows IOException and emits empty.
  */
 @Singleton
 class GuardianPreferences @Inject constructor(
@@ -45,14 +51,25 @@ class GuardianPreferences @Inject constructor(
         val KEY_RULES_VERSION  = intPreferencesKey("rules_version")
         val KEY_PROTECTION_ENABLED = booleanPreferencesKey("protection_enabled")
         val KEY_SENSITIVITY = stringPreferencesKey("sensitivity")
+
+        // v12: max time we'll wait for a single .first() read before
+        // giving up and using a default. Prevents UI hang on broken
+        // DataStore.
+        private const val FIRST_READ_TIMEOUT_MS = 2_000L
     }
 
     private fun safeData(): Flow<Preferences> = context.dataStore.data.catch { e ->
-        if (e is IOException) {
-            Timber.w(e, "DataStore read failed — emitting empty preferences")
-            emit(emptyPreferences())
-        } else {
-            throw e
+        when (e) {
+            is IOException -> {
+                Timber.w(e, "DataStore read failed (IO) — emitting empty preferences")
+                emit(emptyPreferences())
+            }
+            else -> {
+                // v12: also swallow non-IO throwables — some OEMs throw
+                // NPE / IllegalStateException from PreferencesProto.
+                Timber.w(e, "DataStore read failed (non-IO) — emitting empty preferences")
+                emit(emptyPreferences())
+            }
         }
     }
 
@@ -95,8 +112,14 @@ class GuardianPreferences @Inject constructor(
         }
     }
 
+    /**
+     * v12: bounded-wait first read. If DataStore never emits within 2 s
+     * we return 0 instead of suspending forever.
+     */
     suspend fun currentRulesVersion(): Int =
-        runCatching { rulesVersion.first() }.getOrDefault(0)
+        runCatching {
+            withTimeoutOrNull(FIRST_READ_TIMEOUT_MS) { rulesVersion.first() } ?: 0
+        }.getOrDefault(0)
 
     suspend fun bumpRulesVersion() = safeEdit {
         val curr = it[KEY_RULES_VERSION] ?: 0
@@ -104,7 +127,9 @@ class GuardianPreferences @Inject constructor(
     }
 
     suspend fun currentProtectionEnabled(): Boolean =
-        runCatching { protectionEnabled.first() }.getOrDefault(true)
+        runCatching {
+            withTimeoutOrNull(FIRST_READ_TIMEOUT_MS) { protectionEnabled.first() } ?: true
+        }.getOrDefault(true)
 
     suspend fun setProtectionEnabled(v: Boolean) = safeEdit {
         it[KEY_PROTECTION_ENABLED] = v

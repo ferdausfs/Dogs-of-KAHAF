@@ -17,12 +17,14 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * v11 (2.1.1) STABILITY PATCH:
- *  • CRITICAL FIX: importModel() / resetModel() previously called
- *    `ai.close()` which used runBlocking. From the Main dispatcher this
- *    blocked the UI thread and triggered the visible "App keeps stopping"
- *    crash on import. Now we call ai.closeSuspend() inside
- *    withContext(Dispatchers.IO) — main thread is never blocked.
+ * v12 (2.1.2):
+ *  • Added closeAiInterpreter() entry point used by the legacy model
+ *    importer in SettingsActivity. Previously the legacy import path
+ *    didn't close the interpreter and the mapped buffer pinned the file
+ *    until app restart.
+ *
+ * v11 (2.1.1):
+ *  • importModel/resetModel use Dispatchers.IO + closeSuspend (no ANR).
  */
 data class ModelSlotUi(
     val isImported: Boolean = false,
@@ -124,13 +126,21 @@ class SettingsViewModel @Inject constructor(
     fun resetPin()                   = pinManager.clearPin()
     fun refresh()                    { refreshTrigger.value = refreshTrigger.value + 1 }
 
+    /**
+     * v12: dedicated closer for callers that need the interpreter gone
+     * before they overwrite the model file (legacy importer).
+     */
+    suspend fun closeAiInterpreter() {
+        withContext(Dispatchers.IO) {
+            runCatching { ai.closeSuspend() }
+        }
+    }
+
     fun importModel(uri: Uri, modelName: String) {
         val busyFlag = busyFlagFor(modelName) ?: return
         viewModelScope.launch {
             busyFlag.value = true
             try {
-                // v11 FIX: was `ai.close()` (runBlocking on Main → ANR).
-                // Now: suspend version on IO dispatcher.
                 withContext(Dispatchers.IO) {
                     runCatching { ai.closeSuspend() }
                 }
@@ -154,7 +164,6 @@ class SettingsViewModel @Inject constructor(
 
     fun resetModel(modelName: String) {
         viewModelScope.launch {
-            // v11 FIX — same root cause as importModel above.
             withContext(Dispatchers.IO) {
                 runCatching { ai.closeSuspend() }
             }
