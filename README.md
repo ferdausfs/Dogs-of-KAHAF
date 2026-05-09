@@ -1,8 +1,18 @@
-# 🛡️ Guardian Shield
+# 🛡️ Guardian Shield — v10 (2.1.0)
 
 **Adult Content Blocker & Digital Discipline App for Android**
 
 Native Android app — Kotlin, Clean Architecture, MVVM, Hilt, Room, TFLite.
+
+## 🆕 v10 (2.1.0) — Smart Tiered Detection
+
+Four-tier classification (`SAFE` / `NATURAL` / `SUGGESTIVE` / `EXPLICIT`) —
+only **EXPLICIT** triggers a block. Hot/sexy content is logged but never
+blocks. EXPLICIT debounce (2 hits within 3 s) eliminates single-frame
+false positives. Source-based **15-min auto-lock** for content-source
+apps (Facebook / Instagram / TikTok / browsers / etc.) when AI confirms
+explicit material. Sensitivity preset (Low / Balanced / High). See
+[CHANGELOG.md](CHANGELOG.md) for full details.
 
 ---
 

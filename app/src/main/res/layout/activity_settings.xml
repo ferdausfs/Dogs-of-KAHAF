@@ -27,7 +27,6 @@
                     android:text="Manage Keywords"
                     android:layout_marginBottom="8dp"
                     style="@style/Widget.Material3.Button.OutlinedButton"/>
-                <!-- v9 (2.0.0) — P4-A: schedule rules -->
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnSchedule"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:text="@string/manage_schedule"
@@ -60,6 +59,58 @@
                     <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/swAi"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- v10 (2.1.0) — Sensitivity preset card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/navy_700" app:cardCornerRadius="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/sensitivity_label" android:textColor="@color/cyan_400"
+                    android:textSize="14sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/sensitivity_summary"
+                    android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupSensitivity"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSensLow"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/sensitivity_low"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSensBalanced"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/sensitivity_balanced"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSensHigh"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/sensitivity_high"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+                </com.google.android.material.chip.ChipGroup>
+
+                <TextView
+                    android:id="@+id/tvSensitivityStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_secondary" android:textSize="11sp"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -127,7 +178,9 @@
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:valueFrom="5" android:valueTo="120" android:stepSize="5"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:text="AI Threshold" android:textColor="@color/white"/>
+                    android:layout_marginTop="8dp"
+                    android:text="AI Threshold (advanced — overrides preset)"
+                    android:textColor="@color/white" android:textSize="12sp"/>
                 <com.google.android.material.slider.Slider android:id="@+id/sliderThreshold"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:valueFrom="0.1" android:valueTo="0.95" android:stepSize="0.05"/>
@@ -153,7 +206,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ── New: AI Models (per-model import) ─────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
@@ -169,7 +221,6 @@
                     android:text="Import the two .tflite files from your phone storage. Files are copied into app private storage."
                     android:textColor="@color/text_secondary" android:textSize="12sp"/>
 
-                <!-- ── NSFW model row ── -->
                 <View android:layout_width="match_parent" android:layout_height="1dp"
                     android:layout_marginTop="12dp" android:layout_marginBottom="8dp"
                     android:background="@color/navy_900"/>
@@ -205,7 +256,6 @@
                         style="@style/Widget.Material3.Button.OutlinedButton"/>
                 </LinearLayout>
 
-                <!-- ── Gender model row ── -->
                 <View android:layout_width="match_parent" android:layout_height="1dp"
                     android:layout_marginTop="12dp" android:layout_marginBottom="8dp"
                     android:background="@color/navy_900"/>

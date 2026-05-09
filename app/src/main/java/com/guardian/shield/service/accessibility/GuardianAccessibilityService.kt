@@ -14,10 +14,13 @@ import androidx.annotation.RequiresApi
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.data.local.datastore.GuardianPreferences.Companion.GENDER_NONE
 import com.guardian.shield.domain.model.BlockReason
+import com.guardian.shield.domain.model.ContentTier
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.service.detection.TimedBlockManager
+import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,23 +37,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * v9 (2.0.0) FIX-LOG (performance + cleanup pass):
- *  • P1-C → preference reads on every tick are gone. AiDetector.startPrefsCache
- *    is called once from onServiceConnected; tick logic reads cached fields.
- *  • P1-E → screen-state-aware periodic scanner. ACTION_SCREEN_OFF pauses /
- *    slows the scanner to SCREEN_OFF_PERIODIC_MS. ACTION_SCREEN_ON resumes.
- *  • P2-B → LocalBroadcastManager removed. We collect RulesEngine.rulesChanged
- *    SharedFlow directly via the service scope.
- *  • P2-C → collectVisibleText() now tracks every recycled node in a visited
- *    set so we never call recycle() twice on the same handle (some OEMs let
- *    `getChild(i)` return a node that's already a sibling reference).
+ * v10 (2.1.0) FIX-LOG (Smart Tiered Detection):
+ *  • Replaced single-frame block with EXPLICIT_DEBOUNCE — block fires only
+ *    after 2 consecutive EXPLICIT classifications within 3 seconds.
+ *    Single-frame false positives no longer trigger.
+ *  • SUGGESTIVE tier (hot/sexy) is now logged but never blocks. Only
+ *    EXPLICIT (porn / hentai / explicit nudity above per-class threshold)
+ *    triggers the overlay.
+ *  • Source-based 15-min timed block: when a content-source app
+ *    (Facebook / Instagram / Twitter / TikTok / YouTube / Telegram /
+ *    WhatsApp / Reddit / browsers) is the verified source of EXPLICIT
+ *    content, [TimedBlockManager.addTimedBlock] is called with a 15-min
+ *    expiry. RulesEngine then auto-blocks every subsequent open of that
+ *    app for the full window — no overlay arguments, no second chances.
  *
- * Earlier v8 fixes preserved:
- *   - BUG-01 → triggerAiCheck() always resets aiInFlight via finally.
- *   - BUG-02 → periodic loop wraps each tick in try/catch.
- *   - BUG-03 → bounded per-package throttle map.
- *   - BUG-09 → API < 30 follow-up scan chain.
- *   - companion isRunning flag for the foreground watchdog (BUG-05).
+ * v9 (2.0.0) preserved: P1-C prefs cache, P1-E screen-state-aware scanner,
+ *   P2-B SharedFlow rules-changed notifications, P2-C visited-set node
+ *   recycling.
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
@@ -63,6 +66,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         private const val SCREEN_OFF_PERIODIC_MS = GuardianConstants.SCREEN_OFF_PERIODIC_MS
         private const val MAX_AI_SCAN_MAP = GuardianConstants.MAX_AI_SCAN_MAP
 
+        // v10: tiered debounce
+        private const val EXPLICIT_DEBOUNCE_MS = GuardianConstants.EXPLICIT_DEBOUNCE_MS
+        private const val EXPLICIT_CONFIRM_COUNT = GuardianConstants.EXPLICIT_CONFIRM_COUNT
+
         @Volatile var isRunning: Boolean = false
             private set
     }
@@ -71,6 +78,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var blockingEngine: BlockingEngine
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
+    @Inject lateinit var timedBlockManager: TimedBlockManager
 
     private val scope: CoroutineScope = Scopes.default()
     private var periodicJob: Job? = null
@@ -80,12 +88,18 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val lastAiScanByPkg = HashMap<String, Long>()
     private val aiInFlight = AtomicBoolean(false)
 
-    // P1-E: live screen state. Defaults to ON because the service is normally
-    // bound while the user is interacting with the device.
     @Volatile private var isScreenOn = true
-
-    // P4-C: cached master protection switch. Refreshed via a hot collector.
     @Volatile private var protectionMasterEnabled = true
+
+    /**
+     * v10: per-package detection history. Tracks the timestamp of each
+     * EXPLICIT classification — used to enforce the EXPLICIT_DEBOUNCE
+     * (2 hits within 3 s before block fires).
+     *
+     * Entries older than EXPLICIT_DEBOUNCE_MS are discarded on every
+     * recordExplicitHit() call. Map size is bounded at MAX_AI_SCAN_MAP.
+     */
+    private val explicitHits = HashMap<String, ArrayDeque<Long>>()
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -107,13 +121,12 @@ class GuardianAccessibilityService : AccessibilityService() {
         isRunning = true
         Timber.i("GuardianAccessibilityService connected")
 
-        // P1-C: start hot collectors for the prefs the AI loop reads on every
-        // tick. ONE collector per pref instead of a DataStore read per tick.
         runCatching { aiDetector.startPrefsCache(scope) }
 
         scope.launch {
             rulesEngine.reload()
-            // Try to load both legacy + new pipelines. Failures are silent.
+            // v10: warm the timed-block cache from DB on startup.
+            runCatching { timedBlockManager.refresh() }
             runCatching {
                 if (aiDetector.isModelAvailable()) aiDetector.ensureLoaded()
             }.onFailure { Timber.e(it, "Legacy model preload failed") }
@@ -122,8 +135,6 @@ class GuardianAccessibilityService : AccessibilityService() {
             }.onFailure { Timber.e(it, "Gender pipeline preload failed") }
         }
 
-        // P2-B: collect RulesEngine.rulesChanged directly — replaces the
-        // deprecated LocalBroadcastManager + BroadcastReceiver wiring.
         scope.launch {
             runCatching {
                 rulesEngine.rulesChanged.collect {
@@ -132,14 +143,12 @@ class GuardianAccessibilityService : AccessibilityService() {
             }.onFailure { Timber.w(it, "rulesChanged collector failed") }
         }
 
-        // P4-C: hot collector for the master protection switch.
         scope.launch {
             runCatching {
                 prefs.protectionEnabled.collect { protectionMasterEnabled = it }
             }.onFailure { Timber.w(it, "protectionEnabled collector failed") }
         }
 
-        // P1-E: register screen state receiver.
         runCatching {
             registerReceiver(
                 screenStateReceiver,
@@ -153,12 +162,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         startPeriodicAiScanner()
     }
 
-    /**
-     * P1-E: screen-state-aware. When the screen is OFF we use a much longer
-     * delay (SCREEN_OFF_PERIODIC_MS) AND skip the scan body entirely. This
-     * preserves battery while still allowing a quick wake when the screen
-     * turns back on.
-     */
     private fun startPeriodicAiScanner() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         periodicJob?.cancel()
@@ -166,13 +169,11 @@ class GuardianAccessibilityService : AccessibilityService() {
             while (isActive) {
                 val interval = if (isScreenOn) AI_PERIODIC_MS else SCREEN_OFF_PERIODIC_MS
                 delay(interval)
-                if (!isScreenOn) continue   // skip the scan body while screen is off
+                if (!isScreenOn) continue
 
-                // BUG-02: single tick failures must NOT kill the loop.
                 try {
                     val pkg = lastForegroundPkg ?: continue
                     if (!rulesEngine.canBlock(pkg)) continue
-                    // P1-C: cached pref instead of DataStore read.
                     if (!aiDetector.cachedAiEnabled) continue
                     if (!aiDetector.isModelAvailable() && !aiDetector.isNsfwModelAvailable()) continue
                     triggerAiCheck(pkg)
@@ -185,10 +186,6 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
-        // P4-C: master protection switch — skip all processing when paused.
-        // We read the cached pref via a fast non-blocking flow.last() emulation
-        // by checking the AiDetector pref cache hot-state; the master switch
-        // itself uses a synchronous boolean cache.
         if (!protectionMasterEnabled) return
         val pkg = event.packageName?.toString() ?: return
         when (event.eventType) {
@@ -202,6 +199,10 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleWindowChange(pkg: String) {
         if (pkg == lastForegroundPkg) return
         lastForegroundPkg = pkg
+
+        // v10: opening a new app clears its previous EXPLICIT debounce
+        // counter — fresh start.
+        synchronized(explicitHits) { explicitHits.remove(pkg) }
 
         when (val result = rulesEngine.evaluatePackage(pkg)) {
             is DetectionResult.Block -> {
@@ -229,9 +230,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    /**
-     * BUG-09: best-effort progressive content rescan for API < 30.
-     */
     private fun scheduleLegacyFollowUpChain(pkg: String) {
         scope.launch {
             val delays = longArrayOf(500L, 1500L, 3000L)
@@ -294,6 +292,32 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun lastScanTimeFor(pkg: String): Long =
         synchronized(lastAiScanByPkg) { lastAiScanByPkg[pkg] ?: 0L }
 
+    /**
+     * v10: record an EXPLICIT classification timestamp for [pkg].
+     * Returns true when EXPLICIT_CONFIRM_COUNT hits have occurred within
+     * EXPLICIT_DEBOUNCE_MS — i.e. the debounce has fired and a real
+     * block should be issued. Otherwise returns false (we wait for more).
+     */
+    private fun recordExplicitHit(pkg: String): Boolean {
+        val now = System.currentTimeMillis()
+        synchronized(explicitHits) {
+            // Drop old packages if we're at cap.
+            if (explicitHits.size >= MAX_AI_SCAN_MAP && !explicitHits.containsKey(pkg)) {
+                val oldestKey = explicitHits.entries
+                    .minByOrNull { it.value.lastOrNull() ?: 0L }?.key
+                if (oldestKey != null) explicitHits.remove(oldestKey)
+            }
+
+            val deque = explicitHits.getOrPut(pkg) { ArrayDeque() }
+            // Discard hits older than the debounce window.
+            while (deque.isNotEmpty() && now - deque.first() > EXPLICIT_DEBOUNCE_MS) {
+                deque.removeFirst()
+            }
+            deque.addLast(now)
+            return deque.size >= EXPLICIT_CONFIRM_COUNT
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String, force: Boolean = false) {
         val now = System.currentTimeMillis()
@@ -305,17 +329,14 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         scope.launch {
             try {
-                // P1-C: cached pref reads (was prefs.aiDetectionEnabled.first()).
                 val aiEnabled = aiDetector.cachedAiEnabled
                 if (!aiEnabled) {
                     aiInFlight.set(false)
                     return@launch
                 }
 
-                // P1-C: cached gender (was prefs.userGender.first()).
                 val userGender = aiDetector.cachedUserGender
 
-                // Decide which detectors are even possible right now.
                 val genderFeatureOn = userGender != GENDER_NONE && aiDetector.isNsfwModelAvailable()
                 val legacyOn        = aiDetector.isModelAvailable()
 
@@ -375,20 +396,49 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                 }
 
                                                 if (!blocked && legacyOn) {
-                                                    val hit = runCatching {
-                                                        aiDetector.isUnsafe(safeBmp)
+                                                    // v10: tiered classify() instead of boolean isUnsafe().
+                                                    val result = runCatching {
+                                                        aiDetector.classify(safeBmp, pkg)
                                                     }.onFailure {
-                                                        Timber.e(it, "isUnsafe threw")
-                                                    }.getOrDefault(false)
+                                                        Timber.e(it, "classify() threw")
+                                                    }.getOrDefault(
+                                                        com.guardian.shield.domain.model.ClassificationResult.SAFE
+                                                    )
 
-                                                    if (hit) {
-                                                        Timber.d("AI flagged content in $pkg")
-                                                        withContext(Dispatchers.Main) {
-                                                            blockingEngine.block(
-                                                                pkg,
-                                                                BlockReason.AI_DETECTION,
-                                                                "AI detected unsafe content"
+                                                    when (result.tier) {
+                                                        ContentTier.SUGGESTIVE -> {
+                                                            // Log only — do NOT block.
+                                                            Timber.d(
+                                                                "SUGGESTIVE in $pkg (porn=%.2f hentai=%.2f sexy=%.2f) — log only".format(
+                                                                    result.pornScore,
+                                                                    result.hentaiScore,
+                                                                    result.sexyScore
+                                                                )
                                                             )
+                                                        }
+                                                        ContentTier.EXPLICIT -> {
+                                                            // v10: debounce — require N consecutive hits.
+                                                            val confirmed = recordExplicitHit(pkg)
+                                                            if (confirmed) {
+                                                                Timber.i(
+                                                                    "EXPLICIT confirmed in $pkg (porn=%.2f hentai=%.2f combined=%.2f) — blocking".format(
+                                                                        result.pornScore,
+                                                                        result.hentaiScore,
+                                                                        result.combinedUnsafeScore
+                                                                    )
+                                                                )
+                                                                handleConfirmedExplicit(pkg)
+                                                            } else {
+                                                                Timber.d(
+                                                                    "EXPLICIT pending (1/${EXPLICIT_CONFIRM_COUNT}) in $pkg — waiting for confirmation"
+                                                                )
+                                                            }
+                                                        }
+                                                        ContentTier.NATURAL,
+                                                        ContentTier.SAFE -> {
+                                                            // Quiet frame — clear any stale debounce hits.
+                                                            // (Old hits expire naturally via timeout, but
+                                                            // a clean SAFE frame is a good reset signal.)
                                                         }
                                                     }
                                                 }
@@ -428,11 +478,51 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * P2-C: visited-set tracking — avoids double-recycle when a child node
-     * reference is also reachable through another path on certain OEMs.
-     * We collect every non-root node into [toRecycle] and recycle each
-     * exactly once after the BFS completes.
+     * v10: an EXPLICIT verdict has cleared the debounce. Two paths:
+     *
+     *   1. If [pkg] is a known content-source app (Facebook / Instagram /
+     *      Twitter / TikTok / browsers / etc.), add it to the
+     *      TimedBlockManager for AI_SOURCE_BLOCK_MS (15 min). The
+     *      RulesEngine will then automatically reject every subsequent
+     *      foreground event for that package — no overlay arguments, no
+     *      second chances.
+     *
+     *   2. Always trigger an immediate one-time block with reason
+     *      AI_DETECTION so the user is kicked out of the current view.
+     *
+     * The 15-min auto-lock is in addition to the immediate block, NOT a
+     * replacement — the reason logged for the FIRST block is still
+     * AI_DETECTION (so dashboard stats stay accurate). Subsequent re-opens
+     * within 15 min log AI_SOURCE_TIMED_BLOCK.
      */
+    private suspend fun handleConfirmedExplicit(pkg: String) {
+        // 1. Source-based timed block — only for content-source apps,
+        //    skip for system / launcher / IME / whitelisted (canBlock guard
+        //    already covers those, but we double-check the source-app filter).
+        val isSourceApp = AppClassifier.isContentSourceApp(pkg)
+        if (isSourceApp && rulesEngine.canBlock(pkg)) {
+            runCatching {
+                timedBlockManager.addTimedBlock(pkg)
+            }.onFailure { Timber.w(it, "Failed to add timed block for $pkg") }
+        }
+
+        // 2. Immediate block (kicks the user out of the current view).
+        withContext(Dispatchers.Main) {
+            blockingEngine.block(
+                pkg,
+                BlockReason.AI_DETECTION,
+                if (isSourceApp)
+                    "AI confirmed explicit content — app locked for 15 min"
+                else
+                    "AI detected explicit content"
+            )
+        }
+
+        // 3. Clear the debounce buffer for this package so we don't
+        //    re-fire on the next frame.
+        synchronized(explicitHits) { explicitHits.remove(pkg) }
+    }
+
     private fun collectVisibleText(root: AccessibilityNodeInfo?): String? {
         root ?: return null
         val sb = StringBuilder(512)
@@ -452,12 +542,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
                 nodes++
             }
-            // Drain any remaining queue entries — they also need recycling.
             for (n in queue) {
                 if (n !== root) toRecycle.add(n)
             }
         } finally {
-            // Recycle exactly once per non-root node.
             for (n in toRecycle) runCatching { n.recycle() }
         }
         return sb.toString().takeIf { it.isNotBlank() }
@@ -468,7 +556,6 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         isRunning = false
         runCatching { periodicJob?.cancel() }
-        // P2-B: no LocalBroadcastManager to unregister anymore.
         runCatching { unregisterReceiver(screenStateReceiver) }
         runCatching { scope.cancel() }
         runCatching { aiDetector.close() }

@@ -47,3 +47,19 @@ data class ScheduleRuleEntity(
     val enabled: Boolean,
     val createdAt: Long
 )
+
+/**
+ * v10 (2.1.0): timed block records — used by the source-based 15-min
+ * auto-lock feature. When AI confirms EXPLICIT material is coming from a
+ * content-source app, that app's package is added here with an expiry
+ * timestamp. RulesEngine consults this on every package evaluation and
+ * blocks until `expiresAt` is in the past.
+ */
+@Entity(tableName = "timed_blocks")
+data class TimedBlockEntity(
+    @PrimaryKey val packageName: String,
+    val expiresAt: Long,
+    /** BlockReason.name — usually AI_SOURCE_TIMED_BLOCK. */
+    val reason: String,
+    val createdAt: Long
+)

@@ -40,4 +40,20 @@
     <string name="manage_schedule">Manage Schedule Rules</string>
     <string name="schedule_active">Active %1$02d:%2$02d – %3$02d:%4$02d</string>
     <string name="schedule_disabled">No schedule</string>
+
+    <!-- v10 (2.1.0) — Smart Tiered Detection -->
+    <string name="sensitivity_label">Detection Sensitivity</string>
+    <string name="sensitivity_summary">Pick a preset. NSFW = block, Hot/Sexy = log only, Natural = ignore.</string>
+    <string name="sensitivity_low">Low</string>
+    <string name="sensitivity_low_desc">Only obvious explicit content. Fewest false positives.</string>
+    <string name="sensitivity_balanced">Balanced</string>
+    <string name="sensitivity_balanced_desc">Recommended. Blocks porn / hentai / nudity, ignores hot photos.</string>
+    <string name="sensitivity_high">High</string>
+    <string name="sensitivity_high_desc">Catches more, may have some false positives.</string>
+
+    <string name="timed_block_title">Auto-Locked Apps</string>
+    <string name="timed_block_summary">Apps temporarily locked because AI detected explicit content from them.</string>
+    <string name="timed_block_remaining">%1$s — locked for %2$d min %3$d s</string>
+    <string name="timed_block_clear">Unlock now</string>
+    <string name="block_reason_source_timed">App auto-locked: AI confirmed explicit content from this source.</string>
 </resources>

@@ -20,6 +20,7 @@ import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.setup.PinVerifyActivity
+import com.guardian.shield.util.GuardianConstants
 import com.guardian.shield.viewmodel.SettingsEvent
 import com.guardian.shield.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,12 +33,9 @@ import java.io.IOException
 import javax.inject.Inject
 
 /**
- * v8 FIX-LOG (stability pass):
- *  • BUG-13 → legacy combined-model import is now performed on
- *    Dispatchers.IO via viewModelScope-equivalent lifecycleScope. We also
- *    do the same TFLite "TFL3" header sniff used by ModelImportManager so
- *    junk files are rejected, and update the on-screen status to "Importing…"
- *    while the copy runs. Previously a 150 MB file would ANR on Main.
+ * v10 (2.1.0): added Sensitivity preset chips (Low / Balanced / High).
+ *
+ * v8 BUG-13 preserved: legacy combined-model copy on Dispatchers.IO.
  */
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
@@ -46,18 +44,14 @@ class SettingsActivity : AppCompatActivity() {
     private val vm: SettingsViewModel by viewModels()
     @Inject lateinit var pinManager: PinManager
 
-    /** Suppress chip-listener feedback while we sync UI ← state. */
     @Volatile private var bindingGenderFromState = false
-
-    /** Which model we're picking right now — written before launching [pickModel]. */
+    @Volatile private var bindingSensitivityFromState = false
     @Volatile private var pendingModelName: String? = null
 
-    /** Legacy combined-model picker (existing behavior, kept). */
     private val pickLegacyModel = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> uri?.let { copyLegacyModel(it) } }
 
-    /** New per-model picker — routes to [pendingModelName]. */
     private val pickModel = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -96,7 +90,6 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnKeywords.setOnClickListener {
             runCatching { startActivity(Intent(this, KeywordActivity::class.java)) }
         }
-        // v9 (2.0.0) — P4-A: schedule rules entry-point.
         binding.btnSchedule.setOnClickListener {
             runCatching { startActivity(Intent(this, ScheduleActivity::class.java)) }
         }
@@ -105,7 +98,6 @@ class SettingsActivity : AppCompatActivity() {
             runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
         }
 
-        // ── New "AI Models" section listeners ──
         binding.btnImportNsfwModel.setOnClickListener {
             launchPickerFor(AiDetector.NSFW_MODEL_FILE)
         }
@@ -124,7 +116,6 @@ class SettingsActivity : AppCompatActivity() {
         binding.sliderDelay.addOnChangeListener { _, value, _ -> vm.setDelaySeconds(value.toInt()) }
         binding.sliderThreshold.addOnChangeListener { _, value, _ -> vm.setAiThreshold(value) }
 
-        // Gender chips — Material ChipGroup with singleSelection.
         binding.chipGroupGender.setOnCheckedStateChangeListener { _, checkedIds ->
             if (bindingGenderFromState) return@setOnCheckedStateChangeListener
             val gender = when (checkedIds.firstOrNull()) {
@@ -136,7 +127,17 @@ class SettingsActivity : AppCompatActivity() {
             vm.setUserGender(gender)
         }
 
-        // ── State observer ──
+        // v10: sensitivity preset chips.
+        binding.chipGroupSensitivity.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (bindingSensitivityFromState) return@setOnCheckedStateChangeListener
+            val level = when (checkedIds.firstOrNull()) {
+                binding.chipSensLow.id      -> GuardianConstants.SENSITIVITY_LOW
+                binding.chipSensHigh.id     -> GuardianConstants.SENSITIVITY_HIGH
+                else                        -> GuardianConstants.SENSITIVITY_BALANCED
+            }
+            vm.setSensitivity(level)
+        }
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.ui.collect { s ->
@@ -150,7 +151,6 @@ class SettingsActivity : AppCompatActivity() {
                         else          -> "No model uploaded"
                     }
 
-                    // Sync gender chips without re-triggering the listener.
                     bindingGenderFromState = true
                     try {
                         val targetId = when (s.userGender) {
@@ -165,6 +165,30 @@ class SettingsActivity : AppCompatActivity() {
                         bindingGenderFromState = false
                     }
 
+                    // v10: sync sensitivity chips.
+                    bindingSensitivityFromState = true
+                    try {
+                        val targetId = when (s.sensitivity) {
+                            GuardianConstants.SENSITIVITY_LOW  -> binding.chipSensLow.id
+                            GuardianConstants.SENSITIVITY_HIGH -> binding.chipSensHigh.id
+                            else                               -> binding.chipSensBalanced.id
+                        }
+                        if (binding.chipGroupSensitivity.checkedChipId != targetId) {
+                            binding.chipGroupSensitivity.check(targetId)
+                        }
+                    } finally {
+                        bindingSensitivityFromState = false
+                    }
+
+                    binding.tvSensitivityStatus.text = when (s.sensitivity) {
+                        GuardianConstants.SENSITIVITY_LOW ->
+                            "Low — only obvious explicit content (threshold 0.85)."
+                        GuardianConstants.SENSITIVITY_HIGH ->
+                            "High — catches more, may have false positives (threshold 0.65)."
+                        else ->
+                            "Balanced (recommended) — blocks NSFW, ignores hot photos (threshold 0.78)."
+                    }
+
                     binding.tvGenderModelStatus.text = when {
                         s.userGender == GENDER_NONE ->
                             "Opposite-gender filter is OFF (gender not set)."
@@ -174,7 +198,6 @@ class SettingsActivity : AppCompatActivity() {
                             "Active: blocking ${if (s.userGender == GENDER_MALE) "female" else "male"} NSFW content."
                     }
 
-                    // ── Per-model status rendering ──
                     renderModelSlot(
                         statusView   = binding.tvNsfwModelStatus,
                         importBtn    = binding.btnImportNsfwModel,
@@ -195,7 +218,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // ── One-shot events (toasts) ──
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.events.collect { evt ->
@@ -212,7 +234,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    /** Render a single model slot row (status text + import/reset button states). */
     private fun renderModelSlot(
         statusView: android.widget.TextView,
         importBtn: com.google.android.material.button.MaterialButton,
@@ -233,7 +254,6 @@ class SettingsActivity : AppCompatActivity() {
             else             -> missingLabel
         }
 
-        // While importing, disable both buttons to prevent double-taps.
         val enabled = !slot.isImporting
         importBtn.isEnabled = enabled
         resetBtn.isEnabled = enabled && slot.isImported
@@ -244,7 +264,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun launchPickerFor(modelName: String) {
         pendingModelName = modelName
-        // Most file pickers don't return a useful MIME for .tflite, so accept */*.
         pickModel.launch(arrayOf("*/*"))
     }
 
@@ -267,11 +286,6 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * BUG-13: legacy combined-model copy now runs on Dispatchers.IO with
-     *         on-screen progress and TFLite header validation. Previously
-     *         this ran on the Main thread → guaranteed ANR for >50 MB models.
-     */
     private fun copyLegacyModel(uri: Uri) {
         binding.btnUploadModel.isEnabled = false
         binding.tvModelStatus.text = "Importing…"
@@ -334,7 +348,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    /** TFLite FlatBuffer identifier "TFL3" lives at byte offset 4. */
     private fun isValidTfliteFile(file: File): Boolean = runCatching {
         file.inputStream().use { input ->
             val header = ByteArray(8)

@@ -19,30 +19,29 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * v9 (2.0.0) FIX-LOG:
- *  • P2-B → expose a SharedFlow<Unit> "rulesChanged" instead of relying on
- *    LocalBroadcastManager. GuardianAccessibilityService collects it directly
- *    via coroutine, removing the deprecated AndroidX dependency.
- *  • P4-A → schedule rules are part of the snapshot. isScheduleBlocked(pkg)
- *    returns true if NOW falls inside a per-package time window (with
- *    overnight wrap support) on an enabled day.
+ * v10 (2.1.0) FIX-LOG:
+ *  • Source-based timed-block awareness — evaluatePackage() now consults
+ *    [TimedBlockManager] before returning Allow. If a package is in the
+ *    15-min auto-lock window it returns Block(AI_SOURCE_TIMED_BLOCK).
  *
- * Earlier v8 BUG-08 still applies: all read paths go through a single
- * immutable [RulesSnapshot] replaced atomically.
+ * v9 (2.0.0):
+ *  • P2-B → SharedFlow<Unit> "rulesChanged" replaces LocalBroadcastManager.
+ *  • P4-A → schedule rules in the snapshot.
+ *
+ * v8 BUG-08 still applies: all reads via single immutable RulesSnapshot.
  */
 @Singleton
 class RulesEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val getApps: GetAllAppRulesSyncUseCase,
     private val getKws: GetAllKeywordsSyncUseCase,
-    private val getSchedules: GetAllScheduleRulesSyncUseCase
+    private val getSchedules: GetAllScheduleRulesSyncUseCase,
+    private val timedBlockManager: TimedBlockManager
 ) {
     companion object {
-        // Kept for back-compat in case any external code still references it.
         const val ACTION_RULES_CHANGED = "com.guardian.shield.ACTION_RULES_CHANGED"
     }
 
-    /** Atomic, fully-coherent view of all rules. Replaced as one reference. */
     private data class RulesSnapshot(
         val blocked: Set<String>,
         val whitelist: Set<String>,
@@ -54,7 +53,6 @@ class RulesEngine @Inject constructor(
     private val mutex = Mutex()
     private val ownPackage = context.packageName
 
-    // P2-B: external observers use this flow instead of LocalBroadcastManager.
     private val _rulesChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val rulesChanged: SharedFlow<Unit> = _rulesChanged.asSharedFlow()
 
@@ -72,9 +70,6 @@ class RulesEngine @Inject constructor(
         val schedules = runCatching { getSchedules() }.getOrDefault(emptyList())
         val ime = AppClassifier.loadInputMethodPackages(context)
 
-        // Build the new snapshot completely BEFORE swapping the volatile
-        // reference — readers either see the fully-old snapshot or the
-        // fully-new one, never a mix.
         val newSnapshot = RulesSnapshot(
             whitelist = apps.filter { it.isWhitelisted }.map { it.packageName }.toSet(),
             blocked = apps.filter { it.isBlocked && !it.isWhitelisted }
@@ -84,7 +79,8 @@ class RulesEngine @Inject constructor(
             scheduleRules = schedules.associateBy { it.packageName }
         )
         snapshot = newSnapshot
-        // P2-B: notify observers (replaces LocalBroadcastManager).
+        // v10: also refresh the timed-block cache.
+        runCatching { timedBlockManager.refresh() }
         _rulesChanged.tryEmit(Unit)
     }
 
@@ -96,7 +92,14 @@ class RulesEngine @Inject constructor(
         if (isAlwaysAllowed(pkg, snap)) return DetectionResult.Allow
         if (snap.whitelist.contains(pkg)) return DetectionResult.Allow
         if (snap.blocked.contains(pkg)) return DetectionResult.Block(BlockReason.APP_BLOCKED, pkg)
-        // P4-A: schedule-based blocking (e.g. social media 22:00–06:00).
+        // v10: source-based timed-block (15 min) takes precedence over schedule.
+        if (timedBlockManager.isBlockedSync(pkg)) {
+            val remainingSec = (timedBlockManager.remainingMillis(pkg) / 1000L).coerceAtLeast(1L)
+            return DetectionResult.Block(
+                BlockReason.AI_SOURCE_TIMED_BLOCK,
+                "Auto-locked for ${remainingSec}s after AI detection"
+            )
+        }
         if (isScheduleBlocked(pkg, snap)) {
             return DetectionResult.Block(BlockReason.SCHEDULE_BLOCKED, pkg)
         }
@@ -127,11 +130,6 @@ class RulesEngine @Inject constructor(
         return true
     }
 
-    /**
-     * P4-A: returns true if [pkg] currently falls inside its scheduled-block
-     * time window. Supports overnight ranges (e.g. start=22:00, end=06:00).
-     * Days are 0-indexed where 0 = Sunday (matches Calendar.DAY_OF_WEEK - 1).
-     */
     fun isScheduleBlocked(pkg: String): Boolean = isScheduleBlocked(pkg, snapshot)
 
     private fun isScheduleBlocked(pkg: String, snap: RulesSnapshot): Boolean {
@@ -145,7 +143,6 @@ class RulesEngine @Inject constructor(
         return if (startMinutes <= endMinutes) {
             nowMinutes in startMinutes until endMinutes
         } else {
-            // Overnight wrap: e.g. 22:00–06:00.
             nowMinutes >= startMinutes || nowMinutes < endMinutes
         }
     }

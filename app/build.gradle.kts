@@ -14,10 +14,16 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        // v9 (2.0.0): performance pass — GPU delegate, mmap loading,
-        // pref caching, screen-state-aware scanning, schedule rules.
-        versionCode = 3
-        versionName = "2.0.0"
+        // v10 (2.1.0): Smart Tiered Detection — anti-aggressive policy.
+        //   • Three-tier classification (SAFE / NATURAL / SUGGESTIVE / EXPLICIT).
+        //   • Per-class thresholds (porn / hentai / sexy treated separately).
+        //   • EXPLICIT_DEBOUNCE — block only after 2 consecutive explicit
+        //     detections within 3 s (single-frame false positives suppressed).
+        //   • Source-based 15-min auto-lock for content-source apps.
+        //   • Sensitivity preset (LOW / BALANCED / HIGH).
+        //   • Default threshold 0.7 → 0.78.
+        versionCode = 4
+        versionName = "2.1.0"
     }
 
     buildTypes {
@@ -39,8 +45,6 @@ android {
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
-// v9 (2.0.0): Room AutoMigration requires schema export. Schemas land in
-// app/schemas/ and should be committed so future migrations can diff them.
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -79,17 +83,7 @@ dependencies {
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    // P1-A: GPU delegate (3-5x faster inference) — falls back to CPU on
-    // unsupported devices.
-    // FIX: tensorflow-lite-gpu-delegate-plugin:0.4.4 removed — it is the
-    // Task Library plugin API (not used here) and conflicts with
-    // tensorflow-lite-gpu:2.16.1 by pulling an incompatible version of
-    // tensorflow-lite-gpu-api, causing GpuDelegateFactory.Options to be
-    // unresolved at compile time.
     implementation("org.tensorflow:tensorflow-lite-gpu:2.16.1")
-
-    // P2-B: LocalBroadcastManager removed — replaced by SharedFlow.
-    // implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")

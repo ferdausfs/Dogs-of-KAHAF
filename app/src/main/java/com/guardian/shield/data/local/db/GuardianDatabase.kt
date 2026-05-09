@@ -4,20 +4,23 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 /**
+ * v10 (2.1.0):
+ *  • Schema bumped to v3 — adds `timed_blocks` table for the source-based
+ *    15-min auto-lock feature. Manual Migration(2 → 3) defined in
+ *    AppModule.kt.
+ *
  * v9 (2.0.0):
  *  • Schema bumped to v2 to include the new `schedule_rules` table (P4-A).
- *  • Manual Migration(1 → 2) defined in AppModule.kt — AutoMigration was
- *    removed because it requires a committed `1.json` schema file in
- *    app/schemas/ which was absent, causing KSP to fail at build time.
  */
 @Database(
     entities = [
         AppRuleEntity::class,
         KeywordRuleEntity::class,
         BlockEventEntity::class,
-        ScheduleRuleEntity::class
+        ScheduleRuleEntity::class,
+        TimedBlockEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -25,4 +28,5 @@ abstract class GuardianDatabase : RoomDatabase() {
     abstract fun keywordDao(): KeywordDao
     abstract fun blockEventDao(): BlockEventDao
     abstract fun scheduleRuleDao(): ScheduleRuleDao
+    abstract fun timedBlockDao(): TimedBlockDao
 }

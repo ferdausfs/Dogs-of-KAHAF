@@ -77,3 +77,34 @@ interface ScheduleRuleDao {
     @Query("DELETE FROM schedule_rules WHERE packageName = :pkg")
     suspend fun deleteByPackage(pkg: String)
 }
+
+/**
+ * v10 (2.1.0) — DAO for the source-based 15-min timed-block feature.
+ *
+ * Reads filter out expired entries automatically via a `:now` parameter
+ * so callers never see stale rows. Old rows are cleaned by the
+ * `pruneExpired()` call which fires opportunistically on access.
+ */
+@Dao
+interface TimedBlockDao {
+    @Query("SELECT * FROM timed_blocks WHERE expiresAt > :now ORDER BY expiresAt DESC")
+    fun observeActive(now: Long): Flow<List<TimedBlockEntity>>
+
+    @Query("SELECT * FROM timed_blocks WHERE expiresAt > :now")
+    suspend fun getActive(now: Long): List<TimedBlockEntity>
+
+    @Query("SELECT * FROM timed_blocks WHERE packageName = :pkg AND expiresAt > :now LIMIT 1")
+    suspend fun getActiveFor(pkg: String, now: Long): TimedBlockEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: TimedBlockEntity)
+
+    @Query("DELETE FROM timed_blocks WHERE packageName = :pkg")
+    suspend fun deleteByPackage(pkg: String)
+
+    @Query("DELETE FROM timed_blocks WHERE expiresAt <= :now")
+    suspend fun pruneExpired(now: Long)
+
+    @Query("DELETE FROM timed_blocks")
+    suspend fun deleteAll()
+}

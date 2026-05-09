@@ -3,6 +3,7 @@ package com.guardian.shield.data.local.datastore
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -13,12 +14,14 @@ import javax.inject.Singleton
 private val Context.dataStore by preferencesDataStore(name = "guardian_prefs")
 
 /**
- * v9 (2.0.0):
- *  • P4-C → KEY_PROTECTION_ENABLED master switch (default true). The
- *    AccessibilityService skips all processing when this is false, allowing
- *    a quick FAB toggle from the dashboard without going into Settings.
+ * v10 (2.1.0):
+ *  • KEY_SENSITIVITY ("LOW" / "BALANCED" / "HIGH") — high-level preset
+ *    that drives the effective AI threshold. Default BALANCED (0.78).
+ *  • Default ai_threshold raised 0.7 → 0.78 (BALANCED preset).
  *
- *  Earlier v8 BUG-12 KEY_RULES_VERSION counter preserved.
+ * v9 (2.0.0):
+ *  • KEY_PROTECTION_ENABLED master switch.
+ *  • KEY_RULES_VERSION counter.
  */
 @Singleton
 class GuardianPreferences @Inject constructor(
@@ -42,9 +45,11 @@ class GuardianPreferences @Inject constructor(
         // BUG-12: monotonically-increasing rules version counter.
         val KEY_RULES_VERSION  = intPreferencesKey("rules_version")
 
-        // P4-C: master protection switch (FAB quick toggle on dashboard).
-        // Default true to preserve existing behaviour for upgraded installs.
+        // P4-C: master protection switch.
         val KEY_PROTECTION_ENABLED = booleanPreferencesKey("protection_enabled")
+
+        // v10 (2.1.0): sensitivity preset.
+        val KEY_SENSITIVITY = stringPreferencesKey("sensitivity")
     }
 
     val keywordFilterEnabled: Flow<Boolean> =
@@ -53,8 +58,11 @@ class GuardianPreferences @Inject constructor(
         context.dataStore.data.map { it[KEY_AI_DETECTION] ?: false }
     val delaySeconds: Flow<Int> =
         context.dataStore.data.map { it[KEY_DELAY_SECONDS] ?: 30 }
+
+    /** v10: default raised 0.7 → 0.78 to match the BALANCED sensitivity preset. */
     val aiThreshold: Flow<Float> =
-        context.dataStore.data.map { it[KEY_AI_THRESHOLD] ?: 0.7f }
+        context.dataStore.data.map { it[KEY_AI_THRESHOLD] ?: GuardianConstants.DEFAULT_AI_THRESHOLD }
+
     val isFirstRun: Flow<Boolean> =
         context.dataStore.data.map { it[KEY_FIRST_RUN] ?: true }
 
@@ -64,9 +72,13 @@ class GuardianPreferences @Inject constructor(
     val rulesVersion: Flow<Int> =
         context.dataStore.data.map { it[KEY_RULES_VERSION] ?: 0 }
 
-    /** P4-C: master protection switch. Default true. */
     val protectionEnabled: Flow<Boolean> =
         context.dataStore.data.map { it[KEY_PROTECTION_ENABLED] ?: true }
+
+    /** v10: sensitivity preset. Default BALANCED. */
+    val sensitivity: Flow<String> = context.dataStore.data.map {
+        it[KEY_SENSITIVITY] ?: GuardianConstants.SENSITIVITY_BALANCED
+    }
 
     suspend fun setKeywordFilter(v: Boolean) = context.dataStore.edit { it[KEY_KEYWORD_FILTER] = v }
     suspend fun setAiDetection(v: Boolean)   = context.dataStore.edit { it[KEY_AI_DETECTION] = v }
@@ -88,11 +100,19 @@ class GuardianPreferences @Inject constructor(
         it[KEY_RULES_VERSION] = curr + 1
     }
 
-    /** P4-C: snapshot read for guard checks in the AccessibilityService. */
     suspend fun currentProtectionEnabled(): Boolean = protectionEnabled.first()
 
-    /** P4-C: persist the master protection switch. */
     suspend fun setProtectionEnabled(v: Boolean) = context.dataStore.edit {
         it[KEY_PROTECTION_ENABLED] = v
+    }
+
+    /** v10: persist the sensitivity preset. */
+    suspend fun setSensitivity(level: String) = context.dataStore.edit {
+        it[KEY_SENSITIVITY] = when (level) {
+            GuardianConstants.SENSITIVITY_LOW,
+            GuardianConstants.SENSITIVITY_BALANCED,
+            GuardianConstants.SENSITIVITY_HIGH -> level
+            else -> GuardianConstants.SENSITIVITY_BALANCED
+        }
     }
 }
