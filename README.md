@@ -1,79 +1,138 @@
-# Guardian Shield (Dogs of KAHAF)
+# 🛡️ Guardian Shield
 
-**Current version: v13 (2.1.3)** — Build-fail fix + 3-pass stability audit.
-See [`CHANGELOG.md`](./CHANGELOG.md) for the full v13 fix list.
+**Adult Content Blocker & Digital Discipline App for Android**
 
-A privacy-first, on-device content blocker for Android. Uses the
-Accessibility Service to monitor foreground apps & screen content and
-combines:
-
-- **App-level rules** — block / whitelist any installed app.
-- **Keyword filter** — substring + regex match on visible text.
-- **Time-based schedules** — block apps during recurring windows
-  (e.g. social media 22:00–06:00).
-- **AI NSFW detection** — TFLite-powered tiered classifier
-  (SAFE / NATURAL / SUGGESTIVE / EXPLICIT) with anti-false-positive
-  debouncing and per-app threshold boosts for "heavy image" apps.
-- **Source-based 15-min auto-lock** — when AI confirms EXPLICIT
-  material from a content-source app (Facebook / Instagram / etc.),
-  the app is locked for 15 minutes.
-
-All inference runs **on-device**. **No telemetry, no network calls.**
+Native Android app — Kotlin, Clean Architecture, MVVM, Hilt, Room, TFLite.
 
 ---
 
-## Build (CI)
+## 🚀 Quick Start — Build APK via GitHub Actions
 
-Push to `main` / `master` / `dev` → GitHub Actions builds the debug
-APK and uploads it as a downloadable artifact (`GuardianShield-debug-<run>`).
+1. Push this repo to GitHub (any branch: `main` / `master` / `dev`)
+2. GitHub Actions starts automatically
+3. Go to **Actions** tab → `Build Debug APK` → download `GuardianShield-debug-*.apk` artifact
 
-The CI workflow (`.github/workflows/build-debug.yml`) provisions
-Gradle 8.7 + JDK 17, regenerates the (gitignored) gradle-wrapper jar,
-accepts SDK licenses, then runs `./gradlew assembleDebug`.
+That's it. No local Android Studio needed.
 
-## Build (local)
+---
+
+## 🏗️ Local Build (Android Studio)
 
 ```bash
-cp local.properties.template local.properties
-# edit local.properties → set sdk.dir to your Android SDK path
+git clone https://github.com/YOUR_USER/GuardianShield
+cd GuardianShield
 ./gradlew assembleDebug
+# APK → app/build/outputs/apk/debug/app-debug.apk
 ```
 
-If `gradlew` reports `ClassNotFoundException: GradleWrapperMain`, the
-gradle-wrapper jar is missing (gitignored). Regenerate it once:
+**Requirements:**
+- JDK 17+
+- Android SDK (API 34)
+- Gradle 8.4 (auto-downloaded by wrapper)
 
-```bash
-gradle wrapper --gradle-version 8.7 --distribution-type bin
+---
+
+## 📱 First-Time Setup on Device
+
+1. Install APK (enable "Install from unknown sources")
+2. Open app → **Set PIN** (protects settings)
+3. Tap **"Enable Accessibility Service"** → Settings → Guardian Shield → Enable
+4. Add apps to **Blocked List** in Settings
+5. Optionally upload `.tflite` model for AI detection
+
+---
+
+## 🧠 Architecture
+
+```
+Clean Architecture + MVVM
+
+UI Layer        → Activities, Adapters
+ViewModel Layer → StateFlow, lifecycle-aware
+Domain Layer    → UseCases, Models
+Data Layer      → Room DB, DataStore, EncryptedSharedPrefs
+
+Key Services:
+  RulesEngine              ← whitelist-first detection priority
+  GuardianAccessibilityService ← event-driven, no polling
+  BlockingEngine           ← HOME + BlockOverlayActivity
+  AiDetector               ← TFLite, event-triggered only
+  PinManager               ← SHA-256 hash, EncryptedSharedPrefs
 ```
 
-(You need a Gradle ≥ 8.7 binary on PATH for the regenerate step;
-afterwards, `./gradlew` is self-sufficient.)
+**Whitelist Priority (immutable order):**
+```
+1. Own package       → always allow
+2. System UI         → always allow
+3. WHITELIST         → always allow (overrides EVERYTHING)
+4. Blocked app list  → block
+5. Keyword match     → block
+6. AI detection      → block
+```
 
-## Toolchain
+---
 
-| Tool        | Version     |
-|-------------|-------------|
-| AGP         | 8.5.2       |
-| Gradle      | 8.7         |
-| Kotlin      | 1.9.24      |
-| KSP         | 1.9.24-1.0.20 |
-| Hilt        | 2.52        |
-| Room        | 2.6.1       |
-| compileSdk  | 35          |
-| minSdk      | 26          |
-| targetSdk   | 35          |
-| JDK target  | 17          |
+## 📦 Tech Stack
 
-## Permissions used
+| Component | Library |
+|-----------|---------|
+| Language | Kotlin |
+| DI | Hilt 2.50 |
+| DB | Room 2.6.1 |
+| Prefs | DataStore 1.0 |
+| Secure Storage | EncryptedSharedPreferences |
+| Async | Coroutines + StateFlow |
+| AI | TensorFlow Lite 2.14 |
+| UI | Material Design 3 + ViewBinding |
+| Logging | Timber |
+| Min SDK | API 26 (Android 8.0) |
 
-Required for protection: `BIND_ACCESSIBILITY_SERVICE`,
-`SYSTEM_ALERT_WINDOW`, `FOREGROUND_SERVICE` +
-`FOREGROUND_SERVICE_SPECIAL_USE`, `RECEIVE_BOOT_COMPLETED`,
-`POST_NOTIFICATIONS`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+---
 
-Optional but recommended: `BIND_DEVICE_ADMIN` (uninstall protection),
-`PACKAGE_USAGE_STATS`.
+## 🔐 Security
 
-## License
+- PIN stored as **SHA-256 hash** only — never plain text
+- Sensitive config in **EncryptedSharedPreferences** (AES-256-GCM)
+- No network calls — fully offline
+- No analytics / tracking
+- ProGuard enabled for release builds
 
-Private project — no public license attached.
+---
+
+## 🤖 AI Detection (Optional)
+
+Supply your own `.tflite` model:
+- **2-class**: `[safe_score, unsafe_score]`
+- **5-class**: `[drawings, hentai, neutral, porn, sexy]`
+
+Upload via Settings → AI Screen Detection → Upload Model.
+
+Model is **not bundled** in the APK. Stored in `filesDir/guardian_model.tflite`.
+
+- --
+
+## 📁 Project Structure
+
+```
+app/src/main/java/com/guardian/shield/
+├── domain/
+│   ├── model/          AppRule, KeywordRule, BlockEvent, DetectionResult
+│   └── usecase/        12 clean use cases
+├── data/
+│   ├── local/db/       Room entities, DAOs, mappers
+│   ├── local/datastore/ GuardianPreferences, SecureStorage
+│   └── repository/     interfaces + implementations
+├── service/
+│   ├── detection/      RulesEngine, PinManager, AiDetector
+│   ├── blocker/        BlockingEngine, ForegroundService
+│   └── accessibility/  GuardianAccessibilityService
+├── di/                 Hilt modules
+├── viewmodel/          Dashboard, AppList, Settings, Keyword, PIN
+├── ui/
+│   ├── dashboard/      MainActivity, BlockEventAdapter
+│   ├── overlay/        BlockOverlayActivity
+│   ├── unlock/         DelayUnlockActivity
+│   ├── setup/          PinSetupActivity, PinVerifyActivity
+│   └── settings/       SettingsActivity, Adapters
+└── receiver/           BootReceiver
+```

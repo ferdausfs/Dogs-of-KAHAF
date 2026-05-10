@@ -1,17 +1,12 @@
-// v13 (2.1.3) FULL OPTIMISATION + BUILD-FIX:
-//  • Bumped AGP 8.3.2 → 8.5.2 (officially supports compileSdk 35 — no
-//    more `android.suppressUnsupportedCompileSdk` hack required).
-//  • Bumped Gradle wrapper 8.4 → 8.7 (AGP 8.5.x requires Gradle 8.7+).
-//  • Kotlin 1.9.24 + KSP 1.9.24-1.0.20 kept (proven stable with Hilt 2.52).
-//  • Hilt stays 2.52 (compatible with AGP 8.5.x and KSP 1.9.24-1.0.20).
 plugins {
-    id 'com.android.application' version '8.5.2' apply false
-    id 'com.android.library' version '8.5.2' apply false
-    id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
-    id 'com.google.dagger.hilt.android' version '2.52' apply false
-    id 'com.google.devtools.ksp' version '1.9.24-1.0.20' apply false
+    id 'com.android.application' version '8.1.4' apply false
+    id 'com.android.library' version '8.1.4' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.10' apply false
+    id 'com.google.dagger.hilt.android' version '2.48.1' apply false
+    id 'com.google.devtools.ksp' version '1.9.10-1.0.13' apply false
 }
 
+// FIX: task clean deprecated → tasks.register
 tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }

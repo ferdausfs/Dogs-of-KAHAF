@@ -14,39 +14,3 @@ fun BlockEventEntity.toDomain() = BlockEvent(
     matchedTerm, timestamp
 )
 fun BlockEvent.toEntity() = BlockEventEntity(id, packageName, reason.name, matchedTerm, timestamp)
-
-// ── v9 (2.0.0) — P4-A: schedule rule mappers ─────────────────────────────
-
-fun ScheduleRuleEntity.toDomain(): ScheduleRule {
-    val days = mutableSetOf<Int>()
-    for (i in 0..6) {
-        if ((enabledDaysMask shr i) and 1 == 1) days.add(i)
-    }
-    return ScheduleRule(
-        packageName = packageName,
-        startHour = startHour,
-        startMinute = startMinute,
-        endHour = endHour,
-        endMinute = endMinute,
-        enabledDays = days,
-        enabled = enabled,
-        createdAt = createdAt
-    )
-}
-
-fun ScheduleRule.toEntity(): ScheduleRuleEntity {
-    var mask = 0
-    enabledDays.forEach { d ->
-        if (d in 0..6) mask = mask or (1 shl d)
-    }
-    return ScheduleRuleEntity(
-        packageName = packageName,
-        startHour = startHour,
-        startMinute = startMinute,
-        endHour = endHour,
-        endMinute = endMinute,
-        enabledDaysMask = mask,
-        enabled = enabled,
-        createdAt = createdAt
-    )
-}

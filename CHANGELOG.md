@@ -1,161 +1,104 @@
-# Guardian Shield — v14 (2.1.4) FOUR-PASS REVIEW + STABILITY PATCH 4
+# Guardian Shield — Bug Review & Fix Update
 
-versionCode: 7 → **8**
-versionName: 2.1.3 → **2.1.4**
-
-## 🚨 Why this release exists
-
-User report (after v13): *"app ta review koro full app... review ses korar
-por abar review korbe .. tokkhon review korte thakebe jotokhono kono na
-kono bug pawa jay... সব fix সহ optimized ZIP দিন"*
-(Review the full app, then re-review, keep reviewing until no more bugs
-are found, then ship a fully optimised ZIP.)
-
-This release is the result of **four independent top-to-bottom audits**
-of the v13 code. **Five defects were found and fixed** across four
-review passes; the fifth audit pass found no remaining bugs.
+This update addresses the user-reported issue **"AI detects adult images/content but does not block them"** plus a full pass of bugs found across the codebase.
 
 ---
 
-## 🔧 Fixes added in v14 (2.1.4)
+## 🔴 P0 — Why AI was detecting but not blocking
 
-### 1. AiDetector preference-cache goes stale after accessibility-service restart — CRITICAL FIX
-**Root cause:** `AiDetector.startPrefsCache(scope)` launched its four
-preference collectors on the **caller's** scope — which was the
-accessibility-service's own `Scopes.default()` scope. When the OS killed
-or recycled the accessibility service (MIUI, ColorOS, Android 14
-permission-reset), that scope cancelled and the collectors died. A new
-service instance would then call `startPrefsCache(newScope)`, but the
-`@Volatile prefsCacheStarted = true` flag made it an early-return no-op.
-Result: `cachedAiEnabled`, `cachedUserGender`, `cachedSensitivity`,
-`cachedAiThreshold` stayed frozen at whatever they were the last time
-the old service saw them — user would toggle AI / change sensitivity
-and it would look like nothing happened until app reboot.
+### 1. `AiDetector.kt` — pixel values were NEVER normalized
+The original code fed raw `0..255` floats into TFLite. Every common NSFW model (NSFWJS, GantMan, OpenNSFW, MobileNet-NSFW) expects `0..1`. So even with a model uploaded, predictions were random noise → never crossed the threshold → no block.
 
-**Fix:**
-- `startPrefsCache` now launches collectors on the process-lifetime
-  `Scopes.appDefault` singleton. The incoming `scope` parameter is
-  preserved for source compatibility but marked `@Suppress("UNUSED_PARAMETER")`.
-- Collectors now survive any number of service restarts; preferences
-  propagate to the cache on every change.
+**Fix:** Added `NormalizeOp(0f, 255f)` in the image-processor pipeline. Pixel values now arrive as `0..1` floats — the format every public NSFW TFLite model uses.
 
-### 2. GuardianAccessibilityService onDestroy teardown race — FIX
-**Root cause:** `onDestroy()` cancelled `scope` **after** calling
-`aiDetector.closeAsync(Scopes.appIo)`. On OEMs that recycle the service
-fast, an already-in-flight screenshot callback could enqueue fresh
-classify() work during teardown, sometimes landing a TFLite call against
-a half-closed interpreter. Rare native-side crash on MIUI + low RAM.
+### 2. `GuardianAccessibilityService.kt` — AI ran only on text events
+AI screenshot scan was triggered exclusively from `TYPE_VIEW_TEXT_CHANGED` / `TYPE_WINDOW_CONTENT_CHANGED`. **Image-only screens (Reels, Gallery, Image search, Video player) emit very few text events** — so AI almost never fired in exactly the apps that needed it most.
 
-**Fix:**
-- `scope.cancel()` + `periodicJob?.cancel()` now happen FIRST, before
-  screen-receiver unregister and before `aiDetector.closeAsync`.
-- AiDetector singletons outlive the service, so already-launched
-  callbacks on `Scopes.appDefault` finish harmlessly.
-- `super.onDestroy()` wrapped in try/catch for symmetry with other
-  lifecycle overrides.
+**Fix:** Added a periodic AI scanner coroutine that ticks every 1.5 s on the active foreground package whenever AI detection is enabled and a model is loaded — independent of accessibility events.
 
-### 3. SettingsActivity legacy-model import button locked after cancellation — FIX
-**Root cause:** `copyLegacyModel` disabled `btnUploadModel` on entry and
-re-enabled it only in the success/failure branches AFTER the
-`withContext(Dispatchers.IO)` block. If the user rotated the device or
-left Settings mid-import, the coroutine cancelled with
-`CancellationException` and the button stayed greyed-out forever. User
-could not attempt another import until killing + relaunching the app.
+### 3. `AiDetector.kt` — output shape was guessed, not detected
+2-class vs 5-class was decided by `try/catch` over `interpreter.run()`. Shape mismatches don't always throw, so a 5-class model could be read as 2-class and produce garbage indices.
 
-**Fix:**
-- Outer `try { ... } finally { binding.btnUploadModel.isEnabled = true }`
-  guarantees the button is re-enabled on every exit path (success,
-  failure, cancellation).
+**Fix:** Output shape is read once from `interpreter.getOutputTensor(0).shape()` at load time and dispatched correctly. Also added a generic fallback for arbitrary class counts.
 
-### 4. AppListViewModel sort — DEFENSIVE
-**Root cause:** The sort chain used `compareByDescending<InstalledApp> { it.rule?.isBlocked == true || ... }`
-whose selector returns `Boolean`. Boolean *is* `Comparable<Boolean>` in
-Kotlin, so it compiles — but across Kotlin 1.9.x patch releases we have
-seen JDK-21 / JDK-17 inconsistencies in the generated `compareTo`
-bridge. Normalising to `Int` (1/0) is guaranteed-deterministic.
+### 4. No model bundled + no UX warning
+The APK ships without a `.tflite` model. If the user enables AI without uploading one, nothing happens silently.
 
-**Fix:**
-- Selectors now return `if (...) 1 else 0`.
+**Fix:** Settings screen now displays:
+> ⚠️ AI is ON but no model uploaded — detection will NOT work
 
-### 5. Dialog/Permissions layout — xmlns:tools hoisting (cleanup)
-**Root cause:** `dialog_schedule_editor.xml` and `activity_permissions.xml`
-declared `xmlns:tools="http://schemas.android.com/tools"` on inner
-child elements rather than the root. Valid XML, but Android Studio lint
-on some versions produces false-positive "unresolved namespace" noise.
-
-**Fix:**
-- Namespace declaration hoisted to root.
-- `tools:ignore="HardcodedText"` applied consistently to demo strings.
+so the user immediately sees what's wrong.
 
 ---
 
-## 📋 Four-pass review summary
+## 🟠 P1 — Security holes
 
-**Pass 1 — Compile & build-fail checks:** 0 new issues found. The v13
-fixes (AGP 8.5.2, Gradle 8.7, wrapper-jar regeneration in CI, `compileSdk = 35`)
-still hold. Room 2.6.1 + Hilt 2.52 + KSP 1.9.24-1.0.20 remain the
-pinned stable triple. `buildFeatures.buildConfig = true` retained (used
-by `BuildConfig.DEBUG` in `GuardianApp.ReleaseTree`).
+### 5. PIN gate did not actually gate anything
+`MainActivity` rendered first, *then* launched `PinVerifyActivity` on top. Press HOME, come back → main UI was visible without verification.
 
-**Pass 2 — Logic & lifecycle bugs:** Found fix #1 (stale preference
-cache), fix #2 (onDestroy race), fix #3 (locked button).
+**Fix:** `MainActivity` now keeps its root view `INVISIBLE` and launches `PinVerifyActivity` via `ActivityResultLauncher`. The dashboard only becomes visible on `RESULT_OK`. On cancel → `finishAffinity()`.
 
-**Pass 3 — Resource & manifest audit:** Found fix #5 (tools-namespace
-hoisting). AndroidManifest FGS type, device-admin policy, and
-accessibility-service config all re-verified OK.
+### 6. Settings, AppList, Keyword screens had ZERO PIN check
+Anyone could open Settings and unblock apps, disable AI, or wipe keywords.
 
-**Pass 4 — Defensive polish:** Found fix #4 (Boolean selector
-normalisation). `SettingsViewModel.combine(listOf(...))` re-audited
-and confirmed safe: Kotlin infers `Flow<out Any>` and the transform
-receives `Array<Any>`; unchecked casts are intentional and suppressed.
+**Fix:** All three screens now require PIN verify before showing UI.
 
-**Pass 5 — Final re-read:** No further issues identified. Shipping.
+### 7. Block overlay was bypass-able on OEMs
+Background-activity-launch restrictions on Android 10+ (and aggressive killers on MIUI / ColorOS / FunTouchOS) often dropped the overlay.
+
+**Fix:** `BlockingEngine` now (a) always sends `Intent.CATEGORY_HOME` first to evict the offending app, then (b) launches the overlay with `FLAG_ACTIVITY_NO_HISTORY` and `ActivityOptions` allowing background starts on API 34+. Each `startActivity` is wrapped in `runCatching` so a single OEM failure doesn't break the whole block path.
 
 ---
 
-## 🛡️ App-wide optimisation (kept from v13, no behaviour change)
-- `outputClasses` honours the model's real output shape (1-output
-  sigmoid models no longer crash TFLite).
-- `aiInFlight` reset race resolved via `screenshotInvoked` local.
-- `DashboardViewModel.todayStats` self-refreshes at midnight.
-- `DashboardViewModel.toggleProtection()` uses an in-VM volatile cache
-  (no 2-second DataStore timeout race).
-- `PinManager` entry points `runCatching`-wrapped.
-- `SecureStorage` three-step Keystore recovery.
-- `BlockingEngine.backgroundActivityOptions()` cached.
-- `GuardianForegroundService` watchdog 45 s.
+## 🟡 P2 — Stability / logic / API correctness
+
+### 8. `pkg.startsWith("com.android.systemui")` over-matched
+Matched fictitious `com.android.systemuixyz`. Replaced with an exact-match `Set` for system packages plus a documented prefix list for legitimately-varying launcher packages (MIUI / Samsung / OPPO / Vivo / Realme / Huawei).
+
+### 9. Deprecated `onBackPressed()` overrides
+`@Suppress("MissingSuperCall")` doesn't make predictive-back work. Replaced in `PinVerifyActivity`, `PinSetupActivity`, and `BlockOverlayActivity` with `OnBackPressedDispatcher` callbacks. Manifest also gets `android:enableOnBackInvokedCallback="true"`.
+
+### 10. `lastAiScanMs` was global
+After switching apps the first 3 s was a blind spot. Replaced with a per-package `HashMap`.
+
+### 11. `toggleBlock` deleted rows that still had whitelist info
+`toggleBlock` called `delete()`, wiping a row that might have had `isWhitelisted=true`. Block / whitelist flags are now independent; rows are deleted only when both flags become false.
+
+### 12. `notificationTimeout=100` dropped fast events
+Bumped to `200`. Combined with the new periodic scanner this is comfortably reliable without spamming the OS.
+
+### 13. `BootReceiver` could throw `BackgroundServiceStartNotAllowedException`
+Wrapped in `runCatching`, also accepts `LOCKED_BOOT_COMPLETED` for Direct Boot devices, and verifies the action before starting.
+
+### 14. `Interpreter.run()` was called from multiple coroutines
+Native crash risk under load. Inference is now serialized through a `Mutex` and screenshot-then-inference is guarded by an `AtomicBoolean` so only one is in flight at a time.
+
+### 15. `KeywordActivity` accepted invalid regex
+Invalid patterns were silently swallowed in `RulesEngine.evaluateText`. Now validated at insert time with an inline error.
+
+### 16. `AppListViewModel` listed our own package
+Hidden — you can't whitelist Guardian Shield from itself anyway.
+
+### 17. Foreground-service type not declared at start on API 34
+Calling `startForeground(id, notif)` without the type parameter on API 34+ violates `FOREGROUND_SERVICE_SPECIAL_USE`. Fixed by passing `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` on `UPSIDE_DOWN_CAKE+`.
+
+### 18. `Settings` "Model loaded" indicator was stuck on stale state
+Added `refresh()` on `SettingsViewModel` and called after upload — UI now updates immediately.
+
+### 19. `<queries>` element missing
+Play Store rejects `QUERY_ALL_PACKAGES` for most apps. Added a `<queries>` element with the LAUNCHER intent so the app list works without the wide permission. (Wide permission kept for sideload convenience.)
 
 ---
 
-## 🔩 Build prerequisites (unchanged from v13)
+## How to deploy
 
-- **JDK 17**
-- **Gradle 8.7** (wrapper jar is gitignored — CI regenerates via
-  `gradle wrapper --gradle-version 8.7`; local builds auto-fetch
-  via `./gradlew`)
-- **Android SDK 35** with build-tools 35.x
-- **minSdk 26 / targetSdk 35**
+1. Replace your repo content with the files in this archive.
+2. Push to GitHub — the existing `Build Debug APK` workflow will produce a new APK.
+3. Install over the previous version (no data migration needed — DB schema unchanged).
+4. **Important for AI to actually work:**
+   - In-app: Settings → AI Screen Detection → Upload Model
+   - Recommended models: NSFWJS converted to TFLite (224×224, output `[1,5]`),
+     or any GantMan-style 2-class classifier (output `[1,2]`).
+   - Threshold 0.6–0.75 is a good starting point.
 
----
-
-## 📦 File manifest changes
-
-| File | Change |
-|---|---|
-| `app/build.gradle.kts` | `versionCode 7→8`, `versionName 2.1.3→2.1.4` |
-| `app/src/main/java/.../service/detection/AiDetector.kt` | `startPrefsCache` uses `Scopes.appDefault` |
-| `app/src/main/java/.../service/accessibility/GuardianAccessibilityService.kt` | `onDestroy` teardown order fixed |
-| `app/src/main/java/.../ui/settings/SettingsActivity.kt` | `copyLegacyModel` wrapped in try/finally |
-| `app/src/main/java/.../viewmodel/AppListViewModel.kt` | Sort selectors return Int not Boolean |
-| `app/src/main/res/layout/dialog_schedule_editor.xml` | xmlns:tools hoisted to root |
-| `app/src/main/res/layout/activity_permissions.xml` | xmlns:tools hoisted to root |
-| `CHANGELOG.md` | This file |
-
-## v14-FIXED-5 (2026-05-09)
-
-### 🐛 Build Fix
-- **CRITICAL**: Fixed `Unresolved reference: canTakeScreenshot` compile error in `GuardianAccessibilityService.kt`
-  - `AccessibilityServiceInfo.canTakeScreenshot` does NOT exist as a Kotlin property
-  - Replaced with correct bitmask check: `capabilities and CAPABILITY_CAN_TAKE_SCREENSHOT != 0`
-  - Corrected API level guard from `Build.VERSION_CODES.R` (30) to `Build.VERSION_CODES.S` (31) — `CAPABILITY_CAN_TAKE_SCREENSHOT` requires API 31
-  - Added missing `import android.accessibilityservice.AccessibilityServiceInfo`
+If after this update AI still doesn't catch anything, the root cause is almost certainly the model file itself (wrong input shape / quantization). Send `adb logcat | grep TFLite` and we can debug from the inference logs.

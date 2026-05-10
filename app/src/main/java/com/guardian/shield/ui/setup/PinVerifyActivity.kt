@@ -9,17 +9,18 @@ import com.guardian.shield.viewmodel.PinViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
- * v12 (2.1.2):
- *  • Debounce: disable Verify button after first tap until result returns
- *    (prevents double-finish IllegalStateException on slow devices).
- *  • Defensive: PinManager.verifyPin can throw on broken Keystore — wrap.
+ * FIX-LOG (vs original):
+ *  - BUG #5: now returns RESULT_OK to the launching Activity, which truly gates
+ *            access to MainActivity / SettingsActivity (caller hides UI until
+ *            this Activity returns RESULT_OK).
+ *  - BUG #9: replaced deprecated onBackPressed() with OnBackPressedDispatcher;
+ *            on back press we cancel (RESULT_CANCELED) so the caller can decide
+ *            to finish/finishAffinity instead of being silently bypassed.
  */
 @AndroidEntryPoint
 class PinVerifyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPinVerifyBinding
     private val vm: PinViewModel by viewModels()
-
-    @Volatile private var verifying = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,23 +28,15 @@ class PinVerifyActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnVerify.setOnClickListener {
-            if (verifying) return@setOnClickListener
-            verifying = true
-            binding.btnVerify.isEnabled = false
-
-            val ok = runCatching { vm.verify(binding.etPin.text.toString()) }
-                .getOrDefault(false)
-
-            if (ok) {
+            if (vm.verify(binding.etPin.text.toString())) {
                 setResult(RESULT_OK)
                 finish()
             } else {
                 binding.tvError.text = "Wrong PIN"
-                verifying = false
-                binding.btnVerify.isEnabled = true
             }
         }
 
+        // BUG #9 fix — predictive-back-aware.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 setResult(RESULT_CANCELED)

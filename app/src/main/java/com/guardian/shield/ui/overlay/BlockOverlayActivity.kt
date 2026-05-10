@@ -10,16 +10,14 @@ import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
-import timber.log.Timber
 
 /**
- * v12 (2.1.2):
- *  • Defensive: ViewBinding inflation can fail on theme conflict — try
- *    block falls back to finish() instead of crashing.
- *  • Vibrator service can be null on some emulators / Android Auto.
- *
- * v11 (2.1.1):
- *  • setShowWhenLocked / setTurnScreenOn wrapped in runCatching.
+ * FIX-LOG (vs original):
+ *  - BUG #9: deprecated onBackPressed() override replaced with
+ *    OnBackPressedDispatcher (predictive-back safe).
+ *  - Always come back to HOME after the overlay is dismissed via the home
+ *    button — previously, finishing the Activity could pop the user back
+ *    into the offending app on some OEMs.
  */
 @AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
@@ -30,34 +28,30 @@ class BlockOverlayActivity : AppCompatActivity() {
         const val EXTRA_TERM = "extra_term"
     }
 
-    private var binding: ActivityBlockOverlayBinding? = null
+    private lateinit var binding: ActivityBlockOverlayBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val b = runCatching { ActivityBlockOverlayBinding.inflate(layoutInflater) }
-            .onFailure { Timber.e(it, "Failed to inflate BlockOverlay layout — finishing") }
-            .getOrNull()
-        if (b == null) { runCatching { finish() }; return }
-        binding = b
-        setContentView(b.root)
-
-        runCatching { setShowWhenLocked(true) }
-        runCatching { setTurnScreenOn(true) }
+        binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
         vibrate()
 
         val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: "unknown"
         val term = intent.getStringExtra(EXTRA_TERM)
-        b.tvBlockedPackage.text = pkg
-        b.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
+        binding.tvBlockedPackage.text = pkg
+        binding.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
 
-        b.btnHome.setOnClickListener { goHomeAndFinish() }
-        b.btnRequestUnlock.setOnClickListener {
-            runCatching { startActivity(Intent(this, DelayUnlockActivity::class.java)) }
-                .onFailure { Timber.w(it, "Failed to start DelayUnlockActivity") }
-            runCatching { finish() }
+        binding.btnHome.setOnClickListener { goHomeAndFinish() }
+        binding.btnRequestUnlock.setOnClickListener {
+            startActivity(Intent(this, DelayUnlockActivity::class.java))
+            finish()
         }
 
+        // BUG #9 fix — predictive-back-aware. Back press is intentionally
+        // mapped to "go home" (we never want the user dropped back into the
+        // app we just blocked).
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = goHomeAndFinish()
         })
@@ -70,22 +64,15 @@ class BlockOverlayActivity : AppCompatActivity() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             startActivity(home)
-        }.onFailure { Timber.w(it, "goHome failed") }
-        runCatching { finish() }
+        }
+        finish()
     }
 
     @Suppress("DEPRECATION")
     private fun vibrate() = runCatching {
-        val v: Vibrator? = if (android.os.Build.VERSION.SDK_INT >= 31) {
-            (getSystemService(VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
-        } else {
-            getSystemService(VIBRATOR_SERVICE) as? Vibrator
-        }
-        v?.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-
-    override fun onDestroy() {
-        binding = null
-        super.onDestroy()
+        val v = if (android.os.Build.VERSION.SDK_INT >= 31)
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        else getSystemService(VIBRATOR_SERVICE) as Vibrator
+        v.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
     }
 }

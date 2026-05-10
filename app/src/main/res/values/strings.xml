@@ -4,56 +4,10 @@
     <string name="accessibility_service_description">Monitors apps and screen content to enforce your blocking rules. No data leaves your device.</string>
     <string name="protection_active">Protection Active</string>
     <string name="protection_inactive">Protection Inactive</string>
-    <string name="protection_paused">Protection Paused</string>
     <string name="enable_accessibility">Enable Accessibility Service</string>
     <string name="accessibility_enabled">Accessibility Enabled</string>
     <string name="content_blocked">CONTENT BLOCKED</string>
     <string name="stay_strong">Stay strong. You\'ve got this.</string>
     <string name="go_home">Go Home</string>
     <string name="request_unlock">Request Timed Unlock</string>
-
-    <!-- v2 -->
-    <string name="permission_health">Permission Health</string>
-    <string name="device_admin_description">Activate to prevent casual uninstall and stop the OS from killing Guardian Shield in the background.</string>
-
-    <!-- v8 -->
-    <string name="protection_degraded_title">Guardian Shield needs attention</string>
-    <string name="protection_degraded_short">⚠ %1$d issue(s) — tap to fix</string>
-    <string name="protection_degraded_long">%1$d critical permission(s) are missing or have been revoked. Tap to restore protection.</string>
-    <string name="protection_degraded_accessibility">Accessibility service is not currently running. Tap to re-enable Guardian Shield protection.</string>
-
-    <!-- v9 (2.0.0) -->
-    <string name="recent_blocks">Recent Blocks</string>
-    <string name="clear">Clear</string>
-    <string name="today_blocks">Today\'s Blocks</string>
-    <string name="todays_stats">Today\'s Stats</string>
-    <string name="stat_total">Total</string>
-    <string name="stat_ai">AI</string>
-    <string name="stat_keyword">Keyword</string>
-    <string name="stat_top_app">Most blocked app</string>
-    <string name="toggle_protection">Toggle Protection</string>
-    <string name="export_log">Export Log</string>
-
-    <!-- P4-A schedule rules UI -->
-    <string name="schedule_block_title">Schedule Block</string>
-    <string name="schedule_block_summary">Block %1$s during a daily time window.</string>
-    <string name="manage_schedule">Manage Schedule Rules</string>
-    <string name="schedule_active">Active %1$02d:%2$02d – %3$02d:%4$02d</string>
-    <string name="schedule_disabled">No schedule</string>
-
-    <!-- v10 (2.1.0) — Smart Tiered Detection -->
-    <string name="sensitivity_label">Detection Sensitivity</string>
-    <string name="sensitivity_summary">Pick a preset. NSFW = block, Hot/Sexy = log only, Natural = ignore.</string>
-    <string name="sensitivity_low">Low</string>
-    <string name="sensitivity_low_desc">Only obvious explicit content. Fewest false positives.</string>
-    <string name="sensitivity_balanced">Balanced</string>
-    <string name="sensitivity_balanced_desc">Recommended. Blocks porn / hentai / nudity, ignores hot photos.</string>
-    <string name="sensitivity_high">High</string>
-    <string name="sensitivity_high_desc">Catches more, may have some false positives.</string>
-
-    <string name="timed_block_title">Auto-Locked Apps</string>
-    <string name="timed_block_summary">Apps temporarily locked because AI detected explicit content from them.</string>
-    <string name="timed_block_remaining">%1$s — locked for %2$d min %3$d s</string>
-    <string name="timed_block_clear">Unlock now</string>
-    <string name="block_reason_source_timed">App auto-locked: AI confirmed explicit content from this source.</string>
 </resources>

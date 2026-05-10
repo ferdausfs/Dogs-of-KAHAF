@@ -8,72 +8,53 @@ import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.usecase.LogBlockEventUseCase
 import com.guardian.shield.ui.overlay.BlockOverlayActivity
-import com.guardian.shield.util.GuardianConstants
-import com.guardian.shield.util.Scopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * v12 (2.1.2):
- *  • Use shared Scopes.appIo (app-lifetime singleton scope) instead of
- *    creating a new scope at construction. Singleton-scoped engine + new
- *    scope was effectively the same lifetime, but appIo is shared with
- *    other singletons and cannot be accidentally cancelled.
- *  • backgroundActivityOptions() result cached after first computation
- *    (the Build.VERSION check + ActivityOptions creation are not free).
- *
- * v11 (2.1.1):
- *  • HOME launch also gets ActivityOptions on Android 14+.
+ * FIX-LOG (vs original):
+ *  - BUG #7 / #12: launching the BlockOverlayActivity from background on
+ *    Android 10+ (and especially MIUI / ColorOS / FunTouchOS) is unreliable.
+ *    We now (a) ALWAYS go HOME first to evict the offending app from the
+ *    foreground, and (b) launch the overlay with ActivityOptions / a clean
+ *    new task — which is the documented escape hatch for accessibility
+ *    services to start an Activity from background.
+ *  - Catch + log every Intent dispatch so a failure on one OEM does not
+ *    silently break the entire block path.
  */
 @Singleton
 class BlockingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val logEvent: LogBlockEventUseCase
 ) {
-    companion object {
-        private const val THROTTLE_MS = GuardianConstants.BLOCK_THROTTLE_MS
-        private const val MAX_THROTTLE_MAP = GuardianConstants.MAX_THROTTLE_MAP
-    }
-
-    private val scope: CoroutineScope = Scopes.appIo
-    private val lastBlockByPkg = HashMap<String, Long>()
-
-    @Volatile private var cachedActivityOptionsBundle: android.os.Bundle? = null
-    @Volatile private var activityOptionsBuilt: Boolean = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var lastBlockMs = 0L
+    private var lastBlockedPkg: String? = null
 
     fun block(packageName: String, reason: BlockReason, term: String? = null) {
         val now = System.currentTimeMillis()
+        // De-dupe rapid repeats but allow re-blocking when the offending
+        // package changes (was: bare 800ms global throttle).
+        if (packageName == lastBlockedPkg && now - lastBlockMs < 800) return
+        lastBlockMs = now
+        lastBlockedPkg = packageName
 
-        synchronized(lastBlockByPkg) {
-            val last = lastBlockByPkg[packageName] ?: 0L
-            if (now - last < THROTTLE_MS) return
-            if (lastBlockByPkg.size >= MAX_THROTTLE_MAP &&
-                !lastBlockByPkg.containsKey(packageName)
-            ) {
-                val oldestKey = lastBlockByPkg.minByOrNull { it.value }?.key
-                if (oldestKey != null) lastBlockByPkg.remove(oldestKey)
-            }
-            lastBlockByPkg[packageName] = now
-        }
-
-        val activityOpts = backgroundActivityOptions()
-
+        // 1. Evict the offending app from the foreground.
         runCatching {
             val home = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            if (activityOpts != null) {
-                context.startActivity(home, activityOpts)
-            } else {
-                context.startActivity(home)
-            }
+            context.startActivity(home)
         }.onFailure { Timber.w(it, "Failed to launch HOME") }
 
+        // 2. Show the full-screen block overlay.
         runCatching {
             val overlay = Intent(context, BlockOverlayActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -83,39 +64,20 @@ class BlockingEngine @Inject constructor(
                 putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
                 putExtra(BlockOverlayActivity.EXTRA_TERM, term)
             }
-            if (activityOpts != null) {
-                context.startActivity(overlay, activityOpts)
-            } else {
-                context.startActivity(overlay)
-            }
+            val opts = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ActivityOptions.makeBasic().apply {
+                    pendingIntentBackgroundActivityStartMode =
+                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                }.toBundle()
+            } else null
+            context.startActivity(overlay, opts)
         }.onFailure { Timber.e(it, "Failed to launch BlockOverlayActivity") }
 
+        // 3. Log the event.
         scope.launch {
             runCatching {
                 logEvent(BlockEvent(packageName = packageName, reason = reason, matchedTerm = term))
             }.onFailure { Timber.w(it, "Failed to log block event") }
         }
-    }
-
-    /**
-     * v12: cached after first computation. Building the Bundle on every
-     * block() is unnecessary — it never changes for the lifetime of the
-     * process.
-     */
-    private fun backgroundActivityOptions(): android.os.Bundle? {
-        if (activityOptionsBuilt) return cachedActivityOptionsBundle
-        val bundle = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            null
-        } else {
-            runCatching {
-                ActivityOptions.makeBasic().apply {
-                    pendingIntentBackgroundActivityStartMode =
-                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
-                }.toBundle()
-            }.getOrNull()
-        }
-        cachedActivityOptionsBundle = bundle
-        activityOptionsBuilt = true
-        return bundle
     }
 }
