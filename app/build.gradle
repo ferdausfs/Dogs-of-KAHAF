@@ -1,0 +1,160 @@
+// =============================================================================
+//  Guardian Shield — :app module build script
+//  (Fixed in v2.1.8 — earlier zips were missing this file entirely, which is
+//   why CI failed with "Task 'assembleDebug' not found in root project".)
+// =============================================================================
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.dagger.hilt.android'
+    id 'com.google.devtools.ksp'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.24'
+}
+
+android {
+    namespace 'com.kahaf.guardianshield'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.kahaf.guardianshield'
+        minSdk 26
+        targetSdk 35
+        versionCode 11
+        versionName '2.1.8'
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+        // Room schema export for migration testing
+        ksp {
+            arg('room.schemaLocation', "$projectDir/schemas")
+            arg('room.incremental', 'true')
+        }
+
+        vectorDrawables { useSupportLibrary true }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            // Speed up debug build — no shrinking, no R8
+            debuggable true
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+        freeCompilerArgs += [
+                '-opt-in=kotlin.RequiresOptIn',
+                '-opt-in=androidx.compose.material3.ExperimentalMaterial3Api'
+        ]
+    }
+
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+    composeOptions {
+        // Compose compiler 1.5.14 is the matching pair for Kotlin 1.9.24
+        kotlinCompilerExtensionVersion = '1.5.14'
+    }
+
+    packaging {
+        resources {
+            excludes += [
+                    '/META-INF/{AL2.0,LGPL2.1}',
+                    '/META-INF/DEPENDENCIES',
+                    '/META-INF/LICENSE*',
+                    '/META-INF/NOTICE*',
+                    'META-INF/*.kotlin_module'
+            ]
+        }
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        warningsAsErrors false
+    }
+}
+
+dependencies {
+    // ── Kotlin / coroutines ─────────────────────────────────────────────────
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+
+    // ── AndroidX core ───────────────────────────────────────────────────────
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.activity:activity-compose:1.9.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-service:2.8.4'
+
+    // ── Compose (BOM keeps versions in sync) ────────────────────────────────
+    def composeBom = platform('androidx.compose:compose-bom:2024.06.00')
+    implementation composeBom
+    androidTestImplementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.compose.foundation:foundation'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+
+    // ── Navigation ──────────────────────────────────────────────────────────
+    implementation 'androidx.navigation:navigation-compose:2.7.7'
+
+    // ── Hilt DI ─────────────────────────────────────────────────────────────
+    implementation 'com.google.dagger:hilt-android:2.52'
+    ksp 'com.google.dagger:hilt-android-compiler:2.52'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
+    implementation 'androidx.hilt:hilt-work:1.2.0'
+    ksp 'androidx.hilt:hilt-compiler:1.2.0'
+
+    // ── Room ────────────────────────────────────────────────────────────────
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'androidx.room:room-ktx:2.6.1'
+    ksp 'androidx.room:room-compiler:2.6.1'
+
+    // ── DataStore ───────────────────────────────────────────────────────────
+    implementation 'androidx.datastore:datastore-preferences:1.1.1'
+
+    // ── WorkManager ─────────────────────────────────────────────────────────
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+
+    // ── TFLite (on-device NSFW classifier) ──────────────────────────────────
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+
+    // ── Unit tests ──────────────────────────────────────────────────────────
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'io.mockk:mockk:1.13.12'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
+    testImplementation 'app.cash.turbine:turbine:1.1.0'
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+
+    // ── Instrumented tests ──────────────────────────────────────────────────
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+}

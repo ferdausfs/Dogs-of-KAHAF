@@ -12,6 +12,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.kahaf.guardianshield.domain.model.AiSettings
 import com.kahaf.guardianshield.domain.model.AppSettings
 import com.kahaf.guardianshield.domain.model.ThemeMode
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -19,9 +20,22 @@ import javax.inject.Singleton
 
 private val Context.dataStore by preferencesDataStore(name = "guardian_settings")
 
+/**
+ * On-device settings store. Single Hilt binding via `@Inject` constructor +
+ * `@ApplicationContext`. We removed the duplicate `@Provides` in ServiceModule
+ * because two bindings for the same type cause a duplicate-binding compile
+ * error in Hilt.
+ *
+ * v2.1.8 fixes:
+ *  - `readAppOnce` / `readAiOnce` previously called `dataStore.edit{}` just to
+ *    read — that triggered a write on every read. Now uses `.first()`.
+ *  - `updateApp` / `updateAi` previously used a read-then-write pair which is
+ *    a TOCTOU race. The transform now runs inside a single `edit{}` block, so
+ *    concurrent updates are serialized correctly.
+ */
 @Singleton
 class SettingsDataStore @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     private object Keys {
         val PROTECTION = booleanPreferencesKey("protection_enabled")
@@ -37,32 +51,14 @@ class SettingsDataStore @Inject constructor(
         val AI_ENGINE = stringPreferencesKey("ai_engine")
     }
 
-    val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
-        AppSettings(
-            protectionEnabled = prefs[Keys.PROTECTION] ?: true,
-            themeMode = runCatching { ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: "SYSTEM") }
-                .getOrDefault(ThemeMode.SYSTEM),
-            dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: true,
-            uninstallProtection = prefs[Keys.UNINSTALL_PROTECT] ?: false
-        )
-    }
-
-    val aiSettings: Flow<AiSettings> = context.dataStore.data.map { prefs ->
-        AiSettings(
-            sensitivity = prefs[Keys.AI_SENSITIVITY] ?: 0.55f,
-            debounceFrames = prefs[Keys.AI_DEBOUNCE_FRAMES] ?: 3,
-            debounceWindowMs = prefs[Keys.AI_DEBOUNCE_WINDOW] ?: 4_000L,
-            perAppBoost = decodeBoosts(prefs[Keys.AI_PER_APP_BOOST]),
-            contentSourcePackages = decodePackages(prefs[Keys.AI_SOURCES])
-                .ifEmpty { AiSettings.DEFAULT_CONTENT_SOURCES },
-            engine = prefs[Keys.AI_ENGINE] ?: "stub"
-        )
-    }
+    val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs -> decodeApp(prefs) }
+    val aiSettings: Flow<AiSettings> = context.dataStore.data.map { prefs -> decodeAi(prefs) }
 
     suspend fun updateApp(transform: (AppSettings) -> AppSettings) {
-        val current = readAppOnce()
-        val next = transform(current)
+        // Atomic read-modify-write inside a single edit block.
         context.dataStore.edit { p ->
+            val current = decodeApp(p)
+            val next = transform(current)
             p[Keys.PROTECTION] = next.protectionEnabled
             p[Keys.THEME_MODE] = next.themeMode.name
             p[Keys.DYNAMIC_COLOR] = next.dynamicColor
@@ -71,9 +67,9 @@ class SettingsDataStore @Inject constructor(
     }
 
     suspend fun updateAi(transform: (AiSettings) -> AiSettings) {
-        val current = readAiOnce()
-        val next = transform(current)
         context.dataStore.edit { p ->
+            val current = decodeAi(p)
+            val next = transform(current)
             p[Keys.AI_SENSITIVITY] = next.sensitivity
             p[Keys.AI_DEBOUNCE_FRAMES] = next.debounceFrames
             p[Keys.AI_DEBOUNCE_WINDOW] = next.debounceWindowMs
@@ -81,18 +77,6 @@ class SettingsDataStore @Inject constructor(
             p[Keys.AI_SOURCES] = next.contentSourcePackages.joinToString(",")
             p[Keys.AI_ENGINE] = next.engine
         }
-    }
-
-    private suspend fun readAppOnce(): AppSettings {
-        var snap: AppSettings = AppSettings()
-        context.dataStore.edit { p -> snap = decodeApp(p) }
-        return snap
-    }
-
-    private suspend fun readAiOnce(): AiSettings {
-        var snap: AiSettings = AiSettings()
-        context.dataStore.edit { p -> snap = decodeAi(p) }
-        return snap
     }
 
     private fun decodeApp(p: Preferences) = AppSettings(

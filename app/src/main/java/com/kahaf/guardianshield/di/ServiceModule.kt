@@ -1,19 +1,20 @@
 package com.kahaf.guardianshield.di
 
-import android.content.Context
-import com.kahaf.guardianshield.data.datastore.SettingsDataStore
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 
+/**
+ * Service-layer Hilt module.
+ *
+ * v2.1.8: removed the redundant `provideSettingsDataStore` @Provides — it
+ * collided with `SettingsDataStore`'s own `@Inject` constructor and would
+ * have produced a Hilt "duplicate binding" error at compile time. The class
+ * is now provided exclusively by its constructor.
+ *
+ * Kept as an empty module placeholder so future service-layer providers
+ * (e.g. WorkManager helpers, system-service wrappers) have a home.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
-object ServiceModule {
-
-    @Provides @Singleton
-    fun provideSettingsDataStore(@ApplicationContext context: Context): SettingsDataStore =
-        SettingsDataStore(context)
-}
+object ServiceModule

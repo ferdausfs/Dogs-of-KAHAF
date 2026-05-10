@@ -4,6 +4,53 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.8] — 2026-05-10
+
+### Fixed (build-breakers)
+- **Re-added the missing `app/build.gradle`.** Earlier zips shipped only
+  `app/proguard-rules.pro` and the `src/` tree under `app/`, with no module
+  build script. Gradle therefore did not register `:app` as an Android
+  application module and CI failed with:
+
+  > Task 'assembleDebug' not found in root project 'GuardianShield' and its
+  > subprojects.
+
+  The new module script declares the AGP 8.5.2 / Kotlin 1.9.24 / Hilt 2.52
+  / KSP / Compose BOM 2024.06.00 / Room 2.6.1 / DataStore / WorkManager /
+  TFLite stack, plus all unit-test deps (`mockk`, `turbine`,
+  `kotlinx-coroutines-test`).
+
+### Fixed (latent runtime bugs found during the audit)
+- `SettingsDataStore.readAppOnce()` / `readAiOnce()` were calling
+  `dataStore.edit { … }` purely to read — that triggered a needless write to
+  Preferences on every read. Replaced with a single `decodeApp(p)` /
+  `decodeAi(p)` call inside the same `edit{}` block used by `updateApp` /
+  `updateAi`, eliminating the spurious-write bug *and* the read-then-write
+  TOCTOU race.
+- `BlockEventRepositoryImpl.observeBlocksTodayCount()` captured
+  `startOfTodayMs()` once at flow construction, so the dashboard counter
+  went stale after midnight. Re-implemented with a 1-minute ticker so the
+  "today" boundary always advances correctly.
+- `ServiceModule.provideSettingsDataStore` collided with
+  `SettingsDataStore`'s own `@Inject` constructor (Hilt would have failed
+  with a duplicate-binding error). Removed the `@Provides` and added
+  `@ApplicationContext` to the constructor parameter.
+- `AndroidManifest.xml` referenced `@mipmap/ic_launcher` for `roundIcon`
+  while no round drawable existed; added a dedicated
+  `mipmap-anydpi-v26/ic_launcher_round.xml`.
+- The single adaptive icon was placed in `mipmap-hdpi/`. Moved it to
+  `mipmap-anydpi-v26/` (the correct location for adaptive icons; min SDK is
+  26 so no PNG fallback is required).
+- `values/themes.xml` redeclared `xmlns:tools` on a child `<item>`. Hoisted
+  the namespace to the root `<resources>` element to avoid lint noise.
+
+### Notes
+- The `INTERNET` permission is still absent from the manifest — verified.
+- `data_extraction_rules.xml` and `backup_rules.xml` continue to exclude all
+  app data from cloud backup and device transfer.
+
+---
+
 ## [2.1.7] — 2026-05-09
 
 ### Added

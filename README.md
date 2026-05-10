@@ -13,7 +13,7 @@ manifest. By design.
 |-----------------------|----------------------|
 | Package               | `com.kahaf.guardianshield` |
 | versionCode           | 11                   |
-| versionName           | 2.1.7                |
+| versionName           | 2.1.8                |
 | Min SDK / Target SDK  | 26 / 35              |
 | JVM target            | 17                   |
 | Language              | 100% Kotlin          |
