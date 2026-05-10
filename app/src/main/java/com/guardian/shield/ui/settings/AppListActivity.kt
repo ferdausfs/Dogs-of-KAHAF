@@ -6,6 +6,7 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -18,14 +19,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * FIX-LOG (vs original):
- *  - BUG #6: blocked-app list also requires PIN now (was unprotected).
- */
 @AndroidEntryPoint
 class AppListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAppListBinding
     private val vm: AppListViewModel by viewModels()
+
     @Inject lateinit var pinManager: PinManager
 
     private val pinVerify = registerForActivityResult(
@@ -40,8 +38,12 @@ class AppListActivity : AppCompatActivity() {
         binding = ActivityAppListBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.visibility = View.INVISIBLE
-        if (pinManager.isPinSet()) pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        else binding.root.visibility = View.VISIBLE
+
+        if (pinManager.isPinSet()) {
+            pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
+        } else {
+            binding.root.visibility = View.VISIBLE
+        }
 
         val adapter = AppListAdapter(
             onBlockToggle = vm::toggleBlock,
@@ -50,9 +52,23 @@ class AppListActivity : AppCompatActivity() {
         binding.rv.layoutManager = LinearLayoutManager(this)
         binding.rv.adapter = adapter
 
+        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                vm.setSearchQuery(query.orEmpty())
+                binding.searchView.clearFocus()
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                vm.setSearchQuery(newText.orEmpty())
+                return true
+            }
+        })
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.apps.collect { adapter.submitList(it) }
+                launch { vm.apps.collect { adapter.submitList(it) } }
+                launch { vm.summary.collect { binding.tvSummary.text = it } }
             }
         }
     }

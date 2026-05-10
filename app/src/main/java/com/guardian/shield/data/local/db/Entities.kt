@@ -29,3 +29,21 @@ data class BlockEventEntity(
     val matchedTerm: String?,
     val timestamp: Long
 )
+
+/**
+ * v9 (2.0.0) — P4-A: persistence for time-based schedule rules.
+ *
+ * `enabledDaysMask` is a bitmask where bit N corresponds to day N
+ * (0=Sun … 6=Sat). 0b1111111 == all-days.
+ */
+@Entity(tableName = "schedule_rules")
+data class ScheduleRuleEntity(
+    @PrimaryKey val packageName: String,
+    val startHour: Int,
+    val startMinute: Int,
+    val endHour: Int,
+    val endMinute: Int,
+    val enabledDaysMask: Int,
+    val enabled: Boolean,
+    val createdAt: Long
+)

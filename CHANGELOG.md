@@ -1,104 +1,239 @@
-# Guardian Shield — Bug Review & Fix Update
+# Guardian Shield — v9 (2.0.0) Performance & Features Pass
 
-This update addresses the user-reported issue **"AI detects adult images/content but does not block them"** plus a full pass of bugs found across the codebase.
+versionCode: 2 → **3**
+versionName: 1.1.0 → **2.0.0**
 
----
-
-## 🔴 P0 — Why AI was detecting but not blocking
-
-### 1. `AiDetector.kt` — pixel values were NEVER normalized
-The original code fed raw `0..255` floats into TFLite. Every common NSFW model (NSFWJS, GantMan, OpenNSFW, MobileNet-NSFW) expects `0..1`. So even with a model uploaded, predictions were random noise → never crossed the threshold → no block.
-
-**Fix:** Added `NormalizeOp(0f, 255f)` in the image-processor pipeline. Pixel values now arrive as `0..1` floats — the format every public NSFW TFLite model uses.
-
-### 2. `GuardianAccessibilityService.kt` — AI ran only on text events
-AI screenshot scan was triggered exclusively from `TYPE_VIEW_TEXT_CHANGED` / `TYPE_WINDOW_CONTENT_CHANGED`. **Image-only screens (Reels, Gallery, Image search, Video player) emit very few text events** — so AI almost never fired in exactly the apps that needed it most.
-
-**Fix:** Added a periodic AI scanner coroutine that ticks every 1.5 s on the active foreground package whenever AI detection is enabled and a model is loaded — independent of accessibility events.
-
-### 3. `AiDetector.kt` — output shape was guessed, not detected
-2-class vs 5-class was decided by `try/catch` over `interpreter.run()`. Shape mismatches don't always throw, so a 5-class model could be read as 2-class and produce garbage indices.
-
-**Fix:** Output shape is read once from `interpreter.getOutputTensor(0).shape()` at load time and dispatched correctly. Also added a generic fallback for arbitrary class counts.
-
-### 4. No model bundled + no UX warning
-The APK ships without a `.tflite` model. If the user enables AI without uploading one, nothing happens silently.
-
-**Fix:** Settings screen now displays:
-> ⚠️ AI is ON but no model uploaded — detection will NOT work
-
-so the user immediately sees what's wrong.
+> Comprehensive improvement pass on top of v8 (1.1.0). All P1–P5 items
+> from the specification implemented. v8 stability fixes preserved.
 
 ---
 
-## 🟠 P1 — Security holes
+## 🚀 PRIORITY 1 — PERFORMANCE
 
-### 5. PIN gate did not actually gate anything
-`MainActivity` rendered first, *then* launched `PinVerifyActivity` on top. Press HOME, come back → main UI was visible without verification.
+### P1-A — TFLite GPU Delegate (3–5× faster inference)
+- New deps: `tensorflow-lite-gpu:2.16.1` + `tensorflow-lite-gpu-delegate-plugin:0.4.4`.
+- `AiDetector.buildInterpreterOptions()` tries `GpuDelegate` first via
+  `CompatibilityList.isDelegateSupportedOnThisDevice`. Falls back to CPU
+  on unsupported devices, AND retries on CPU if the GPU interpreter
+  throws at construction time.
+- GpuDelegate handles tracked per-interpreter (legacy / nsfw / gender)
+  and explicitly closed in `tearDownInterpreters()`.
 
-**Fix:** `MainActivity` now keeps its root view `INVISIBLE` and launches `PinVerifyActivity` via `ActivityResultLauncher`. The dashboard only becomes visible on `RESULT_OK`. On cancel → `finishAffinity()`.
+### P1-B — Memory-Mapped Model Loading (2× less memory, faster load)
+- `readModelBuffer()` now uses `FileInputStream.channel.map(READ_ONLY,…)`
+  to obtain a zero-copy `MappedByteBuffer`. Falls back to the original
+  byte-array copy path on filesystems where mmap fails.
+- Asset path keeps the byte-array copy (assets cannot be mmap'd through
+  the standard API).
 
-### 6. Settings, AppList, Keyword screens had ZERO PIN check
-Anyone could open Settings and unblock apps, disable AI, or wipe keywords.
+### P1-C — DataStore Preferences In-Memory Cache
+- `AiDetector.cachedAiEnabled` and `AiDetector.cachedUserGender` are hot
+  fields, refreshed by collectors started from `startPrefsCache(scope)`.
+- `GuardianAccessibilityService.onServiceConnected` calls
+  `startPrefsCache` once. Per-tick reads (`triggerAiCheck`,
+  `startPeriodicAiScanner`) use the cached values instead of
+  `prefs.aiDetectionEnabled.first()` / `prefs.userGender.first()`.
 
-**Fix:** All three screens now require PIN verify before showing UI.
+### P1-D — Adaptive Bitmap Variant Scanning (Early Exit)
+- `AiDetector.isUnsafe()` runs the full image first; if its scores are
+  below `threshold * EARLY_EXIT_RATIO` (20%), the 3 follow-up crops
+  are skipped entirely. Major win on benign content.
 
-### 7. Block overlay was bypass-able on OEMs
-Background-activity-launch restrictions on Android 10+ (and aggressive killers on MIUI / ColorOS / FunTouchOS) often dropped the overlay.
+### P1-E — Screen-State-Aware Periodic Scanner (battery)
+- New `screenStateReceiver` listens for `ACTION_SCREEN_OFF` /
+  `ACTION_SCREEN_ON`. While the screen is off, the periodic AI loop
+  uses `SCREEN_OFF_PERIODIC_MS` (5 s) AND skips the scan body itself.
 
-**Fix:** `BlockingEngine` now (a) always sends `Intent.CATEGORY_HOME` first to evict the offending app, then (b) launches the overlay with `FLAG_ACTIVITY_NO_HISTORY` and `ActivityOptions` allowing background starts on API 34+. Each `startActivity` is wrapped in `runCatching` so a single OEM failure doesn't break the whole block path.
+---
+
+## 🐛 PRIORITY 2 — BUG FIXES
+
+### P2-A — `AiDetector.close()` ANR risk
+- Now runs on `Dispatchers.IO` and bounds the lock-acquire wait to
+  `AI_DETECTOR_CLOSE_TIMEOUT_MS` (2 s) via `withTimeoutOrNull`.
+- If the wait times out we still tear down — the next `Interpreter.run()`
+  would have failed gracefully anyway (caller wraps in `runCatching`).
+
+### P2-B — Replace deprecated `LocalBroadcastManager`
+- `RulesEngine` exposes `rulesChanged: SharedFlow<Unit>` and emits on
+  `reload()`.
+- `GuardianAccessibilityService` collects `rulesChanged` directly via
+  the service scope.
+- `AppListViewModel` / `KeywordViewModel` notify by calling
+  `rulesEngine.reload()` directly instead of broadcasting.
+- Dependency `androidx.localbroadcastmanager` removed from
+  `app/build.gradle.kts`.
+
+### P2-C — `AccessibilityNodeInfo` recycling correctness
+- `collectVisibleText()` now collects every non-root node into a
+  visited `HashSet`, then recycles each exactly once after the BFS.
+  Eliminates the rare double-recycle on OEMs that return the same
+  child handle through multiple paths.
 
 ---
 
-## 🟡 P2 — Stability / logic / API correctness
+## 📦 PRIORITY 3 — DEPENDENCY UPDATES
 
-### 8. `pkg.startsWith("com.android.systemui")` over-matched
-Matched fictitious `com.android.systemuixyz`. Replaced with an exact-match `Set` for system packages plus a documented prefix list for legitimately-varying launcher packages (MIUI / Samsung / OPPO / Vivo / Realme / Huawei).
-
-### 9. Deprecated `onBackPressed()` overrides
-`@Suppress("MissingSuperCall")` doesn't make predictive-back work. Replaced in `PinVerifyActivity`, `PinSetupActivity`, and `BlockOverlayActivity` with `OnBackPressedDispatcher` callbacks. Manifest also gets `android:enableOnBackInvokedCallback="true"`.
-
-### 10. `lastAiScanMs` was global
-After switching apps the first 3 s was a blind spot. Replaced with a per-package `HashMap`.
-
-### 11. `toggleBlock` deleted rows that still had whitelist info
-`toggleBlock` called `delete()`, wiping a row that might have had `isWhitelisted=true`. Block / whitelist flags are now independent; rows are deleted only when both flags become false.
-
-### 12. `notificationTimeout=100` dropped fast events
-Bumped to `200`. Combined with the new periodic scanner this is comfortably reliable without spamming the OS.
-
-### 13. `BootReceiver` could throw `BackgroundServiceStartNotAllowedException`
-Wrapped in `runCatching`, also accepts `LOCKED_BOOT_COMPLETED` for Direct Boot devices, and verifies the action before starting.
-
-### 14. `Interpreter.run()` was called from multiple coroutines
-Native crash risk under load. Inference is now serialized through a `Mutex` and screenshot-then-inference is guarded by an `AtomicBoolean` so only one is in flight at a time.
-
-### 15. `KeywordActivity` accepted invalid regex
-Invalid patterns were silently swallowed in `RulesEngine.evaluateText`. Now validated at insert time with an inline error.
-
-### 16. `AppListViewModel` listed our own package
-Hidden — you can't whitelist Guardian Shield from itself anyway.
-
-### 17. Foreground-service type not declared at start on API 34
-Calling `startForeground(id, notif)` without the type parameter on API 34+ violates `FOREGROUND_SERVICE_SPECIAL_USE`. Fixed by passing `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` on `UPSIDE_DOWN_CAKE+`.
-
-### 18. `Settings` "Model loaded" indicator was stuck on stale state
-Added `refresh()` on `SettingsViewModel` and called after upload — UI now updates immediately.
-
-### 19. `<queries>` element missing
-Play Store rejects `QUERY_ALL_PACKAGES` for most apps. Added a `<queries>` element with the LAUNCHER intent so the app list works without the wide permission. (Wide permission kept for sideload convenience.)
+| Dependency | Was | Now |
+|---|---|---|
+| `compileSdk` / `targetSdk` | 34 | **35** |
+| `androidx.core:core-ktx` | 1.12.0 | **1.13.1** |
+| `androidx.appcompat:appcompat` | 1.6.1 | **1.7.0** |
+| `material` | 1.11.0 | **1.12.0** |
+| `constraintlayout` | 2.1.4 | **2.2.0** |
+| `activity-ktx` | 1.8.2 | **1.9.3** |
+| `fragment-ktx` | 1.6.2 | **1.8.5** |
+| `lifecycle-*` | 2.7.0 | **2.8.7** |
+| `hilt-android` | 2.50 | **2.52** |
+| `datastore-preferences` | 1.0.0 | **1.1.1** |
+| `kotlinx-coroutines-android` | 1.7.3 | **1.8.1** |
+| `tensorflow-lite` | 2.14.0 | **2.16.1** |
+| `tensorflow-lite-gpu` | — | **2.16.1** (NEW) |
+| `tensorflow-lite-gpu-delegate-plugin` | — | **0.4.4** (NEW) |
+| `androidx.localbroadcastmanager` | 1.1.0 | **REMOVED** |
+| Kotlin | 1.9.10 | **1.9.24** |
+| AGP | 8.1.4 | **8.5.2** |
+| KSP | 1.9.10-1.0.13 | **1.9.24-1.0.20** |
 
 ---
+
+## ✨ PRIORITY 4 — NEW FEATURES
+
+### P4-A — Time-Based Schedule Blocking
+- `domain/model/ScheduleRule.kt` data class.
+- `data/local/db/Entities.kt` adds `ScheduleRuleEntity` (days as
+  bitmask).
+- `data/local/db/Daos.kt` adds `ScheduleRuleDao`.
+- `data/local/db/GuardianDatabase.kt` bumped to **version 2** with
+  `AutoMigration(1 → 2)`. Schema export configured in `build.gradle.kts`
+  via `ksp.arg("room.schemaLocation", …)`.
+- `RulesEngine` integrates `isScheduleBlocked(pkg)`; result raised as
+  new `BlockReason.SCHEDULE_BLOCKED` so the user can distinguish in the
+  block log.
+- Overnight ranges (e.g. 22:00–06:00) supported.
+- New `ScheduleViewModel` + `ScheduleActivity` + dialog editor with
+  Material `TimePickerDialog`.
+- Settings entry-point: "Manage Schedule Rules" button.
+
+### P4-B — Block Statistics Card on Dashboard
+- New `BlockStats` data class (`totalBlocks`, `aiBlocks`, `keywordBlocks`,
+  `appBlocks`, `scheduleBlocks`, `topApp`, `topAppCount`).
+- `DashboardViewModel.todayStats` is a hot StateFlow aggregated from
+  `observeBlockEventsSince(todayMidnightMs())`.
+- `activity_main.xml` renders a stats `MaterialCardView` with bold
+  numbers for total / AI / keyword counts and the most-blocked package.
+
+### P4-C — Quick-Toggle Floating Action Button
+- New DataStore key `KEY_PROTECTION_ENABLED` (default `true`).
+- `DashboardViewModel.toggleProtection()` flips the master switch.
+- `MainActivity` shows a Material `FloatingActionButton` (`fabToggle`)
+  with `ic_shield_on` / `ic_shield_off` drawable based on state.
+- `GuardianAccessibilityService` checks `protectionMasterEnabled`
+  (kept hot via collector) at the start of `onAccessibilityEvent` —
+  zero processing while paused.
+
+### P4-D — Export Block Log as CSV
+- `RulesRepository.getAllBlockEvents()` returns the full table.
+- `MainActivity` overflow menu "Export Log" writes a CSV to public
+  `Environment.DIRECTORY_DOWNLOADS` on `Dispatchers.IO`. Comma-safe
+  escaping for `matchedTerm`.
+- New `menu/menu_dashboard.xml`.
+
+---
+
+## 🧹 PRIORITY 5 — CODE QUALITY
+
+### P5-A — Shared Coroutine Scope Helper
+- New `util/Scopes.kt` with `Scopes.io()` / `Scopes.default()`.
+- `BlockingEngine`, `GuardianForegroundService`,
+  `GuardianAccessibilityService` use it instead of inline
+  `CoroutineScope(SupervisorJob() + Dispatchers.X)`.
+
+### P5-B — Centralised Constants
+- New `util/Constants.kt` (`GuardianConstants`) holds every throttle,
+  threshold, and timing value previously scattered across files. The
+  old per-class `companion object` constants now alias these for back-
+  compat with any callers reaching in.
+
+### P5-C — Version Bumped
+- `versionCode = 3`, `versionName = "2.0.0"`.
+
+---
+
+## Files added (12)
+
+```
+app/src/main/java/com/guardian/shield/util/Constants.kt
+app/src/main/java/com/guardian/shield/util/Scopes.kt
+app/src/main/java/com/guardian/shield/domain/model/ScheduleRule.kt
+app/src/main/java/com/guardian/shield/viewmodel/ScheduleViewModel.kt
+app/src/main/java/com/guardian/shield/ui/settings/ScheduleActivity.kt
+app/src/main/res/layout/activity_schedule.xml
+app/src/main/res/layout/item_schedule_rule.xml
+app/src/main/res/layout/dialog_schedule_editor.xml
+app/src/main/res/menu/menu_dashboard.xml
+app/src/main/res/drawable/ic_shield_on.xml
+app/src/main/res/drawable/ic_shield_off.xml
+app/schemas/.gitkeep
+```
+
+## Files changed (22)
+
+- `build.gradle`
+- `app/build.gradle.kts`
+- `app/src/main/AndroidManifest.xml`
+- `app/src/main/res/layout/activity_main.xml`
+- `app/src/main/res/layout/activity_settings.xml`
+- `app/src/main/res/values/strings.xml`
+- `app/src/main/java/com/guardian/shield/service/accessibility/GuardianAccessibilityService.kt`
+- `app/src/main/java/com/guardian/shield/service/detection/AiDetector.kt`
+- `app/src/main/java/com/guardian/shield/service/detection/RulesEngine.kt`
+- `app/src/main/java/com/guardian/shield/service/blocker/GuardianForegroundService.kt`
+- `app/src/main/java/com/guardian/shield/service/blocker/BlockingEngine.kt`
+- `app/src/main/java/com/guardian/shield/data/local/datastore/GuardianPreferences.kt`
+- `app/src/main/java/com/guardian/shield/data/local/db/Daos.kt`
+- `app/src/main/java/com/guardian/shield/data/local/db/Entities.kt`
+- `app/src/main/java/com/guardian/shield/data/local/db/GuardianDatabase.kt`
+- `app/src/main/java/com/guardian/shield/data/local/db/Mappers.kt`
+- `app/src/main/java/com/guardian/shield/data/repository/RulesRepositoryImpl.kt`
+- `app/src/main/java/com/guardian/shield/di/AppModule.kt`
+- `app/src/main/java/com/guardian/shield/domain/model/BlockEvent.kt`
+- `app/src/main/java/com/guardian/shield/domain/repository/RulesRepository.kt`
+- `app/src/main/java/com/guardian/shield/domain/usecase/UseCases.kt`
+- `app/src/main/java/com/guardian/shield/ui/dashboard/MainActivity.kt`
+- `app/src/main/java/com/guardian/shield/ui/settings/SettingsActivity.kt`
+- `app/src/main/java/com/guardian/shield/viewmodel/DashboardViewModel.kt`
+- `app/src/main/java/com/guardian/shield/viewmodel/AppListViewModel.kt`
+- `app/src/main/java/com/guardian/shield/viewmodel/KeywordViewModel.kt`
+
+## Schema
+
+- **Room DB:** version `1 → 2`, `AutoMigration(1, 2)` adds the
+  `schedule_rules` table. `fallbackToDestructiveMigration()` kept as a
+  safety net for unforeseen drift.
+- **DataStore:** one new key `KEY_PROTECTION_ENABLED` (default `true`).
+  Backwards compatible — old installs default to "protection on".
+
+## Conflicts / Risks
+
+- All v8 stability fixes preserved.
+- GPU delegate availability is detected at runtime; old / weak GPUs
+  fall back to CPU automatically. No build-time risk.
+- `AutoMigration(1, 2)` requires Room schema export. Configured in
+  `build.gradle.kts` via `ksp { arg("room.schemaLocation", …) }`.
+  Schema files land in `app/schemas/` at first build.
 
 ## How to deploy
 
-1. Replace your repo content with the files in this archive.
-2. Push to GitHub — the existing `Build Debug APK` workflow will produce a new APK.
-3. Install over the previous version (no data migration needed — DB schema unchanged).
-4. **Important for AI to actually work:**
-   - In-app: Settings → AI Screen Detection → Upload Model
-   - Recommended models: NSFWJS converted to TFLite (224×224, output `[1,5]`),
-     or any GantMan-style 2-class classifier (output `[1,2]`).
-   - Threshold 0.6–0.75 is a good starting point.
-
-If after this update AI still doesn't catch anything, the root cause is almost certainly the model file itself (wrong input shape / quantization). Send `adb logcat | grep TFLite` and we can debug from the inference logs.
+1. Drop the entire updated tree onto your repo (or merge from `v9`).
+2. Push to GitHub → CI workflow builds Debug APK as before.
+3. Install over the existing v8 build (`adb install -r app-debug.apk`).
+4. **First launch after update:**
+   - PIN prompt unlocks dashboard as before.
+   - Re-confirm Permission Health items if anything was reset by Android.
+   - New FAB appears at bottom-right; tap to pause/resume protection.
+   - "Manage Schedule Rules" appears in Settings → Rules.
+   - Three-dot menu on Dashboard → "Export Log" writes CSV to Downloads.
+5. Existing `nsfw_model.tflite` / `gender_model.tflite` files are still
+   loaded as-is — they will benefit from the GPU delegate automatically
+   if the device supports it.

@@ -41,6 +41,12 @@ interface BlockEventDao {
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<BlockEventEntity>>
 
+    @Query("SELECT * FROM block_events ORDER BY timestamp DESC")
+    suspend fun getAll(): List<BlockEventEntity>
+
+    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
+    fun observeSince(since: Long): Flow<List<BlockEventEntity>>
+
     @Insert
     suspend fun insert(entity: BlockEventEntity)
 
@@ -49,4 +55,25 @@ interface BlockEventDao {
 
     @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
     suspend fun countSince(since: Long): Int
+}
+
+/**
+ * v9 (2.0.0) — P4-A: schedule rules DAO.
+ */
+@Dao
+interface ScheduleRuleDao {
+    @Query("SELECT * FROM schedule_rules ORDER BY packageName ASC")
+    fun observeAll(): Flow<List<ScheduleRuleEntity>>
+
+    @Query("SELECT * FROM schedule_rules WHERE enabled = 1")
+    suspend fun getAllEnabled(): List<ScheduleRuleEntity>
+
+    @Query("SELECT * FROM schedule_rules WHERE packageName = :pkg LIMIT 1")
+    suspend fun getByPackage(pkg: String): ScheduleRuleEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: ScheduleRuleEntity)
+
+    @Query("DELETE FROM schedule_rules WHERE packageName = :pkg")
+    suspend fun deleteByPackage(pkg: String)
 }

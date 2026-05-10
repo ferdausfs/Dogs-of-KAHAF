@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v9 (2.0.0) — P4-D: dashboard overflow menu (Export Log). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_export_log"
+        android:title="@string/export_log"
+        android:showAsAction="never" />
+</menu>

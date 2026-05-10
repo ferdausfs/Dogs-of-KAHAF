@@ -12,7 +12,8 @@ import javax.inject.Singleton
 class RulesRepositoryImpl @Inject constructor(
     private val appDao: AppRuleDao,
     private val kwDao: KeywordDao,
-    private val evtDao: BlockEventDao
+    private val evtDao: BlockEventDao,
+    private val schedDao: ScheduleRuleDao
 ) : RulesRepository {
 
     override fun observeAppRules(): Flow<List<AppRule>> =
@@ -43,4 +44,27 @@ class RulesRepositoryImpl @Inject constructor(
         }
         return evtDao.countSince(cal.timeInMillis)
     }
+
+    // v9 (2.0.0): full log export + dashboard stats.
+    override suspend fun getAllBlockEvents(): List<BlockEvent> =
+        evtDao.getAll().map { it.toDomain() }
+
+    override fun observeBlockEventsSince(since: Long): Flow<List<BlockEvent>> =
+        evtDao.observeSince(since).map { list -> list.map { it.toDomain() } }
+
+    // v9 (2.0.0) — P4-A: schedule rules.
+    override fun observeScheduleRules(): Flow<List<ScheduleRule>> =
+        schedDao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getAllScheduleRules(): List<ScheduleRule> =
+        schedDao.getAllEnabled().map { it.toDomain() }
+
+    override suspend fun getScheduleRule(packageName: String): ScheduleRule? =
+        schedDao.getByPackage(packageName)?.toDomain()
+
+    override suspend fun upsertScheduleRule(rule: ScheduleRule) =
+        schedDao.upsert(rule.toEntity())
+
+    override suspend fun deleteScheduleRule(packageName: String) =
+        schedDao.deleteByPackage(packageName)
 }

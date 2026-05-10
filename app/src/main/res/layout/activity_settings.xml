@@ -25,6 +25,12 @@
                 <com.google.android.material.button.MaterialButton android:id="@+id/btnKeywords"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:text="Manage Keywords"
+                    android:layout_marginBottom="8dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"/>
+                <!-- v9 (2.0.0) — P4-A: schedule rules -->
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnSchedule"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/manage_schedule"
                     style="@style/Widget.Material3.Button.OutlinedButton"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -57,6 +63,58 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- ── Opposite-gender NSFW filter ──────────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/navy_700" app:cardCornerRadius="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Your Gender" android:textColor="@color/cyan_400"
+                    android:textSize="14sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="App will block NSFW content of the opposite gender."
+                    android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupGender"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipGenderMale"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Male"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipGenderFemale"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Female"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipGenderNone"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Not Set"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:checkable="true"/>
+                </com.google.android.material.chip.ChipGroup>
+
+                <TextView
+                    android:id="@+id/tvGenderModelStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_secondary" android:textSize="11sp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
@@ -78,11 +136,12 @@
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             app:cardBackgroundColor="@color/navy_700" app:cardCornerRadius="16dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="AI Model" android:textColor="@color/cyan_400"
+                    android:text="AI Model (Legacy Combined)" android:textColor="@color/cyan_400"
                     android:textSize="14sp" android:textStyle="bold"/>
                 <TextView android:id="@+id/tvModelStatus"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -91,6 +150,115 @@
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="8dp" android:text="Upload .tflite Model"
                     style="@style/Widget.Material3.Button.OutlinedButton"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── New: AI Models (per-model import) ─────────────────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/navy_700" app:cardCornerRadius="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="AI Models" android:textColor="@color/cyan_400"
+                    android:textSize="14sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Import the two .tflite files from your phone storage. Files are copied into app private storage."
+                    android:textColor="@color/text_secondary" android:textSize="12sp"/>
+
+                <!-- ── NSFW model row ── -->
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="12dp" android:layout_marginBottom="8dp"
+                    android:background="@color/navy_900"/>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="NSFW Model"
+                    android:textColor="@color/white" android:textStyle="bold"
+                    android:textSize="13sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="nsfw_model.tflite"
+                    android:textColor="@color/text_secondary" android:textSize="11sp"
+                    android:fontFamily="monospace"/>
+                <TextView android:id="@+id/tvNsfwModelStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="✗ Not Imported"
+                    android:textSize="13sp"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:layout_marginTop="8dp">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnImportNsfwModel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Import"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResetNsfwModel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Reset"
+                        android:visibility="gone"
+                        style="@style/Widget.Material3.Button.OutlinedButton"/>
+                </LinearLayout>
+
+                <!-- ── Gender model row ── -->
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="12dp" android:layout_marginBottom="8dp"
+                    android:background="@color/navy_900"/>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Gender Model"
+                    android:textColor="@color/white" android:textStyle="bold"
+                    android:textSize="13sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="gender_model.tflite"
+                    android:textColor="@color/text_secondary" android:textSize="11sp"
+                    android:fontFamily="monospace"/>
+                <TextView android:id="@+id/tvGenderModelImportStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="✗ Not Imported"
+                    android:textSize="13sp"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:layout_marginTop="8dp">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnImportGenderModel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Import"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResetGenderModel"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Reset"
+                        android:visibility="gone"
+                        style="@style/Widget.Material3.Button.OutlinedButton"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/navy_700" app:cardCornerRadius="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Persistence" android:textColor="@color/cyan_400"
+                    android:textSize="14sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Stops Android / OEM battery savers from killing the app and prevents casual uninstall."
+                    android:textColor="@color/text_secondary" android:textSize="12sp"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnPermissionHealth"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:text="@string/permission_health"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

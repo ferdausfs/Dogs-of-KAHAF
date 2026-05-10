@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Minimal device-admin policy.
+  We only ask for the bare minimum needed to:
+   - prevent casual uninstall (handled by the OS once admin is active),
+   - allow the app to receive admin-related broadcasts.
+  We deliberately DO NOT ask for password / lock / wipe / camera / encryption
+  policies — those would be intrusive and Play-policy-risky.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
+</device-admin>

@@ -7,21 +7,38 @@ import com.guardian.shield.service.blocker.GuardianForegroundService
 import timber.log.Timber
 
 /**
- * FIX-LOG (vs original):
- *  - BUG #13: API 31+ throws BackgroundServiceStartNotAllowedException if a
- *    receiver tries to start a foreground service for a "specialUse" foreground
- *    type from the background. BOOT_COMPLETED is one of the few exempted
- *    triggers, but the call must still be inside a try/catch because some OEMs
- *    are stricter than AOSP. We also accept LOCKED_BOOT_COMPLETED to start
- *    earlier on devices that use Direct Boot.
+ * v8 FIX-LOG (stability pass):
+ *  • BUG-06 → handles a new ACTION_RESTART_SERVICE broadcast scheduled by
+ *    GuardianForegroundService.onTaskRemoved via AlarmManager. This avoids
+ *    the Android 12+ ForegroundServiceDidNotStartInTimeException race.
+ *  • BUG-07 → PACKAGE_REPLACED check now uses exact-match on the
+ *    schemeSpecificPart instead of String.contains(), which would have
+ *    matched any package whose name shares our prefix.
  */
 class BootReceiver : BroadcastReceiver() {
+
+    companion object {
+        /** Custom action used by FGS self-restart alarm (BUG-06). */
+        const val ACTION_RESTART_SERVICE = "com.guardian.shield.action.RESTART_SERVICE"
+    }
+
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
-        if (action != Intent.ACTION_BOOT_COMPLETED &&
-            action != Intent.ACTION_LOCKED_BOOT_COMPLETED) return
+
+        // BUG-07: exact match on the package URI's schemeSpecificPart.
+        val isOwnPackageReplaced = action == Intent.ACTION_PACKAGE_REPLACED &&
+            intent.data?.schemeSpecificPart == context.packageName
+
+        val accepted = action == Intent.ACTION_BOOT_COMPLETED ||
+            action == Intent.ACTION_LOCKED_BOOT_COMPLETED ||
+            action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            action == ACTION_RESTART_SERVICE ||  // BUG-06
+            isOwnPackageReplaced
+
+        if (!accepted) return
+
         runCatching {
             GuardianForegroundService.start(context)
-        }.onFailure { Timber.w(it, "Failed to start service on boot") }
+        }.onFailure { Timber.w(it, "Failed to start service for action=$action") }
     }
 }

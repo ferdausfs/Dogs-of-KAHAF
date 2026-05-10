@@ -9,6 +9,19 @@
      apps. We still keep the permission as a fallback for sideloaded builds.
    - BlockOverlayActivity is now noHistory + showOnLockScreen + turnScreenOn so
      the overlay survives across OEM background-launch restrictions.
+
+  v2 update (this commit):
+   - Added REQUEST_IGNORE_BATTERY_OPTIMIZATIONS so the app can ask the user to
+     unrestrict it. This directly fixes "permission auto remove hoy / app
+     kaj kore na" — without this, OEM Battery Saver kills the service.
+   - Added REQUEST_DISABLE_APP_HIBERNATION so we can ask Android 12+ to stop
+     auto-revoking permissions when the user hasn't opened the app in a while.
+   - Added PACKAGE_USAGE_STATS already declared; added BIND_DEVICE_ADMIN for
+     the new GuardianDeviceAdminReceiver — gives uninstall protection and
+     better OEM survival on MIUI / ColorOS / FunTouch / Realme UI.
+   - Added MyPackageReplacedReceiver to BootReceiver so the foreground
+     service is restarted automatically after an app update.
+   - Registered PermissionsActivity (the new "Permission Health" screen).
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -23,6 +36,15 @@
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- v2: keep service alive against OEM battery savers -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- v2: stop Android 12+ from auto-revoking our permissions if user
+         doesn't open the app for ~3 months. -->
+    <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION" />
+    <!-- v2: required for the DeviceAdminReceiver below. -->
+    <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
+        tools:ignore="ProtectedPermissions" />
 
     <queries>
         <intent>
@@ -57,6 +79,12 @@
         <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
         <activity android:name=".ui.settings.AppListActivity" android:exported="false" />
         <activity android:name=".ui.settings.KeywordActivity" android:exported="false" />
+        <!-- v9 (2.0.0) — P4-A: schedule rules screen -->
+        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false" />
+
+        <!-- v2: Permission Health screen -->
+        <activity android:name=".ui.permissions.PermissionsActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ui.overlay.BlockOverlayActivity"
@@ -102,6 +130,29 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <!-- v2: also restart after an app update -->
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <!-- v2: Device-Admin receiver — uninstall protection + better OEM
+             background survival. Activation is OPTIONAL — the rest of the
+             app keeps working even if the user never enables admin. -->
+        <receiver
+            android:name=".admin.GuardianDeviceAdminReceiver"
+            android:label="@string/app_name"
+            android:description="@string/device_admin_description"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
             </intent-filter>
         </receiver>
     </application>

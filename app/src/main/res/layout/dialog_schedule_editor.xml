@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText android:id="@+id/etPackage"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="Package name (e.g. com.instagram.android)"
+        android:inputType="text"
+        android:fontFamily="monospace"/>
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="12dp"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="60dp" android:layout_height="wrap_content"
+            android:text="Start"/>
+        <TextView android:id="@+id/tvStart"
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="16sp" android:textStyle="bold"
+            tools:ignore="HardcodedText"
+            xmlns:tools="http://schemas.android.com/tools"
+            android:text="22:00"/>
+        <Button android:id="@+id/btnStart"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Pick"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="60dp" android:layout_height="wrap_content"
+            android:text="End"/>
+        <TextView android:id="@+id/tvEnd"
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="16sp" android:textStyle="bold"
+            xmlns:tools="http://schemas.android.com/tools"
+            tools:ignore="HardcodedText"
+            android:text="06:00"/>
+        <Button android:id="@+id/btnEnd"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Pick"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="12sp"
+        android:text="Rule applies every day. Overnight ranges (e.g. 22:00–06:00) are supported."/>
+</LinearLayout>
