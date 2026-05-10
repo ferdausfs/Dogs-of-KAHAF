@@ -1,19 +1,31 @@
 package com.kahaf.guardianshield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
+import android.graphics.Bitmap
+import android.hardware.HardwareBuffer
+import android.os.Build
+import android.os.PowerManager
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.annotation.RequiresApi
 import com.kahaf.guardianshield.R
 import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
+import com.kahaf.guardianshield.domain.usecase.AnalyzeFrameUseCase
+import com.kahaf.guardianshield.domain.usecase.AutoLockSourceAppUseCase
 import com.kahaf.guardianshield.domain.usecase.EvaluateForegroundAppUseCase
 import com.kahaf.guardianshield.domain.usecase.RecordBlockEventUseCase
 import com.kahaf.guardianshield.domain.usecase.ScanTextForKeywordsUseCase
 import com.kahaf.guardianshield.domain.usecase.ScanUrlForDomainUseCase
 import com.kahaf.guardianshield.service.foreground.GuardianForegroundService
 import com.kahaf.guardianshield.service.overlay.BlockOverlayActivity
+import com.kahaf.guardianshield.util.AppClassifier
+import com.kahaf.guardianshield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,7 +34,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.coroutines.resume
 
 /**
  * Heart of the protection logic.
@@ -36,6 +51,13 @@ import javax.inject.Inject
  * v3.0.0: when the foreground app is a known browser, we additionally feed
  * collected text through [ScanUrlForDomainUseCase] so URL bars / page
  * content matched against the user's blocked-domain list trigger a block.
+ *
+ * v3.1.0: AI on-screen NSFW scanning wired via [AnalyzeFrameUseCase].
+ *  - Periodic scanner uses [AccessibilityService.takeScreenshot] (API 30+).
+ *  - Falls back silently on older devices.
+ *  - Honours a per-package throttle on TYPE_WINDOW_CONTENT_CHANGED.
+ *  - On confirmed EXPLICIT verdict, fires AI_NSFW block + (when applicable)
+ *    triggers the 15-min source-based auto-lock via [AutoLockSourceAppUseCase].
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
@@ -45,11 +67,21 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var scanUrlForDomain: ScanUrlForDomainUseCase
     @Inject lateinit var recordBlockEvent: RecordBlockEventUseCase
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var analyzeFrameUseCase: AnalyzeFrameUseCase
+    @Inject lateinit var autoLockSourceApp: AutoLockSourceAppUseCase
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile private var lastForegroundPackage: String? = null
     @Volatile private var lastBlockedAtMs: Long = 0L
     private var pendingScanJob: Job? = null
+    private var aiPeriodicJob: Job? = null
+
+    /** Per-package last-AI-scan timestamp for content-changed throttle. */
+    private val lastAiScanByPkg = HashMap<String, Long>()
+
+    private val powerManager: PowerManager? by lazy {
+        runCatching { getSystemService(Context.POWER_SERVICE) as? PowerManager }.getOrNull()
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -57,6 +89,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             instance = this
             // Start FG so the system gives us higher priority and a visible notif.
             GuardianForegroundService.start(applicationContext)
+            // Kick off the AI periodic scan loop (API 30+ only).
+            startAiPeriodicScan()
             Log.i(TAG, "Accessibility service connected")
         } catch (t: Throwable) {
             Log.e(TAG, "onServiceConnected error", t)
@@ -88,6 +122,9 @@ class GuardianAccessibilityService : AccessibilityService() {
                 AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED,
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                     scheduleTextScan(safePkg)
+                    // Opportunistic AI scan on content changes — strictly
+                    // throttled per-package to honour AI_THROTTLE_MS.
+                    maybeScheduleAiScanOnContentChange(safePkg)
                 }
             }
         } catch (t: Throwable) {
@@ -180,6 +217,196 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    //  AI on-screen NSFW scanning  (v3.1.0)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Periodic AI scan loop. Runs every [GuardianConstants.AI_PERIODIC_MS]
+     * (or [GuardianConstants.SCREEN_OFF_PERIODIC_MS] when the screen is off).
+     *
+     * Silent no-op on API < 30 — [takeScreenshot] is unavailable.
+     */
+    private fun startAiPeriodicScan() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Log.i(TAG, "AI periodic scan disabled — requires API 30+")
+            return
+        }
+        aiPeriodicJob?.cancel()
+        aiPeriodicJob = scope.launch {
+            while (true) {
+                try {
+                    val sleep = if (powerManager?.isInteractive == false) {
+                        GuardianConstants.SCREEN_OFF_PERIODIC_MS
+                    } else {
+                        GuardianConstants.AI_PERIODIC_MS
+                    }
+                    delay(sleep)
+
+                    val protectionOn = settingsRepository.appSettings.first().protectionEnabled
+                    if (!protectionOn) continue
+
+                    // Skip work entirely while the screen is off — saves battery.
+                    if (powerManager?.isInteractive == false) continue
+
+                    val pkg = lastForegroundPackage ?: continue
+                    if (pkg == applicationContext.packageName) continue
+
+                    val confirmedBlock = runAiScanFor(pkg)
+                    if (confirmedBlock) {
+                        // After a confirmed block, throttle harder so we don't
+                        // re-fire on every following frame of the same surface.
+                        delay(GuardianConstants.EXPLICIT_DEBOUNCE_MS)
+                    }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.e(TAG, "AI periodic loop iteration error", t)
+                }
+            }
+        }
+    }
+
+    /**
+     * Lightweight per-package throttle for AI scans driven by content-changed
+     * events. The periodic loop is independent and runs regardless.
+     */
+    private fun maybeScheduleAiScanOnContentChange(pkg: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val now = System.currentTimeMillis()
+        val last = lastAiScanByPkg[pkg] ?: 0L
+        if (now - last < GuardianConstants.AI_THROTTLE_MS) return
+        lastAiScanByPkg[pkg] = now
+        // Cap the map so a long session doesn't grow it unbounded.
+        if (lastAiScanByPkg.size > GuardianConstants.MAX_AI_SCAN_MAP) {
+            val cutoff = now - 60_000L
+            lastAiScanByPkg.entries.removeAll { it.value < cutoff }
+        }
+        scope.launch {
+            try {
+                val protectionOn = settingsRepository.appSettings.first().protectionEnabled
+                if (!protectionOn) return@launch
+                if (powerManager?.isInteractive == false) return@launch
+                runAiScanFor(pkg)
+            } catch (t: Throwable) {
+                Log.e(TAG, "content-change AI scan error", t)
+            }
+        }
+    }
+
+    /**
+     * Performs a single AI scan iteration for [pkg]. Returns true iff the
+     * outcome was confirmed and a block was fired.
+     *
+     * Caller must already have verified protection is enabled.
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private suspend fun runAiScanFor(pkg: String): Boolean {
+        // Skip whitelisted system surfaces.
+        val ime = runCatching { AppClassifier.loadInputMethodPackages(applicationContext) }
+            .getOrDefault(emptySet())
+        if (AppClassifier.isAlwaysAllowedPackage(applicationContext.packageName, pkg, ime)) {
+            return false
+        }
+
+        val ai = settingsRepository.aiSettings.first()
+        // AI runs only on apps the user (or defaults) has marked as content
+        // sources. Saves battery and avoids surprising scans of native UIs.
+        if (pkg !in ai.contentSourcePackages) return false
+
+        var bitmap: Bitmap? = null
+        try {
+            bitmap = captureScreenshotSuspend() ?: return false
+            // Skip frames that are too small to be meaningful.
+            if (bitmap.width < ai.minImageSize || bitmap.height < ai.minImageSize) {
+                return false
+            }
+
+            // Inference on Default dispatcher (already serialised inside
+            // TfLiteNsfwClassifier via Mutex).
+            val outcome = withContext(Dispatchers.Default) {
+                analyzeFrameUseCase.analyze(pkg, bitmap!!)
+            }
+
+            if (outcome.confirmed) {
+                val confidence = outcome.result.confidence
+                triggerBlock(
+                    pkg = pkg,
+                    reason = BlockReason.AI_NSFW,
+                    detail = "AI score: $confidence",
+                    lockedUntilMs = 0L,
+                    reasonRes = R.string.blk_reason_ai
+                )
+                // 15-min source-based auto-lock for known content-source apps.
+                if (AppClassifier.isContentSourceApp(pkg) &&
+                    pkg in ai.contentSourcePackages
+                ) {
+                    runCatching {
+                        autoLockSourceApp(pkg, "AI EXPLICIT detection")
+                    }.onFailure { Log.e(TAG, "autoLockSourceApp failed", it) }
+                }
+                return true
+            }
+            return false
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "runAiScanFor error", t)
+            return false
+        } finally {
+            try {
+                if (bitmap != null && !bitmap.isRecycled) bitmap.recycle()
+            } catch (_: Throwable) { /* ignore */ }
+        }
+    }
+
+    /**
+     * Wraps [AccessibilityService.takeScreenshot] in a suspend function. The
+     * platform callback fires on the provided executor — we copy the
+     * HardwareBuffer into a software Bitmap before resuming so downstream
+     * inference can read pixels safely.
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private suspend fun captureScreenshotSuspend(): Bitmap? =
+        suspendCancellableCoroutine { cont ->
+            try {
+                takeScreenshot(
+                    Display.DEFAULT_DISPLAY,
+                    { command -> command.run() },                           // direct executor
+                    object : TakeScreenshotCallback {
+                        override fun onSuccess(screenshot: ScreenshotResult) {
+                            // Consume on Main as required by the platform contract,
+                            // then deliver the bitmap synchronously.
+                            var bmp: Bitmap? = null
+                            try {
+                                val hb: HardwareBuffer = screenshot.hardwareBuffer
+                                val cs = screenshot.colorSpace
+                                val wrapped = Bitmap.wrapHardwareBuffer(hb, cs)
+                                // Convert to ARGB_8888 software bitmap so TFLite
+                                // can read pixels (HARDWARE bitmaps are read-only).
+                                bmp = wrapped?.copy(Bitmap.Config.ARGB_8888, false)
+                                wrapped?.recycle()
+                                hb.close()
+                            } catch (t: Throwable) {
+                                Log.e(TAG, "screenshot decode failed", t)
+                            }
+                            if (cont.isActive) cont.resume(bmp)
+                        }
+
+                        override fun onFailure(errorCode: Int) {
+                            Log.w(TAG, "takeScreenshot failed: $errorCode")
+                            if (cont.isActive) cont.resume(null)
+                        }
+                    }
+                )
+            } catch (t: Throwable) {
+                Log.e(TAG, "takeScreenshot threw", t)
+                if (cont.isActive) cont.resume(null)
+            }
+        }
+
+    // ─────────────────────────────────────────────────────────────────────
+
     private suspend fun triggerBlock(
         pkg: String,
         reason: BlockReason,
@@ -225,6 +452,8 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         try {
             instance = null
+            aiPeriodicJob?.cancel()
+            aiPeriodicJob = null
             scope.cancel()
         } catch (_: Throwable) {}
         super.onDestroy()
