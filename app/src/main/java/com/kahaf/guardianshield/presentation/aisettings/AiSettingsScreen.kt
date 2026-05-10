@@ -13,10 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +30,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kahaf.guardianshield.R
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
 
+/**
+ * v3.0.0: removed the engine FilterChip (stub/real). The detection engine is
+ * always the on-device TFLite classifier. New controls:
+ *   • Model status (Loaded / Not found — safe fallback)
+ *   • Minimum image size slider
+ *   • Input normalized toggle (for models trained on [0,1] floats)
+ *   • Secondary heuristic toggle
+ */
 @Composable
 fun AiSettingsScreen(
     onBack: () -> Unit,
@@ -37,6 +45,7 @@ fun AiSettingsScreen(
 ) {
     val ai by vm.ai.collectAsStateWithLifecycle()
     val apps by vm.allApps.collectAsStateWithLifecycle()
+    val modelLoaded by vm.isModelLoaded.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
 
     Scaffold(topBar = {
@@ -46,6 +55,69 @@ fun AiSettingsScreen(
             Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(scroll),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // -- Detection Engine card (replaces old "engine" chips) -------------
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.ai_engine_title),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        stringResource(R.string.ai_engine_subtitle),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        if (modelLoaded) stringResource(R.string.ai_model_status_loaded)
+                        else stringResource(R.string.ai_model_status_missing),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (modelLoaded) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                    // Min image size
+                    Text(
+                        stringResource(R.string.ai_min_image_size, ai.minImageSize),
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                    Slider(
+                        value = ai.minImageSize.toFloat(),
+                        onValueChange = { vm.setMinImageSize(it.toInt()) },
+                        valueRange = 50f..500f
+                    )
+                    // Input normalization
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.ai_input_normalized),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = ai.modelInputNormalized,
+                            onCheckedChange = { vm.setModelInputNormalized(it) }
+                        )
+                    }
+                    // Heuristic
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.ai_heuristic),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = ai.heuristicEnabled,
+                            onCheckedChange = { vm.setHeuristicEnabled(it) }
+                        )
+                    }
+                }
+            }
+
+            // -- Sensitivity ----------------------------------------------------
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
@@ -60,6 +132,8 @@ fun AiSettingsScreen(
                     Text("${(ai.sensitivity * 100).toInt()}%")
                 }
             }
+
+            // -- Debounce -------------------------------------------------------
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
@@ -81,27 +155,8 @@ fun AiSettingsScreen(
                     )
                 }
             }
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.ai_engine), fontWeight = FontWeight.Medium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = ai.engine == "stub",
-                            onClick = { vm.setEngine("stub") },
-                            label = { Text(stringResource(R.string.ai_engine_stub)) }
-                        )
-                        FilterChip(
-                            selected = ai.engine == "real",
-                            onClick = { vm.setEngine("real") },
-                            label = { Text(stringResource(R.string.ai_engine_real)) }
-                        )
-                    }
-                    Text(
-                        stringResource(R.string.ai_model_missing),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
+
+            // -- Sources --------------------------------------------------------
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(

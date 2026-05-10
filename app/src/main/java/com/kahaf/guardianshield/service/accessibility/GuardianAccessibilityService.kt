@@ -1,7 +1,6 @@
 package com.kahaf.guardianshield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -11,6 +10,7 @@ import com.kahaf.guardianshield.domain.repository.SettingsRepository
 import com.kahaf.guardianshield.domain.usecase.EvaluateForegroundAppUseCase
 import com.kahaf.guardianshield.domain.usecase.RecordBlockEventUseCase
 import com.kahaf.guardianshield.domain.usecase.ScanTextForKeywordsUseCase
+import com.kahaf.guardianshield.domain.usecase.ScanUrlForDomainUseCase
 import com.kahaf.guardianshield.service.foreground.GuardianForegroundService
 import com.kahaf.guardianshield.service.overlay.BlockOverlayActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,12 +32,17 @@ import javax.inject.Inject
  *  - Coalesces text scans with a 250ms debounce.
  *  - Wraps every callback in try/catch — never throws.
  *  - Starts the foreground service on connect so the system keeps us alive.
+ *
+ * v3.0.0: when the foreground app is a known browser, we additionally feed
+ * collected text through [ScanUrlForDomainUseCase] so URL bars / page
+ * content matched against the user's blocked-domain list trigger a block.
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var evaluateForegroundApp: EvaluateForegroundAppUseCase
     @Inject lateinit var scanTextForKeywords: ScanTextForKeywordsUseCase
+    @Inject lateinit var scanUrlForDomain: ScanUrlForDomainUseCase
     @Inject lateinit var recordBlockEvent: RecordBlockEventUseCase
     @Inject lateinit var settingsRepository: SettingsRepository
 
@@ -119,6 +124,24 @@ class GuardianAccessibilityService : AccessibilityService() {
             try {
                 val text = collectVisibleText() ?: return@launch
                 if (text.isBlank()) return@launch
+
+                // 1) Browser package? Try domain blocking first — URL bar text
+                //    is typically the most authoritative signal for browsers.
+                if (pkg in BROWSER_PACKAGES) {
+                    val domainHit = scanUrlForDomain(text)
+                    if (domainHit != null) {
+                        triggerBlock(
+                            pkg = pkg,
+                            reason = BlockReason.KEYWORD,
+                            detail = "Blocked domain: ${domainHit.domain}",
+                            lockedUntilMs = 0L,
+                            reasonRes = R.string.blk_reason_domain
+                        )
+                        return@launch
+                    }
+                }
+
+                // 2) Generic keyword scan for every package (browsers included).
                 val match = scanTextForKeywords(text) ?: return@launch
                 triggerBlock(
                     pkg = pkg,
@@ -175,7 +198,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             context = applicationContext,
             packageName = pkg,
             reasonRes = reasonRes,
-            lockedUntilMs = lockedUntilMs
+            lockedUntilMs = lockedUntilMs,
+            reasonName = reason.name
         )
         try {
             applicationContext.startActivity(intent)
@@ -210,6 +234,25 @@ class GuardianAccessibilityService : AccessibilityService() {
         private const val TAG = "GuardianA11y"
         private const val MAX_DEPTH = 24
         private const val MAX_TEXT_BYTES = 8192
+
+        /** Known major browser packages we run domain-blocking against. */
+        private val BROWSER_PACKAGES: Set<String> = setOf(
+            "com.android.chrome",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "org.mozilla.firefox",
+            "org.mozilla.firefox_beta",
+            "org.mozilla.fennec_fdroid",
+            "com.brave.browser",
+            "com.sec.android.app.sbrowser",
+            "com.opera.browser",
+            "com.opera.mini.native",
+            "com.duckduckgo.mobile.android",
+            "org.mozilla.focus",
+            "com.microsoft.emmx",
+            "com.vivaldi.browser",
+            "com.kiwibrowser.browser"
+        )
 
         @Volatile var instance: GuardianAccessibilityService? = null
             private set

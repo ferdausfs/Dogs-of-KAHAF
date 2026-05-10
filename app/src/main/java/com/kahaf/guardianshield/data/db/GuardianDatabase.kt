@@ -5,11 +5,13 @@ import androidx.room.RoomDatabase
 import com.kahaf.guardianshield.data.db.dao.AppLockDao
 import com.kahaf.guardianshield.data.db.dao.AppRuleDao
 import com.kahaf.guardianshield.data.db.dao.BlockEventDao
+import com.kahaf.guardianshield.data.db.dao.DomainRuleDao
 import com.kahaf.guardianshield.data.db.dao.KeywordRuleDao
 import com.kahaf.guardianshield.data.db.dao.ScheduleDao
 import com.kahaf.guardianshield.data.db.entity.AppLockEntity
 import com.kahaf.guardianshield.data.db.entity.AppRuleEntity
 import com.kahaf.guardianshield.data.db.entity.BlockEventEntity
+import com.kahaf.guardianshield.data.db.entity.DomainRuleEntity
 import com.kahaf.guardianshield.data.db.entity.KeywordRuleEntity
 import com.kahaf.guardianshield.data.db.entity.ScheduleEntity
 
@@ -19,9 +21,10 @@ import com.kahaf.guardianshield.data.db.entity.ScheduleEntity
         KeywordRuleEntity::class,
         ScheduleEntity::class,
         BlockEventEntity::class,
-        AppLockEntity::class
+        AppLockEntity::class,
+        DomainRuleEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -30,6 +33,7 @@ abstract class GuardianDatabase : RoomDatabase() {
     abstract fun scheduleDao(): ScheduleDao
     abstract fun blockEventDao(): BlockEventDao
     abstract fun appLockDao(): AppLockDao
+    abstract fun domainRuleDao(): DomainRuleDao
 
     companion object {
         const val DB_NAME = "guardian_shield.db"

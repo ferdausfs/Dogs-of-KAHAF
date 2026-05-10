@@ -1,11 +1,12 @@
 package com.kahaf.guardianshield.viewmodels
 
 import com.kahaf.guardianshield.domain.model.AppSettings
+import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.domain.repository.BlockEventRepository
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
 import com.kahaf.guardianshield.presentation.dashboard.DashboardViewModel
-import io.mockk.coVerify
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -23,15 +24,24 @@ class DashboardViewModelTest {
 
     @get:Rule val coroutineRule = MainCoroutineRule()
 
+    private fun stubEventRepo(): BlockEventRepository {
+        val r = mockk<BlockEventRepository>(relaxed = true)
+        every { r.observeBlocksTodayCount() } returns MutableStateFlow(0)
+        every { r.observeRecent(any()) } returns MutableStateFlow(emptyList())
+        every { r.getBlocksByReason(any()) } returns
+                MutableStateFlow(emptyMap<BlockReason, Int>())
+        every { r.getTopBlockedApps(any(), any()) } returns
+                MutableStateFlow(emptyList<Pair<String, Int>>())
+        return r
+    }
+
     @Test
     fun `setProtection updates app settings via repository`() = runTest {
         val settingsRepo = mockk<SettingsRepository>(relaxed = true)
-        val eventRepo = mockk<BlockEventRepository>(relaxed = true)
+        val eventRepo = stubEventRepo()
         val initial = AppSettings(protectionEnabled = true)
         val flow = MutableStateFlow(initial)
         every { settingsRepo.appSettings } returns flow
-        every { eventRepo.observeBlocksTodayCount() } returns MutableStateFlow(0)
-        every { eventRepo.observeRecent(any()) } returns MutableStateFlow(emptyList())
 
         val captured = slot<(AppSettings) -> AppSettings>()
         coEvery { settingsRepo.updateAppSettings(capture(captured)) } answers {}
@@ -48,10 +58,8 @@ class DashboardViewModelTest {
     @Test
     fun `setProtection true keeps it enabled`() = runTest {
         val settingsRepo = mockk<SettingsRepository>(relaxed = true)
-        val eventRepo = mockk<BlockEventRepository>(relaxed = true)
+        val eventRepo = stubEventRepo()
         every { settingsRepo.appSettings } returns MutableStateFlow(AppSettings())
-        every { eventRepo.observeBlocksTodayCount() } returns MutableStateFlow(0)
-        every { eventRepo.observeRecent(any()) } returns MutableStateFlow(emptyList())
 
         val captured = slot<(AppSettings) -> AppSettings>()
         coEvery { settingsRepo.updateAppSettings(capture(captured)) } answers {}

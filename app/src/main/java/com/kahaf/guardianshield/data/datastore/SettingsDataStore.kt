@@ -26,12 +26,16 @@ private val Context.dataStore by preferencesDataStore(name = "guardian_settings"
  * because two bindings for the same type cause a duplicate-binding compile
  * error in Hilt.
  *
- * v2.1.8 fixes:
- *  - `readAppOnce` / `readAiOnce` previously called `dataStore.edit{}` just to
- *    read — that triggered a write on every read. Now uses `.first()`.
- *  - `updateApp` / `updateAi` previously used a read-then-write pair which is
- *    a TOCTOU race. The transform now runs inside a single `edit{}` block, so
- *    concurrent updates are serialized correctly.
+ * v3.0.0:
+ *  - removed `AI_ENGINE` (no longer user-selectable; the real TFLite classifier
+ *    is bound unconditionally — see [com.kahaf.guardianshield.di.RepositoryModule]).
+ *  - added `AI_HEURISTIC`, `AI_MIN_IMAGE_SIZE`, `AI_INPUT_NORMALIZED`.
+ *  - added `PIN_HASH`, `PIN_ENABLED` for Settings PIN lock.
+ *
+ * v2.1.8 fixes (preserved):
+ *  - Reads no longer use `dataStore.edit{}` (which would write on every read).
+ *  - `updateApp` / `updateAi` use a single `edit{}` block so concurrent
+ *    transforms cannot race.
  */
 @Singleton
 class SettingsDataStore @Inject constructor(
@@ -42,13 +46,17 @@ class SettingsDataStore @Inject constructor(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val UNINSTALL_PROTECT = booleanPreferencesKey("uninstall_protection")
+        val PIN_HASH = stringPreferencesKey("settings_pin_hash")
+        val PIN_ENABLED = booleanPreferencesKey("settings_pin_enabled")
 
         val AI_SENSITIVITY = floatPreferencesKey("ai_sensitivity")
         val AI_DEBOUNCE_FRAMES = intPreferencesKey("ai_debounce_frames")
         val AI_DEBOUNCE_WINDOW = longPreferencesKey("ai_debounce_window_ms")
         val AI_PER_APP_BOOST = stringPreferencesKey("ai_per_app_boost_csv") // pkg=boost,...
         val AI_SOURCES = stringPreferencesKey("ai_content_sources_csv")
-        val AI_ENGINE = stringPreferencesKey("ai_engine")
+        val AI_HEURISTIC = booleanPreferencesKey("ai_heuristic_enabled")
+        val AI_MIN_IMAGE_SIZE = intPreferencesKey("ai_min_image_size")
+        val AI_INPUT_NORMALIZED = booleanPreferencesKey("ai_input_normalized")
     }
 
     val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs -> decodeApp(prefs) }
@@ -63,6 +71,8 @@ class SettingsDataStore @Inject constructor(
             p[Keys.THEME_MODE] = next.themeMode.name
             p[Keys.DYNAMIC_COLOR] = next.dynamicColor
             p[Keys.UNINSTALL_PROTECT] = next.uninstallProtection
+            p[Keys.PIN_HASH] = next.settingsPinHash
+            p[Keys.PIN_ENABLED] = next.settingsPinEnabled
         }
     }
 
@@ -75,7 +85,9 @@ class SettingsDataStore @Inject constructor(
             p[Keys.AI_DEBOUNCE_WINDOW] = next.debounceWindowMs
             p[Keys.AI_PER_APP_BOOST] = encodeBoosts(next.perAppBoost)
             p[Keys.AI_SOURCES] = next.contentSourcePackages.joinToString(",")
-            p[Keys.AI_ENGINE] = next.engine
+            p[Keys.AI_HEURISTIC] = next.heuristicEnabled
+            p[Keys.AI_MIN_IMAGE_SIZE] = next.minImageSize
+            p[Keys.AI_INPUT_NORMALIZED] = next.modelInputNormalized
         }
     }
 
@@ -84,7 +96,9 @@ class SettingsDataStore @Inject constructor(
         themeMode = runCatching { ThemeMode.valueOf(p[Keys.THEME_MODE] ?: "SYSTEM") }
             .getOrDefault(ThemeMode.SYSTEM),
         dynamicColor = p[Keys.DYNAMIC_COLOR] ?: true,
-        uninstallProtection = p[Keys.UNINSTALL_PROTECT] ?: false
+        uninstallProtection = p[Keys.UNINSTALL_PROTECT] ?: false,
+        settingsPinHash = p[Keys.PIN_HASH] ?: "",
+        settingsPinEnabled = p[Keys.PIN_ENABLED] ?: false
     )
 
     private fun decodeAi(p: Preferences) = AiSettings(
@@ -94,7 +108,9 @@ class SettingsDataStore @Inject constructor(
         perAppBoost = decodeBoosts(p[Keys.AI_PER_APP_BOOST]),
         contentSourcePackages = decodePackages(p[Keys.AI_SOURCES])
             .ifEmpty { AiSettings.DEFAULT_CONTENT_SOURCES },
-        engine = p[Keys.AI_ENGINE] ?: "stub"
+        heuristicEnabled = p[Keys.AI_HEURISTIC] ?: true,
+        minImageSize = (p[Keys.AI_MIN_IMAGE_SIZE] ?: 120).coerceIn(50, 500),
+        modelInputNormalized = p[Keys.AI_INPUT_NORMALIZED] ?: false
     )
 
     private fun decodeBoosts(s: String?): Map<String, Float> {

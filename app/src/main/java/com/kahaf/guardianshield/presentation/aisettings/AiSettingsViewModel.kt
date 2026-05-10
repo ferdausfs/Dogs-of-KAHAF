@@ -2,6 +2,7 @@ package com.kahaf.guardianshield.presentation.aisettings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier
 import com.kahaf.guardianshield.domain.model.AiSettings
 import com.kahaf.guardianshield.domain.model.InstalledApp
 import com.kahaf.guardianshield.domain.repository.AppRuleRepository
@@ -16,14 +17,26 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * v3.0.0:
+ *  - removed `setEngine` (engine toggle is gone — TFLite is the only engine).
+ *  - added `setMinImageSize`, `setModelInputNormalized`, `setHeuristicEnabled`.
+ *  - exposes `isModelLoaded` from the classifier so the UI can show
+ *    "Loaded" vs. "Not found — using safe fallback".
+ */
 @HiltViewModel
 class AiSettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val appRuleRepository: AppRuleRepository
+    private val appRuleRepository: AppRuleRepository,
+    private val classifier: TfLiteNsfwClassifier
 ) : ViewModel() {
 
     val ai: StateFlow<AiSettings> = settingsRepository.aiSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AiSettings())
+
+    /** True after the TFLite model is mapped + warmed up. */
+    val isModelLoaded: StateFlow<Boolean> = classifier.isModelLoaded
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     val allApps: StateFlow<List<InstalledApp>> = _allApps.asStateFlow()
@@ -54,15 +67,23 @@ class AiSettingsViewModel @Inject constructor(
         }
     }
 
-    fun setEngine(engine: String) = viewModelScope.launch {
-        settingsRepository.updateAiSettings { it.copy(engine = engine) }
-    }
-
     fun setPerAppBoost(pkg: String, boost: Float) = viewModelScope.launch {
         settingsRepository.updateAiSettings {
             val map = it.perAppBoost.toMutableMap()
             if (boost == 0f) map.remove(pkg) else map[pkg] = boost
             it.copy(perAppBoost = map)
         }
+    }
+
+    fun setMinImageSize(px: Int) = viewModelScope.launch {
+        settingsRepository.updateAiSettings { it.copy(minImageSize = px.coerceIn(50, 500)) }
+    }
+
+    fun setModelInputNormalized(enabled: Boolean) = viewModelScope.launch {
+        settingsRepository.updateAiSettings { it.copy(modelInputNormalized = enabled) }
+    }
+
+    fun setHeuristicEnabled(enabled: Boolean) = viewModelScope.launch {
+        settingsRepository.updateAiSettings { it.copy(heuristicEnabled = enabled) }
     }
 }

@@ -1,7 +1,8 @@
 // =============================================================================
 //  Guardian Shield — :app module build script
-//  (Fixed in v2.1.8 — earlier zips were missing this file entirely, which is
-//   why CI failed with "Task 'assembleDebug' not found in root project".)
+//  v3.0.0 — switched default classifier binding to TfLiteNsfwClassifier,
+//           added tensorflow-lite-gpu, added PIN lock + domain blocking,
+//           bumped DB schema to v4.
 // =============================================================================
 plugins {
     id 'com.android.application'
@@ -19,8 +20,8 @@ android {
         applicationId 'com.kahaf.guardianshield'
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName '2.1.8'
+        versionCode 12
+        versionName '3.0.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
@@ -145,6 +146,8 @@ dependencies {
     // ── TFLite (on-device NSFW classifier) ──────────────────────────────────
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+    // v3.0.0: opt-in GPU delegate. Falls back gracefully when unavailable.
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
 
     // ── Unit tests ──────────────────────────────────────────────────────────
     testImplementation 'junit:junit:4.13.2'

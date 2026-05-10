@@ -1,17 +1,24 @@
 package com.kahaf.guardianshield.presentation.dashboard
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
@@ -24,8 +31,16 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,8 +48,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kahaf.guardianshield.R
 import com.kahaf.guardianshield.domain.model.BlockEvent
+import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
+import com.kahaf.guardianshield.presentation.common.PinEntryDialog
 import com.kahaf.guardianshield.presentation.common.StatCard
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -45,12 +63,18 @@ fun DashboardScreen(
     onOpenKeywords: () -> Unit,
     onOpenSchedules: () -> Unit,
     onOpenAi: () -> Unit,
+    onOpenDomains: () -> Unit,
     onOpenSettings: () -> Unit,
     vm: DashboardViewModel = hiltViewModel()
 ) {
-    val settings by vm.settings.collectAsStateWithLifecycle()
+    val settings by vm.appSettings.collectAsStateWithLifecycle()
     val blocks by vm.blocksToday.collectAsStateWithLifecycle()
     val recent by vm.recent.collectAsStateWithLifecycle()
+    val byReason by vm.blocksByReasonToday.collectAsStateWithLifecycle()
+    val topApps by vm.topBlockedAppsToday.collectAsStateWithLifecycle()
+
+    var showSettingsPin by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(topBar = {
         GuardianTopBar(stringResource(R.string.app_name))
@@ -98,6 +122,9 @@ fun DashboardScreen(
                 )
             }
 
+            // v3.0.0: "Today's Activity" — segmented bar by reason + top blocked apps.
+            TodaysActivityCard(byReason = byReason, topApps = topApps)
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 NavTile(
                     label = stringResource(R.string.apps_title),
@@ -126,12 +153,24 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Row {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NavTile(
+                    label = stringResource(R.string.nav_domains),
+                    icon = Icons.Filled.Language,
+                    onClick = onOpenDomains,
+                    modifier = Modifier.weight(1f)
+                )
                 NavTile(
                     label = stringResource(R.string.set_title),
                     icon = Icons.Filled.Settings,
-                    onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth()
+                    onClick = {
+                        if (settings.settingsPinEnabled && settings.settingsPinHash.isNotBlank()) {
+                            showSettingsPin = true
+                        } else {
+                            onOpenSettings()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -152,6 +191,140 @@ fun DashboardScreen(
             }
         }
     }
+
+    if (showSettingsPin) {
+        PinEntryDialog(
+            expectedHash = settings.settingsPinHash,
+            onVerified = {
+                showSettingsPin = false
+                onOpenSettings()
+            },
+            onDismiss = { showSettingsPin = false }
+        )
+    }
+}
+
+@Composable
+private fun TodaysActivityCard(
+    byReason: Map<BlockReason, Int>,
+    topApps: List<Pair<String, Int>>
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                stringResource(R.string.dash_today_activity),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(8.dp))
+            ReasonBar(byReason)
+            Spacer(Modifier.height(10.dp))
+            ReasonLegend(byReason)
+            if (topApps.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.dash_top_blocked_apps),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(6.dp))
+                topApps.forEach { (pkg, count) ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(pkg, style = MaterialTheme.typography.bodySmall)
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            Text(
+                                "  $count  ",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReasonBar(byReason: Map<BlockReason, Int>) {
+    val total = byReason.values.sum().coerceAtLeast(1)
+    val orderedReasons = BlockReason.values().toList()
+    Canvas(
+        Modifier
+            .fillMaxWidth()
+            .height(14.dp)
+            .clip(RoundedCornerShape(7.dp))
+    ) {
+        var x = 0f
+        val w = size.width
+        val h = size.height
+        if (byReason.isEmpty()) {
+            drawRect(Color(0xFFE0E0E0), topLeft = Offset(0f, 0f), size = Size(w, h))
+            return@Canvas
+        }
+        orderedReasons.forEach { reason ->
+            val count = byReason[reason] ?: 0
+            if (count > 0) {
+                val segW = w * count / total.toFloat()
+                drawRect(
+                    color = colorFor(reason),
+                    topLeft = Offset(x, 0f),
+                    size = Size(segW, h)
+                )
+                x += segW
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReasonLegend(byReason: Map<BlockReason, Int>) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        BlockReason.values().forEach { r ->
+            val count = byReason[r] ?: 0
+            if (count > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                    ) { Canvas(Modifier.fillMaxSize()) { drawRect(colorFor(r)) } }
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        "${labelFor(r)}: $count",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun colorFor(r: BlockReason): Color = when (r) {
+    BlockReason.APP_RULE -> Color(0xFF1976D2)
+    BlockReason.KEYWORD -> Color(0xFFEF6C00)
+    BlockReason.SCHEDULE -> Color(0xFF6A1B9A)
+    BlockReason.AI_NSFW -> Color(0xFFD32F2F)
+    BlockReason.AUTO_LOCK -> Color(0xFF2E7D32)
+}
+
+private fun labelFor(r: BlockReason): String = when (r) {
+    BlockReason.APP_RULE -> "App rule"
+    BlockReason.KEYWORD -> "Keyword/domain"
+    BlockReason.SCHEDULE -> "Schedule"
+    BlockReason.AI_NSFW -> "AI NSFW"
+    BlockReason.AUTO_LOCK -> "Auto-lock"
 }
 
 @Composable

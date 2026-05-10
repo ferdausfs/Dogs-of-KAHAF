@@ -48,6 +48,24 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
+      # 6.5. v3.0.0: Download NSFW TFLite model from a GitHub Release asset.
+      #      The URL is supplied via the NSFW_MODEL_URL secret so the model
+      #      itself is never committed to the repo. If the secret is unset
+      #      the build still succeeds — TfLiteNsfwClassifier handles missing
+      #      models gracefully and falls back to SAFE.
+      - name: Download NSFW model
+        run: |
+          MODEL_URL="${{ secrets.NSFW_MODEL_URL }}"
+          DEST="app/src/main/assets/nsfw_v1.tflite"
+          mkdir -p "$(dirname "$DEST")"
+          if [ -n "$MODEL_URL" ]; then
+            echo "Downloading model from: $MODEL_URL"
+            curl -L --fail --retry 3 -o "$DEST" "$MODEL_URL"
+            echo "Model size: $(du -sh $DEST | cut -f1)"
+          else
+            echo "NSFW_MODEL_URL secret not set — build will use safe fallback"
+          fi
+
       # 7. Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
@@ -59,14 +77,19 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: GuardianShield-debug-${{ github.run_number }}
+          name: Dogs-of-KAHAF-v3.0.0-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: warn
 
-      # 9. Print APK info
-      - name: APK info
+      # 9. APK summary
+      - name: APK summary
         if: success()
         run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
           echo "Build complete!"
           ls -lh app/build/outputs/apk/debug/ || echo "(no APK found)"
+          if [ -f "$APK" ]; then
+            echo "APK size: $(du -sh $APK | cut -f1)"
+          fi
+          echo "Model bundled: $([ -f app/src/main/assets/nsfw_v1.tflite ] && echo YES || echo NO)"

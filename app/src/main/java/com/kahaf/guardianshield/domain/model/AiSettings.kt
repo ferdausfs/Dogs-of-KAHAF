@@ -6,7 +6,13 @@ package com.kahaf.guardianshield.domain.model
  * @param debounceWindowMs         within this rolling window
  * @param perAppBoost              extra sensitivity (added to base) per package
  * @param contentSourcePackages    packages eligible for the 15-minute auto-lock
- * @param engine                   "real" or "stub"
+ * @param heuristicEnabled         secondary heuristic checks alongside the model
+ * @param minImageSize             ignore frames smaller than this (in px) on either dim
+ * @param modelInputNormalized     true = model expects [0,1] float inputs; false = [0,255]
+ *
+ * v3.0.0: removed `engine` field — the real TFLite classifier is now the only
+ * implementation bound by Hilt. `StubNsfwClassifier` remains in source as a
+ * test double but is never wired into the production graph.
  */
 data class AiSettings(
     val sensitivity: Float = 0.55f,
@@ -14,7 +20,9 @@ data class AiSettings(
     val debounceWindowMs: Long = 4_000L,
     val perAppBoost: Map<String, Float> = emptyMap(),
     val contentSourcePackages: Set<String> = DEFAULT_CONTENT_SOURCES,
-    val engine: String = "stub"
+    val heuristicEnabled: Boolean = true,
+    val minImageSize: Int = 120,
+    val modelInputNormalized: Boolean = false
 ) {
     fun thresholdFor(pkg: String): Float {
         val base = (1f - sensitivity).coerceIn(0.05f, 0.95f)

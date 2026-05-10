@@ -4,6 +4,78 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] — 2026-05-10
+
+### Added
+- **Real on-device TFLite NSFW classifier is now the default.** The Hilt
+  binding in `RepositoryModule` switched from `StubNsfwClassifier` to
+  `TfLiteNsfwClassifier`. The stub remains in source as a test double but
+  is no longer wired into the production graph. The real classifier still
+  handles a missing model file gracefully — when `assets/nsfw_v1.tflite`
+  is absent it returns `SAFE` deterministically.
+- **CI bundles the model at build time.** New `Download NSFW model` step in
+  `.github/workflows/build-debug.yml` reads `NSFW_MODEL_URL` from repo
+  secrets and `curl`s the file into `app/src/main/assets/nsfw_v1.tflite`
+  before Gradle runs. The artifact is renamed to
+  `Dogs-of-KAHAF-v3.0.0-${run_number}` and the build summary now reports
+  APK size + whether the model was bundled.
+- **GPU delegate** (`org.tensorflow:tensorflow-lite-gpu:2.14.0`) with
+  graceful fallback chain GPU → NNAPI → CPU.
+- **Model warm-up** — one dummy inference after load to pre-JIT kernels.
+- **2-class model auto-detection.** The classifier now reads the output
+  tensor shape and supports both `[1,4]` (SAFE/NATURAL/SUGGESTIVE/EXPLICIT)
+  and `[1,2]` (SFW/NSFW) softmax layouts; the latter is mapped to the
+  4-tier severity scale via documented thresholds.
+- **Configurable input normalization.** `AiSettings.modelInputNormalized`
+  toggles a `NormalizeOp(0f, 255f)` in the image pre-processor for models
+  trained on `[0,1]` floats. Exposed in the Detection Settings screen.
+- **Min image size threshold** — frames smaller than
+  `AiSettings.minImageSize` (default 120 px, slider 50–500) skip
+  inference and return SAFE.
+- **Settings PIN lock.** New `PinManager` (SHA-256), `PinEntryDialog` (with
+  shake animation, 3-attempt lockout + 30 s cooldown), `PinSetupDialog`
+  (two-step entry with mismatch detection). Settings navigation from the
+  dashboard is now PIN-gated when enabled. PIN hash is **not** included in
+  configuration export.
+- **Browser domain blocking.** New `DomainRule` model, `domain_rules` Room
+  table (schema bumped to v4 with `MIGRATION_3_4`), `DomainRepository*`,
+  `ScanUrlForDomainUseCase`, `DomainsScreen` + `DomainsViewModel`. Wired
+  into `GuardianAccessibilityService`: when the foreground app is a known
+  major browser, collected text is matched against the user's domain list
+  in addition to the keyword scan.
+- **Today's Activity card** on the Dashboard — segmented bar (drawn with
+  `Canvas`, no chart library) showing block counts per `BlockReason`,
+  plus a top-3 list of most-blocked apps.
+- **Block overlay improvements** — pulsing shield icon
+  (`Animatable` 1f→1.1f infinite reverse), blocked-app launcher icon
+  resolved via `PackageManager`, live `Locked for X min Y sec` countdown
+  for `AUTO_LOCK`, `Blocked until HH:MM` for `SCHEDULE`, and a hardened
+  back-gesture override via `OnBackPressedDispatcher`.
+
+### Changed
+- `AiSettingsScreen` no longer shows the engine toggle (stub/real). The
+  card is replaced by a **Detection Engine** card showing model status
+  (Loaded / Not found — safe fallback), the min-image-size slider, the
+  input-normalization toggle, and a heuristic toggle.
+- `AppSettings` gained `settingsPinHash` and `settingsPinEnabled`.
+- `AiSettings` removed `engine` (no longer user-selectable) and gained
+  `heuristicEnabled`, `minImageSize`, `modelInputNormalized`.
+- `BlockEventRepository` gained `getBlocksByReason(sinceMs)` and
+  `getTopBlockedApps(sinceMs, limit)` for dashboard statistics.
+- `DashboardViewModel` exposes `appSettings`, `verifyPin(pin)`,
+  `blocksByReasonToday`, and `topBlockedAppsToday`.
+- Settings export schema bumped to `version = 2`. v1 snapshots still
+  import correctly thanks to `ignoreUnknownKeys = true`.
+
+### Database
+- Schema **v3 → v4**: added `domain_rules` table.
+  Migration is idempotent (`CREATE TABLE IF NOT EXISTS`).
+
+### Build
+- `versionCode 11 → 12`, `versionName 2.1.8 → 3.0.0`.
+- New dependency: `org.tensorflow:tensorflow-lite-gpu:2.14.0`.
+- No new runtime permissions added — still **no `INTERNET`**.
+
 ## [2.1.8] — 2026-05-10
 
 ### Fixed (build-breakers)

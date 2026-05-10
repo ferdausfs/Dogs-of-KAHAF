@@ -28,6 +28,8 @@
     <string name="dash_today_scans">Scans today</string>
     <string name="dash_recent_events">Recent events</string>
     <string name="dash_no_events">No events yet.</string>
+    <string name="dash_today_activity">Today\'s activity</string>
+    <string name="dash_top_blocked_apps">Top blocked apps</string>
 
     <!-- App List -->
     <string name="apps_title">Apps</string>
@@ -56,16 +58,36 @@
     <string name="sch_enabled">Enabled</string>
     <string name="sch_save">Save</string>
 
-    <!-- AI Settings -->
-    <string name="ai_title">AI content detection</string>
+    <!-- AI / Detection Settings (v3.0.0) -->
+    <string name="ai_title">Detection Settings</string>
+    <string name="ai_engine_title">Detection Engine</string>
+    <string name="ai_engine_subtitle">On-device TFLite NSFW classifier</string>
+    <string name="ai_model_status_loaded">Model loaded ✓</string>
+    <string name="ai_model_status_missing">Model not found — safe fallback active</string>
+    <string name="ai_min_image_size">Min image size: %1$dpx</string>
+    <string name="ai_input_normalized">Input normalization (0–1 range)</string>
+    <string name="ai_heuristic">Secondary heuristic</string>
     <string name="ai_sensitivity">Global sensitivity</string>
     <string name="ai_debounce">Debounce window (frames / seconds)</string>
     <string name="ai_per_app">Per-app threshold boost</string>
     <string name="ai_sources">Content-source apps (15-min auto-lock)</string>
-    <string name="ai_engine">Detection engine</string>
-    <string name="ai_engine_real">Real TFLite model</string>
-    <string name="ai_engine_stub">Stub (test) — always SAFE</string>
-    <string name="ai_model_missing">No model bundled — using stub.</string>
+
+    <!-- Domains (v3.0.0) -->
+    <string name="nav_domains">Domains</string>
+    <string name="domains_title">Blocked Domains</string>
+    <string name="domains_hint">e.g. reddit.com</string>
+    <string name="domains_invalid">Invalid domain format</string>
+
+    <!-- PIN (v3.0.0) -->
+    <string name="pin_title">Protection PIN</string>
+    <string name="pin_enable">Enable Settings PIN</string>
+    <string name="pin_change">Change PIN</string>
+    <string name="pin_enter">Enter PIN to continue</string>
+    <string name="pin_wrong">Wrong PIN — %1$d attempt(s) left</string>
+    <string name="pin_locked">Locked — retry in %1$ds</string>
+    <string name="pin_set_new">Set a new PIN</string>
+    <string name="pin_confirm">Confirm PIN</string>
+    <string name="pin_mismatch">PINs do not match — try again</string>
 
     <!-- Settings -->
     <string name="set_title">Settings</string>
@@ -84,11 +106,12 @@
     <string name="blk_title">Blocked by Guardian Shield</string>
     <string name="blk_reason_app">This app is on your block list.</string>
     <string name="blk_reason_keyword">A forbidden keyword was detected.</string>
+    <string name="blk_reason_domain">Blocked domain</string>
     <string name="blk_reason_schedule">This app is blocked by a time schedule.</string>
     <string name="blk_reason_ai">Sensitive content was detected.</string>
     <string name="blk_reason_lock">This app is locked for 15 minutes.</string>
     <string name="blk_locked_until">Unlocks in %1$s</string>
-    <string name="blk_go_home">Go to home</string>
+    <string name="blk_go_home">I understand — go home</string>
 
     <string name="cd_back">Back</string>
 </resources>

@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -34,6 +35,8 @@ import com.kahaf.guardianshield.BuildConfig
 import com.kahaf.guardianshield.R
 import com.kahaf.guardianshield.domain.model.ThemeMode
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
+import com.kahaf.guardianshield.presentation.common.PinEntryDialog
+import com.kahaf.guardianshield.presentation.common.PinSetupDialog
 
 @Composable
 fun SettingsScreen(
@@ -47,6 +50,13 @@ fun SettingsScreen(
 
     var importDialogOpen by remember { mutableStateOf(false) }
     var importText by remember { mutableStateOf("") }
+
+    // PIN dialog state machine:
+    //   "setup"            → first-time PIN creation
+    //   "verifyForDisable" → require old PIN before disabling protection
+    //   "verifyForChange"  → require old PIN before changing
+    //   "setupAfterVerify" → set up new PIN after old verified
+    var pinDialogMode by remember { mutableStateOf<String?>(null) }
 
     Scaffold(topBar = {
         GuardianTopBar(stringResource(R.string.set_title), onBack = onBack)
@@ -109,6 +119,41 @@ fun SettingsScreen(
                         checked = app.uninstallProtection,
                         onCheckedChange = { vm.setUninstallProtection(it) }
                     )
+                }
+            }
+
+            // -- v3.0.0: Protection PIN card -----------------------------------
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.pin_title),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.pin_enable))
+                        Switch(
+                            checked = app.settingsPinEnabled,
+                            onCheckedChange = { wantOn ->
+                                if (wantOn) {
+                                    pinDialogMode = "setup"
+                                } else {
+                                    pinDialogMode = "verifyForDisable"
+                                }
+                            }
+                        )
+                    }
+                    if (app.settingsPinEnabled) {
+                        OutlinedButton(
+                            onClick = { pinDialogMode = "verifyForChange" },
+                            modifier = Modifier.padding(top = 6.dp)
+                        ) {
+                            Text(stringResource(R.string.pin_change))
+                        }
+                    }
                 }
             }
 
@@ -193,6 +238,37 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+        )
+    }
+
+    // ----- PIN dialogs -------------------------------------------------------
+    when (pinDialogMode) {
+        "setup" -> PinSetupDialog(
+            onPinSet = { pin ->
+                vm.setPin(pin)
+                pinDialogMode = null
+            },
+            onDismiss = { pinDialogMode = null }
+        )
+        "verifyForDisable" -> PinEntryDialog(
+            expectedHash = app.settingsPinHash,
+            onVerified = {
+                vm.disablePin()
+                pinDialogMode = null
+            },
+            onDismiss = { pinDialogMode = null }
+        )
+        "verifyForChange" -> PinEntryDialog(
+            expectedHash = app.settingsPinHash,
+            onVerified = { pinDialogMode = "setupAfterVerify" },
+            onDismiss = { pinDialogMode = null }
+        )
+        "setupAfterVerify" -> PinSetupDialog(
+            onPinSet = { pin ->
+                vm.setPin(pin)
+                pinDialogMode = null
+            },
+            onDismiss = { pinDialogMode = null }
         )
     }
 }

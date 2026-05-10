@@ -29,9 +29,19 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.updateAi(transform)
     }
 
+    /**
+     * v3.0.0:
+     *  - bumped snapshot version to 2
+     *  - removed `aiEngine` (no longer user-selectable)
+     *  - added `aiHeuristicEnabled`, `aiMinImageSize`, `aiInputNormalized`
+     *  - PIN hash/enabled are intentionally NOT exported (don't move PINs across devices)
+     *
+     * `ignoreUnknownKeys = true` keeps importing v1 snapshots safe — we just
+     * drop the old `aiEngine` key.
+     */
     @Serializable
     data class ConfigSnapshot(
-        val version: Int = 1,
+        val version: Int = 2,
         val themeMode: String,
         val dynamicColor: Boolean,
         val protectionEnabled: Boolean,
@@ -41,7 +51,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val aiDebounceWindowMs: Long,
         val aiPerAppBoost: Map<String, Float>,
         val aiContentSources: List<String>,
-        val aiEngine: String
+        val aiHeuristicEnabled: Boolean = true,
+        val aiMinImageSize: Int = 120,
+        val aiInputNormalized: Boolean = false
     )
 
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
@@ -59,7 +71,9 @@ class SettingsRepositoryImpl @Inject constructor(
             aiDebounceWindowMs = ai.debounceWindowMs,
             aiPerAppBoost = ai.perAppBoost,
             aiContentSources = ai.contentSourcePackages.toList(),
-            aiEngine = ai.engine
+            aiHeuristicEnabled = ai.heuristicEnabled,
+            aiMinImageSize = ai.minImageSize,
+            aiInputNormalized = ai.modelInputNormalized
         )
         return json.encodeToString(snap)
     }
@@ -74,6 +88,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 dynamicColor = snap.dynamicColor,
                 protectionEnabled = snap.protectionEnabled,
                 uninstallProtection = snap.uninstallProtection
+                // PIN hash/enabled intentionally not imported.
             )
         }
         dataStore.updateAi { current ->
@@ -83,7 +98,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 debounceWindowMs = snap.aiDebounceWindowMs,
                 perAppBoost = snap.aiPerAppBoost,
                 contentSourcePackages = snap.aiContentSources.toSet(),
-                engine = snap.aiEngine
+                heuristicEnabled = snap.aiHeuristicEnabled,
+                minImageSize = snap.aiMinImageSize.coerceIn(50, 500),
+                modelInputNormalized = snap.aiInputNormalized
             )
         }
         return true

@@ -7,6 +7,7 @@ import com.kahaf.guardianshield.data.db.Migrations
 import com.kahaf.guardianshield.data.db.dao.AppLockDao
 import com.kahaf.guardianshield.data.db.dao.AppRuleDao
 import com.kahaf.guardianshield.data.db.dao.BlockEventDao
+import com.kahaf.guardianshield.data.db.dao.DomainRuleDao
 import com.kahaf.guardianshield.data.db.dao.KeywordRuleDao
 import com.kahaf.guardianshield.data.db.dao.ScheduleDao
 import dagger.Module
@@ -33,4 +34,5 @@ object DatabaseModule {
     @Provides fun provideScheduleDao(db: GuardianDatabase): ScheduleDao = db.scheduleDao()
     @Provides fun provideBlockEventDao(db: GuardianDatabase): BlockEventDao = db.blockEventDao()
     @Provides fun provideAppLockDao(db: GuardianDatabase): AppLockDao = db.appLockDao()
+    @Provides fun provideDomainRuleDao(db: GuardianDatabase): DomainRuleDao = db.domainRuleDao()
 }

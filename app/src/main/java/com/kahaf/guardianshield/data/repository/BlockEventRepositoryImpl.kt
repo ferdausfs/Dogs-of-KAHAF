@@ -44,6 +44,18 @@ class BlockEventRepositoryImpl @Inject constructor(
             .flatMapLatest { since -> dao.observeCountSince(since) }
     }
 
+    override fun getBlocksByReason(sinceMs: Long): Flow<Map<BlockReason, Int>> =
+        dao.observeByReasonSince(sinceMs).map { rows ->
+            rows.associate { row ->
+                BlockReason.fromStringOrDefault(row.reason) to row.count
+            }
+        }
+
+    override fun getTopBlockedApps(sinceMs: Long, limit: Int): Flow<List<Pair<String, Int>>> =
+        dao.observeTopPackagesSince(sinceMs, limit).map { rows ->
+            rows.map { it.packageName to it.count }
+        }
+
     override suspend fun log(packageName: String, reason: BlockReason, detail: String) {
         dao.insert(
             BlockEventEntity(

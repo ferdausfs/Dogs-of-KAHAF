@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  *
  * v1 → v2 : added `schedules` and `block_events` tables.
  * v2 → v3 : added `app_locks` table for source-based 15-minute auto-lock.
+ * v3 → v4 : added `domain_rules` table for browser domain blocking (v3.0.0).
  *
  * We use IF NOT EXISTS everywhere so re-running a partially applied migration
  * never crashes the user's database.
@@ -57,5 +58,19 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+    val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS domain_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    domain TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 }
