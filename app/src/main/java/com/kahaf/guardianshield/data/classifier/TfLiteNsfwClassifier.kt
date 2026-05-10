@@ -285,7 +285,16 @@ class TfLiteNsfwClassifier @Inject constructor(
 
     /**
      * 2-output softmax: index 0 = SFW, index 1 = NSFW.
-     * Severity mapping documented in nsfw_v1.tflite.README:
+     *
+     * v3.1.3 FIX: previously the SUGGESTIVE bucket got `nsfw * 0.3f` which
+     * artificially deflated mid-range scores and made it impossible for the
+     * AnalyzeFrameUseCase threshold (driven by the user's sensitivity slider)
+     * to ever fire on the SUGGESTIVE path. Now the buckets carry the actual
+     * raw nsfw probability and AnalyzeFrameUseCase decides EXPLICIT vs.
+     * non-EXPLICIT against the user's effective threshold — so the slider is
+     * truly dynamic for 2-class models too.
+     *
+     * Severity mapping (label only — NOT the block decision):
      *   nsfw < 0.40                 → SAFE
      *   0.40 ≤ nsfw < 0.60          → NATURAL
      *   0.60 ≤ nsfw < 0.80          → SUGGESTIVE
@@ -305,8 +314,8 @@ class TfLiteNsfwClassifier @Inject constructor(
             confidence = if (label == NsfwLabel.SAFE) sfw else nsfw,
             scores = mapOf(
                 NsfwLabel.SAFE       to sfw,
-                NsfwLabel.NATURAL    to 0f,
-                NsfwLabel.SUGGESTIVE to nsfw * 0.3f,
+                NsfwLabel.NATURAL    to if (nsfw in 0.40f..0.60f) nsfw else 0f,
+                NsfwLabel.SUGGESTIVE to if (nsfw >= 0.60f) nsfw else 0f,
                 NsfwLabel.EXPLICIT   to nsfw
             )
         )

@@ -37,14 +37,68 @@ data class AiSettings(
     }
 
     companion object {
+        /**
+         * v3.1.3 FIX: the previous default list contained only 7 social-media
+         * apps, so the AI screen-scanner silently skipped browsers, gallery,
+         * file managers, video apps, etc. Result: the user opens an explicit
+         * image in Chrome / their gallery / a downloads viewer and nothing
+         * fires — "the app does NSFW detection but doesn't actually detect".
+         * The expanded default covers the realistic set of apps that can
+         * deliver user-facing media. The user can still trim the list in the
+         * Detection Settings screen.
+         */
         val DEFAULT_CONTENT_SOURCES: Set<String> = setOf(
+            // Social
             "com.facebook.katana",
+            "com.facebook.lite",
+            "com.facebook.orca",                    // Messenger
             "com.instagram.android",
-            "com.zhiliaoapp.musically",   // TikTok
+            "com.instagram.lite",
+            "com.zhiliaoapp.musically",             // TikTok
+            "com.ss.android.ugc.trill",
             "com.twitter.android",
             "com.x.android",
+            "com.snapchat.android",
             "com.reddit.frontpage",
-            "com.pinterest"
+            "com.pinterest",
+            "com.tumblr",
+            "com.linkedin.android",
+            // Messaging that hosts media / links
+            "org.telegram.messenger",
+            "org.thunderdog.challegram",
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "com.discord",
+            "com.viber.voip",
+            // Video apps
+            "com.google.android.youtube",
+            "com.google.android.apps.youtube.music",
+            // Browsers — the most common NSFW delivery surface
+            "com.android.chrome",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.brave.browser",
+            "org.mozilla.firefox",
+            "org.mozilla.firefox_beta",
+            "org.mozilla.focus",
+            "com.microsoft.emmx",
+            "com.opera.browser",
+            "com.opera.mini.native",
+            "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.UCMobile.intl",
+            "com.kiwibrowser.browser",
+            "com.vivaldi.browser",
+            // Gallery / file viewers
+            "com.google.android.apps.photos",
+            "com.sec.android.gallery3d",
+            "com.miui.gallery",
+            "com.android.gallery3d",
+            "com.coloros.gallery3d",
+            "com.oneplus.gallery",
+            "com.huawei.photos",
+            "com.google.android.documentsui",
+            "com.android.documentsui"
         )
 
         val HEAVY_IMAGE_APPS: Set<String> = setOf(

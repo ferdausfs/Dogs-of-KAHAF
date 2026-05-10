@@ -1,5 +1,17 @@
 // =============================================================================
 //  Guardian Shield — :app module build script
+//  v3.1.3 — CRITICAL "AI doesn't detect NSFW" fix:
+//           * SettingsDataStore.modelInputNormalized default flipped false→true
+//             (was the #1 reason every frame scored ~0 → SAFE)
+//           * AnalyzeFrameUseCase: sensitivity slider is now actually dynamic
+//             (no longer gated behind hardcoded label==EXPLICIT cut at 0.80)
+//           * AiSettings.DEFAULT_CONTENT_SOURCES expanded from 7 → ~45 apps
+//             so AI scanning fires on browsers / gallery / messengers by
+//             default — not just on a handful of social apps
+//           * GuardianAccessibilityService.runAiScanFor auto-allows any
+//             AppClassifier.isContentSourceApp() pkg even when the user list
+//             is empty
+//           * versionCode 16, versionName 3.1.3
 //  v3.1.2 — full code-review optimisation pass:
 //           * fixed failing SchedulesViewModelTest (default-arg verify)
 //           * cleared every Kotlin compiler warning surfaced by CI
@@ -26,8 +38,8 @@ android {
         applicationId 'com.kahaf.guardianshield'
         minSdk 26
         targetSdk 35
-        versionCode 15
-        versionName '3.1.2'
+        versionCode 16
+        versionName '3.1.3'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 

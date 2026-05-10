@@ -53,7 +53,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val aiContentSources: List<String>,
         val aiHeuristicEnabled: Boolean = true,
         val aiMinImageSize: Int = 120,
-        val aiInputNormalized: Boolean = false
+        val aiInputNormalized: Boolean = true   // v3.1.3 FIX: was false
     )
 
     // v3.1.2 FIX: renamed from `json` → `jsonCodec` so we can name the override

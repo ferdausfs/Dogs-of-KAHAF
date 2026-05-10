@@ -337,9 +337,17 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
 
         val ai = settingsRepository.aiSettings.first()
-        // AI runs only on apps the user (or defaults) has marked as content
-        // sources. Saves battery and avoids surprising scans of native UIs.
-        if (pkg !in ai.contentSourcePackages) return false
+        // v3.1.3 FIX: previously the scan was skipped unless the package was
+        // in the user's content-source list. Combined with the very narrow
+        // default list (7 social apps) this is the second most-common reason
+        // people report "the app doesn't detect NSFW" — nothing else gets
+        // scanned. We now also auto-allow any known content-source app from
+        // [AppClassifier.isContentSourceApp] so browsers / messengers /
+        // galleries fire even if the user hasn't manually toggled them on.
+        // Saves battery on truly native UIs (whitelist above already culls
+        // launchers, IMEs, settings, etc.).
+        val pkgIsKnownSource = AppClassifier.isContentSourceApp(pkg)
+        if (pkg !in ai.contentSourcePackages && !pkgIsKnownSource) return false
 
         var bitmap: Bitmap? = null
         try {
@@ -371,9 +379,13 @@ class GuardianAccessibilityService : AccessibilityService() {
                     reasonRes = R.string.blk_reason_ai
                 )
                 // 15-min source-based auto-lock for known content-source apps.
-                if (AppClassifier.isContentSourceApp(pkg) &&
-                    pkg in ai.contentSourcePackages
-                ) {
+                // v3.1.3: dropped the redundant `pkg in ai.contentSourcePackages`
+                // requirement — we already gated entry to runAiScanFor on either
+                // the user list OR the AppClassifier known-source list, so any
+                // confirmed block from a known content-source warrants the
+                // 15-min auto-lock without forcing the user to also opt-in via
+                // the toggle list.
+                if (AppClassifier.isContentSourceApp(pkg)) {
                     runCatching {
                         autoLockSourceApp(pkg, "AI EXPLICIT detection")
                     }.onFailure { Log.e(TAG, "autoLockSourceApp failed", it) }

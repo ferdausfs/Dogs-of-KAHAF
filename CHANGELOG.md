@@ -4,6 +4,66 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.1.3] — 2026-05-10  —  CRITICAL: "AI doesn't detect NSFW" fix
+
+This release fixes a chain of bugs that, in combination, caused user reports
+of "the app does not detect NSFW content even with a valid model loaded".
+The pipeline was technically running — the model loaded, screenshots were
+taken, inference completed — but every frame came back SAFE for one of
+three reasons listed below.
+
+### Fixed (CRITICAL — the actual root causes of "NSFW detection doesn't work")
+
+- **`SettingsDataStore.decodeAi` defaulted `modelInputNormalized` to `false`**
+  even though `AiSettings` data-class default was already flipped to `true`
+  in v3.1.2. The DataStore default WINS over the data-class default at
+  decode time, so on every fresh install the pre-processor sent raw
+  `[0,255]` pixels into MobileNetV2-class models that expect `[0,1]`,
+  producing near-zero `nsfw` scores for every frame. Default flipped to
+  `true` to match the data class. Existing users with the old `false`
+  preference can flip the toggle in Detection Settings.
+
+- **`AnalyzeFrameUseCase` required BOTH `label == EXPLICIT` AND
+  `score >= threshold`**, but for 2-class models the label hard-cuts at
+  `nsfw ≥ 0.80`. With sensitivity `0.55` the threshold worked out to
+  `0.45`, so any value of the slider above ~`0.20` was a no-op — only the
+  `≥0.80` label gate ever fired. The slider is now actually wired:
+  EITHER the model already says EXPLICIT, OR the score crosses the user's
+  effective threshold. Stricter sensitivity now catches mid-tier frames.
+
+- **AI scan was skipped on most apps by default.** The default content
+  source list contained only 7 social apps. Anyone opening explicit
+  imagery in their browser, gallery, file manager, messenger, video app,
+  etc. saw NO AI scan at all. Two-pronged fix:
+  1. Default `DEFAULT_CONTENT_SOURCES` expanded to ~45 packages covering
+     social, messaging, video, browsers, and gallery surfaces.
+  2. `GuardianAccessibilityService.runAiScanFor` also auto-allows any
+     package that `AppClassifier.isContentSourceApp` recognises, so even
+     fresh users with empty source lists get protection on browsers /
+     messengers / galleries out of the box.
+
+### Fixed (related)
+
+- **`SettingsRepositoryImpl.ConfigSnapshot`** — `aiInputNormalized` default
+  flipped `false` → `true`, matching the data-class default. Imports of
+  v1 / v2 snapshots that omit the field no longer silently break
+  detection.
+- **`TfLiteNsfwClassifier.map2ClassOutput`** — `SUGGESTIVE` and
+  `NATURAL` buckets now carry the real raw `nsfw` probability instead of
+  `nsfw * 0.3f`. Previously the deflated SUGGESTIVE score made it
+  impossible for the user's threshold to ever fire on the SUGGESTIVE
+  path — sensitivity "HIGH" did nothing extra. The bucket layering is
+  now: only the buckets the score actually falls into receive a non-zero
+  value, mirroring the way 4-class softmax outputs work.
+- **Auto-lock entry condition** in `GuardianAccessibilityService` no
+  longer requires the package to ALSO appear in
+  `ai.contentSourcePackages` — we already gate scan entry on either the
+  user list OR the AppClassifier known-source list, so requiring it
+  twice cancelled the v3.1.3 scan-coverage fix above.
+
+### versionCode / versionName
+- versionCode 16, versionName 3.1.3.
+
 ## [3.1.2] — 2026-05-10  —  Full code-review / build-green release
 
 This release is the result of a complete code-review pass on v3.1.1. The

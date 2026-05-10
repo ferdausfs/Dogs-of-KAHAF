@@ -110,7 +110,13 @@ class SettingsDataStore @Inject constructor(
             .ifEmpty { AiSettings.DEFAULT_CONTENT_SOURCES },
         heuristicEnabled = p[Keys.AI_HEURISTIC] ?: true,
         minImageSize = (p[Keys.AI_MIN_IMAGE_SIZE] ?: 120).coerceIn(50, 500),
-        modelInputNormalized = p[Keys.AI_INPUT_NORMALIZED] ?: false
+        // v3.1.3 FIX: default flipped false → true. The DataStore default was
+        // overriding the AiSettings data-class default (which v3.1.2 had already
+        // flipped to true). Result: even on a fresh install the pre-processor
+        // was sending raw [0,255] values to MobileNetV2-class models that expect
+        // [0,1], producing near-zero scores → every frame appeared SAFE → "AI
+        // doesn't detect NSFW". This restores the [0,1] normalisation by default.
+        modelInputNormalized = p[Keys.AI_INPUT_NORMALIZED] ?: true
     )
 
     private fun decodeBoosts(s: String?): Map<String, Float> {

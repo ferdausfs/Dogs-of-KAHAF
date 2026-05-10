@@ -12,8 +12,8 @@ declared in its manifest. By design.
 | Property              | Value                |
 |-----------------------|----------------------|
 | Package               | `com.kahaf.guardianshield` |
-| versionCode           | 15                   |
-| versionName           | 3.1.2                |
+| versionCode           | 16                   |
+| versionName           | 3.1.3                |
 | Min SDK / Target SDK  | 26 / 35              |
 | JVM target            | 17                   |
 | Language              | 100% Kotlin          |
@@ -23,7 +23,31 @@ declared in its manifest. By design.
 | DB                    | Room (schema v4)     |
 | Async                 | Coroutines + Flow    |
 
-## ⚠ v3.1.2 — Full code-review / build-green release
+## ⚠ v3.1.3 — CRITICAL "AI doesn't detect NSFW" fix
+
+v3.1.3 fixes a chain of three bugs that, together, caused user reports of
+*"the app does NSFW detection but never actually blocks anything"*:
+
+1. **`SettingsDataStore.modelInputNormalized` default flipped `false → true`.**
+   v3.1.2 had already flipped the `AiSettings` data-class default, but the
+   DataStore default WINS at decode time, so the pre-processor was still
+   sending raw `[0,255]` pixels into MobileNetV2-class models that expect
+   `[0,1]`. Result: every frame scored near-zero → SAFE → nothing blocked.
+2. **`AnalyzeFrameUseCase` sensitivity slider was a no-op above ~0.20.**
+   The block decision required BOTH `label == EXPLICIT` (which for 2-class
+   models hard-cuts at `nsfw ≥ 0.80`) AND a threshold check. The label gate
+   always fired first, so the slider didn't matter. Now: EITHER the label
+   says EXPLICIT, OR the score crosses the user's effective threshold.
+3. **AI scan was skipped on most apps by default.** The default content
+   source list was 7 social apps, so browsers / gallery / messengers / file
+   managers were never scanned. The list now defaults to ~45 packages and
+   `runAiScanFor` auto-allows any `AppClassifier.isContentSourceApp()` pkg
+   even when the user list is empty.
+
+No schema changes. No new permissions. See [CHANGELOG.md](CHANGELOG.md) for
+the full bug-fix list.
+
+## v3.1.2 — Full code-review / build-green release
 
 v3.1.2 is a full code-review pass on v3.1.1:
 

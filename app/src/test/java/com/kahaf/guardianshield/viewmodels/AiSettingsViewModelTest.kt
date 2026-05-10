@@ -2,6 +2,7 @@ package com.kahaf.guardianshield.viewmodels
 
 import com.kahaf.guardianshield.data.classifier.ModelImportManager
 import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier
+import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier.ModelSource
 import com.kahaf.guardianshield.domain.model.AiSettings
 import com.kahaf.guardianshield.domain.repository.AppRuleRepository
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
@@ -38,6 +39,11 @@ class AiSettingsViewModelTest {
         val modelImport = mockk<ModelImportManager>(relaxed = true)
         every { repo.aiSettings } returns MutableStateFlow(AiSettings())
         every { classifier.isModelLoaded } returns MutableStateFlow(false)
+        // v3.1.3: AiSettingsViewModel now also collects classifier.modelSource
+        // for the "Active: custom / bundled" status text on the screen, so the
+        // mock has to expose the StateFlow or `relaxed = true` would synthesize
+        // a placeholder that crashes `stateIn`.
+        every { classifier.modelSource } returns MutableStateFlow(ModelSource.NONE)
         coEvery { appRepo.getInstalledApps(any()) } returns emptyList()
         every { modelImport.isImported(any()) } returns false
         every { modelImport.getModelSize(any()) } returns null

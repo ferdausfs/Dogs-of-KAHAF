@@ -37,7 +37,18 @@ class AnalyzeFrameUseCase @Inject constructor(
         val res = classifier.classify(bitmap)
         val threshold = ai.thresholdFor(packageName)
         val explicitConfidence = res.scores[NsfwLabel.EXPLICIT] ?: 0f
-        val isExplicit = res.label == NsfwLabel.EXPLICIT && explicitConfidence >= threshold
+
+        // v3.1.3 FIX: previously a frame had to satisfy BOTH `label == EXPLICIT`
+        // (which for 2-class models hard-cut at nsfw≥0.80) AND a threshold check
+        // — making the user's sensitivity slider effectively a no-op above ~0.20
+        // because the label gate fired before the threshold ever did. The new
+        // logic: the score itself crossing the user-set threshold is enough,
+        // OR the model already decided EXPLICIT. This wires the slider back to
+        // real behaviour and lets stricter sensitivity catch SUGGESTIVE-tier
+        // frames the user explicitly opted-in to.
+        val crossedThreshold = explicitConfidence >= threshold
+        val labelExplicit    = res.label == NsfwLabel.EXPLICIT
+        val isExplicit       = labelExplicit || crossedThreshold
 
         val now = System.currentTimeMillis()
         val buf = buffers.getOrPut(packageName) { ArrayDeque() }
