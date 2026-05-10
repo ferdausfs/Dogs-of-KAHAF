@@ -24,29 +24,33 @@ import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
+import java.io.File
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Real on-device TFLite classifier.
  *
- *  - Loads `assets/nsfw_v1.tflite` (lazy).
+ *  v3.1.1 (FIX): The previous version only read the bundled
+ *  `assets/nsfw_v1.tflite`. ModelImportManager saves user-imported
+ *  models to `filesDir/nsfw_model.tflite`, so user imports were
+ *  completely ignored — that's why "AI can't detect / can't block
+ *  NSFW" was happening on builds without a CI-bundled model.
+ *
+ *  Loading priority (first-found wins):
+ *    1. filesDir/nsfw_model.tflite        — user-imported (SAF)
+ *    2. assets/nsfw_v1.tflite             — CI-bundled
+ *    3. SAFE deterministic fallback       — keeps build green
+ *
  *  - Delegate selection (best-effort): GPU → NNAPI → CPU.
  *  - One dummy warm-up inference after load to pre-JIT kernels.
  *  - Skips inference for bitmaps below `AiSettings.minImageSize`.
- *  - Supports both 4-output (SAFE/NATURAL/SUGGESTIVE/EXPLICIT) and 2-output
- *    (SFW/NSFW) softmax layouts. The output dimension is read from the model
- *    at load-time. For 2-class models, the NSFW score is mapped to severity
- *    tiers as documented in `assets/nsfw_v1.tflite.README`.
- *  - When `AiSettings.modelInputNormalized` is true, inputs are scaled to the
- *    [0,1] float range; otherwise they are passed as raw [0,255] floats.
- *  - Inference runs on Dispatchers.Default; serialized via a Mutex because
- *    Interpreter is NOT thread-safe.
- *
- * If the model asset is missing the constructor does NOT crash — `classify`
- * returns a deterministic SAFE result so the rest of the app still works.
- *
- * v3.0.0: now the default classifier (see RepositoryModule).
+ *  - Supports both 4-output and 2-output softmax layouts.
+ *  - Inference serialized via Mutex (Interpreter is NOT thread-safe).
+ *  - [reload] forces a re-load — call after a successful custom-model
+ *    import or delete so the new model takes effect immediately.
  */
 @Singleton
 class TfLiteNsfwClassifier @Inject constructor(
@@ -59,7 +63,7 @@ class TfLiteNsfwClassifier @Inject constructor(
     private var gpuDelegate: GpuDelegate? = null
     private val initMutex = Mutex()
     private val inferMutex = Mutex()
-    private var modelMissing = false
+    @Volatile private var modelMissing = false
     private var inputW = INPUT_SIZE
     private var inputH = INPUT_SIZE
     private var numClasses = DEFAULT_NUM_CLASSES
@@ -68,10 +72,28 @@ class TfLiteNsfwClassifier @Inject constructor(
     /** Emits `true` once the TFLite model has been mapped & warmed up successfully. */
     val isModelLoaded: StateFlow<Boolean> = _isModelLoaded.asStateFlow()
 
+    /** Where the model was loaded from — surfaced in the UI. */
+    private val _modelSource = MutableStateFlow(ModelSource.NONE)
+    val modelSource: StateFlow<ModelSource> = _modelSource.asStateFlow()
+
+    enum class ModelSource { NONE, CUSTOM_IMPORTED, BUNDLED_ASSET }
+
     private suspend fun ensureLoaded() = initMutex.withLock {
-        if (interpreter != null || modelMissing) return@withLock
+        if (interpreter != null) return@withLock
+        if (modelMissing) return@withLock
         try {
-            val mb = FileUtil.loadMappedFile(context, MODEL_ASSET)
+            // Resolve in priority order: custom > bundled.
+            val customFile = File(context.filesDir, ModelImportManager.NSFW_MODEL_FILE)
+            val (mb, source) = when {
+                customFile.exists() && customFile.length() > 0L -> {
+                    Log.i(TAG, "Loading custom imported model: ${customFile.absolutePath}")
+                    loadMappedFile(customFile) to ModelSource.CUSTOM_IMPORTED
+                }
+                else -> {
+                    Log.i(TAG, "Loading bundled asset model: $MODEL_ASSET")
+                    FileUtil.loadMappedFile(context, MODEL_ASSET) to ModelSource.BUNDLED_ASSET
+                }
+            }
             val opts = Interpreter.Options().apply {
                 setNumThreads(2)
                 // Best-effort delegate chain: GPU → NNAPI → CPU.
@@ -107,13 +129,46 @@ class TfLiteNsfwClassifier @Inject constructor(
                 val dummyOut = Array(1) { FloatArray(numClasses) }
                 interpreter?.run(dummy, dummyOut)
             }.onFailure { Log.w(TAG, "Warm-up inference skipped: ${it.message}") }
-            Log.i(TAG, "TFLite model loaded: ${inputW}x${inputH} → $numClasses classes")
+            Log.i(TAG, "TFLite model loaded from ${source.name}: ${inputW}x${inputH} → $numClasses classes")
+            _modelSource.value = source
             _isModelLoaded.value = true
+            modelMissing = false
         } catch (t: Throwable) {
             Log.w(TAG, "Model not present, using SAFE fallback: ${t.message}")
             modelMissing = true
             _isModelLoaded.value = false
+            _modelSource.value = ModelSource.NONE
         }
+    }
+
+    private fun loadMappedFile(file: File): MappedByteBuffer {
+        file.inputStream().channel.use { channel ->
+            return channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
+        }
+    }
+
+    /**
+     * Force a re-load. Call after the user imports / deletes a custom model so
+     * the new model takes effect without needing a process restart.
+     */
+    suspend fun reload() = initMutex.withLock {
+        runCatching { interpreter?.close() }
+        runCatching { nnApiDelegate?.close() }
+        runCatching { gpuDelegate?.close() }
+        interpreter = null
+        nnApiDelegate = null
+        gpuDelegate = null
+        modelMissing = false
+        _isModelLoaded.value = false
+        _modelSource.value = ModelSource.NONE
+        // The next call to classify() will lazy-init it. Trigger one now so the
+        // UI status flips quickly.
+        // Drop the lock first by re-entering ensureLoaded outside this lock.
+        // (initMutex is re-entrant only via a helper; safer to release & re-take)
+    }.also {
+        // Now actually trigger a load (outside the lock above, since we just released it
+        // by exiting the .withLock block).
+        ensureLoaded()
     }
 
     override suspend fun classify(bitmap: Bitmap): NsfwResult = withContext(Dispatchers.Default) {
@@ -208,6 +263,7 @@ class TfLiteNsfwClassifier @Inject constructor(
         nnApiDelegate = null
         gpuDelegate = null
         _isModelLoaded.value = false
+        _modelSource.value = ModelSource.NONE
     }
 
     private fun safeResult() = NsfwResult(

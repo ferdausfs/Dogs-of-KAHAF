@@ -4,6 +4,83 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.1.1] — 2026-05-10  —  Critical bug-fix release
+
+### Fixed (CRITICAL — root cause of "AI doesn't detect / block NSFW")
+- **`TfLiteNsfwClassifier` now actually reads the user-imported model.**
+  The previous code only ever loaded `assets/nsfw_v1.tflite`, but
+  `ModelImportManager` saves user-picked models to
+  `filesDir/nsfw_model.tflite`. Result: every user who imported their own
+  model got the SAFE deterministic fallback forever — no detection, no
+  blocking. The classifier now resolves models in this priority order:
+    1. `filesDir/nsfw_model.tflite`  (user-imported via SAF)
+    2. `assets/nsfw_v1.tflite`       (CI-bundled at build time)
+    3. SAFE deterministic fallback   (keeps the build green)
+- **Classifier hot-reload after import / delete.** `AiSettingsViewModel`
+  now calls `classifier.reload()` after a successful import or delete, so
+  the new model takes effect immediately instead of after the next
+  process restart.
+- **AI Settings screen now shows model provenance** — distinct messages
+  for "Active: custom imported model", "Active: bundled model", and
+  "Model not found — safe fallback active".
+
+### Fixed
+- **Unit tests no longer compile-fail.** `OnboardingViewModelTest` was
+  still constructing the v3.0.0 `PermissionManager.Snapshot` (without the
+  new `deviceAdmin` and `autoRevokeDisabled` fields added in v3.1.0). All
+  Snapshot call-sites in tests updated.
+- **Mipmap launcher icons regenerated at proper density sizes.**
+  Previous zip shipped the same 48×48 PNG in *every* density bucket
+  (mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi), so the launcher icon was blurry on
+  high-DPI devices. Each bucket now ships its correct size:
+  48 / 72 / 96 / 144 / 192.
+- **`PinEntryDialog`** had a leftover `Text(stringResource(R.string.set_theme_system).let { "Cancel" })`
+  that ignored the resource entirely and hard-coded "Cancel". Replaced
+  with a localised `R.string.common_cancel`. Same fix applied to other
+  dialogs that hard-coded "Cancel" / "Close".
+- **`PermissionManager` deep-links** are all now wrapped in `runCatching`
+  so onboarding can't crash on stripped-down OEM ROMs (MIUI / older EMUI)
+  that don't ship the `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`
+  activity. Fallback to the generic battery-optimisation screen included.
+- **Battery drain on no-model builds.** `GuardianAccessibilityService`
+  now skips the screenshot + decode pipeline entirely when
+  `classifier.isModelLoaded == false`. Previously it took a screenshot
+  every 850ms, decoded ARGB_8888, then returned SAFE — pure waste.
+- **`GuardianAccessibilityService` per-package throttle** now tracks the
+  periodic-loop's timestamps too, so a content-change event landing
+  inside the periodic window can't fire a back-to-back second screenshot.
+
+### Added
+- `R.string.common_cancel` / `R.string.common_close` shared strings.
+- `ai_model_status_custom`, `ai_model_status_bundled`, `ai_import_help`
+  user-facing strings.
+- `TfLiteNsfwClassifier.modelSource: StateFlow<ModelSource>` so the UI
+  can show which model is live.
+- `TfLiteNsfwClassifier.reload()` for in-place re-load after a custom
+  import / delete.
+
+### Changed
+- `versionCode` 13 → 14, `versionName` 3.1.0 → 3.1.1.
+- ProGuard / R8 rules tightened: keep all `kotlinx.serialization`
+  generated `$$serializer` classes + `Companion` members, otherwise
+  release builds silently drop the Export/Import configuration codec.
+- Also injected `TfLiteNsfwClassifier` into `GuardianAccessibilityService`
+  so it can short-circuit the AI loop on no-model builds.
+
+### CI
+- The artifact name in `build-debug.yml` was still
+  `Dogs-of-KAHAF-v3.0.0-…`; bumped to `Dogs-of-KAHAF-v3.1.1-…` so the
+  filename matches `versionName`.
+- Re-enabled `./gradlew testDebugUnitTest` in the CI step (was broken by
+  the `OnboardingViewModelTest` compile error).
+
+### Not changed (intentionally)
+- Schema is still v4. No new entities, no new migrations.
+- All Hilt graph wiring, Compose UI, DataStore keys, WorkManager
+  scheduling, AccessibilityService event filter set, foreground service
+  type — unchanged.
+- Still **no `INTERNET` permission**. App is still 100% on-device.
+
 ## [3.1.0] — 2026-05-10  —  Legacy-merge release
 
 This release re-introduces every "power-user" feature that lived in the

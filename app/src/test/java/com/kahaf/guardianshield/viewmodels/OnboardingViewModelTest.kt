@@ -8,14 +8,25 @@ import io.mockk.verify
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * v3.1.1 FIX: the `PermissionManager.Snapshot` data-class gained two new
+ * fields in the legacy merge (`deviceAdmin`, `autoRevokeDisabled`). The old
+ * constructor calls in this test no longer compiled, which broke
+ * `./gradlew testDebugUnitTest` for the entire project.
+ */
 class OnboardingViewModelTest {
 
     @Test
     fun `init refreshes permission snapshot`() {
         val pm = mockk<PermissionManager>(relaxed = true)
         every { pm.refresh() } returns PermissionManager.Snapshot(
-            accessibility = true, overlay = true, notifications = true,
-            ignoreBatteryOpt = false, capturedAtMs = 0L
+            accessibility = true,
+            overlay = true,
+            notifications = true,
+            ignoreBatteryOpt = false,
+            deviceAdmin = false,
+            autoRevokeDisabled = true,
+            capturedAtMs = 0L
         )
         val vm = OnboardingViewModel(pm)
         verify { pm.refresh() }
@@ -26,8 +37,13 @@ class OnboardingViewModelTest {
     fun `canFinish requires accessibility and overlay`() {
         val pm = mockk<PermissionManager>(relaxed = true)
         every { pm.refresh() } returns PermissionManager.Snapshot(
-            accessibility = false, overlay = true, notifications = true,
-            ignoreBatteryOpt = true, capturedAtMs = 0L
+            accessibility = false,
+            overlay = true,
+            notifications = true,
+            ignoreBatteryOpt = true,
+            deviceAdmin = false,
+            autoRevokeDisabled = true,
+            capturedAtMs = 0L
         )
         val vm = OnboardingViewModel(pm)
         assertTrue(!vm.state.value.canFinish)

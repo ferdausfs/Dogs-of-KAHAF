@@ -12,6 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import com.kahaf.guardianshield.R
+import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier
 import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
 import com.kahaf.guardianshield.domain.usecase.AnalyzeFrameUseCase
@@ -58,6 +59,14 @@ import kotlin.coroutines.resume
  *  - Honours a per-package throttle on TYPE_WINDOW_CONTENT_CHANGED.
  *  - On confirmed EXPLICIT verdict, fires AI_NSFW block + (when applicable)
  *    triggers the 15-min source-based auto-lock via [AutoLockSourceAppUseCase].
+ *
+ * v3.1.1 FIXES:
+ *  - Skip the screenshot + inference cost entirely when the classifier model
+ *    isn't loaded (no asset bundled and no custom import). Previously we'd
+ *    burn battery scanning every 850ms and then return SAFE.
+ *  - The content-change throttle map now also tracks periodic-scan timestamps
+ *    so we don't double-scan back-to-back when a content event lands inside
+ *    the periodic loop's window.
  */
 @AndroidEntryPoint
 class GuardianAccessibilityService : AccessibilityService() {
@@ -69,6 +78,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var analyzeFrameUseCase: AnalyzeFrameUseCase
     @Inject lateinit var autoLockSourceApp: AutoLockSourceAppUseCase
+    @Inject lateinit var classifier: TfLiteNsfwClassifier
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile private var lastForegroundPackage: String? = null
@@ -76,7 +86,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     private var pendingScanJob: Job? = null
     private var aiPeriodicJob: Job? = null
 
-    /** Per-package last-AI-scan timestamp for content-changed throttle. */
+    /** Per-package last-AI-scan timestamp (covers BOTH content-change AND periodic). */
     private val lastAiScanByPkg = HashMap<String, Long>()
 
     private val powerManager: PowerManager? by lazy {
@@ -226,6 +236,10 @@ class GuardianAccessibilityService : AccessibilityService() {
      * (or [GuardianConstants.SCREEN_OFF_PERIODIC_MS] when the screen is off).
      *
      * Silent no-op on API < 30 — [takeScreenshot] is unavailable.
+     *
+     * v3.1.1: also no-op when the classifier reports `isModelLoaded == false`,
+     * so we don't pay the screenshot + decode cost when there's nothing
+     * meaningful to classify against.
      */
     private fun startAiPeriodicScan() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
@@ -249,8 +263,20 @@ class GuardianAccessibilityService : AccessibilityService() {
                     // Skip work entirely while the screen is off — saves battery.
                     if (powerManager?.isInteractive == false) continue
 
+                    // v3.1.1: skip if no model is loaded (asset missing AND no custom
+                    // import). Otherwise we'd just screenshot → decode → classify SAFE
+                    // every tick.
+                    if (!classifier.isModelLoaded.value) continue
+
                     val pkg = lastForegroundPackage ?: continue
                     if (pkg == applicationContext.packageName) continue
+
+                    // Honour the same per-package throttle as content-change scans
+                    // so we don't fire two screenshots back-to-back.
+                    val now = System.currentTimeMillis()
+                    val lastScan = lastAiScanByPkg[pkg] ?: 0L
+                    if (now - lastScan < GuardianConstants.AI_THROTTLE_MS) continue
+                    lastAiScanByPkg[pkg] = now
 
                     val confirmedBlock = runAiScanFor(pkg)
                     if (confirmedBlock) {
@@ -273,6 +299,7 @@ class GuardianAccessibilityService : AccessibilityService() {
      */
     private fun maybeScheduleAiScanOnContentChange(pkg: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        if (!classifier.isModelLoaded.value) return  // v3.1.1: skip when no model
         val now = System.currentTimeMillis()
         val last = lastAiScanByPkg[pkg] ?: 0L
         if (now - last < GuardianConstants.AI_THROTTLE_MS) return

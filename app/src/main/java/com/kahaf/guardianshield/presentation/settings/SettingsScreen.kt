@@ -243,7 +243,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { vm.clearExport() },
             confirmButton = {
-                TextButton(onClick = { vm.clearExport() }) { Text("Close") }
+                TextButton(onClick = { vm.clearExport() }) { Text(stringResource(R.string.common_close)) }
             },
             title = { Text(stringResource(R.string.set_export)) },
             text = {
@@ -274,7 +274,7 @@ fun SettingsScreen(
                 }) { Text(stringResource(R.string.set_import)) }
             },
             dismissButton = {
-                TextButton(onClick = { importDialogOpen = false }) { Text("Cancel") }
+                TextButton(onClick = { importDialogOpen = false }) { Text(stringResource(R.string.common_cancel)) }
             },
             title = { Text(stringResource(R.string.set_import)) },
             text = {

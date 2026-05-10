@@ -2,19 +2,26 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      v2.1.8: moved the `xmlns:tools` declaration to the <resources> root so
-      every <item> can use `tools:ignore` cleanly. Previously the namespace
-      was redeclared on a single <item> which works but trips lint warnings.
+      v3.1.1: parent switched from `Theme.Material.Light.NoActionBar` to
+      `Theme.AppCompat.DayNight.NoActionBar` (matches the AppCompat 1.7.0
+      dependency the project already pulls in via `androidx.appcompat`).
+      The status / nav bars are still drawn behind the Compose root, and
+      the Material 3 colour scheme is supplied dynamically by Theme.kt.
+
+      v2.1.8: hoisted `xmlns:tools` to the <resources> root so every
+      <item> can use `tools:ignore` cleanly.
     -->
-    <style name="Theme.GuardianShield" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.GuardianShield" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:ignore="NewApi">true</item>
     </style>
 
-    <style name="Theme.GuardianShield.Overlay" parent="android:Theme.Material.NoActionBar.TranslucentDecor">
+    <style name="Theme.GuardianShield.Overlay" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

@@ -13,6 +13,10 @@
     <string name="fg_notif_title">Guardian Shield is active</string>
     <string name="fg_notif_text">Protecting %1$d apps · %2$d rules</string>
 
+    <!-- Common -->
+    <string name="common_cancel">Cancel</string>
+    <string name="common_close">Close</string>
+
     <!-- Onboarding -->
     <string name="onb_welcome_title">Welcome to Guardian Shield</string>
     <string name="onb_welcome_body">A privacy-first, 100%% on-device content protection tool. Nothing leaves your device.</string>
@@ -61,12 +65,14 @@
     <string name="sch_enabled">Enabled</string>
     <string name="sch_save">Save</string>
 
-    <!-- AI / Detection Settings (v3.0.0) -->
+    <!-- AI / Detection Settings (v3.0.0 + v3.1.1) -->
     <string name="ai_title">Detection Settings</string>
     <string name="ai_engine_title">Detection Engine</string>
     <string name="ai_engine_subtitle">On-device TFLite NSFW classifier</string>
     <string name="ai_model_status_loaded">Model loaded ✓</string>
-    <string name="ai_model_status_missing">Model not found — safe fallback active</string>
+    <string name="ai_model_status_missing">Model not found — safe fallback active. Import a .tflite below or wait for the bundled CI build.</string>
+    <string name="ai_model_status_custom">✓ Active: custom imported model</string>
+    <string name="ai_model_status_bundled">✓ Active: bundled model</string>
     <string name="ai_min_image_size">Min image size: %1$dpx</string>
     <string name="ai_input_normalized">Input normalization (0–1 range)</string>
     <string name="ai_heuristic">Secondary heuristic</string>
@@ -80,6 +86,7 @@
     <string name="ai_preset_balanced">Balanced (recommended)</string>
     <string name="ai_preset_high">High (catches more)</string>
     <string name="ai_import_custom_model">Import custom NSFW model (.tflite)</string>
+    <string name="ai_import_help">Pick a 4-class [SAFE/NATURAL/SUGGESTIVE/EXPLICIT] or a 2-class [SFW/NSFW] TFLite model with input shape [1,224,224,3]. The new model is validated, copied to private storage, and loaded immediately — no restart required.</string>
     <string name="ai_imported_size">Imported: %1$s</string>
     <string name="ai_delete_imported">Remove imported model</string>
     <string name="ai_import_ok">Custom model imported successfully</string>

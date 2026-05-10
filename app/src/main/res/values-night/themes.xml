@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.GuardianShield" parent="android:Theme.Material.NoActionBar">
+    <!--
+      v3.1.1: switched parent to AppCompat.DayNight to match values/themes.xml.
+      The DayNight parent already handles dark-mode resource selection, so
+      this file is mostly for any night-only overrides (currently none).
+    -->
+    <style name="Theme.GuardianShield" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="Theme.GuardianShield.Overlay" parent="android:Theme.Material.NoActionBar.TranslucentDecor">
+    <style name="Theme.GuardianShield.Overlay" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

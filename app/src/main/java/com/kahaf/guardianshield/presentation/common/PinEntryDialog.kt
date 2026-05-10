@@ -108,7 +108,10 @@ fun PinEntryDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pin_enter)) },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.set_theme_system).let { "Cancel" }) }
+            // v3.1.1 FIX: previous version had a leftover `.let { "Cancel" }`
+            // that ignored the string resource entirely. Use the localised
+            // common-cancel string.
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
         text = {
             Column(
@@ -176,7 +179,7 @@ fun PinSetupDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
         text = {
             Column(

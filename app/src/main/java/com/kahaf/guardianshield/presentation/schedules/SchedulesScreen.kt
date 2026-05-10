@@ -147,7 +147,7 @@ private fun ScheduleEditorDialog(
                 )
             }) { Text(stringResource(R.string.sch_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
         title = { Text(stringResource(R.string.sch_title)) },
         text = {
             Column {

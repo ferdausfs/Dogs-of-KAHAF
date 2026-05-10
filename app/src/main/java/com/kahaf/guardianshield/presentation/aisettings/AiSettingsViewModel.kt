@@ -20,6 +20,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
+ * v3.1.1 (FIX): on successful custom-model import or delete we now call
+ * `classifier.reload()`. Previously the new model was never picked up
+ * until the user fully restarted the app — and combined with the
+ * load-path bug in [TfLiteNsfwClassifier], it meant the AI never
+ * detected anything for users who imported their own model.
+ *
  * v3.1.0 (legacy merge):
  *  - injected [ModelImportManager] so the user can import a custom .tflite
  *    NSFW model from Storage Access Framework. Result is surfaced via
@@ -47,6 +53,13 @@ class AiSettingsViewModel @Inject constructor(
     /** True after the TFLite model is mapped + warmed up. */
     val isModelLoaded: StateFlow<Boolean> = classifier.isModelLoaded
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Where the active model came from (custom-imported / bundled / none). */
+    val modelSource: StateFlow<TfLiteNsfwClassifier.ModelSource> = classifier.modelSource
+        .stateIn(
+            viewModelScope, SharingStarted.Eagerly,
+            TfLiteNsfwClassifier.ModelSource.NONE
+        )
 
     private val _allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     val allApps: StateFlow<List<InstalledApp>> = _allApps.asStateFlow()
@@ -116,6 +129,9 @@ class AiSettingsViewModel @Inject constructor(
 
     fun setModelInputNormalized(enabled: Boolean) = viewModelScope.launch {
         settingsRepository.updateAiSettings { it.copy(modelInputNormalized = enabled) }
+        // The pre-processor reads this each inference, but reload makes any
+        // delegate state pick it up cleanly too.
+        classifier.reload()
     }
 
     fun setHeuristicEnabled(enabled: Boolean) = viewModelScope.launch {
@@ -130,6 +146,10 @@ class AiSettingsViewModel @Inject constructor(
             _importStatus.value = "Custom model imported successfully"
             _customModelImported.value = true
             _customModelSize.value = modelImportManager.getModelSize(ModelImportManager.NSFW_MODEL_FILE)
+            // v3.1.1 FIX: actually load the new model into the classifier.
+            // Without this, on-screen scanning kept using the old model
+            // (or the SAFE fallback) until the next process restart.
+            classifier.reload()
         }.onFailure { t ->
             _importStatus.value = "Could not import model: ${t.message ?: "unknown error"}"
         }
@@ -139,6 +159,9 @@ class AiSettingsViewModel @Inject constructor(
         modelImportManager.deleteModel(ModelImportManager.NSFW_MODEL_FILE)
         _customModelImported.value = false
         _customModelSize.value = null
+        // v3.1.1 FIX: drop the now-deleted custom model from the live
+        // interpreter and fall back to the bundled asset (or SAFE).
+        classifier.reload()
     }
 
     fun clearImportStatus() { _importStatus.value = null }

@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.kahaf.guardianshield.R
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
 import com.kahaf.guardianshield.util.GuardianConstants
 import kotlinx.coroutines.delay
@@ -86,7 +88,7 @@ fun DelayUnlockScreen(
                     onClick = onConfirmed,
                     enabled = remaining == 0
                 ) {
-                    Text("Continue")
+                    Text(stringResource(R.string.onb_continue))
                 }
             }
         }

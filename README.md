@@ -12,8 +12,8 @@ declared in its manifest. By design.
 | Property              | Value                |
 |-----------------------|----------------------|
 | Package               | `com.kahaf.guardianshield` |
-| versionCode           | 12                   |
-| versionName           | 3.0.0                |
+| versionCode           | 14                   |
+| versionName           | 3.1.1                |
 | Min SDK / Target SDK  | 26 / 35              |
 | JVM target            | 17                   |
 | Language              | 100% Kotlin          |
@@ -22,6 +22,27 @@ declared in its manifest. By design.
 | DI                    | Hilt                 |
 | DB                    | Room (schema v4)     |
 | Async                 | Coroutines + Flow    |
+
+## ⚠ v3.1.1 — Critical NSFW-detection fix
+
+If you imported a custom `.tflite` model in v3.1.0 and noticed the AI
+overlay never fires, **that wasn't your model — it was a load-path bug
+in the classifier**. v3.0.0/v3.1.0's `TfLiteNsfwClassifier` only ever
+read `assets/nsfw_v1.tflite`, so user-imported models (saved to
+`filesDir/nsfw_model.tflite` by `ModelImportManager`) were silently
+ignored, and the SAFE deterministic fallback was used instead.
+
+v3.1.1 fixes this end-to-end:
+1. The classifier now resolves models in priority order — custom →
+   bundled → SAFE.
+2. The Detection Settings screen surfaces which model is live ("Active:
+   custom imported model" / "Active: bundled model" / "Model not found —
+   safe fallback active").
+3. Importing or deleting a custom model triggers a hot-reload of the
+   live `Interpreter`, so changes take effect immediately — no need to
+   force-stop the app.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full bug-fix list.
 
 ---
 
@@ -48,12 +69,20 @@ The output APK lives at `app/build/outputs/apk/debug/app-debug.apk`.
 ## Bundling the NSFW model
 
 Starting with v3.0.0 the real on-device TFLite classifier
-(`TfLiteNsfwClassifier`) is the **default** binding in `RepositoryModule`. The
-classifier loads `app/src/main/assets/nsfw_v1.tflite` lazily; if the asset is
-missing it returns `SAFE` deterministically and the build still works.
+(`TfLiteNsfwClassifier`) is the **default** binding in `RepositoryModule`.
 
-Because the model is binary (and may be license-restricted) the repo does
-**not** commit it. Instead, CI fetches it at build time:
+The classifier resolves a model in this order (first-found wins):
+
+1. **`filesDir/nsfw_model.tflite`** — user-imported via the
+   *Detection Settings → Import custom NSFW model* button (Storage
+   Access Framework).
+2. **`assets/nsfw_v1.tflite`** — fetched and bundled at build time by CI
+   (see below).
+3. **SAFE deterministic fallback** — if neither file exists, the app
+   still installs and runs, but no AI block fires until a model is
+   provided.
+
+### Option A — bundle the model at build time (recommended for CI)
 
 1. Obtain a compatible TFLite model:
    - **4-class** (preferred): `float32 [1,224,224,3] → [1,4]`
@@ -76,12 +105,25 @@ Because the model is binary (and may be license-restricted) the repo does
 If the secret is unset the build still passes — the classifier falls back to
 SAFE.
 
+### Option B — let the user import their own model at runtime
+
+In the app: **Detection Settings → Import custom NSFW model (.tflite)**.
+The picker accepts `*/*` because Android's SAF doesn't always expose a
+`.tflite` MIME type. The file is:
+
+1. Atomically copied to `filesDir/nsfw_model.tflite.tmp`.
+2. Validated against the TFLite `"TFL3"` magic header.
+3. Opened in a throwaway `Interpreter` to confirm it's not corrupt.
+4. Renamed to `nsfw_model.tflite` only on success.
+5. The classifier is hot-reloaded — the new model is live immediately.
+
 ### Input normalization
 
 Some public NSFW models expect inputs in `[0,1]` (after dividing by 255),
 others expect raw `[0,255]`. The default is raw. Toggle
 **Detection Settings → Input normalization** in the app to switch — no
-recompile required.
+recompile required (the toggle now also re-loads the interpreter so any
+delegate state gets fresh kernels).
 
 ### Recommended public models
 
@@ -104,6 +146,8 @@ recompile required.
 | `QUERY_ALL_PACKAGES`                    | Enumerate installed user apps for the App List screen. |
 | `PACKAGE_USAGE_STATS` (optional)        | Helpful as a fallback foreground detector on certain OEMs. |
 | `VIBRATE`                               | Short haptic when the block overlay appears. |
+| `BIND_DEVICE_ADMIN` (v3.1.0+)           | Optional uninstall protection via Device Admin. |
+| `REQUEST_DISABLE_APP_HIBERNATION` (v3.1.0+) | Optional auto-revoke opt-out. |
 
 **No `INTERNET` permission**. Verify with:
 
@@ -120,8 +164,9 @@ grep -R "android.permission.INTERNET" app/src/main/AndroidManifest.xml
   reporter that uploads.
 - `data_extraction_rules.xml` and `backup_rules.xml` exclude all app data from
   cloud backup and device-transfer.
-- The TFLite NSFW model (`assets/nsfw_v1.tflite`) is loaded from local assets
-  and inference runs through GPU → NNAPI → CPU delegate fallback chain.
+- The TFLite NSFW model (`assets/nsfw_v1.tflite` or `filesDir/nsfw_model.tflite`)
+  is loaded from local storage only and inference runs through GPU → NNAPI →
+  CPU delegate fallback chain.
 - The Settings PIN is stored as SHA-256 of the 4-digit PIN inside the local
   DataStore — never exported by the **Export configuration** feature.
 
@@ -134,10 +179,12 @@ grep -R "android.permission.INTERNET" app/src/main/AndroidManifest.xml
 | F1 — App-level rules     | `AppRuleRepository*`, `AppListScreen`, `AppRuleEntity` |
 | F2 — Keyword filter      | `KeywordRepository*`, `ScanTextForKeywordsUseCase`, `KeywordsScreen` |
 | F3 — Time schedules      | `ScheduleRepository*`, `TimedBlockManager`, `MinuteTickReceiver`, `ScheduleRecomputeWorker` |
-| F4 — AI NSFW (TFLite)    | `NsfwClassifier`, `TfLiteNsfwClassifier`, `AnalyzeFrameUseCase` |
+| F4 — AI NSFW (TFLite)    | `NsfwClassifier`, `TfLiteNsfwClassifier`, `AnalyzeFrameUseCase`, `ModelImportManager` |
 | F5 — 15-minute auto-lock | `AppLockEntity`, `AppLockRepository*`, `AutoLockSourceAppUseCase`, `EvaluateForegroundAppUseCase` |
 | F6 — Browser domain block (v3.0.0) | `DomainRule`, `DomainRepository*`, `ScanUrlForDomainUseCase`, `DomainsScreen` |
 | F7 — Settings PIN (v3.0.0)         | `PinManager`, `PinEntryDialog`, `PinSetupDialog` |
+| F8 — Uninstall protection (v3.1.0) | `GuardianDeviceAdminReceiver`, `PermissionManager.requestDeviceAdmin` |
+| F9 — Reflection delay (v3.1.0)     | `DelayUnlockScreen` |
 
 ---
 
@@ -150,6 +197,7 @@ data/          Room DAOs, DataStore, repository impls, TFLite wrapper, PinManage
 service/       AccessibilityService, ForegroundService, BlockOverlayActivity,
                BootReceiver, MinuteTickReceiver, WorkManager workers,
                TimedBlockManager
+admin/         GuardianDeviceAdminReceiver (v3.1.0)
 di/            Hilt modules (DatabaseModule, RepositoryModule, ServiceModule)
 ```
 
@@ -164,7 +212,9 @@ Single-Activity (`MainActivity`) + Compose Navigation. No Fragments anywhere.
 ```
 
 Unit tests cover every ViewModel using **MockK** + **Turbine** +
-`kotlinx-coroutines-test`. See `app/src/test/`.
+`kotlinx-coroutines-test`. See `app/src/test/`. v3.1.1 fixes the
+`OnboardingViewModelTest` compile error introduced by the
+`PermissionManager.Snapshot` change in v3.1.0.
 
 ---
 
@@ -186,6 +236,8 @@ Unit tests cover every ViewModel using **MockK** + **Turbine** +
   `bindingReady` flag.
 - Room migrations are idempotent (`CREATE TABLE IF NOT EXISTS`); we never
   use `fallbackToDestructiveMigration()`.
+- All system-Settings deep-link launches are wrapped in `runCatching` (v3.1.1)
+  so onboarding can't crash on stripped OEM ROMs.
 
 ---
 
@@ -195,8 +247,8 @@ GitHub Actions workflow at `.github/workflows/build-debug.yml`:
 - triggers on push to `main` / `master` / `dev` and `workflow_dispatch`
 - regenerates `gradle-wrapper.jar` (which is `.gitignore`d), accepts SDK
   licenses, downloads the NSFW model from `NSFW_MODEL_URL` (if set), runs
-  `./gradlew assembleDebug`
-- uploads the debug APK as `Dogs-of-KAHAF-v3.0.0-${{ github.run_number }}`
+  `./gradlew testDebugUnitTest` then `./gradlew assembleDebug`
+- uploads the debug APK as `Dogs-of-KAHAF-v3.1.1-${{ github.run_number }}`
 
 ---
 

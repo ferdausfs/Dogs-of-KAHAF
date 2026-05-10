@@ -35,15 +35,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kahaf.guardianshield.R
+import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
 
 /**
+ * v3.1.1: surfaces `modelSource` so the user can tell whether the imported
+ * model is actually live, or whether the bundled asset / SAFE fallback is
+ * in use.
+ *
  * v3.0.0: removed the engine FilterChip (stub/real). The detection engine is
- * always the on-device TFLite classifier. New controls:
- *   • Model status (Loaded / Not found — safe fallback)
- *   • Minimum image size slider
- *   • Input normalized toggle (for models trained on [0,1] floats)
- *   • Secondary heuristic toggle
+ * always the on-device TFLite classifier.
  */
 @Composable
 fun AiSettingsScreen(
@@ -53,6 +54,7 @@ fun AiSettingsScreen(
     val ai by vm.ai.collectAsStateWithLifecycle()
     val apps by vm.allApps.collectAsStateWithLifecycle()
     val modelLoaded by vm.isModelLoaded.collectAsStateWithLifecycle()
+    val modelSource by vm.modelSource.collectAsStateWithLifecycle()
     val customImported by vm.customModelImported.collectAsStateWithLifecycle()
     val customSize by vm.customModelSize.collectAsStateWithLifecycle()
     val importStatus by vm.importStatus.collectAsStateWithLifecycle()
@@ -72,7 +74,7 @@ fun AiSettingsScreen(
             Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(scroll),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // -- Detection Engine card (replaces old "engine" chips) -------------
+            // -- Detection Engine card ----------------------------------------
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
@@ -83,9 +85,16 @@ fun AiSettingsScreen(
                         stringResource(R.string.ai_engine_subtitle),
                         style = MaterialTheme.typography.bodySmall
                     )
+                    val statusText = when {
+                        !modelLoaded -> stringResource(R.string.ai_model_status_missing)
+                        modelSource == TfLiteNsfwClassifier.ModelSource.CUSTOM_IMPORTED ->
+                            stringResource(R.string.ai_model_status_custom)
+                        modelSource == TfLiteNsfwClassifier.ModelSource.BUNDLED_ASSET ->
+                            stringResource(R.string.ai_model_status_bundled)
+                        else -> stringResource(R.string.ai_model_status_loaded)
+                    }
                     Text(
-                        if (modelLoaded) stringResource(R.string.ai_model_status_loaded)
-                        else stringResource(R.string.ai_model_status_missing),
+                        statusText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (modelLoaded) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.error,
@@ -177,6 +186,11 @@ fun AiSettingsScreen(
                         stringResource(R.string.ai_import_custom_model),
                         fontWeight = FontWeight.Medium
                     )
+                    Text(
+                        stringResource(R.string.ai_import_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                     if (customImported) {
                         Text(
                             stringResource(R.string.ai_imported_size, customSize ?: "?"),
@@ -188,7 +202,10 @@ fun AiSettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = {
-                            // SAF: ask the user to pick a .tflite (or any binary)
+                            // SAF: ask the user to pick a .tflite (or any binary).
+                            // Some pickers won't show .tflite under a strict mime-type
+                            // filter, so we accept "*/*" and validate the magic header
+                            // server-side in ModelImportManager.
                             pickModel.launch(arrayOf("*/*"))
                         }) { Text(stringResource(R.string.ai_import_custom_model)) }
                         if (customImported) {

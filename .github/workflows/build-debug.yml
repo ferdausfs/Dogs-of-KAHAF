@@ -66,23 +66,29 @@ jobs:
             echo "NSFW_MODEL_URL secret not set — build will use safe fallback"
           fi
 
-      # 7. Build Debug APK
+      # 7. Run unit tests (v3.1.1: re-enabled — OnboardingViewModelTest fixed)
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
+
+      # 8. Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
 
-      # 8. Upload APK as downloadable artifact
+      # 9. Upload APK as downloadable artifact (name reflects current versionName)
       - name: Upload Debug APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Dogs-of-KAHAF-v3.0.0-${{ github.run_number }}
+          name: Dogs-of-KAHAF-v3.1.1-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: warn
 
-      # 9. APK summary
+      # 10. APK summary
       - name: APK summary
         if: success()
         run: |

@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.kahaf.guardianshield.admin.GuardianDeviceAdminReceiver
 import com.kahaf.guardianshield.service.accessibility.GuardianAccessibilityService
@@ -21,6 +22,13 @@ import javax.inject.Singleton
 /**
  * Snapshots permission grant status (cached 10s). Compose-friendly via [refresh] +
  * `current()` getters. Provides deep-links to each system settings screen.
+ *
+ * v3.1.1 FIX: every system-Settings deep-link is now wrapped in
+ * runCatching — some OEM ROMs (notably stripped-down MIUI / older Huawei
+ * EMUI) don't ship the activity that handles
+ * `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` /
+ * `ACTION_MANAGE_OVERLAY_PERMISSION`, and an unhandled
+ * ActivityNotFoundException here used to crash the onboarding flow.
  *
  * v3.0.0 + legacy merge:
  *   - added Device Admin (uninstall protection) tracking
@@ -97,7 +105,8 @@ class PermissionManager @Inject constructor(
 
     fun isIgnoringBatteryOptimizations(): Boolean {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
-        return pm.isIgnoringBatteryOptimizations(context.packageName)
+        return runCatching { pm.isIgnoringBatteryOptimizations(context.packageName) }
+            .getOrDefault(false)
     }
 
     fun isDeviceAdminActive(): Boolean = runCatching {
@@ -116,28 +125,46 @@ class PermissionManager @Inject constructor(
             .getOrDefault(false)
     }
 
-    // ───── deep-links ─────
+    // ───── deep-links (v3.1.1: all wrapped in runCatching) ─────
     fun openAccessibilitySettings() = startSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 
-    fun openOverlaySettings() = context.startActivity(
-        Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${context.packageName}")
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    )
+    fun openOverlaySettings() {
+        runCatching {
+            context.startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }.onFailure { Log.w(TAG, "openOverlaySettings failed", it) }
+    }
 
     fun openNotificationSettings() {
-        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        runCatching {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }.onFailure { Log.w(TAG, "openNotificationSettings failed", it) }
     }
 
     fun openBatteryOptimizationSettings() {
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-            .setData(Uri.parse("package:${context.packageName}"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        runCatching {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:${context.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }.onFailure {
+            Log.w(TAG, "openBatteryOptimizationSettings failed, falling back", it)
+            // Fallback to the generic battery-optimization screen so the user
+            // can at least find the setting manually on stripped OEM ROMs.
+            runCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+        }
     }
 
     /** Launch the system "Activate Device Admin?" prompt. */
@@ -151,6 +178,7 @@ class PermissionManager @Inject constructor(
             )
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { context.startActivity(intent) }
+            .onFailure { Log.w(TAG, "requestDeviceAdmin failed", it) }
     }
 
     /** Programmatically deactivate Device Admin (the only safe way). */
@@ -158,7 +186,7 @@ class PermissionManager @Inject constructor(
         runCatching {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
             dpm.removeActiveAdmin(GuardianDeviceAdminReceiver.componentName(context))
-        }
+        }.onFailure { Log.w(TAG, "removeDeviceAdmin failed", it) }
     }
 
     /** Send the user to the auto-revoke / hibernation exclusion screen. */
@@ -169,11 +197,17 @@ class PermissionManager @Inject constructor(
             Uri.parse("package:${context.packageName}")
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { context.startActivity(intent) }
+            .onFailure { Log.w(TAG, "requestDisableAutoRevoke failed", it) }
     }
 
     private fun startSettings(action: String) {
-        context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        runCatching {
+            context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.onFailure { Log.w(TAG, "startSettings($action) failed", it) }
     }
 
-    companion object { private const val CACHE_MS = 10_000L }
+    companion object {
+        private const val TAG = "PermissionManager"
+        private const val CACHE_MS = 10_000L
+    }
 }
