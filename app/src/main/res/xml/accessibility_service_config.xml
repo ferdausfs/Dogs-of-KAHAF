@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  FIX-LOG (vs original):
+   - BUG #12: notificationTimeout was 100ms which caused fast events to be coalesced
+     and dropped on busy apps. Bumped to 200ms — still feels instant but lets the
+     OS deliver more events.
+   - flagRequestAccessibilityButton enables a quick-toggle entry on Android 8+.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeViewTextChanged|typeWindowContentChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews|flagRequestAccessibilityButton"
     android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
     android:description="@string/accessibility_service_description"
-    android:notificationTimeout="100"
-    android:summary="@string/accessibility_service_summary" />
+    android:notificationTimeout="200"
+    android:settingsActivity="com.guardian.shield.ui.settings.SettingsActivity" />

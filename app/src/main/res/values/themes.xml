@@ -1,27 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-
-    <!--
-      v3.1.1: parent switched from `Theme.Material.Light.NoActionBar` to
-      `Theme.AppCompat.DayNight.NoActionBar` (matches the AppCompat 1.7.0
-      dependency the project already pulls in via `androidx.appcompat`).
-      The status / nav bars are still drawn behind the Compose root, and
-      the Material 3 colour scheme is supplied dynamically by Theme.kt.
-
-      v2.1.8: hoisted `xmlns:tools` to the <resources> root so every
-      <item> can use `tools:ignore` cleanly.
-    -->
-    <style name="Theme.GuardianShield" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar" tools:ignore="NewApi">true</item>
+<resources>
+    <style name="Theme.GuardianShield" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/cyan_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:colorBackground">@color/navy_900</item>
+        <item name="android:windowBackground">@color/navy_900</item>
     </style>
-
-    <style name="Theme.GuardianShield.Overlay" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+    <style name="Theme.GuardianShield.Overlay" parent="Theme.GuardianShield">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowIsTranslucent">false</item>
     </style>
 </resources>

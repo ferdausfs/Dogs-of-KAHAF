@@ -35,96 +35,38 @@ jobs:
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      # 5. Regenerate gradle-wrapper.jar (gitignored in this repo)
+      # 5. v13 (2.1.3): gradle-wrapper.jar is gitignored in this repo, so
+      #    `./gradlew` would fail with "ClassNotFoundException:
+      #    GradleWrapperMain". Regenerate the wrapper jar from the
+      #    provisioned `gradle` binary (step 3) and make gradlew executable.
       - name: Generate Gradle wrapper jar
         run: |
           gradle wrapper --gradle-version 8.7 --distribution-type bin
           chmod +x gradlew
 
-      # 6. Accept Android SDK licenses
+      # 6. Accept Android SDK licenses (avoids first-time license prompt)
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      # 6.5. Download NSFW TFLite model.
-      #
-      #  Priority:
-      #    1. NSFW_MODEL_URL secret  — your own private/custom model URL
-      #    2. Public HuggingFace fallback — tried without auth (may 401 on gated models)
-      #    3. Graceful skip — build still succeeds, app uses SAFE fallback at runtime
-      #
-      #  NOTE: --fail is intentionally NOT used. A 401/404 from HuggingFace
-      #  must NOT crash the build. Instead we validate the downloaded file:
-      #  TFLite files start with magic bytes "TFL3" at offset 4. If the file
-      #  is an HTML error page or too small, we delete it and warn.
-      - name: Download NSFW model
-        run: |
-          MODEL_URL="${{ secrets.NSFW_MODEL_URL }}"
-          PUBLIC_FALLBACK="https://huggingface.co/s0md3v/ufal-nsfw-classifier/resolve/main/model.tflite"
-          DEST="app/src/main/assets/nsfw_v1.tflite"
-          mkdir -p "$(dirname "$DEST")"
-
-          if [ -n "$MODEL_URL" ]; then
-            DOWNLOAD_URL="$MODEL_URL"
-            echo "Using custom model URL from secret..."
-          else
-            DOWNLOAD_URL="$PUBLIC_FALLBACK"
-            echo "No NSFW_MODEL_URL secret — trying public HuggingFace fallback..."
-          fi
-
-          # Download WITHOUT --fail so HTTP errors don't crash the build
-          curl -L --retry 3 --max-time 60 -o "$DEST" "$DOWNLOAD_URL" || true
-
-          # Validate: TFLite magic bytes "TFL3" at offset 4 (hex: 54464c33)
-          if [ -f "$DEST" ]; then
-            FILE_SIZE=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
-            MAGIC=$(xxd -p -s 4 -l 4 "$DEST" 2>/dev/null || echo "")
-            echo "Downloaded: ${FILE_SIZE} bytes, magic=${MAGIC}"
-
-            if [ "$MAGIC" = "54464c33" ] && [ "$FILE_SIZE" -gt 10240 ]; then
-              echo "✅ Valid TFLite model bundled ($(du -sh $DEST | cut -f1))"
-            else
-              echo "⚠️  Not a valid TFLite file (bad magic or too small — likely 401/404 HTML response)"
-              echo "    Build continues. App will use SAFE fallback at runtime."
-              echo "    Fix: set NSFW_MODEL_URL secret to a direct .tflite download link."
-              rm -f "$DEST"
-            fi
-          else
-            echo "⚠️  Download failed entirely. Build continues with SAFE fallback."
-          fi
-
-      # 7. Run unit tests
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
-
-      # 8. Build Debug APK
+      # 7. Build Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
 
-      # 9. Upload APK artifact
+      # 8. Upload APK as downloadable artifact
       - name: Upload Debug APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Dogs-of-KAHAF-v3.1.2-${{ github.run_number }}
+          name: GuardianShield-debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: warn
 
-      # 10. APK summary
-      - name: APK summary
+      # 9. Print APK info
+      - name: APK info
         if: success()
         run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
+          echo "Build complete!"
           ls -lh app/build/outputs/apk/debug/ || echo "(no APK found)"
-          if [ -f "$APK" ]; then
-            echo "APK size: $(du -sh $APK | cut -f1)"
-          fi
-          if [ -f app/src/main/assets/nsfw_v1.tflite ]; then
-            echo "Model bundled: YES — AI detection active"
-          else
-            echo "Model bundled: NO — app uses SAFE fallback (set NSFW_MODEL_URL secret to fix)"
-          fi

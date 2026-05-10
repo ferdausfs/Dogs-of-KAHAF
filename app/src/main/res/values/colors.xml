@@ -1,6 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="seed">#3F51B5</color>
-    <color name="block_red">#B71C1C</color>
-    <color name="ok_green">#2E7D32</color>
+    <color name="navy_900">#0B1426</color>
+    <color name="navy_800">#101D33</color>
+    <color name="navy_700">#1A2B47</color>
+    <color name="cyan_500">#00BCD4</color>
+    <color name="cyan_400">#26C6DA</color>
+    <color name="red_500">#E53935</color>
+    <color name="green_500">#43A047</color>
+    <color name="white">#FFFFFF</color>
+    <color name="text_secondary">#B0BEC5</color>
 </resources>

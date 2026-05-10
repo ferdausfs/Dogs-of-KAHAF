@@ -1,145 +1,59 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Guardian Shield</string>
     <string name="accessibility_service_label">Guardian Shield Protection</string>
-    <string name="accessibility_service_summary">Enforces blocked apps, keyword filters, and content rules on-device.</string>
-    <string name="accessibility_service_description">Guardian Shield needs Accessibility access to detect when blocked apps come to the foreground and to scan visible text for forbidden keywords. All processing happens locally on this device. Nothing is uploaded.</string>
+    <string name="accessibility_service_description">Monitors apps and screen content to enforce your blocking rules. No data leaves your device.</string>
+    <string name="protection_active">Protection Active</string>
+    <string name="protection_inactive">Protection Inactive</string>
+    <string name="protection_paused">Protection Paused</string>
+    <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="accessibility_enabled">Accessibility Enabled</string>
+    <string name="content_blocked">CONTENT BLOCKED</string>
+    <string name="stay_strong">Stay strong. You\'ve got this.</string>
+    <string name="go_home">Go Home</string>
+    <string name="request_unlock">Request Timed Unlock</string>
 
-    <!-- v3.1.0 (legacy merge): Device Admin description -->
-    <string name="device_admin_description">Allow Guardian Shield to prevent uninstall and to keep its protection service alive even on aggressive OEM ROMs (MIUI, ColorOS, FunTouch, Realme). No password / wipe policy is requested.</string>
+    <!-- v2 -->
+    <string name="permission_health">Permission Health</string>
+    <string name="device_admin_description">Activate to prevent casual uninstall and stop the OS from killing Guardian Shield in the background.</string>
 
-    <string name="fg_channel_name">Guardian Shield Protection</string>
-    <string name="fg_channel_desc">Keeps protection running so blocking can be enforced.</string>
-    <string name="fg_notif_title">Guardian Shield is active</string>
-    <string name="fg_notif_text">Protecting %1$d apps · %2$d rules</string>
+    <!-- v8 -->
+    <string name="protection_degraded_title">Guardian Shield needs attention</string>
+    <string name="protection_degraded_short">⚠ %1$d issue(s) — tap to fix</string>
+    <string name="protection_degraded_long">%1$d critical permission(s) are missing or have been revoked. Tap to restore protection.</string>
+    <string name="protection_degraded_accessibility">Accessibility service is not currently running. Tap to re-enable Guardian Shield protection.</string>
 
-    <!-- Common -->
-    <string name="common_cancel">Cancel</string>
-    <string name="common_close">Close</string>
+    <!-- v9 (2.0.0) -->
+    <string name="recent_blocks">Recent Blocks</string>
+    <string name="clear">Clear</string>
+    <string name="today_blocks">Today\'s Blocks</string>
+    <string name="todays_stats">Today\'s Stats</string>
+    <string name="stat_total">Total</string>
+    <string name="stat_ai">AI</string>
+    <string name="stat_keyword">Keyword</string>
+    <string name="stat_top_app">Most blocked app</string>
+    <string name="toggle_protection">Toggle Protection</string>
+    <string name="export_log">Export Log</string>
 
-    <!-- Onboarding -->
-    <string name="onb_welcome_title">Welcome to Guardian Shield</string>
-    <string name="onb_welcome_body">A privacy-first, 100%% on-device content protection tool. Nothing leaves your device.</string>
-    <string name="onb_perm_accessibility">Accessibility access</string>
-    <string name="onb_perm_overlay">Display over other apps</string>
-    <string name="onb_perm_notifications">Notifications</string>
-    <string name="onb_perm_battery">Ignore battery optimizations</string>
-    <string name="onb_grant">Grant</string>
-    <string name="onb_granted">Granted</string>
-    <string name="onb_continue">Continue</string>
-    <string name="onb_finish">Start protecting</string>
+    <!-- P4-A schedule rules UI -->
+    <string name="schedule_block_title">Schedule Block</string>
+    <string name="schedule_block_summary">Block %1$s during a daily time window.</string>
+    <string name="manage_schedule">Manage Schedule Rules</string>
+    <string name="schedule_active">Active %1$02d:%2$02d – %3$02d:%4$02d</string>
+    <string name="schedule_disabled">No schedule</string>
 
-    <!-- Dashboard -->
-    <string name="dash_protection">Protection</string>
-    <string name="dash_today_blocks">Blocks today</string>
-    <string name="dash_today_scans">Scans today</string>
-    <string name="dash_recent_events">Recent events</string>
-    <string name="dash_no_events">No events yet.</string>
-    <string name="dash_today_activity">Today\'s activity</string>
-    <string name="dash_top_blocked_apps">Top blocked apps</string>
+    <!-- v10 (2.1.0) — Smart Tiered Detection -->
+    <string name="sensitivity_label">Detection Sensitivity</string>
+    <string name="sensitivity_summary">Pick a preset. NSFW = block, Hot/Sexy = log only, Natural = ignore.</string>
+    <string name="sensitivity_low">Low</string>
+    <string name="sensitivity_low_desc">Only obvious explicit content. Fewest false positives.</string>
+    <string name="sensitivity_balanced">Balanced</string>
+    <string name="sensitivity_balanced_desc">Recommended. Blocks porn / hentai / nudity, ignores hot photos.</string>
+    <string name="sensitivity_high">High</string>
+    <string name="sensitivity_high_desc">Catches more, may have some false positives.</string>
 
-    <!-- App List -->
-    <string name="apps_title">Apps</string>
-    <string name="apps_search_hint">Search installed apps…</string>
-    <string name="state_normal">Normal</string>
-    <string name="state_blocked">Blocked</string>
-    <string name="state_whitelisted">Whitelist</string>
-
-    <!-- Keywords -->
-    <string name="kw_title">Keywords</string>
-    <string name="kw_add">Add keyword</string>
-    <string name="kw_pattern">Pattern</string>
-    <string name="kw_is_regex">Treat as regex</string>
-    <string name="kw_save">Save</string>
-    <string name="kw_delete">Delete</string>
-    <string name="kw_invalid_regex">Invalid regular expression</string>
-
-    <!-- Schedules -->
-    <string name="sch_title">Schedules</string>
-    <string name="sch_add">New schedule</string>
-    <string name="sch_label">Label</string>
-    <string name="sch_days">Days</string>
-    <string name="sch_start">Start</string>
-    <string name="sch_end">End</string>
-    <string name="sch_packages">Apps in this schedule</string>
-    <string name="sch_enabled">Enabled</string>
-    <string name="sch_save">Save</string>
-
-    <!-- AI / Detection Settings (v3.0.0 + v3.1.1) -->
-    <string name="ai_title">Detection Settings</string>
-    <string name="ai_engine_title">Detection Engine</string>
-    <string name="ai_engine_subtitle">On-device TFLite NSFW classifier</string>
-    <string name="ai_model_status_loaded">Model loaded ✓</string>
-    <string name="ai_model_status_missing">Model not found — safe fallback active. Import a .tflite below or wait for the bundled CI build.</string>
-    <string name="ai_model_status_custom">✓ Active: custom imported model</string>
-    <string name="ai_model_status_bundled">✓ Active: bundled model</string>
-    <string name="ai_min_image_size">Min image size: %1$dpx</string>
-    <string name="ai_input_normalized">Input normalization (0–1 range)</string>
-    <string name="ai_heuristic">Secondary heuristic</string>
-    <string name="ai_sensitivity">Global sensitivity</string>
-    <string name="ai_debounce">Debounce window (frames / seconds)</string>
-    <string name="ai_per_app">Per-app threshold boost</string>
-    <string name="ai_sources">Content-source apps (15-min auto-lock)</string>
-
-    <!-- v3.1.0 (legacy merge): Sensitivity preset chips + custom-model import -->
-    <string name="ai_preset_low">Low (fewer false positives)</string>
-    <string name="ai_preset_balanced">Balanced (recommended)</string>
-    <string name="ai_preset_high">High (catches more)</string>
-    <string name="ai_import_custom_model">Import custom NSFW model (.tflite)</string>
-    <string name="ai_import_help">Pick a 4-class [SAFE/NATURAL/SUGGESTIVE/EXPLICIT] or a 2-class [SFW/NSFW] TFLite model with input shape [1,224,224,3]. The new model is validated, copied to private storage, and loaded immediately — no restart required.</string>
-    <string name="ai_imported_size">Imported: %1$s</string>
-    <string name="ai_delete_imported">Remove imported model</string>
-    <string name="ai_import_ok">Custom model imported successfully</string>
-    <string name="ai_import_failed">Could not import model: %1$s</string>
-
-    <!-- Domains (v3.0.0) -->
-    <string name="nav_domains">Domains</string>
-    <string name="domains_title">Blocked Domains</string>
-    <string name="domains_hint">e.g. reddit.com</string>
-    <string name="domains_invalid">Invalid domain format</string>
-
-    <!-- PIN (v3.0.0) -->
-    <string name="pin_title">Protection PIN</string>
-    <string name="pin_enable">Enable Settings PIN</string>
-    <string name="pin_change">Change PIN</string>
-    <string name="pin_enter">Enter PIN to continue</string>
-    <string name="pin_wrong">Wrong PIN — %1$d attempt(s) left</string>
-    <string name="pin_locked">Locked — retry in %1$ds</string>
-    <string name="pin_set_new">Set a new PIN</string>
-    <string name="pin_confirm">Confirm PIN</string>
-    <string name="pin_mismatch">PINs do not match — try again</string>
-
-    <!-- Settings -->
-    <string name="set_title">Settings</string>
-    <string name="set_theme">Theme</string>
-    <string name="set_theme_system">System</string>
-    <string name="set_theme_dark">Dark</string>
-    <string name="set_theme_light">Light</string>
-    <string name="set_dynamic_color">Dynamic color (Android 12+)</string>
-    <string name="set_export">Export configuration</string>
-    <string name="set_import">Import configuration</string>
-    <string name="set_uninstall_protect">Uninstall protection</string>
-    <string name="set_about">About</string>
-    <string name="set_version">Version</string>
-
-    <!-- v3.1.0 (legacy merge): extra Settings strings -->
-    <string name="set_uninstall_protect_subtitle">Activate Device Admin so the app cannot be casually uninstalled. Strictly optional.</string>
-    <string name="set_uninstall_active">Device Admin active</string>
-    <string name="set_uninstall_inactive">Device Admin inactive</string>
-    <string name="set_disable_auto_revoke">Disable permission auto-reset (Android 11+)</string>
-    <string name="set_disable_auto_revoke_subtitle">Stops Android from revoking Accessibility / Overlay if you don\'t open the app for a few months.</string>
-    <string name="set_reflect_delay">Reflection delay (seconds)</string>
-
-    <!-- Block overlay -->
-    <string name="blk_title">Blocked by Guardian Shield</string>
-    <string name="blk_reason_app">This app is on your block list.</string>
-    <string name="blk_reason_keyword">A forbidden keyword was detected.</string>
-    <string name="blk_reason_domain">Blocked domain</string>
-    <string name="blk_reason_schedule">This app is blocked by a time schedule.</string>
-    <string name="blk_reason_ai">Sensitive content was detected.</string>
-    <string name="blk_reason_lock">This app is locked for 15 minutes.</string>
-    <string name="blk_locked_until">Unlocks in %1$s</string>
-    <string name="blk_go_home">I understand — go home</string>
-
-    <string name="cd_back">Back</string>
+    <string name="timed_block_title">Auto-Locked Apps</string>
+    <string name="timed_block_summary">Apps temporarily locked because AI detected explicit content from them.</string>
+    <string name="timed_block_remaining">%1$s — locked for %2$d min %3$d s</string>
+    <string name="timed_block_clear">Unlock now</string>
+    <string name="block_reason_source_timed">App auto-locked: AI confirmed explicit content from this source.</string>
 </resources>

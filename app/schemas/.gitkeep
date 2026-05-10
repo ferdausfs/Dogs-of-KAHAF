@@ -1,0 +1,2 @@
+# Room schemas land here at build time. Used by AutoMigration to diff
+# between database versions. Committed so CI builds can verify migrations.

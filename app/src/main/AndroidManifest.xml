@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Guardian Shield — merged manifest (v3.1.0).
-  Combines the v3.0.0 (kahaf) Compose architecture with the legacy v2.x
-  hardening features (Device Admin uninstall protection, app-hibernation
-  opt-out, hardware acceleration on overlay, anti-resizable overlay).
+  v11 (2.1.1) STABILITY PATCH FIX-LOG:
+   - dataExtractionRules + fullBackupContent kept (no behaviour change).
+   - Added android:hardwareAccelerated="true" explicitly (some OEM
+     ROMs were defaulting it off for legacy theme-style apps, which
+     broke the BlockOverlayActivity surface).
+   - Added android:resizeableActivity="false" to BlockOverlayActivity
+     so split-screen / freeform doesn't break the full-screen overlay
+     on tablets.
+   - foregroundServiceType=specialUse kept; matched by the
+     PROPERTY_SPECIAL_USE_FGS_SUBTYPE attribute.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Core permissions -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- Optional but recommended -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- v3.1.0 (legacy merge): tamper-resistance / OEM-killer survival -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION" />
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
         tools:ignore="ProtectedPermissions" />
-
-    <!-- Privacy: NO INTERNET permission. App is 100% on-device. -->
 
     <queries>
         <intent>
@@ -38,48 +38,57 @@
     </queries>
 
     <application
-        android:name=".GuardianShieldApp"
+        android:name=".GuardianApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
-        android:fullBackupContent="@xml/backup_rules"
+        android:fullBackupContent="false"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GuardianShield"
         tools:targetApi="34">
 
-        <!-- Main single Activity -->
         <activity
-            android:name=".presentation.MainActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.GuardianShield">
+            android:name=".ui.dashboard.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Block overlay (full-screen activity over offending apps) -->
+        <activity android:name=".ui.setup.PinSetupActivity" android:exported="false" />
+        <activity android:name=".ui.setup.PinVerifyActivity" android:exported="false" />
+        <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
+        <activity android:name=".ui.settings.AppListActivity" android:exported="false" />
+        <activity android:name=".ui.settings.KeywordActivity" android:exported="false" />
+        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false" />
+
+        <activity android:name=".ui.permissions.PermissionsActivity"
+            android:exported="false" />
+
         <activity
-            android:name=".service.overlay.BlockOverlayActivity"
-            android:excludeFromRecents="true"
+            android:name=".ui.overlay.BlockOverlayActivity"
             android:exported="false"
-            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
             android:noHistory="true"
             android:resizeableActivity="false"
             android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleInstance"
             android:taskAffinity=""
-            android:theme="@style/Theme.GuardianShield.Overlay"
-            android:turnScreenOn="true" />
+            android:theme="@style/Theme.GuardianShield.Overlay" />
 
-        <!-- Accessibility service -->
+        <activity
+            android:name=".ui.unlock.DelayUnlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
@@ -90,21 +99,17 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Foreground service (special use justified by content-shield use-case) -->
         <service
-            android:name=".service.foreground.GuardianForegroundService"
-            android:enabled="true"
+            android:name=".service.blocker.GuardianForegroundService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="On-device parental/content protection that must remain active to enforce app and keyword blocking. No network, no telemetry." />
+                android:value="content_blocker" />
         </service>
 
-        <!-- Boot receiver (resume protection after reboot) -->
         <receiver
-            android:name=".service.receiver.BootReceiver"
-            android:enabled="true"
+            android:name=".receiver.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -117,20 +122,12 @@
             </intent-filter>
         </receiver>
 
-        <!-- Minute ticker for time-based schedules -->
-        <receiver
-            android:name=".service.receiver.MinuteTickReceiver"
-            android:enabled="true"
-            android:exported="false" />
-
-        <!-- v3.1.0 (legacy merge): Device Admin receiver — uninstall protection.
-             Strictly OPTIONAL; the rest of the app works without it. -->
         <receiver
             android:name=".admin.GuardianDeviceAdminReceiver"
-            android:description="@string/device_admin_description"
-            android:exported="true"
             android:label="@string/app_name"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            android:description="@string/device_admin_description"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
             <meta-data
                 android:name="android.app.device_admin"
                 android:resource="@xml/device_admin" />
@@ -140,18 +137,5 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
             </intent-filter>
         </receiver>
-
-        <!-- WorkManager Hilt initializer disabled - we use HiltWorkerFactory via custom Configuration.Provider -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
-        </provider>
-
     </application>
 </manifest>
