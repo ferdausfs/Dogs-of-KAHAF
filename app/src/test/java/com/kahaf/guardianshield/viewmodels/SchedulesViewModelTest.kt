@@ -39,7 +39,11 @@ class SchedulesViewModelTest {
         advanceUntilIdle()
 
         coVerify { schedRepo.upsert(s) }
-        verify { timed.recompute() }
+        // v3.1.2 FIX: TimedBlockManager.recompute() has a default Long parameter,
+        // so the Kotlin compiler emits a call into the synthetic `recompute$default`
+        // bridge. MockK's `verify` only sees the underlying `recompute(Long)` call,
+        // so we must match the actual signature with `any()`.
+        verify { timed.recompute(any()) }
     }
 
     @Test

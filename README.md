@@ -12,8 +12,8 @@ declared in its manifest. By design.
 | Property              | Value                |
 |-----------------------|----------------------|
 | Package               | `com.kahaf.guardianshield` |
-| versionCode           | 14                   |
-| versionName           | 3.1.1                |
+| versionCode           | 15                   |
+| versionName           | 3.1.2                |
 | Min SDK / Target SDK  | 26 / 35              |
 | JVM target            | 17                   |
 | Language              | 100% Kotlin          |
@@ -23,7 +23,24 @@ declared in its manifest. By design.
 | DB                    | Room (schema v4)     |
 | Async                 | Coroutines + Flow    |
 
-## ⚠ v3.1.1 — Critical NSFW-detection fix
+## ⚠ v3.1.2 — Full code-review / build-green release
+
+v3.1.2 is a full code-review pass on v3.1.1:
+
+- **CI is green again**: the `SchedulesViewModelTest > upsert delegates…`
+  failure that broke `./gradlew testDebugUnitTest` for the whole project
+  is fixed. (Root cause: `TimedBlockManager.recompute()` has a default-arg
+  `Long`, so MockK's no-arg `verify` couldn't match the synthetic-bridge
+  call into `recompute(Long)`. Verification now uses `verify { timed.recompute(any()) }`.)
+- **Every Kotlin compiler warning surfaced by CI is now gone** — see
+  [CHANGELOG.md](CHANGELOG.md) for the per-file list.
+- **Dashboard counters no longer thrash the DB once a minute** —
+  `distinctUntilChanged` on the today-rollover ticker means the DAO Flow
+  is only re-subscribed when the day actually rolls over.
+
+No behaviour changes. No schema changes. No new permissions.
+
+## v3.1.1 — Critical NSFW-detection fix
 
 If you imported a custom `.tflite` model in v3.1.0 and noticed the AI
 overlay never fires, **that wasn't your model — it was a load-path bug
@@ -248,7 +265,7 @@ GitHub Actions workflow at `.github/workflows/build-debug.yml`:
 - regenerates `gradle-wrapper.jar` (which is `.gitignore`d), accepts SDK
   licenses, downloads the NSFW model from `NSFW_MODEL_URL` (if set), runs
   `./gradlew testDebugUnitTest` then `./gradlew assembleDebug`
-- uploads the debug APK as `Dogs-of-KAHAF-v3.1.1-${{ github.run_number }}`
+- uploads the debug APK as `Dogs-of-KAHAF-v3.1.2-${{ github.run_number }}`
 
 ---
 

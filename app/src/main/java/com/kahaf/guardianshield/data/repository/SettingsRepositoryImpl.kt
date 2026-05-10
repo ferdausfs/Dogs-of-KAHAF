@@ -56,7 +56,11 @@ class SettingsRepositoryImpl @Inject constructor(
         val aiInputNormalized: Boolean = false
     )
 
-    private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+    // v3.1.2 FIX: renamed from `json` → `jsonCodec` so we can name the override
+    // parameter `json` (matching the `SettingsRepository` interface) without a
+    // shadowing conflict. Eliminates the "parameter name differs from supertype"
+    // compiler warning.
+    private val jsonCodec = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
     override suspend fun exportJson(): String {
         val app = dataStore.appSettings.first()
@@ -75,11 +79,11 @@ class SettingsRepositoryImpl @Inject constructor(
             aiMinImageSize = ai.minImageSize,
             aiInputNormalized = ai.modelInputNormalized
         )
-        return json.encodeToString(snap)
+        return jsonCodec.encodeToString(snap)
     }
 
-    override suspend fun importJson(jsonStr: String): Boolean {
-        val snap = runCatching { json.decodeFromString<ConfigSnapshot>(jsonStr) }
+    override suspend fun importJson(json: String): Boolean {
+        val snap = runCatching { jsonCodec.decodeFromString<ConfigSnapshot>(json) }
             .getOrElse { return false }
         dataStore.updateApp { current ->
             current.copy(

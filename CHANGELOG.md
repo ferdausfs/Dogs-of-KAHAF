@@ -4,6 +4,66 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.1.2] — 2026-05-10  —  Full code-review / build-green release
+
+This release is the result of a complete code-review pass on v3.1.1. The
+goal: make CI green, eliminate every Kotlin compiler warning, and apply
+low-risk performance optimisations — without changing any user-visible
+behaviour.
+
+### Fixed (CRITICAL — unblocks CI)
+- **`SchedulesViewModelTest › upsert delegates…` no longer fails.**
+  `TimedBlockManager.recompute(nowMs: Long = System.currentTimeMillis())` has
+  a default parameter, so Kotlin compiles `timedBlockManager.recompute()`
+  into a call through the synthetic `recompute$default(…)` bridge into
+  `recompute(Long)`. MockK's `verify { timed.recompute() }` could not match
+  the actual `recompute(Long)` invocation, so the assertion always failed.
+  The verification now uses `verify { timed.recompute(any()) }` to match the
+  real signature. CI's `./gradlew testDebugUnitTest` is green again.
+
+### Fixed (compiler warnings — every warning from the v3.1.1 build is now gone)
+- **`SettingsRepositoryImpl.importJson`** now uses the parameter name `json`
+  (matching the `SettingsRepository` supertype). The internal `Json { … }`
+  codec was renamed to `jsonCodec` to avoid the shadowing collision. Resolves
+  the `parameter name differs from supertype` warning.
+- **`DashboardScreen`**: removed the unused `val scope = rememberCoroutineScope()`
+  (and its `kotlinx.coroutines.launch` / `rememberCoroutineScope` imports) —
+  nothing in the composable was launching a coroutine.
+- **`SettingsScreen`**: `onRequestReflectionDelay` is preserved on the public
+  signature (the `DELAY_UNLOCK` route is still wired in `GuardianNavHost`)
+  but is intentionally suppressed with `@Suppress("UNUSED_PARAMETER")` until
+  the reflection-delay gating is wired into the "disable protection" /
+  "remove PIN" flows.
+- **`GuardianAccessibilityService.runAiScanFor`**: capture the screenshot
+  into a final local `val captured: Bitmap` before passing it into the
+  suspending `withContext { … }` block. Eliminates the `bitmap!!` non-null
+  assertion warning (Kotlin can't smart-cast a `var` across a lambda boundary).
+
+### Performance
+- **`BlockEventRepositoryImpl.observeBlocksTodayCount()`** now
+  `distinctUntilChanged()`s the minute-tick source, so the DAO Flow is no
+  longer torn down and re-subscribed every 60 seconds when the day hasn't
+  rolled over. Previously the dashboard counter triggered a fresh DB query
+  every single minute even when nothing had changed.
+- **`DashboardViewModel.todayTicker`** likewise gets `distinctUntilChanged()`
+  so `blocksByReasonToday` and `topBlockedAppsToday` (both `flatMapLatest`-ed
+  on the same ticker) stop tearing down and re-subscribing once a minute.
+  Net effect: the Dashboard idles at one DAO subscription per metric for the
+  whole day, swapping only when the day actually rolls over.
+
+### Changed
+- `versionCode` 14 → 15, `versionName` 3.1.1 → 3.1.2.
+- CI artifact name bumped to `Dogs-of-KAHAF-v3.1.2-${run_number}` to match.
+
+### Not changed (intentionally)
+- DB schema is still v4. No new entities, no new migrations.
+- Hilt graph wiring, Compose UI, DataStore keys, WorkManager, accessibility
+  service event filter, foreground service type — all unchanged.
+- The custom-model load-path priority chain shipped in v3.1.1
+  (filesDir/nsfw_model.tflite → assets/nsfw_v1.tflite → SAFE fallback)
+  is unchanged.
+- Still **no `INTERNET` permission**. App is still 100% on-device.
+
 ## [3.1.1] — 2026-05-10  —  Critical bug-fix release
 
 ### Fixed (CRITICAL — root cause of "AI doesn't detect / block NSFW")

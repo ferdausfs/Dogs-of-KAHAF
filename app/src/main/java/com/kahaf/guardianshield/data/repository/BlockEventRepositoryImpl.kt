@@ -7,6 +7,7 @@ import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.domain.repository.BlockEventRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -30,6 +31,10 @@ class BlockEventRepositoryImpl @Inject constructor(
      * outer `flow { … }` builder now re-emits a fresh start-of-day every
      * minute, and `flatMapLatest` cancels the prior DAO subscription when
      * the day rolls over.
+     *
+     * v3.1.2 optimisation: `distinctUntilChanged` so we don't tear down and
+     * re-subscribe the DAO Flow every minute when `startOfTodayMs` hasn't
+     * actually changed. We only swap when the day really rolls over.
      */
     override fun observeBlocksTodayCount(): Flow<Int> {
         val tickerSourceMs = TimeUnit.MINUTES.toMillis(1)
@@ -40,7 +45,7 @@ class BlockEventRepositoryImpl @Inject constructor(
             }
         }
         return source
-            .map { it } // identity, kept for clarity
+            .distinctUntilChanged()
             .flatMapLatest { since -> dao.observeCountSince(since) }
     }
 

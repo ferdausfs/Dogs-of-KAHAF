@@ -11,6 +11,7 @@ import com.kahaf.guardianshield.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -40,13 +41,19 @@ class DashboardViewModel @Inject constructor(
     private val blockEventRepository: BlockEventRepository
 ) : ViewModel() {
 
-    /** Re-emits `startOfTodayMs` every minute so day-rollover is handled. */
+    /**
+     * Re-emits `startOfTodayMs` every minute so day-rollover is handled.
+     *
+     * v3.1.2: `distinctUntilChanged` so the downstream `flatMapLatest`
+     * subscriptions don't tear down and re-subscribe the DAO Flow every
+     * minute — they only re-subscribe when the day actually rolls over.
+     */
     private val todayTicker = flow {
         while (true) {
             emit(startOfTodayMs())
             kotlinx.coroutines.delay(TimeUnit.MINUTES.toMillis(1))
         }
-    }
+    }.distinctUntilChanged()
 
     val appSettings: StateFlow<AppSettings> = settingsRepository.appSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())

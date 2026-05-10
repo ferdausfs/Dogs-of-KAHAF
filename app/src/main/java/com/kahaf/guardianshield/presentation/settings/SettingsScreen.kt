@@ -38,6 +38,15 @@ import com.kahaf.guardianshield.presentation.common.GuardianTopBar
 import com.kahaf.guardianshield.presentation.common.PinEntryDialog
 import com.kahaf.guardianshield.presentation.common.PinSetupDialog
 
+/**
+ * v3.1.2: `onRequestReflectionDelay` is preserved on the API surface (the
+ * `DELAY_UNLOCK` route is still wired in [com.kahaf.guardianshield.presentation.navigation.GuardianNavHost])
+ * but is intentionally not invoked from this screen yet — the reflection-delay
+ * gating will be wired into the "disable protection" / "remove PIN" flows in
+ * a follow-up. `@Suppress("UNUSED_PARAMETER")` silences the compiler warning
+ * without changing the public function signature.
+ */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,

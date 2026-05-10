@@ -343,16 +343,22 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         var bitmap: Bitmap? = null
         try {
-            bitmap = captureScreenshotSuspend() ?: return false
+            // v3.1.2 FIX: capture the screenshot into a final local val so the
+            // suspending lambda doesn't need a `!!` to satisfy smart-cast.
+            // Kotlin can't smart-cast a `var` across a lambda boundary, which is
+            // why the previous `bitmap!!` triggered an "unnecessary non-null
+            // assertion" warning at compile time.
+            val captured: Bitmap = captureScreenshotSuspend() ?: return false
+            bitmap = captured
             // Skip frames that are too small to be meaningful.
-            if (bitmap.width < ai.minImageSize || bitmap.height < ai.minImageSize) {
+            if (captured.width < ai.minImageSize || captured.height < ai.minImageSize) {
                 return false
             }
 
             // Inference on Default dispatcher (already serialised inside
             // TfLiteNsfwClassifier via Mutex).
             val outcome = withContext(Dispatchers.Default) {
-                analyzeFrameUseCase.analyze(pkg, bitmap!!)
+                analyzeFrameUseCase.analyze(pkg, captured)
             }
 
             if (outcome.confirmed) {

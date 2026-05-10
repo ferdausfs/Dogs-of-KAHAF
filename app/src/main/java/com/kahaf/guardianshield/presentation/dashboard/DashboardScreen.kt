@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +51,6 @@ import com.kahaf.guardianshield.domain.model.BlockReason
 import com.kahaf.guardianshield.presentation.common.GuardianTopBar
 import com.kahaf.guardianshield.presentation.common.PinEntryDialog
 import com.kahaf.guardianshield.presentation.common.StatCard
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -73,8 +71,9 @@ fun DashboardScreen(
     val byReason by vm.blocksByReasonToday.collectAsStateWithLifecycle()
     val topApps by vm.topBlockedAppsToday.collectAsStateWithLifecycle()
 
+    // v3.1.2: dropped the unused `rememberCoroutineScope()` — nothing in this
+    // composable was launching a coroutine, so the scope was dead weight.
     var showSettingsPin by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     Scaffold(topBar = {
         GuardianTopBar(stringResource(R.string.app_name))

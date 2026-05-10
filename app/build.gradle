@@ -1,13 +1,14 @@
 // =============================================================================
 //  Guardian Shield — :app module build script
-//  v3.1.0 — legacy merge:
-//           * added security-crypto for SecureStorage (encrypted PIN/etc.)
-//           * added Device Admin runtime support
-//           * added custom-NSFW-model import path (uses existing TFLite deps)
-//           * versionCode 13, versionName 3.1.0
-//  v3.0.0 — switched default classifier binding to TfLiteNsfwClassifier,
-//           added tensorflow-lite-gpu, added PIN lock + domain blocking,
-//           bumped DB schema to v4.
+//  v3.1.2 — full code-review optimisation pass:
+//           * fixed failing SchedulesViewModelTest (default-arg verify)
+//           * cleared every Kotlin compiler warning surfaced by CI
+//           * added distinctUntilChanged on the today-rollover ticker so the
+//             dashboard counters don't tear down their DAO Flow every minute
+//           * versionCode 15, versionName 3.1.2
+//  v3.1.1 — critical NSFW load-path fix; classifier hot-reload after import.
+//  v3.1.0 — legacy merge: Device Admin, custom model import, SecureStorage.
+//  v3.0.0 — TFLite classifier default, GPU delegate, PIN lock, domain blocking.
 // =============================================================================
 plugins {
     id 'com.android.application'
@@ -25,8 +26,8 @@ android {
         applicationId 'com.kahaf.guardianshield'
         minSdk 26
         targetSdk 35
-        versionCode 14
-        versionName '3.1.1'
+        versionCode 15
+        versionName '3.1.2'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
