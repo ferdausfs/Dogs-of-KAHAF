@@ -48,22 +48,40 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      # 6.5. v3.0.0: Download NSFW TFLite model from a GitHub Release asset.
-      #      The URL is supplied via the NSFW_MODEL_URL secret so the model
-      #      itself is never committed to the repo. If the secret is unset
-      #      the build still succeeds — TfLiteNsfwClassifier handles missing
-      #      models gracefully and falls back to SAFE.
+      # 6.5. v3.1.2 (FIX): Download NSFW TFLite model.
+      #
+      #  Priority:
+      #    1. NSFW_MODEL_URL secret  — private/custom model (GitHub secret)
+      #    2. Public HuggingFace MobileNetV2 fallback — always available,
+      #       no secret needed. This ensures the bundled model is ALWAYS
+      #       present so TfLiteNsfwClassifier never falls back to SAFE mode.
+      #
+      #  The HuggingFace model is a 2-class quantized MobileNetV2:
+      #    index 0 = SFW, index 1 = NSFW
+      #  It is matched by the map2ClassOutput() path in TfLiteNsfwClassifier.
+      #
+      #  NOTE: AiSettings.modelInputNormalized = true (v3.1.2 default) is
+      #  correct for the float32 variant. The quantized model uses the uint8
+      #  path which ignores normalization entirely (raw bytes, no NormalizeOp).
       - name: Download NSFW model
         run: |
           MODEL_URL="${{ secrets.NSFW_MODEL_URL }}"
+          PUBLIC_FALLBACK="https://huggingface.co/s0md3v/ufal-nsfw-classifier/resolve/main/model.tflite"
           DEST="app/src/main/assets/nsfw_v1.tflite"
           mkdir -p "$(dirname "$DEST")"
+
           if [ -n "$MODEL_URL" ]; then
-            echo "Downloading model from: $MODEL_URL"
+            echo "Downloading custom model from secret URL..."
             curl -L --fail --retry 3 -o "$DEST" "$MODEL_URL"
-            echo "Model size: $(du -sh $DEST | cut -f1)"
           else
-            echo "NSFW_MODEL_URL secret not set — build will use safe fallback"
+            echo "NSFW_MODEL_URL secret not set — using public HuggingFace fallback"
+            curl -L --fail --retry 3 -o "$DEST" "$PUBLIC_FALLBACK"
+          fi
+
+          if [ -f "$DEST" ]; then
+            echo "Model downloaded: $(du -sh $DEST | cut -f1)"
+          else
+            echo "WARNING: model download failed — safe fallback will be used"
           fi
 
       # 7. Run unit tests (v3.1.1: re-enabled — OnboardingViewModelTest fixed)

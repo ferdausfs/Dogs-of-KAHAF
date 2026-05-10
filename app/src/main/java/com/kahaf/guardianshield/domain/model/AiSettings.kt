@@ -13,6 +13,12 @@ package com.kahaf.guardianshield.domain.model
  * v3.0.0: removed `engine` field — the real TFLite classifier is now the only
  * implementation bound by Hilt. `StubNsfwClassifier` remains in source as a
  * test double but is never wired into the production graph.
+ *
+ * v3.1.2 (FIX): modelInputNormalized default changed false → true.
+ * The recommended HuggingFace MobileNetV2 model (and most public NSFW
+ * TFLite models) expect [0,1] float inputs. With default=false the
+ * preprocessor sent raw [0,255] values, producing near-zero scores for
+ * every inference and making all frames appear SAFE.
  */
 data class AiSettings(
     val sensitivity: Float = 0.55f,
@@ -22,7 +28,7 @@ data class AiSettings(
     val contentSourcePackages: Set<String> = DEFAULT_CONTENT_SOURCES,
     val heuristicEnabled: Boolean = true,
     val minImageSize: Int = 120,
-    val modelInputNormalized: Boolean = false
+    val modelInputNormalized: Boolean = true  // FIX v3.1.2: was false
 ) {
     fun thresholdFor(pkg: String): Float {
         val base = (1f - sensitivity).coerceIn(0.05f, 0.95f)
