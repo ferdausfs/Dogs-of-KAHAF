@@ -1,6 +1,7 @@
 package com.kahaf.guardianshield.data.permissions
 
 import android.Manifest
+import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -11,6 +12,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
+import com.kahaf.guardianshield.admin.GuardianDeviceAdminReceiver
 import com.kahaf.guardianshield.service.accessibility.GuardianAccessibilityService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -19,6 +21,11 @@ import javax.inject.Singleton
 /**
  * Snapshots permission grant status (cached 10s). Compose-friendly via [refresh] +
  * `current()` getters. Provides deep-links to each system settings screen.
+ *
+ * v3.0.0 + legacy merge:
+ *   - added Device Admin (uninstall protection) tracking
+ *   - added auto-revoke / app-hibernation tracking (Android 11+)
+ *   - added intent helpers for all of the above
  */
 @Singleton
 class PermissionManager @Inject constructor(
@@ -29,6 +36,8 @@ class PermissionManager @Inject constructor(
         val overlay: Boolean,
         val notifications: Boolean,
         val ignoreBatteryOpt: Boolean,
+        val deviceAdmin: Boolean,
+        val autoRevokeDisabled: Boolean,
         val capturedAtMs: Long
     ) {
         val allCriticalGranted: Boolean
@@ -50,10 +59,16 @@ class PermissionManager @Inject constructor(
             overlay = canDrawOverlays(),
             notifications = isNotificationsAllowed(),
             ignoreBatteryOpt = isIgnoringBatteryOptimizations(),
+            deviceAdmin = isDeviceAdminActive(),
+            autoRevokeDisabled = isAutoRevokeDisabled(),
             capturedAtMs = System.currentTimeMillis()
         )
         cached = snap
         return snap
+    }
+
+    fun invalidateCache() {
+        cached = null
     }
 
     fun isAccessibilityEnabled(): Boolean {
@@ -85,6 +100,22 @@ class PermissionManager @Inject constructor(
         return pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
+    fun isDeviceAdminActive(): Boolean = runCatching {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        dpm.isAdminActive(GuardianDeviceAdminReceiver.componentName(context))
+    }.getOrDefault(false)
+
+    /**
+     * On Android 11+ (API 30), the OS auto-revokes runtime permissions for
+     * "unused" apps. `isAutoRevokeWhitelisted == true` means the user has
+     * whitelisted us → auto-revoke is OFF. Pre-API-30 there is no auto-revoke.
+     */
+    fun isAutoRevokeDisabled(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
+        return runCatching { context.packageManager.isAutoRevokeWhitelisted }
+            .getOrDefault(false)
+    }
+
     // ───── deep-links ─────
     fun openAccessibilitySettings() = startSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 
@@ -107,6 +138,37 @@ class PermissionManager @Inject constructor(
             .setData(Uri.parse("package:${context.packageName}"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+    }
+
+    /** Launch the system "Activate Device Admin?" prompt. */
+    fun requestDeviceAdmin() {
+        val cn: ComponentName = GuardianDeviceAdminReceiver.componentName(context)
+        val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+            .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn)
+            .putExtra(
+                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "Activate to prevent casual uninstall and stop the OS from killing Guardian Shield in the background."
+            )
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+    }
+
+    /** Programmatically deactivate Device Admin (the only safe way). */
+    fun removeDeviceAdmin() {
+        runCatching {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            dpm.removeActiveAdmin(GuardianDeviceAdminReceiver.componentName(context))
+        }
+    }
+
+    /** Send the user to the auto-revoke / hibernation exclusion screen. */
+    fun requestDisableAutoRevoke() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val intent = Intent(
+            Intent.ACTION_AUTO_REVOKE_PERMISSIONS,
+            Uri.parse("package:${context.packageName}")
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
     }
 
     private fun startSettings(action: String) {

@@ -1,19 +1,26 @@
 package com.kahaf.guardianshield.presentation.aisettings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -46,7 +53,17 @@ fun AiSettingsScreen(
     val ai by vm.ai.collectAsStateWithLifecycle()
     val apps by vm.allApps.collectAsStateWithLifecycle()
     val modelLoaded by vm.isModelLoaded.collectAsStateWithLifecycle()
+    val customImported by vm.customModelImported.collectAsStateWithLifecycle()
+    val customSize by vm.customModelSize.collectAsStateWithLifecycle()
+    val importStatus by vm.importStatus.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
+
+    // v3.1.0 (legacy merge): SAF picker for custom .tflite model import.
+    val pickModel = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) vm.importCustomNsfwModel(uri)
+    }
 
     Scaffold(topBar = {
         GuardianTopBar(stringResource(R.string.ai_title), onBack = onBack)
@@ -117,19 +134,78 @@ fun AiSettingsScreen(
                 }
             }
 
-            // -- Sensitivity ----------------------------------------------------
+            // -- Sensitivity (with v3.1.0 LOW/BALANCED/HIGH presets) ------------
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text(
                         stringResource(R.string.ai_sensitivity),
                         fontWeight = FontWeight.Medium
                     )
+                    Row(
+                        Modifier.padding(top = 6.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        FilterChip(
+                            selected = ai.sensitivity <= 0.35f,
+                            onClick = { vm.applyPreset("LOW") },
+                            label = { Text(stringResource(R.string.ai_preset_low)) }
+                        )
+                        FilterChip(
+                            selected = ai.sensitivity in 0.36f..0.64f,
+                            onClick = { vm.applyPreset("BALANCED") },
+                            label = { Text(stringResource(R.string.ai_preset_balanced)) }
+                        )
+                        FilterChip(
+                            selected = ai.sensitivity > 0.64f,
+                            onClick = { vm.applyPreset("HIGH") },
+                            label = { Text(stringResource(R.string.ai_preset_high)) }
+                        )
+                    }
                     Slider(
                         value = ai.sensitivity,
                         onValueChange = { vm.setSensitivity(it) },
                         valueRange = 0f..1f
                     )
                     Text("${(ai.sensitivity * 100).toInt()}%")
+                }
+            }
+
+            // -- v3.1.0 (legacy merge): Custom NSFW model import ---------------
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.ai_import_custom_model),
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (customImported) {
+                        Text(
+                            stringResource(R.string.ai_imported_size, customSize ?: "?"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            // SAF: ask the user to pick a .tflite (or any binary)
+                            pickModel.launch(arrayOf("*/*"))
+                        }) { Text(stringResource(R.string.ai_import_custom_model)) }
+                        if (customImported) {
+                            OutlinedButton(onClick = { vm.deleteCustomNsfwModel() }) {
+                                Text(stringResource(R.string.ai_delete_imported))
+                            }
+                        }
+                    }
+                    importStatus?.let { msg ->
+                        if (msg.isNotBlank()) {
+                            Text(
+                                msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
 

@@ -3,6 +3,7 @@ package com.kahaf.guardianshield.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kahaf.guardianshield.data.PinManager
+import com.kahaf.guardianshield.data.permissions.PermissionManager
 import com.kahaf.guardianshield.domain.model.AppSettings
 import com.kahaf.guardianshield.domain.model.ThemeMode
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
@@ -17,10 +18,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * v3.1.0 (legacy merge): wired the `uninstallProtection` toggle to the actual
+ * Device Admin flow via [PermissionManager.requestDeviceAdmin] /
+ * [PermissionManager.removeDeviceAdmin]. The boolean setting in
+ * [AppSettings] now reflects the *user's intent*; the actual OS state is
+ * read live from [PermissionManager] via [deviceAdminActive].
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val exportImport: ExportImportConfigUseCase
+    private val exportImport: ExportImportConfigUseCase,
+    private val permissionManager: PermissionManager
 ) : ViewModel() {
 
     val app: StateFlow<AppSettings> = settingsRepository.appSettings
@@ -32,6 +41,14 @@ class SettingsViewModel @Inject constructor(
     private val _importMessage = MutableStateFlow<String?>(null)
     val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
 
+    /** Live OS-side Device Admin state (refreshed on demand). */
+    private val _deviceAdminActive = MutableStateFlow(permissionManager.isDeviceAdminActive())
+    val deviceAdminActive: StateFlow<Boolean> = _deviceAdminActive.asStateFlow()
+
+    /** Live OS-side auto-revoke state. */
+    private val _autoRevokeDisabled = MutableStateFlow(permissionManager.isAutoRevokeDisabled())
+    val autoRevokeDisabled: StateFlow<Boolean> = _autoRevokeDisabled.asStateFlow()
+
     fun setTheme(mode: ThemeMode) = viewModelScope.launch {
         settingsRepository.updateAppSettings { it.copy(themeMode = mode) }
     }
@@ -40,8 +57,36 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.updateAppSettings { it.copy(dynamicColor = on) }
     }
 
+    /**
+     * Toggling the in-app "uninstall protection" switch:
+     *  • ON  → persist intent + launch the system "Activate Device Admin?" prompt
+     *  • OFF → persist intent + programmatically remove Device Admin
+     *
+     * The OS-side state is what actually protects the app from uninstall;
+     * the boolean in [AppSettings] is only the *intent* so the UI can
+     * remember what the user asked for after a reboot.
+     */
     fun setUninstallProtection(on: Boolean) = viewModelScope.launch {
         settingsRepository.updateAppSettings { it.copy(uninstallProtection = on) }
+        if (on) {
+            permissionManager.requestDeviceAdmin()
+        } else {
+            permissionManager.removeDeviceAdmin()
+        }
+        permissionManager.invalidateCache()
+        _deviceAdminActive.value = permissionManager.isDeviceAdminActive()
+    }
+
+    /** Re-read live OS state (call from onResume of the host activity). */
+    fun refreshOsPermissionState() {
+        permissionManager.invalidateCache()
+        _deviceAdminActive.value = permissionManager.isDeviceAdminActive()
+        _autoRevokeDisabled.value = permissionManager.isAutoRevokeDisabled()
+    }
+
+    /** Send the user to the auto-revoke / hibernation screen. */
+    fun requestDisableAutoRevoke() {
+        permissionManager.requestDisableAutoRevoke()
     }
 
     fun export() = viewModelScope.launch {

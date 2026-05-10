@@ -1,12 +1,12 @@
 package com.kahaf.guardianshield.viewmodels
 
+import com.kahaf.guardianshield.data.permissions.PermissionManager
 import com.kahaf.guardianshield.domain.model.AppSettings
 import com.kahaf.guardianshield.domain.model.ThemeMode
 import com.kahaf.guardianshield.domain.repository.SettingsRepository
 import com.kahaf.guardianshield.domain.usecase.ExportImportConfigUseCase
 import com.kahaf.guardianshield.presentation.settings.SettingsViewModel
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -23,15 +23,23 @@ class SettingsViewModelTest {
 
     @get:Rule val coroutineRule = MainCoroutineRule()
 
+    private fun fakePermissionManager(): PermissionManager {
+        val pm = mockk<PermissionManager>(relaxed = true)
+        every { pm.isDeviceAdminActive() } returns false
+        every { pm.isAutoRevokeDisabled() } returns true
+        return pm
+    }
+
     @Test
     fun `setTheme transforms current settings`() = runTest {
         val repo = mockk<SettingsRepository>(relaxed = true)
         val expIm = mockk<ExportImportConfigUseCase>(relaxed = true)
+        val perm = fakePermissionManager()
         every { repo.appSettings } returns MutableStateFlow(AppSettings())
         val captured = slot<(AppSettings) -> AppSettings>()
         coEvery { repo.updateAppSettings(capture(captured)) } answers {}
 
-        val vm = SettingsViewModel(repo, expIm)
+        val vm = SettingsViewModel(repo, expIm, perm)
         vm.setTheme(ThemeMode.DARK)
         advanceUntilIdle()
 
@@ -43,10 +51,11 @@ class SettingsViewModelTest {
     fun `export exposes JSON snapshot`() = runTest {
         val repo = mockk<SettingsRepository>(relaxed = true)
         val expIm = mockk<ExportImportConfigUseCase>()
+        val perm = fakePermissionManager()
         every { repo.appSettings } returns MutableStateFlow(AppSettings())
         coEvery { expIm.export() } returns "{\"k\":1}"
 
-        val vm = SettingsViewModel(repo, expIm)
+        val vm = SettingsViewModel(repo, expIm, perm)
         vm.export()
         advanceUntilIdle()
 

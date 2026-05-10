@@ -5,6 +5,9 @@
     <string name="accessibility_service_summary">Enforces blocked apps, keyword filters, and content rules on-device.</string>
     <string name="accessibility_service_description">Guardian Shield needs Accessibility access to detect when blocked apps come to the foreground and to scan visible text for forbidden keywords. All processing happens locally on this device. Nothing is uploaded.</string>
 
+    <!-- v3.1.0 (legacy merge): Device Admin description -->
+    <string name="device_admin_description">Allow Guardian Shield to prevent uninstall and to keep its protection service alive even on aggressive OEM ROMs (MIUI, ColorOS, FunTouch, Realme). No password / wipe policy is requested.</string>
+
     <string name="fg_channel_name">Guardian Shield Protection</string>
     <string name="fg_channel_desc">Keeps protection running so blocking can be enforced.</string>
     <string name="fg_notif_title">Guardian Shield is active</string>
@@ -72,6 +75,16 @@
     <string name="ai_per_app">Per-app threshold boost</string>
     <string name="ai_sources">Content-source apps (15-min auto-lock)</string>
 
+    <!-- v3.1.0 (legacy merge): Sensitivity preset chips + custom-model import -->
+    <string name="ai_preset_low">Low (fewer false positives)</string>
+    <string name="ai_preset_balanced">Balanced (recommended)</string>
+    <string name="ai_preset_high">High (catches more)</string>
+    <string name="ai_import_custom_model">Import custom NSFW model (.tflite)</string>
+    <string name="ai_imported_size">Imported: %1$s</string>
+    <string name="ai_delete_imported">Remove imported model</string>
+    <string name="ai_import_ok">Custom model imported successfully</string>
+    <string name="ai_import_failed">Could not import model: %1$s</string>
+
     <!-- Domains (v3.0.0) -->
     <string name="nav_domains">Domains</string>
     <string name="domains_title">Blocked Domains</string>
@@ -101,6 +114,14 @@
     <string name="set_uninstall_protect">Uninstall protection</string>
     <string name="set_about">About</string>
     <string name="set_version">Version</string>
+
+    <!-- v3.1.0 (legacy merge): extra Settings strings -->
+    <string name="set_uninstall_protect_subtitle">Activate Device Admin so the app cannot be casually uninstalled. Strictly optional.</string>
+    <string name="set_uninstall_active">Device Admin active</string>
+    <string name="set_uninstall_inactive">Device Admin inactive</string>
+    <string name="set_disable_auto_revoke">Disable permission auto-reset (Android 11+)</string>
+    <string name="set_disable_auto_revoke_subtitle">Stops Android from revoking Accessibility / Overlay if you don\'t open the app for a few months.</string>
+    <string name="set_reflect_delay">Reflection delay (seconds)</string>
 
     <!-- Block overlay -->
     <string name="blk_title">Blocked by Guardian Shield</string>

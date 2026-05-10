@@ -41,6 +41,7 @@ import com.kahaf.guardianshield.presentation.common.PinSetupDialog
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onRequestReflectionDelay: () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel()
 ) {
     val app by vm.app.collectAsStateWithLifecycle()
@@ -99,6 +100,9 @@ fun SettingsScreen(
                 }
             }
 
+            // -- v3.1.0 (legacy merge): Uninstall protection (Device Admin) ----
+            val deviceAdminActive by vm.deviceAdminActive.collectAsStateWithLifecycle()
+            val autoRevokeDisabled by vm.autoRevokeDisabled.collectAsStateWithLifecycle()
             Card(Modifier.fillMaxWidth()) {
                 Row(
                     Modifier.padding(12.dp).fillMaxWidth(),
@@ -111,14 +115,57 @@ fun SettingsScreen(
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "Requires Device Admin (separate confirmation flow).",
+                            stringResource(R.string.set_uninstall_protect_subtitle),
                             style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            if (deviceAdminActive)
+                                stringResource(R.string.set_uninstall_active)
+                            else
+                                stringResource(R.string.set_uninstall_inactive),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (deviceAdminActive)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                     Switch(
-                        checked = app.uninstallProtection,
+                        checked = app.uninstallProtection || deviceAdminActive,
                         onCheckedChange = { vm.setUninstallProtection(it) }
                     )
+                }
+            }
+
+            // -- v3.1.0 (legacy merge): Disable permission auto-reset (Android 11+)
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.padding(12.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.set_disable_auto_revoke),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.set_disable_auto_revoke_subtitle),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (autoRevokeDisabled) {
+                        Text(
+                            stringResource(R.string.onb_granted),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        TextButton(onClick = { vm.requestDisableAutoRevoke() }) {
+                            Text(stringResource(R.string.onb_grant))
+                        }
+                    }
                 }
             }
 

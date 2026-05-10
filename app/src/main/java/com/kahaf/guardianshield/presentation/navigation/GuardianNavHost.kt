@@ -12,6 +12,7 @@ import com.kahaf.guardianshield.presentation.keywords.KeywordsScreen
 import com.kahaf.guardianshield.presentation.onboarding.OnboardingScreen
 import com.kahaf.guardianshield.presentation.schedules.SchedulesScreen
 import com.kahaf.guardianshield.presentation.settings.SettingsScreen
+import com.kahaf.guardianshield.presentation.unlock.DelayUnlockScreen
 
 @Composable
 fun GuardianNavHost(
@@ -52,7 +53,18 @@ fun GuardianNavHost(
             AiSettingsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onRequestReflectionDelay = { navController.navigate(Routes.DELAY_UNLOCK) }
+            )
+        }
+        // v3.1.0 (legacy merge): self-imposed friction layer before sensitive
+        // changes (disabling protection, removing the PIN, mass-deleting rules).
+        composable(Routes.DELAY_UNLOCK) {
+            DelayUnlockScreen(
+                onConfirmed = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() }
+            )
         }
     }
 }

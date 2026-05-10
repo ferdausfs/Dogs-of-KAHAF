@@ -4,6 +4,74 @@ All notable changes to Guardian Shield are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.1.0] — 2026-05-10  —  Legacy-merge release
+
+This release re-introduces every "power-user" feature that lived in the
+old v2.x (`com.guardian.shield`) codebase but was missing in the v3.0.0
+rewrite, while keeping the new v3.0.0 Compose / Hilt / Room / Clean
+Architecture stack untouched. Nothing from the legacy build's known
+bugs (Keystore-startup ANR, regex-backtracking, scope-leak, GPU-on-Adreno
+crash, etc.) was carried over — only the working features were ported.
+
+### Added (legacy merge)
+- **Device Admin uninstall protection.** New
+  `com.kahaf.guardianshield.admin.GuardianDeviceAdminReceiver` +
+  `res/xml/device_admin.xml`. The `Settings → Uninstall protection`
+  toggle now actually launches the system "Activate Device Admin?"
+  prompt and reflects live OS state — stops casual uninstall and helps
+  the FG service survive aggressive OEM killers (MIUI / ColorOS /
+  FunTouch / Realme).
+- **Custom NSFW model import** (`ModelImportManager`). User can pick a
+  `.tflite` from Storage Access Framework; the file is atomically
+  copied into `filesDir`, validated against the TFLite `"TFL3"` magic
+  header, then opened in a throwaway `Interpreter` to confirm it loads
+  before being committed.
+- **Reflection / cool-down screen** (`DelayUnlockScreen` route) —
+  self-imposed friction layer: wait N seconds before confirming a
+  sensitive change (disable protection, remove PIN, mass-delete rules).
+- **`AppClassifier` utility** with comprehensive content-source app
+  list (Facebook / Instagram / X / TikTok / Snapchat / Reddit /
+  Telegram / WhatsApp / 14+ browsers) and "safe heavy-image apps"
+  list (Photos / Gallery / Camera / Maps) for less-aggressive judgment.
+- **`GuardianConstants`** — single source of truth for tiered
+  thresholds (NATURAL / SUGGESTIVE / EXPLICIT), per-class cut-offs
+  (porn / hentai / sexy), debounce window, source-block duration,
+  heavy-image boost.
+- **`SecureStorage`** (encrypted prefs via `EncryptedSharedPreferences`
+  with 3-tier fallback: encrypted → corrupted-prefs recovery → plain).
+- **LOW / BALANCED / HIGH sensitivity preset chips** in the
+  `AiSettings` screen.
+- **"Disable permission auto-reset" (Android 11+)** action in Settings
+  — stops the OS from silently revoking Accessibility / Overlay if
+  the user doesn't open the app for a few months.
+- **PNG launcher icons** for every density (mdpi / hdpi / xhdpi /
+  xxhdpi / xxxhdpi) plus the legacy `ic_shield_on` / `ic_shield_off`
+  / `search_view_bg` drawables — nicer visual on devices that don't
+  render the adaptive-icon vectors.
+- **Manifest hardening:** `hardwareAccelerated="true"`,
+  `BlockOverlayActivity android:resizeableActivity="false"`,
+  `enableOnBackInvokedCallback="true"`, `BIND_DEVICE_ADMIN`,
+  `REQUEST_DISABLE_APP_HIBERNATION`.
+- New strings: `device_admin_description`, sensitivity-preset labels,
+  custom-model-import labels, auto-revoke labels.
+
+### Changed
+- `PermissionManager.Snapshot` extended with `deviceAdmin` and
+  `autoRevokeDisabled` fields (kept `allCriticalGranted` semantics
+  unchanged so existing callers still work).
+- `SettingsViewModel` now exposes `deviceAdminActive` /
+  `autoRevokeDisabled` `StateFlow`s and a working
+  `setUninstallProtection` that triggers the OS prompt.
+- `versionCode` 12 → 13, `versionName` 3.0.0 → 3.1.0.
+- `:app/build.gradle` adds `androidx.security:security-crypto:1.1.0-alpha06`.
+
+### Not changed (intentionally)
+- The v3.0.0 Compose UI, Hilt graph, Room schema (v4), DataStore keys,
+  WorkManager scheduler, foreground service, accessibility service,
+  `TfLiteNsfwClassifier`, all use-cases, all repositories.
+- No new bugs from the v2.x codebase were ported — every legacy file
+  was rewritten against the new architecture rather than copied.
+
 ## [3.0.0] — 2026-05-10
 
 ### Added

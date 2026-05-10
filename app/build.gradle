@@ -1,5 +1,10 @@
 // =============================================================================
 //  Guardian Shield — :app module build script
+//  v3.1.0 — legacy merge:
+//           * added security-crypto for SecureStorage (encrypted PIN/etc.)
+//           * added Device Admin runtime support
+//           * added custom-NSFW-model import path (uses existing TFLite deps)
+//           * versionCode 13, versionName 3.1.0
 //  v3.0.0 — switched default classifier binding to TfLiteNsfwClassifier,
 //           added tensorflow-lite-gpu, added PIN lock + domain blocking,
 //           bumped DB schema to v4.
@@ -20,8 +25,8 @@ android {
         applicationId 'com.kahaf.guardianshield'
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName '3.0.0'
+        versionCode 13
+        versionName '3.1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
@@ -139,6 +144,9 @@ dependencies {
 
     // ── DataStore ───────────────────────────────────────────────────────────
     implementation 'androidx.datastore:datastore-preferences:1.1.1'
+
+    // ── Security (v3.1.0 legacy merge: EncryptedSharedPreferences) ──────────
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // ── WorkManager ─────────────────────────────────────────────────────────
     implementation 'androidx.work:work-runtime-ktx:2.9.0'

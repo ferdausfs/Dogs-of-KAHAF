@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Guardian Shield — merged manifest (v3.1.0).
+  Combines the v3.0.0 (kahaf) Compose architecture with the legacy v2.x
+  hardening features (Device Admin uninstall protection, app-hibernation
+  opt-out, hardware acceleration on overlay, anti-resizable overlay).
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
@@ -17,13 +23,27 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- v3.1.0 (legacy merge): tamper-resistance / OEM-killer survival -->
+    <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION" />
+    <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
+        tools:ignore="ProtectedPermissions" />
+
     <!-- Privacy: NO INTERNET permission. App is 100% on-device. -->
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:name=".GuardianShieldApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -50,9 +70,11 @@
             android:exported="false"
             android:launchMode="singleInstance"
             android:noHistory="true"
+            android:resizeableActivity="false"
             android:showOnLockScreen="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.GuardianShield.Overlay" />
+            android:theme="@style/Theme.GuardianShield.Overlay"
+            android:turnScreenOn="true" />
 
         <!-- Accessibility service -->
         <service
@@ -89,6 +111,10 @@
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
+            </intent-filter>
         </receiver>
 
         <!-- Minute ticker for time-based schedules -->
@@ -96,6 +122,24 @@
             android:name=".service.receiver.MinuteTickReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- v3.1.0 (legacy merge): Device Admin receiver — uninstall protection.
+             Strictly OPTIONAL; the rest of the app works without it. -->
+        <receiver
+            android:name=".admin.GuardianDeviceAdminReceiver"
+            android:description="@string/device_admin_description"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
+            </intent-filter>
+        </receiver>
 
         <!-- WorkManager Hilt initializer disabled - we use HiltWorkerFactory via custom Configuration.Provider -->
         <provider

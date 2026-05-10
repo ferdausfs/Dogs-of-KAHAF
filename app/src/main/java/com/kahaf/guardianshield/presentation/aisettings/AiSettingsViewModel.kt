@@ -1,7 +1,9 @@
 package com.kahaf.guardianshield.presentation.aisettings
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kahaf.guardianshield.data.classifier.ModelImportManager
 import com.kahaf.guardianshield.data.classifier.TfLiteNsfwClassifier
 import com.kahaf.guardianshield.domain.model.AiSettings
 import com.kahaf.guardianshield.domain.model.InstalledApp
@@ -18,6 +20,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
+ * v3.1.0 (legacy merge):
+ *  - injected [ModelImportManager] so the user can import a custom .tflite
+ *    NSFW model from Storage Access Framework. Result is surfaced via
+ *    [importStatus] (success message or human-readable error).
+ *  - exposed convenience setters for the LOW/BALANCED/HIGH presets ported
+ *    from the legacy GuardianConstants.
+ *
  * v3.0.0:
  *  - removed `setEngine` (engine toggle is gone — TFLite is the only engine).
  *  - added `setMinImageSize`, `setModelInputNormalized`, `setHeuristicEnabled`.
@@ -28,7 +37,8 @@ import javax.inject.Inject
 class AiSettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val appRuleRepository: AppRuleRepository,
-    private val classifier: TfLiteNsfwClassifier
+    private val classifier: TfLiteNsfwClassifier,
+    private val modelImportManager: ModelImportManager
 ) : ViewModel() {
 
     val ai: StateFlow<AiSettings> = settingsRepository.aiSettings
@@ -41,6 +51,21 @@ class AiSettingsViewModel @Inject constructor(
     private val _allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     val allApps: StateFlow<List<InstalledApp>> = _allApps.asStateFlow()
 
+    /** Custom model import status: null = idle, "" = loading, otherwise message. */
+    private val _importStatus = MutableStateFlow<String?>(null)
+    val importStatus: StateFlow<String?> = _importStatus.asStateFlow()
+
+    /** Reflects whether a user-imported nsfw_model.tflite is present in filesDir. */
+    private val _customModelImported = MutableStateFlow(
+        modelImportManager.isImported(ModelImportManager.NSFW_MODEL_FILE)
+    )
+    val customModelImported: StateFlow<Boolean> = _customModelImported.asStateFlow()
+
+    private val _customModelSize = MutableStateFlow(
+        modelImportManager.getModelSize(ModelImportManager.NSFW_MODEL_FILE)
+    )
+    val customModelSize: StateFlow<String?> = _customModelSize.asStateFlow()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _allApps.value = appRuleRepository.getInstalledApps(includeSystem = false)
@@ -49,6 +74,16 @@ class AiSettingsViewModel @Inject constructor(
 
     fun setSensitivity(value: Float) = viewModelScope.launch {
         settingsRepository.updateAiSettings { it.copy(sensitivity = value) }
+    }
+
+    /** v3.1.0: LOW/BALANCED/HIGH preset → maps to a sensitivity slider value. */
+    fun applyPreset(preset: String) = viewModelScope.launch {
+        val sensitivity = when (preset) {
+            "LOW"  -> 0.30f   // strict threshold => fewer false positives
+            "HIGH" -> 0.75f   // looser threshold => catches more
+            else   -> 0.55f   // BALANCED
+        }
+        settingsRepository.updateAiSettings { it.copy(sensitivity = sensitivity) }
     }
 
     fun setDebounceFrames(frames: Int) = viewModelScope.launch {
@@ -86,4 +121,25 @@ class AiSettingsViewModel @Inject constructor(
     fun setHeuristicEnabled(enabled: Boolean) = viewModelScope.launch {
         settingsRepository.updateAiSettings { it.copy(heuristicEnabled = enabled) }
     }
+
+    // ── v3.1.0 (legacy merge): custom NSFW model import / delete ────────────
+    fun importCustomNsfwModel(uri: Uri) = viewModelScope.launch {
+        _importStatus.value = ""    // sentinel: in-flight
+        val result = modelImportManager.importModel(uri, ModelImportManager.NSFW_MODEL_FILE)
+        result.onSuccess {
+            _importStatus.value = "Custom model imported successfully"
+            _customModelImported.value = true
+            _customModelSize.value = modelImportManager.getModelSize(ModelImportManager.NSFW_MODEL_FILE)
+        }.onFailure { t ->
+            _importStatus.value = "Could not import model: ${t.message ?: "unknown error"}"
+        }
+    }
+
+    fun deleteCustomNsfwModel() = viewModelScope.launch {
+        modelImportManager.deleteModel(ModelImportManager.NSFW_MODEL_FILE)
+        _customModelImported.value = false
+        _customModelSize.value = null
+    }
+
+    fun clearImportStatus() { _importStatus.value = null }
 }

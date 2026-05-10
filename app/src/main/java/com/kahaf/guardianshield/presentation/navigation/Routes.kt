@@ -9,4 +9,7 @@ object Routes {
     const val SCHEDULES = "schedules"
     const val AI_SETTINGS = "ai_settings"
     const val SETTINGS = "settings"
+
+    /** v3.1.0 (legacy merge): reflection / cool-down screen. */
+    const val DELAY_UNLOCK = "delay_unlock"
 }
