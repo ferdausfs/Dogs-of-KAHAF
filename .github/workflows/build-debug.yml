@@ -35,34 +35,27 @@ jobs:
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      # 5. v13 (2.1.3): gradle-wrapper.jar is gitignored in this repo, so
-      #    `./gradlew` would fail with "ClassNotFoundException:
-      #    GradleWrapperMain". Regenerate the wrapper jar from the
-      #    provisioned `gradle` binary (step 3) and make gradlew executable.
+      # 5. Regenerate gradle-wrapper.jar (gitignored in this repo)
       - name: Generate Gradle wrapper jar
         run: |
           gradle wrapper --gradle-version 8.7 --distribution-type bin
           chmod +x gradlew
 
-      # 6. Accept Android SDK licenses (avoids first-time license prompt)
+      # 6. Accept Android SDK licenses
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      # 6.5. v3.1.2 (FIX): Download NSFW TFLite model.
+      # 6.5. Download NSFW TFLite model.
       #
       #  Priority:
-      #    1. NSFW_MODEL_URL secret  — private/custom model (GitHub secret)
-      #    2. Public HuggingFace MobileNetV2 fallback — always available,
-      #       no secret needed. This ensures the bundled model is ALWAYS
-      #       present so TfLiteNsfwClassifier never falls back to SAFE mode.
+      #    1. NSFW_MODEL_URL secret  — your own private/custom model URL
+      #    2. Public HuggingFace fallback — tried without auth (may 401 on gated models)
+      #    3. Graceful skip — build still succeeds, app uses SAFE fallback at runtime
       #
-      #  The HuggingFace model is a 2-class quantized MobileNetV2:
-      #    index 0 = SFW, index 1 = NSFW
-      #  It is matched by the map2ClassOutput() path in TfLiteNsfwClassifier.
-      #
-      #  NOTE: AiSettings.modelInputNormalized = true (v3.1.2 default) is
-      #  correct for the float32 variant. The quantized model uses the uint8
-      #  path which ignores normalization entirely (raw bytes, no NormalizeOp).
+      #  NOTE: --fail is intentionally NOT used. A 401/404 from HuggingFace
+      #  must NOT crash the build. Instead we validate the downloaded file:
+      #  TFLite files start with magic bytes "TFL3" at offset 4. If the file
+      #  is an HTML error page or too small, we delete it and warn.
       - name: Download NSFW model
         run: |
           MODEL_URL="${{ secrets.NSFW_MODEL_URL }}"
@@ -71,20 +64,35 @@ jobs:
           mkdir -p "$(dirname "$DEST")"
 
           if [ -n "$MODEL_URL" ]; then
-            echo "Downloading custom model from secret URL..."
-            curl -L --fail --retry 3 -o "$DEST" "$MODEL_URL"
+            DOWNLOAD_URL="$MODEL_URL"
+            echo "Using custom model URL from secret..."
           else
-            echo "NSFW_MODEL_URL secret not set — using public HuggingFace fallback"
-            curl -L --fail --retry 3 -o "$DEST" "$PUBLIC_FALLBACK"
+            DOWNLOAD_URL="$PUBLIC_FALLBACK"
+            echo "No NSFW_MODEL_URL secret — trying public HuggingFace fallback..."
           fi
 
+          # Download WITHOUT --fail so HTTP errors don't crash the build
+          curl -L --retry 3 --max-time 60 -o "$DEST" "$DOWNLOAD_URL" || true
+
+          # Validate: TFLite magic bytes "TFL3" at offset 4 (hex: 54464c33)
           if [ -f "$DEST" ]; then
-            echo "Model downloaded: $(du -sh $DEST | cut -f1)"
+            FILE_SIZE=$(stat -c%s "$DEST" 2>/dev/null || echo 0)
+            MAGIC=$(xxd -p -s 4 -l 4 "$DEST" 2>/dev/null || echo "")
+            echo "Downloaded: ${FILE_SIZE} bytes, magic=${MAGIC}"
+
+            if [ "$MAGIC" = "54464c33" ] && [ "$FILE_SIZE" -gt 10240 ]; then
+              echo "✅ Valid TFLite model bundled ($(du -sh $DEST | cut -f1))"
+            else
+              echo "⚠️  Not a valid TFLite file (bad magic or too small — likely 401/404 HTML response)"
+              echo "    Build continues. App will use SAFE fallback at runtime."
+              echo "    Fix: set NSFW_MODEL_URL secret to a direct .tflite download link."
+              rm -f "$DEST"
+            fi
           else
-            echo "WARNING: model download failed — safe fallback will be used"
+            echo "⚠️  Download failed entirely. Build continues with SAFE fallback."
           fi
 
-      # 7. Run unit tests (v3.1.1: re-enabled — OnboardingViewModelTest fixed)
+      # 7. Run unit tests
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
         env:
@@ -96,7 +104,7 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Xmx2560m"
 
-      # 9. Upload APK as downloadable artifact (name reflects current versionName)
+      # 9. Upload APK artifact
       - name: Upload Debug APK
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,9 +119,12 @@ jobs:
         if: success()
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
-          echo "Build complete!"
           ls -lh app/build/outputs/apk/debug/ || echo "(no APK found)"
           if [ -f "$APK" ]; then
             echo "APK size: $(du -sh $APK | cut -f1)"
           fi
-          echo "Model bundled: $([ -f app/src/main/assets/nsfw_v1.tflite ] && echo YES || echo NO)"
+          if [ -f app/src/main/assets/nsfw_v1.tflite ]; then
+            echo "Model bundled: YES — AI detection active"
+          else
+            echo "Model bundled: NO — app uses SAFE fallback (set NSFW_MODEL_URL secret to fix)"
+          fi
