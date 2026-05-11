@@ -78,8 +78,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
         isScreenOn = pm?.isInteractive ?: true
 
-        // ✅ FIX: rulesVersion এ change হলে reload() call করো
-        // এটাই মূল fix — keyword/app change হলে snapshot update হবে
+        // Rules version change হলে reload
         ioScope.launch {
             try {
                 prefs.rulesVersion.collect {
@@ -90,9 +89,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                         Timber.e(t, "Rules reload failed")
                     }
                 }
-            } catch (t: Throwable) {
-                Timber.e(t)
-            }
+            } catch (t: Throwable) { Timber.e(t) }
         }
 
         serviceScope.launch {
@@ -102,9 +99,13 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
 
         aiDetector.startPrefsCache(serviceScope)
-        serviceScope.launch {
+
+        // Model load — rules version change এ re-try করো (import এর পরে)
+        ioScope.launch {
             try {
-                aiDetector.ensureLoaded()
+                prefs.rulesVersion.collect {
+                    try { aiDetector.ensureLoaded() } catch (t: Throwable) { Timber.e(t) }
+                }
             } catch (t: Throwable) { Timber.e(t) }
         }
 
@@ -186,7 +187,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                     queue.add(c)
                 }
             }
-        } finally { /* root owned by system */ }
+        } finally { }
         val s = builder.toString().trim()
         return s.ifEmpty { null }
     }
@@ -267,9 +268,21 @@ class GuardianAccessibilityService : AccessibilityService() {
                     if (!isScreenOn || !protectionEnabled) continue
                     val pkg = currentPackage ?: continue
                     if (!rulesEngine.canBlock(pkg)) continue
+
+                    // Package rules check
                     val r = rulesEngine.evaluatePackage(pkg)
                     if (r is DetectionResult.Block) {
                         blockingEngine.block(pkg, r.reason, r.detail)
+                        continue
+                    }
+
+                    // ✅ FIX: Periodic AI scan — এটাই আগে ছিল না
+                    // User same app এ থেকে scroll করলেও AI check হবে
+                    if (aiDetector.cachedAiEnabled
+                        && aiDetector.isLegacyAvailable()
+                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    ) {
+                        triggerAiCheckThrottled(pkg)
                     }
                 } catch (t: Throwable) {
                     Timber.e(t, "Periodic scanner error")
