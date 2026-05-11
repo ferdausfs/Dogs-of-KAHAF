@@ -45,19 +45,16 @@ class AiDetector @Inject constructor(
 
     fun startPrefsCache(scope: CoroutineScope) {
         scope.launch {
-            try {
-                prefs.aiDetection.collect { cachedAiEnabled = it }
-            } catch (t: Throwable) { Timber.e(t) }
+            try { prefs.aiDetection.collect { cachedAiEnabled = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
         scope.launch {
-            try {
-                prefs.userGender.collect { cachedUserGender = it }
-            } catch (t: Throwable) { Timber.e(t) }
+            try { prefs.userGender.collect { cachedUserGender = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
         scope.launch {
-            try {
-                prefs.aiThreshold.collect { cachedThreshold = it }
-            } catch (t: Throwable) { Timber.e(t) }
+            try { prefs.aiThreshold.collect { cachedThreshold = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
     }
 
@@ -84,7 +81,6 @@ class AiDetector @Inject constructor(
     }
 
     private fun loadModelBuffer(name: String): ByteBuffer? {
-        // 1) filesDir → mmap
         val f = File(context.filesDir, name)
         if (f.exists() && f.length() > 0) {
             return try {
@@ -92,18 +88,19 @@ class AiDetector @Inject constructor(
                     ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size())
                 } as MappedByteBuffer
             } catch (t: Throwable) {
-                Timber.w(t, "mmap failed; copying $name to buffer")
+                Timber.w(t, "mmap failed; byte copy $name")
                 f.readBytes().let { bytes ->
-                    ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
+                    ByteBuffer.allocateDirect(bytes.size)
+                        .order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
                 }
             }
         }
-        // 2) assets
         return try {
             context.assets.open(name).use { input ->
                 val bytes = input.readBytes()
                 if (bytes.isEmpty()) return null
-                ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
+                ByteBuffer.allocateDirect(bytes.size)
+                    .order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
             }
         } catch (_: Throwable) { null }
     }
@@ -113,6 +110,7 @@ class AiDetector @Inject constructor(
         try {
             val cl = CompatibilityList()
             if (cl.isDelegateSupportedOnThisDevice) {
+                // ✅ Fix: GpuDelegate() — bestOptionsForThisDevice type mismatch ছিল
                 gpuDelegate = GpuDelegate()
                 opts.addDelegate(gpuDelegate)
                 Timber.i("GPU delegate enabled")
@@ -129,8 +127,7 @@ class AiDetector @Inject constructor(
             Timber.w(t, "GPU interpreter failed; CPU retry")
             try { gpuDelegate?.close() } catch (_: Throwable) {}
             gpuDelegate = null
-            val cpuOpts = Interpreter.Options().setNumThreads(2)
-            Interpreter(buffer, cpuOpts)
+            Interpreter(buffer, Interpreter.Options().setNumThreads(2))
         }
     }
 
@@ -138,36 +135,61 @@ class AiDetector @Inject constructor(
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
             try {
-                val full = runInference(interp, bitmap)
                 val threshold = cachedThreshold
-                if (full.maxOrNull() ?: 0f < threshold * GuardianConstants.EARLY_EXIT_RATIO) {
+
+                // Full image
+                val fullScores = runInference(interp, bitmap)
+                val fullNsfw = extractNsfwScore(fullScores)
+
+                // Early exit — সব score খুব কম হলে safe
+                if (fullNsfw < threshold * GuardianConstants.EARLY_EXIT_RATIO) {
                     return@withLock false
                 }
+                if (fullNsfw >= threshold) return@withLock true
+
+                // Center square crop
                 val centerCrop = cropSquare(bitmap)
-                val centerScore = runInference(interp, centerCrop)
+                val centerNsfw = extractNsfwScore(runInference(interp, centerCrop))
                 centerCrop.recycle()
-                if (centerScore.maxOrNull() ?: 0f >= threshold) return@withLock true
+                if (centerNsfw >= threshold) return@withLock true
 
+                // Top 72% crop
                 val topCrop = cropVertical(bitmap, 0f, 0.72f)
-                val topScore = runInference(interp, topCrop)
+                val topNsfw = extractNsfwScore(runInference(interp, topCrop))
                 topCrop.recycle()
-                if (topScore.maxOrNull() ?: 0f >= threshold) return@withLock true
+                if (topNsfw >= threshold) return@withLock true
 
+                // Lower 82% crop
                 val lowerCrop = cropVertical(bitmap, 0.18f, 1f)
-                val lowerScore = runInference(interp, lowerCrop)
+                val lowerNsfw = extractNsfwScore(runInference(interp, lowerCrop))
                 lowerCrop.recycle()
 
-                val max = maxOf(
-                    full.maxOrNull() ?: 0f,
-                    centerScore.maxOrNull() ?: 0f,
-                    topScore.maxOrNull() ?: 0f,
-                    lowerScore.maxOrNull() ?: 0f
-                )
-                max >= threshold
+                maxOf(fullNsfw, centerNsfw, topNsfw, lowerNsfw) >= threshold
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
                 false
             }
+        }
+    }
+
+    /**
+     * ✅ Bug fix: আগে maxOrNull() ছিল — 2-class model এ safe_prob=0.85 হলেও block হতো।
+     * এখন model output size অনুযায়ী সঠিক nsfw score নেওয়া হচ্ছে:
+     *   - 1 output  → single probability, directly use
+     *   - 2 outputs → [safe, nsfw] → index 1
+     *   - 5 outputs → [drawings, hentai, neutral, porn, sexy] → sum of 1+3+4
+     *   - অন্য size → last index use করো
+     */
+    private fun extractNsfwScore(scores: FloatArray): Float {
+        return when (scores.size) {
+            1 -> scores[0]
+            2 -> scores[1]  // [safe, nsfw] → nsfw is index 1
+            5 -> {          // 5-class NSFW model
+                (scores.getOrElse(1) { 0f } +   // hentai
+                 scores.getOrElse(3) { 0f } +   // porn
+                 scores.getOrElse(4) { 0f })     // sexy
+            }
+            else -> scores.last()  // unknown model — last index assume nsfw
         }
     }
 
@@ -178,7 +200,7 @@ class AiDetector @Inject constructor(
         return inferenceLock.withLock {
             try {
                 val nsfwScores = runInference(nsfw, bitmap)
-                val nsfwProb = nsfwScores.maxOrNull() ?: 0f
+                val nsfwProb = extractNsfwScore(nsfwScores)
                 if (nsfwProb < GuardianConstants.NSFW_GATE_THRESHOLD) return@withLock false
                 val genderScores = runInference(gender, bitmap)
                 val maleProb = genderScores.getOrNull(0) ?: 0f
@@ -196,11 +218,11 @@ class AiDetector @Inject constructor(
     }
 
     private fun runInference(interp: Interpreter, bitmap: Bitmap): FloatArray {
-        val inputShape = interp.getInputTensor(0).shape() // [1,H,W,3]
+        val inputShape = interp.getInputTensor(0).shape()
         val h = inputShape.getOrNull(1) ?: 224
         val w = inputShape.getOrNull(2) ?: 224
         val resized = Bitmap.createScaledBitmap(bitmap, w, h, true)
-        val input = ByteBuffer.allocateDirect(4 * 1 * w * h * 3).order(ByteOrder.nativeOrder())
+        val input = ByteBuffer.allocateDirect(4 * w * h * 3).order(ByteOrder.nativeOrder())
         val pixels = IntArray(w * h)
         resized.getPixels(pixels, 0, w, 0, 0, w, h)
         for (p in pixels) {
@@ -226,7 +248,7 @@ class AiDetector @Inject constructor(
 
     private fun cropVertical(b: Bitmap, fromRatio: Float, toRatio: Float): Bitmap {
         val y = (b.height * fromRatio).toInt().coerceAtLeast(0)
-        val h = ((b.height * (toRatio - fromRatio)).toInt()).coerceAtLeast(1)
+        val h = (b.height * (toRatio - fromRatio)).toInt().coerceAtLeast(1)
         return Bitmap.createBitmap(b, 0, y, b.width, h.coerceAtMost(b.height - y))
     }
 

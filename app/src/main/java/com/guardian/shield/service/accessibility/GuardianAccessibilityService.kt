@@ -1,6 +1,7 @@
 package com.guardian.shield.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -18,6 +19,7 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
@@ -50,11 +52,20 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val aiScanMap = LinkedHashMap<String, Long>()
     private var periodicJob: Job? = null
 
+    // ✅ Fix: home launcher package runtime detect
+    private var homePkg: String? = null
+    // ✅ Fix: KeyguardManager — lock screen check
+    private var keyguardManager: KeyguardManager? = null
+
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> isScreenOn = true
-                Intent.ACTION_SCREEN_OFF -> isScreenOn = false
+                Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
+                    // ✅ Fix: screen off হলে currentPackage clear — stale scan বন্ধ
+                    currentPackage = null
+                }
             }
         }
     }
@@ -62,6 +73,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         Timber.i("Accessibility connected")
+
+        homePkg = AppClassifier.getHomePkg(this)
+        keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
 
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
@@ -78,16 +92,15 @@ class GuardianAccessibilityService : AccessibilityService() {
         val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
         isScreenOn = pm?.isInteractive ?: true
 
-        // Rules version change হলে reload
+        // Rules version change → reload
         ioScope.launch {
             try {
                 prefs.rulesVersion.collect {
                     try {
                         rulesEngine.reload()
-                        Timber.d("Rules reloaded (version=$it)")
-                    } catch (t: Throwable) {
-                        Timber.e(t, "Rules reload failed")
-                    }
+                        aiDetector.ensureLoaded()
+                        Timber.d("Rules + models reloaded (v=$it)")
+                    } catch (t: Throwable) { Timber.e(t) }
                 }
             } catch (t: Throwable) { Timber.e(t) }
         }
@@ -100,21 +113,14 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         aiDetector.startPrefsCache(serviceScope)
 
-        // Model load — rules version change এ re-try করো (import এর পরে)
-        ioScope.launch {
-            try {
-                prefs.rulesVersion.collect {
-                    try { aiDetector.ensureLoaded() } catch (t: Throwable) { Timber.e(t) }
-                }
-            } catch (t: Throwable) { Timber.e(t) }
-        }
-
         startPeriodicScanner()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val ev = event ?: return
         if (!protectionEnabled) return
+        // ✅ Fix: device locked হলে কিছু করবে না
+        if (isDeviceLocked()) return
         try {
             val pkg = ev.packageName?.toString().orEmpty()
             when (ev.eventType) {
@@ -129,15 +135,34 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    // ✅ Fix: lock screen + always-allow check
+    private fun isDeviceLocked(): Boolean {
+        return try {
+            keyguardManager?.isKeyguardLocked == true
+        } catch (_: Throwable) { false }
+    }
+
+    private fun isSafePackage(pkg: String): Boolean {
+        return AppClassifier.isAlwaysAllowedPackage(
+            packageName, pkg,
+            rulesEngine.current().inputMethods,
+            homePkg
+        )
+    }
+
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
+        if (isSafePackage(pkg)) {
+            currentPackage = null  // home/system → package track করবে না
+            return
+        }
         currentPackage = pkg
         val result = rulesEngine.evaluatePackage(pkg)
         if (result is DetectionResult.Block) {
             blockingEngine.block(pkg, result.reason, result.detail)
             return
         }
-        if (rulesEngine.canBlock(pkg) && aiDetector.cachedAiEnabled
+        if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
         ) {
             triggerAiCheckThrottled(pkg)
@@ -145,7 +170,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun handleContentChange(pkg: String) {
-        if (pkg.isBlank()) return
+        if (pkg.isBlank() || isSafePackage(pkg)) return
         val now = System.currentTimeMillis()
         if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
         lastTextScan = now
@@ -178,18 +203,14 @@ class GuardianAccessibilityService : AccessibilityService() {
                 val node = queue.poll() ?: continue
                 if (!visited.add(node)) continue
                 count++
-                val txt = node.text?.toString()
-                if (!txt.isNullOrBlank()) builder.append(txt).append(' ')
-                val desc = node.contentDescription?.toString()
-                if (!desc.isNullOrBlank()) builder.append(desc).append(' ')
+                node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+                node.contentDescription?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
                 for (i in 0 until node.childCount) {
-                    val c = node.getChild(i) ?: continue
-                    queue.add(c)
+                    node.getChild(i)?.let { queue.add(it) }
                 }
             }
         } finally { }
-        val s = builder.toString().trim()
-        return s.ifEmpty { null }
+        return builder.toString().trim().ifEmpty { null }
     }
 
     private fun triggerAiCheckThrottled(pkg: String) {
@@ -265,21 +286,23 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val delayMs = if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS
                     else GuardianConstants.AI_PERIODIC_MS
                     delay(delayMs)
-                    if (!isScreenOn || !protectionEnabled) continue
+
+                    // ✅ Fix: screen off বা locked হলে কিছু করবে না
+                    if (!isScreenOn || !protectionEnabled || isDeviceLocked()) continue
+
                     val pkg = currentPackage ?: continue
+                    if (isSafePackage(pkg)) continue
                     if (!rulesEngine.canBlock(pkg)) continue
 
-                    // Package rules check
+                    // Package/schedule rules check
                     val r = rulesEngine.evaluatePackage(pkg)
                     if (r is DetectionResult.Block) {
                         blockingEngine.block(pkg, r.reason, r.detail)
                         continue
                     }
 
-                    // ✅ FIX: Periodic AI scan — এটাই আগে ছিল না
-                    // User same app এ থেকে scroll করলেও AI check হবে
-                    if (aiDetector.cachedAiEnabled
-                        && aiDetector.isLegacyAvailable()
+                    // Periodic AI scan
+                    if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
                         && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                     ) {
                         triggerAiCheckThrottled(pkg)
