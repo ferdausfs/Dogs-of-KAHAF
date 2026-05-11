@@ -1,78 +1,94 @@
 package com.guardian.shield.ui.overlay
 
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
-import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * FIX-LOG (vs original):
- *  - BUG #9: deprecated onBackPressed() override replaced with
- *    OnBackPressedDispatcher (predictive-back safe).
- *  - Always come back to HOME after the overlay is dismissed via the home
- *    button — previously, finishing the Activity could pop the user back
- *    into the offending app on some OEMs.
- */
-@AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
-
-    companion object {
-        const val EXTRA_PACKAGE = "extra_pkg"
-        const val EXTRA_REASON = "extra_reason"
-        const val EXTRA_TERM = "extra_term"
-    }
 
     private lateinit var binding: ActivityBlockOverlayBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
-        vibrate()
 
-        val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: "unknown"
-        val term = intent.getStringExtra(EXTRA_TERM)
-        binding.tvBlockedPackage.text = pkg
-        binding.tvDetail.text = term?.let { "Matched: $it" } ?: getString(R.string.stay_strong)
+        val pkg = intent.getStringExtra(EXTRA_PACKAGE).orEmpty()
+        val reason = intent.getStringExtra(EXTRA_REASON).orEmpty()
+        val detail = intent.getStringExtra(EXTRA_DETAIL).orEmpty()
 
-        binding.btnHome.setOnClickListener { goHomeAndFinish() }
-        binding.btnRequestUnlock.setOnClickListener {
-            startActivity(Intent(this, DelayUnlockActivity::class.java))
+        binding.txtPackage.text = pkg
+        binding.txtReason.text = formatReason(reason, detail)
+
+        binding.btnHome.setOnClickListener { goHome() }
+        binding.btnUnlock.setOnClickListener {
+            startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
+                putExtra(DelayUnlockActivity.EXTRA_PACKAGE, pkg)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
             finish()
         }
 
-        // BUG #9 fix — predictive-back-aware. Back press is intentionally
-        // mapped to "go home" (we never want the user dropped back into the
-        // app we just blocked).
+        vibrate()
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() = goHomeAndFinish()
+            override fun handleOnBackPressed() { goHome() }
         })
     }
 
-    private fun goHomeAndFinish() {
+    private fun goHome() {
         runCatching {
-            val home = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(home)
+            startActivity(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            )
         }
         finish()
     }
 
-    @Suppress("DEPRECATION")
-    private fun vibrate() = runCatching {
-        val v = if (android.os.Build.VERSION.SDK_INT >= 31)
-            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-        else getSystemService(VIBRATOR_SERVICE) as Vibrator
-        v.vibrate(android.os.VibrationEffect.createOneShot(180, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+    private fun formatReason(reason: String, detail: String): String {
+        val r = when (reason) {
+            "AI_DETECTION" -> getString(R.string.overlay_reason_ai)
+            "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
+            "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
+            "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
+            else -> getString(R.string.overlay_reason_manual)
+        }
+        return r
+    }
+
+    private fun vibrate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                v?.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        } catch (_: Throwable) {}
+    }
+
+    companion object {
+        const val EXTRA_PACKAGE = "extra_package"
+        const val EXTRA_REASON = "extra_reason"
+        const val EXTRA_DETAIL = "extra_detail"
     }
 }

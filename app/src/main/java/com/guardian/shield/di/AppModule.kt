@@ -2,7 +2,11 @@ package com.guardian.shield.di
 
 import android.content.Context
 import androidx.room.Room
-import com.guardian.shield.data.local.db.*
+import com.guardian.shield.data.local.db.AppRuleDao
+import com.guardian.shield.data.local.db.BlockEventDao
+import com.guardian.shield.data.local.db.GuardianDatabase
+import com.guardian.shield.data.local.db.KeywordDao
+import com.guardian.shield.data.local.db.ScheduleRuleDao
 import com.guardian.shield.data.repository.RulesRepositoryImpl
 import com.guardian.shield.domain.repository.RulesRepository
 import dagger.Binds
@@ -17,24 +21,24 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    @Provides @Singleton
-    fun provideDb(@ApplicationContext context: Context): GuardianDatabase =
-        Room.databaseBuilder(context, GuardianDatabase::class.java, "guardian.db")
-            // v9 (2.0.0): AutoMigration(1 → 2) handles the new schedule_rules
-            // table; we still keep destructive fallback as a safety net for
-            // unforeseen schema drift on user devices.
+    @Provides
+    @Singleton
+    fun provideDatabase(@ApplicationContext ctx: Context): GuardianDatabase =
+        Room.databaseBuilder(ctx, GuardianDatabase::class.java, GuardianDatabase.DB_NAME)
+            .addMigrations(GuardianDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
 
-    @Provides fun appRuleDao(db: GuardianDatabase) = db.appRuleDao()
-    @Provides fun keywordDao(db: GuardianDatabase) = db.keywordDao()
-    @Provides fun blockEventDao(db: GuardianDatabase) = db.blockEventDao()
-    @Provides fun scheduleRuleDao(db: GuardianDatabase) = db.scheduleRuleDao()
+    @Provides fun appRuleDao(db: GuardianDatabase): AppRuleDao = db.appRuleDao()
+    @Provides fun keywordDao(db: GuardianDatabase): KeywordDao = db.keywordDao()
+    @Provides fun blockEventDao(db: GuardianDatabase): BlockEventDao = db.blockEventDao()
+    @Provides fun scheduleRuleDao(db: GuardianDatabase): ScheduleRuleDao = db.scheduleRuleDao()
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
-    @Binds @Singleton
+    @Binds
+    @Singleton
     abstract fun bindRulesRepository(impl: RulesRepositoryImpl): RulesRepository
 }

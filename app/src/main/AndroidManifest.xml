@@ -1,55 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  FIX-LOG (vs original):
-   - Added android:enableOnBackInvokedCallback="true" so OnBackPressedDispatcher
-     callbacks (PinVerify, PinSetup, BlockOverlay) work correctly with the
-     Android 13+ predictive-back gesture.
-   - Added a <queries> element so QUERY_ALL_PACKAGES is not strictly required
-     for visibility on API 30+ — Play Store rejects QUERY_ALL_PACKAGES for most
-     apps. We still keep the permission as a fallback for sideloaded builds.
-   - BlockOverlayActivity is now noHistory + showOnLockScreen + turnScreenOn so
-     the overlay survives across OEM background-launch restrictions.
-
-  v2 update (this commit):
-   - Added REQUEST_IGNORE_BATTERY_OPTIMIZATIONS so the app can ask the user to
-     unrestrict it. This directly fixes "permission auto remove hoy / app
-     kaj kore na" — without this, OEM Battery Saver kills the service.
-   - Added REQUEST_DISABLE_APP_HIBERNATION so we can ask Android 12+ to stop
-     auto-revoking permissions when the user hasn't opened the app in a while.
-   - Added PACKAGE_USAGE_STATS already declared; added BIND_DEVICE_ADMIN for
-     the new GuardianDeviceAdminReceiver — gives uninstall protection and
-     better OEM survival on MIUI / ColorOS / FunTouch / Realme UI.
-   - Added MyPackageReplacedReceiver to BootReceiver so the foreground
-     service is restarted automatically after an app update.
-   - Registered PermissionsActivity (the new "Permission Health" screen).
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
+        tools:ignore="ProtectedPermissions"/>
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-
-    <!-- v2: keep service alive against OEM battery savers -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- v2: stop Android 12+ from auto-revoking our permissions if user
-         doesn't open the app for ~3 months. -->
-    <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION" />
-    <!-- v2: required for the DeviceAdminReceiver below. -->
+        tools:ignore="QueryAllPackagesPermission"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION"/>
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
-        tools:ignore="ProtectedPermissions" />
+        tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
 
     <queries>
         <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
         </intent>
     </queries>
 
@@ -57,34 +30,33 @@
         android:name=".GuardianApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GuardianShield"
+        android:enableOnBackInvokedCallback="true"
         tools:targetApi="34">
 
         <activity
             android:name=".ui.dashboard.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.setup.PinSetupActivity" android:exported="false" />
-        <activity android:name=".ui.setup.PinVerifyActivity" android:exported="false" />
-        <activity android:name=".ui.settings.SettingsActivity" android:exported="false" />
-        <activity android:name=".ui.settings.AppListActivity" android:exported="false" />
-        <activity android:name=".ui.settings.KeywordActivity" android:exported="false" />
-        <!-- v9 (2.0.0) — P4-A: schedule rules screen -->
-        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false" />
-
-        <!-- v2: Permission Health screen -->
-        <activity android:name=".ui.permissions.PermissionsActivity"
-            android:exported="false" />
+        <activity android:name=".ui.settings.SettingsActivity" android:exported="false"/>
+        <activity android:name=".ui.settings.AppListActivity" android:exported="false"/>
+        <activity android:name=".ui.settings.KeywordActivity" android:exported="false"/>
+        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false"/>
+        <activity android:name=".ui.permissions.PermissionsActivity" android:exported="false"/>
+        <activity android:name=".ui.setup.PinSetupActivity" android:exported="false"/>
+        <activity android:name=".ui.setup.PinVerifyActivity" android:exported="false"/>
+        <activity android:name=".ui.unlock.DelayUnlockActivity" android:exported="false"/>
 
         <activity
             android:name=".ui.overlay.BlockOverlayActivity"
@@ -95,24 +67,19 @@
             android:turnScreenOn="true"
             android:launchMode="singleInstance"
             android:taskAffinity=""
-            android:theme="@style/Theme.GuardianShield.Overlay" />
-
-        <activity
-            android:name=".ui.unlock.DelayUnlockActivity"
-            android:exported="false"
-            android:excludeFromRecents="true" />
+            android:theme="@style/Theme.GuardianShield.Overlay"/>
 
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
+                android:resource="@xml/accessibility_service_config"/>
         </service>
 
         <service
@@ -121,39 +88,30 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="content_blocker" />
+                android:value="content_blocker"/>
         </service>
 
         <receiver
             android:name=".receiver.BootReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-                <!-- v2: also restart after an app update -->
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.PACKAGE_REPLACED" />
-                <data android:scheme="package" />
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
         </receiver>
 
-        <!-- v2: Device-Admin receiver — uninstall protection + better OEM
-             background survival. Activation is OPTIONAL — the rest of the
-             app keeps working even if the user never enables admin. -->
         <receiver
             android:name=".admin.GuardianDeviceAdminReceiver"
-            android:label="@string/app_name"
-            android:description="@string/device_admin_description"
-            android:permission="android.permission.BIND_DEVICE_ADMIN"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
                 android:name="android.app.device_admin"
-                android:resource="@xml/device_admin" />
+                android:resource="@xml/device_admin"/>
             <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED" />
-                <action android:name="android.app.action.DEVICE_ADMIN_DISABLED" />
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/>
             </intent-filter>
         </receiver>
+
     </application>
 </manifest>

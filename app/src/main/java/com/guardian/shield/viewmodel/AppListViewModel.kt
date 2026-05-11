@@ -3,16 +3,11 @@ package com.guardian.shield.viewmodel
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.AppRule
-import com.guardian.shield.domain.usecase.DeleteAppRuleUseCase
-import com.guardian.shield.domain.usecase.GetAppRulesUseCase
-import com.guardian.shield.domain.usecase.UpsertAppRuleUseCase
-import com.guardian.shield.service.detection.RulesEngine
-import com.guardian.shield.util.AppClassifier
+import com.guardian.shield.domain.repository.RulesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -26,158 +21,93 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-data class InstalledApp(
-    val pkg: String,
-    val name: String,
-    val rule: AppRule?,
-    val isSystemApp: Boolean,
-    val isAlwaysAllowed: Boolean
+enum class AppFilter { ALL, BLOCKED, WHITELISTED }
+
+data class AppListState(
+    val apps: List<AppRule> = emptyList(),
+    val filter: AppFilter = AppFilter.ALL,
+    val query: String = "",
+    val loading: Boolean = false
 )
 
-/**
- * v9 (2.0.0):
- *  • P2-B → LocalBroadcastManager removed. Rule changes are propagated by
- *    calling rulesEngine.reload() directly; observers (e.g. the
- *    AccessibilityService) get notified via RulesEngine.rulesChanged.
- *
- * Earlier v8 BUG-11 / BUG-12 still apply.
- */
 @HiltViewModel
 class AppListViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val getRules: GetAppRulesUseCase,
-    private val upsert: UpsertAppRuleUseCase,
-    private val delete: DeleteAppRuleUseCase,
-    private val prefs: GuardianPreferences,
-    private val rulesEngine: RulesEngine
+    private val repo: RulesRepository,
+    private val prefs: GuardianPreferences
 ) : ViewModel() {
 
-    private val allApps = MutableStateFlow<List<InstalledApp>>(emptyList())
-    private val searchQuery = MutableStateFlow("")
+    private val _filter = MutableStateFlow(AppFilter.ALL)
+    private val _query = MutableStateFlow("")
+    private val _loading = MutableStateFlow(false)
 
-    val apps: StateFlow<List<InstalledApp>> = combine(allApps, searchQuery) { installed, query ->
-        val keyword = query.trim().lowercase()
-        installed.filter { app ->
-            keyword.isBlank() ||
-                app.name.lowercase().contains(keyword) ||
-                app.pkg.lowercase().contains(keyword)
+    val state: StateFlow<AppListState> = combine(
+        repo.observeApps(),
+        _filter,
+        _query,
+        _loading
+    ) { apps, filter, query, loading ->
+        val byPkg = apps.associateBy { it.packageName }
+        val installed = loadInstalledApps()
+        val merged = installed.map { (pkg, name) ->
+            byPkg[pkg] ?: AppRule(pkg, name, isBlocked = false, isWhitelisted = false, createdAt = 0L)
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        val filtered = merged.filter { app ->
+            val matchesFilter = when (filter) {
+                AppFilter.ALL -> true
+                AppFilter.BLOCKED -> app.isBlocked
+                AppFilter.WHITELISTED -> app.isWhitelisted
+            }
+            val q = query.trim().lowercase()
+            val matchesQuery = q.isBlank() ||
+                app.appName.lowercase().contains(q) ||
+                app.packageName.lowercase().contains(q)
+            matchesFilter && matchesQuery
+        }.sortedBy { it.appName.lowercase() }
+        AppListState(filtered, filter, query, loading)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppListState())
 
-    val summary: StateFlow<String> = combine(allApps, apps) { all, filtered ->
-        "${filtered.size} / ${all.size} apps"
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "0 / 0 apps")
-
-    init { load() }
-
-    fun setSearchQuery(query: String) {
-        searchQuery.value = query
-    }
-
-    fun load() = viewModelScope.launch {
-        val rules = getRules().first().associateBy { it.packageName }
-        val installed = withContext(Dispatchers.IO) {
+    private suspend fun loadInstalledApps(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+        try {
             val pm = context.packageManager
-            val inputMethodPackages = AppClassifier.loadInputMethodPackages(context)
-            getInstalledApplicationsCompat(pm)
-                .asSequence()
-                .filter { it.packageName != context.packageName }
-                .map { info ->
-                    val label = runCatching { pm.getApplicationLabel(info).toString() }
-                        .getOrDefault(info.packageName)
-                        .ifBlank { info.packageName }
-                    InstalledApp(
-                        pkg = info.packageName,
-                        name = label,
-                        rule = rules[info.packageName],
-                        isSystemApp = AppClassifier.isSystemApp(info),
-                        isAlwaysAllowed = AppClassifier.isAlwaysAllowedPackage(
-                            context.packageName,
-                            info.packageName,
-                            inputMethodPackages
-                        )
-                    )
-                }
-                .distinctBy { it.pkg }
-                .sortedWith(
-                    compareByDescending<InstalledApp> { it.rule?.isBlocked == true || it.rule?.isWhitelisted == true }
-                        .thenByDescending { it.isAlwaysAllowed }
-                        .thenBy { it.name.lowercase() }
-                )
-                .toList()
+            val apps = pm.getInstalledApplications(0)
+            apps.filter { app ->
+                // exclude system apps without launcher intent
+                val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                val hasLauncher = pm.getLaunchIntentForPackage(app.packageName) != null
+                !isSystem || hasLauncher
+            }.map { app ->
+                app.packageName to (pm.getApplicationLabel(app).toString().ifBlank { app.packageName })
+            }
+        } catch (t: Throwable) {
+            emptyList()
         }
-        allApps.value = installed
     }
 
-    fun toggleBlock(app: InstalledApp) = viewModelScope.launch {
-        if (app.isAlwaysAllowed) return@launch
-        val curr = app.rule
-        val nextBlocked = !(curr?.isBlocked ?: false)
-        val nextWhitelisted = curr?.isWhitelisted ?: false
-        val newRule = if (!nextBlocked && !nextWhitelisted) {
-            delete(app.pkg)
-            null
-        } else {
-            val r = AppRule(
-                packageName = app.pkg,
-                appName = app.name,
-                isBlocked = nextBlocked,
-                isWhitelisted = nextWhitelisted
-            )
-            upsert(r)
-            r
+    fun setFilter(filter: AppFilter) { _filter.value = filter }
+    fun setQuery(q: String) { _query.value = q }
+
+    fun setBlocked(pkg: String, blocked: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val current = repo.getApp(pkg)
+                val updated = (current ?: AppRule(pkg, pkg, false, false, System.currentTimeMillis()))
+                    .copy(isBlocked = blocked, isWhitelisted = if (blocked) false else current?.isWhitelisted ?: false)
+                repo.upsertApp(updated)
+                prefs.bumpRulesVersion()
+            } catch (_: Throwable) {}
         }
-        patchInMemory(app.pkg, newRule)
-        runCatching { prefs.bumpRulesVersion() }
-        notifyRulesChanged()
     }
 
-    fun toggleWhitelist(app: InstalledApp) = viewModelScope.launch {
-        if (app.isAlwaysAllowed) return@launch
-        val curr = app.rule
-        val nextWhitelisted = !(curr?.isWhitelisted ?: false)
-        val nextBlocked = if (nextWhitelisted) false else (curr?.isBlocked ?: false)
-        val newRule = if (!nextBlocked && !nextWhitelisted) {
-            delete(app.pkg)
-            null
-        } else {
-            val r = AppRule(
-                packageName = app.pkg,
-                appName = app.name,
-                isBlocked = nextBlocked,
-                isWhitelisted = nextWhitelisted
-            )
-            upsert(r)
-            r
-        }
-        patchInMemory(app.pkg, newRule)
-        runCatching { prefs.bumpRulesVersion() }
-        notifyRulesChanged()
-    }
-
-    private fun patchInMemory(pkg: String, newRule: AppRule?) {
-        val current = allApps.value
-        val idx = current.indexOfFirst { it.pkg == pkg }
-        if (idx < 0) return
-        val updated = current.toMutableList()
-        updated[idx] = updated[idx].copy(rule = newRule)
-        allApps.value = updated
-    }
-
-    /**
-     * P2-B: directly reload RulesEngine. Subscribers (the AccessibilityService)
-     * are notified via the rulesChanged SharedFlow that reload() emits to.
-     */
-    private fun notifyRulesChanged() = viewModelScope.launch {
-        runCatching { rulesEngine.reload() }
-    }
-
-    private fun getInstalledApplicationsCompat(pm: PackageManager): List<ApplicationInfo> {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getInstalledApplications(PackageManager.MATCH_ALL)
+    fun setWhitelisted(pkg: String, whitelisted: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val current = repo.getApp(pkg)
+                val updated = (current ?: AppRule(pkg, pkg, false, false, System.currentTimeMillis()))
+                    .copy(isWhitelisted = whitelisted, isBlocked = if (whitelisted) false else current?.isBlocked ?: false)
+                repo.upsertApp(updated)
+                prefs.bumpRulesVersion()
+            } catch (_: Throwable) {}
         }
     }
 }

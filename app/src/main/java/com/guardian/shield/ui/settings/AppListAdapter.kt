@@ -1,56 +1,59 @@
 package com.guardian.shield.ui.settings
 
+import android.content.pm.PackageManager
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.guardian.shield.databinding.ItemAppBinding
-import com.guardian.shield.viewmodel.InstalledApp
+import com.guardian.shield.databinding.ItemAppRuleBinding
+import com.guardian.shield.domain.model.AppRule
 
 class AppListAdapter(
-    val onBlockToggle: (InstalledApp) -> Unit,
-    val onWhitelistToggle: (InstalledApp) -> Unit
-) : ListAdapter<InstalledApp, AppListAdapter.VH>(DIFF) {
+    private val pm: PackageManager,
+    private val onBlockChanged: (String, Boolean) -> Unit,
+    private val onWhitelistChanged: (String, Boolean) -> Unit
+) : ListAdapter<AppRule, AppListAdapter.VH>(DIFF) {
 
-    companion object {
-        private val DIFF = object : DiffUtil.ItemCallback<InstalledApp>() {
-            override fun areItemsTheSame(o: InstalledApp, n: InstalledApp) = o.pkg == n.pkg
-            override fun areContentsTheSame(o: InstalledApp, n: InstalledApp) = o == n
+    fun submit(list: List<AppRule>) { submitList(list) }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val b = ItemAppRuleBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(b)
+    }
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    inner class VH(private val b: ItemAppRuleBinding) : RecyclerView.ViewHolder(b.root) {
+        fun bind(rule: AppRule) {
+            b.txtAppName.text = rule.appName.ifBlank { rule.packageName }
+            b.txtPackage.text = rule.packageName
+            try {
+                val icon = pm.getApplicationIcon(rule.packageName)
+                b.imgIcon.setImageDrawable(icon)
+            } catch (_: Throwable) {
+                b.imgIcon.setImageDrawable(null)
+            }
+            // detach listeners while setting state
+            b.switchBlock.setOnCheckedChangeListener(null)
+            b.switchWhitelist.setOnCheckedChangeListener(null)
+            b.switchBlock.isChecked = rule.isBlocked
+            b.switchWhitelist.isChecked = rule.isWhitelisted
+            b.switchBlock.setOnCheckedChangeListener { _, v ->
+                onBlockChanged(rule.packageName, v)
+            }
+            b.switchWhitelist.setOnCheckedChangeListener { _, v ->
+                onWhitelistChanged(rule.packageName, v)
+            }
         }
     }
 
-    inner class VH(val b: ItemAppBinding) : RecyclerView.ViewHolder(b.root)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-        ItemAppBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-    )
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val app = getItem(position)
-        holder.b.tvName.text = app.name
-        holder.b.tvPackage.text = app.pkg
-
-        val tags = buildList {
-            if (app.isSystemApp) add("System app")
-            if (app.isAlwaysAllowed) add("Always allowed")
+    companion object {
+        val DIFF = object : DiffUtil.ItemCallback<AppRule>() {
+            override fun areItemsTheSame(o: AppRule, n: AppRule) = o.packageName == n.packageName
+            override fun areContentsTheSame(o: AppRule, n: AppRule) = o == n
         }
-        holder.b.tvMeta.isVisible = tags.isNotEmpty()
-        holder.b.tvMeta.text = tags.joinToString(" • ")
-
-        holder.b.cbBlock.setOnCheckedChangeListener(null)
-        holder.b.cbWhitelist.setOnCheckedChangeListener(null)
-
-        holder.b.cbBlock.isEnabled = !app.isAlwaysAllowed
-        holder.b.cbWhitelist.isEnabled = !app.isAlwaysAllowed
-        holder.b.cbBlock.alpha = if (app.isAlwaysAllowed) 0.45f else 1f
-        holder.b.cbWhitelist.alpha = if (app.isAlwaysAllowed) 0.75f else 1f
-
-        holder.b.cbBlock.isChecked = !app.isAlwaysAllowed && app.rule?.isBlocked == true
-        holder.b.cbWhitelist.isChecked = app.isAlwaysAllowed || app.rule?.isWhitelisted == true
-
-        holder.b.cbBlock.setOnCheckedChangeListener { _, _ -> onBlockToggle(app) }
-        holder.b.cbWhitelist.setOnCheckedChangeListener { _, _ -> onWhitelistToggle(app) }
     }
 }

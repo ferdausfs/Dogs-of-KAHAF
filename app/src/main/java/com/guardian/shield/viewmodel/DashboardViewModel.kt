@@ -5,31 +5,29 @@ import androidx.lifecycle.viewModelScope
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
-import com.guardian.shield.domain.usecase.*
+import com.guardian.shield.domain.repository.RulesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import javax.inject.Inject
 
-/**
- * v9 (2.0.0):
- *  • P4-B → exposes [todayStats] StateFlow with totalBlocks / aiBlocks /
- *    keywordBlocks / topApp aggregated for the dashboard summary card.
- *  • P4-C → exposes [protectionEnabled] + toggleProtection() for the FAB.
- *  • P4-D → getAllEvents() returns the full list for CSV export.
- */
 data class BlockStats(
     val totalBlocks: Int = 0,
     val aiBlocks: Int = 0,
     val keywordBlocks: Int = 0,
-    val appBlocks: Int = 0,
-    val scheduleBlocks: Int = 0,
-    val topApp: String? = null,
-    val topAppCount: Int = 0
+    val topApp: String? = null
 )
 
-data class DashboardUi(
+data class DashboardUiState(
     val recent: List<BlockEvent> = emptyList(),
     val todayCount: Int = 0,
     val protectionActive: Boolean = false,
@@ -39,72 +37,67 @@ data class DashboardUi(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val getEvents: GetBlockEventsUseCase,
-    private val countToday: CountTodayBlocksUseCase,
-    private val clearEvents: ClearBlockEventsUseCase,
-    private val getAllEventsUC: GetAllBlockEventsUseCase,
-    private val observeSinceUC: ObserveBlockEventsSinceUseCase,
+    private val repo: RulesRepository,
     private val prefs: GuardianPreferences
 ) : ViewModel() {
 
-    private val _ui = MutableStateFlow(DashboardUi())
-    val ui: StateFlow<DashboardUi> = _ui.asStateFlow()
+    private val _protectionActive = MutableStateFlow(false)
 
-    /** P4-B: live-aggregated stats for today, exposed as a StateFlow. */
-    val todayStats: StateFlow<BlockStats> = observeSinceUC(todayMidnightMs())
-        .map { events -> aggregate(events) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, BlockStats())
-
-    init {
-        viewModelScope.launch {
-            getEvents(50).collect { evts ->
-                _ui.update { it.copy(recent = evts, todayCount = countToday()) }
-            }
-        }
-        viewModelScope.launch {
-            todayStats.collect { stats -> _ui.update { it.copy(stats = stats) } }
-        }
-        // P4-C: keep protection master switch in sync with DataStore.
-        viewModelScope.launch {
-            prefs.protectionEnabled.collect { v ->
-                _ui.update { it.copy(protectionEnabled = v) }
-            }
-        }
+    private val todayStart: Long get() {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
-    fun setProtectionActive(active: Boolean) = _ui.update { it.copy(protectionActive = active) }
-    fun clearAll() = viewModelScope.launch { clearEvents() }
-
-    /** P4-C: toggle the master protection switch (FAB). */
-    fun toggleProtection() = viewModelScope.launch {
-        val curr = prefs.currentProtectionEnabled()
-        prefs.setProtectionEnabled(!curr)
-    }
-
-    /** P4-D: full block-event list for CSV export. */
-    suspend fun getAllEvents(): List<BlockEvent> = getAllEventsUC()
-
-    private fun aggregate(events: List<BlockEvent>): BlockStats {
-        if (events.isEmpty()) return BlockStats()
-        val ai = events.count { it.reason == BlockReason.AI_DETECTION }
-        val kw = events.count { it.reason == BlockReason.KEYWORD_MATCH }
-        val app = events.count { it.reason == BlockReason.APP_BLOCKED }
-        val sched = events.count { it.reason == BlockReason.SCHEDULE_BLOCKED }
-        val topPair = events.groupingBy { it.packageName }.eachCount()
-            .maxByOrNull { it.value }
-        return BlockStats(
-            totalBlocks = events.size,
-            aiBlocks = ai,
-            keywordBlocks = kw,
-            appBlocks = app,
-            scheduleBlocks = sched,
-            topApp = topPair?.key,
-            topAppCount = topPair?.value ?: 0
+    val uiState: StateFlow<DashboardUiState> = combine(
+        repo.observeEvents(20),
+        repo.countSinceFlow(todayStart),
+        repo.countByReasonFlow(todayStart, BlockReason.AI_DETECTION),
+        repo.countByReasonFlow(todayStart, BlockReason.KEYWORD_MATCH),
+        repo.topPackageFlow(todayStart),
+        prefs.protectionEnabled,
+        _protectionActive
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val recent = values[0] as List<BlockEvent>
+        val count = values[1] as Int
+        val ai = values[2] as Int
+        val kw = values[3] as Int
+        val top = values[4] as String?
+        val enabled = values[5] as Boolean
+        val active = values[6] as Boolean
+        DashboardUiState(
+            recent = recent,
+            todayCount = count,
+            protectionActive = active,
+            protectionEnabled = enabled,
+            stats = BlockStats(count, ai, kw, top)
         )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
+
+    fun setProtectionActive(active: Boolean) { _protectionActive.value = active }
+
+    fun toggleProtection() {
+        viewModelScope.launch {
+            val current = prefs.protectionEnabled.first()
+            prefs.setProtectionEnabled(!current)
+        }
     }
 
-    private fun todayMidnightMs(): Long = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    fun clearAll() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { repo.clearEvents() } catch (_: Throwable) {}
+        }
+    }
+
+    fun deleteEvent(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try { repo.deleteEvent(id) } catch (_: Throwable) {}
+        }
+    }
+
+    suspend fun getAllEvents(): List<BlockEvent> = withContext(Dispatchers.IO) {
+        try { repo.allEvents() } catch (_: Throwable) { emptyList() }
+    }
 }

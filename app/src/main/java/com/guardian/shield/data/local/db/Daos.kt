@@ -1,6 +1,9 @@
 package com.guardian.shield.data.local.db
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -12,13 +15,22 @@ interface AppRuleDao {
     suspend fun getAll(): List<AppRuleEntity>
 
     @Query("SELECT * FROM app_rules WHERE packageName = :pkg LIMIT 1")
-    suspend fun getByPackage(pkg: String): AppRuleEntity?
+    suspend fun get(pkg: String): AppRuleEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: AppRuleEntity)
+    suspend fun upsert(rule: AppRuleEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rules: List<AppRuleEntity>)
 
     @Query("DELETE FROM app_rules WHERE packageName = :pkg")
-    suspend fun deleteByPackage(pkg: String)
+    suspend fun delete(pkg: String)
+
+    @Query("SELECT packageName FROM app_rules WHERE isBlocked = 1")
+    suspend fun blockedPackages(): List<String>
+
+    @Query("SELECT packageName FROM app_rules WHERE isWhitelisted = 1")
+    suspend fun whitelistPackages(): List<String>
 }
 
 @Dao
@@ -27,53 +39,59 @@ interface KeywordDao {
     fun observeAll(): Flow<List<KeywordRuleEntity>>
 
     @Query("SELECT * FROM keyword_rules WHERE enabled = 1")
-    suspend fun getAllEnabled(): List<KeywordRuleEntity>
+    suspend fun getEnabled(): List<KeywordRuleEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: KeywordRuleEntity)
+    suspend fun upsert(rule: KeywordRuleEntity): Long
 
     @Query("DELETE FROM keyword_rules WHERE id = :id")
-    suspend fun deleteById(id: Long)
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM keyword_rules")
+    suspend fun clear()
 }
 
 @Dao
 interface BlockEventDao {
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC LIMIT :limit")
-    fun observeRecent(limit: Int): Flow<List<BlockEventEntity>>
+    fun observeRecent(limit: Int = 50): Flow<List<BlockEventEntity>>
 
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC")
     suspend fun getAll(): List<BlockEventEntity>
 
-    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
-    fun observeSince(since: Long): Flow<List<BlockEventEntity>>
+    @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
+    fun countSinceFlow(since: Long): Flow<Int>
 
-    @Insert
-    suspend fun insert(entity: BlockEventEntity)
+    @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since AND reason = :reason")
+    fun countByReasonFlow(since: Long, reason: String): Flow<Int>
+
+    @Query("SELECT packageName FROM block_events WHERE timestamp >= :since GROUP BY packageName ORDER BY COUNT(*) DESC LIMIT 1")
+    fun topPackageFlow(since: Long): Flow<String?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(event: BlockEventEntity): Long
+
+    @Query("DELETE FROM block_events WHERE id = :id")
+    suspend fun delete(id: Long)
 
     @Query("DELETE FROM block_events")
-    suspend fun deleteAll()
-
-    @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
-    suspend fun countSince(since: Long): Int
+    suspend fun clear()
 }
 
-/**
- * v9 (2.0.0) — P4-A: schedule rules DAO.
- */
 @Dao
 interface ScheduleRuleDao {
     @Query("SELECT * FROM schedule_rules ORDER BY packageName ASC")
     fun observeAll(): Flow<List<ScheduleRuleEntity>>
 
-    @Query("SELECT * FROM schedule_rules WHERE enabled = 1")
-    suspend fun getAllEnabled(): List<ScheduleRuleEntity>
+    @Query("SELECT * FROM schedule_rules")
+    suspend fun getAll(): List<ScheduleRuleEntity>
 
     @Query("SELECT * FROM schedule_rules WHERE packageName = :pkg LIMIT 1")
-    suspend fun getByPackage(pkg: String): ScheduleRuleEntity?
+    suspend fun get(pkg: String): ScheduleRuleEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: ScheduleRuleEntity)
+    suspend fun upsert(rule: ScheduleRuleEntity)
 
     @Query("DELETE FROM schedule_rules WHERE packageName = :pkg")
-    suspend fun deleteByPackage(pkg: String)
+    suspend fun delete(pkg: String)
 }

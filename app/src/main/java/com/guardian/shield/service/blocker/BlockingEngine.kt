@@ -1,98 +1,82 @@
 package com.guardian.shield.service.blocker
 
-import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
-import com.guardian.shield.domain.usecase.LogBlockEventUseCase
+import com.guardian.shield.domain.repository.RulesRepository
 import com.guardian.shield.ui.overlay.BlockOverlayActivity
 import com.guardian.shield.util.GuardianConstants
 import com.guardian.shield.util.Scopes
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * v9 (2.0.0):
- *  • P5-A → uses Scopes.io() instead of inline SupervisorJob+Dispatchers.IO.
- *  • P5-B → throttle constants are now in GuardianConstants.
- *
- * Earlier v8 fix (BUG-10) preserved: per-package de-dupe throttle map with
- * oldest-out eviction.
- *
- * Existing behavior preserved:
- *   - HOME → overlay → log order is unchanged (must NEVER reorder).
- *   - Each Intent dispatch is wrapped in runCatching for OEM resilience.
- */
 @Singleton
 class BlockingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val logEvent: LogBlockEventUseCase
+    private val repo: RulesRepository
 ) {
-    companion object {
-        private const val THROTTLE_MS = GuardianConstants.BLOCK_THROTTLE_MS
-        private const val MAX_THROTTLE_MAP = GuardianConstants.MAX_THROTTLE_MAP
+    private val throttle = LinkedHashMap<String, Long>()
+    private val ioScope = Scopes.io()
+
+    @Synchronized
+    private fun shouldBlock(pkg: String): Boolean {
+        val now = System.currentTimeMillis()
+        val last = throttle[pkg] ?: 0L
+        if (now - last < GuardianConstants.BLOCK_THROTTLE_MS) return false
+        throttle[pkg] = now
+        if (throttle.size > GuardianConstants.MAX_THROTTLE_MAP) {
+            val it = throttle.entries.iterator()
+            if (it.hasNext()) { it.next(); it.remove() }
+        }
+        return true
     }
 
-    private val scope: CoroutineScope = Scopes.io()
+    fun block(pkg: String, reason: BlockReason, detail: String? = null) {
+        if (!shouldBlock(pkg)) return
+        Timber.i("Blocking %s reason=%s detail=%s", pkg, reason, detail)
 
-    private val lastBlockByPkg = HashMap<String, Long>()
-
-    fun block(packageName: String, reason: BlockReason, term: String? = null) {
-        val now = System.currentTimeMillis()
-
-        // Per-package throttle.
-        synchronized(lastBlockByPkg) {
-            val last = lastBlockByPkg[packageName] ?: 0L
-            if (now - last < THROTTLE_MS) return
-            // Evict oldest if cap reached and this is a new key.
-            if (lastBlockByPkg.size >= MAX_THROTTLE_MAP &&
-                !lastBlockByPkg.containsKey(packageName)
-            ) {
-                val oldestKey = lastBlockByPkg.minByOrNull { it.value }?.key
-                if (oldestKey != null) lastBlockByPkg.remove(oldestKey)
-            }
-            lastBlockByPkg[packageName] = now
+        // 1) Launch HOME first
+        runCatching {
+            val home = Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            context.startActivity(home)
         }
 
-        // 1. Evict the offending app from the foreground.
-        runCatching {
-            val home = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(home)
-        }.onFailure { Timber.w(it, "Failed to launch HOME") }
-
-        // 2. Show the full-screen block overlay.
+        // 2) Launch BlockOverlayActivity
         runCatching {
             val overlay = Intent(context, BlockOverlayActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_NO_HISTORY
-                putExtra(BlockOverlayActivity.EXTRA_PACKAGE, packageName)
+                )
+                putExtra(BlockOverlayActivity.EXTRA_PACKAGE, pkg)
                 putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
-                putExtra(BlockOverlayActivity.EXTRA_TERM, term)
+                putExtra(BlockOverlayActivity.EXTRA_DETAIL, detail)
             }
-            val opts = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                ActivityOptions.makeBasic().apply {
-                    pendingIntentBackgroundActivityStartMode =
-                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
-                }.toBundle()
-            } else null
-            context.startActivity(overlay, opts)
-        }.onFailure { Timber.e(it, "Failed to launch BlockOverlayActivity") }
+            context.startActivity(overlay)
+        }
 
-        // 3. Log the event.
-        scope.launch {
-            runCatching {
-                logEvent(BlockEvent(packageName = packageName, reason = reason, matchedTerm = term))
-            }.onFailure { Timber.w(it, "Failed to log block event") }
+        // 3) Log event
+        ioScope.launch {
+            try {
+                repo.logBlock(
+                    BlockEvent(
+                        id = 0,
+                        packageName = pkg,
+                        reason = reason,
+                        matchedTerm = detail,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to log block event")
+            }
         }
     }
 }

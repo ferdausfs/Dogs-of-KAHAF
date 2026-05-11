@@ -1,137 +1,125 @@
 package com.guardian.shield.ui.dashboard
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.view.accessibility.AccessibilityManager
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
-import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
-import com.guardian.shield.service.detection.PinManager
-import com.guardian.shield.service.detection.RulesEngine
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.SettingsActivity
-import com.guardian.shield.ui.setup.PinSetupActivity
-import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
-import javax.inject.Inject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-/**
- * v9 (2.0.0):
- *  • P4-B → renders block-stats card (totalBlocks / aiBlocks / kwBlocks / topApp).
- *  • P4-C → FAB toggles master protection switch.
- *  • P4-D → "Export Log" menu writes CSV to public Downloads.
- *
- * Earlier v8 BUG-12 still applies (cached rules version skip on resume).
- */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val vm: DashboardViewModel by viewModels()
-    @Inject lateinit var pinManager: PinManager
-    @Inject lateinit var rulesEngine: RulesEngine
-    @Inject lateinit var prefs: GuardianPreferences
-
-    private var unlocked = false
-    private var cachedRulesVersion: Int = -1
-
-    private val pinSetupLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            if (res.resultCode == RESULT_OK || pinManager.isPinSet()) {
-                unlocked = true
-                binding.root.visibility = View.VISIBLE
-            } else {
-                finish()
-            }
-        }
-
-    private val pinVerifyLauncher: ActivityResultLauncher<Intent> =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            if (res.resultCode == RESULT_OK) {
-                unlocked = true
-                binding.root.visibility = View.VISIBLE
-            } else {
-                finishAffinity()
-            }
-        }
+    private val viewModel: DashboardViewModel by viewModels()
+    private lateinit var adapter: BlockEventAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.root.visibility = View.INVISIBLE
+        setSupportActionBar(binding.toolbar)
 
-        if (!pinManager.isPinSet()) {
-            pinSetupLauncher.launch(Intent(this, PinSetupActivity::class.java))
-        } else {
-            pinVerifyLauncher.launch(Intent(this, PinVerifyActivity::class.java))
+        adapter = BlockEventAdapter(
+            onDelete = { viewModel.deleteEvent(it.id) }
+        )
+        binding.recyclerRecent.layoutManager = LinearLayoutManager(this)
+        binding.recyclerRecent.adapter = adapter
+
+        binding.fabToggle.setOnClickListener {
+            viewModel.toggleProtection()
         }
 
-        val adapter = BlockEventAdapter()
-        binding.rvEvents.layoutManager = LinearLayoutManager(this)
-        binding.rvEvents.adapter = adapter
-
-        binding.btnEnableAccessibility.setOnClickListener {
-            runCatching {
-                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            }
-        }
         binding.btnSettings.setOnClickListener {
-            runCatching { startActivity(Intent(this, SettingsActivity::class.java)) }
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
-        binding.btnPermissions.setOnClickListener {
-            runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
-        }
-        binding.btnClear.setOnClickListener { vm.clearAll() }
 
-        // P4-C: FAB → master toggle.
-        binding.fabToggle.setOnClickListener { vm.toggleProtection() }
+        binding.btnPermissions.setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.ui.collect { state ->
-                    adapter.submit(state.recent)
-                    binding.tvTodayCount.text = state.todayCount.toString()
-                    binding.tvProtectionStatus.text = getString(
-                        when {
-                            !state.protectionEnabled -> R.string.protection_paused
-                            state.protectionActive   -> R.string.protection_active
-                            else                     -> R.string.protection_inactive
-                        }
-                    )
-                    // P4-B: stats card.
-                    binding.tvStatsTotal.text   = state.stats.totalBlocks.toString()
-                    binding.tvStatsAi.text      = state.stats.aiBlocks.toString()
-                    binding.tvStatsKeyword.text = state.stats.keywordBlocks.toString()
-                    binding.tvStatsTopApp.text  = state.stats.topApp ?: "—"
-                    // P4-C: FAB icon.
-                    val iconRes = if (state.protectionEnabled)
-                        R.drawable.ic_shield_on else R.drawable.ic_shield_off
-                    runCatching { binding.fabToggle.setImageResource(iconRes) }
-                }
+                viewModel.uiState.collect { render(it) }
             }
         }
+
+        startForegroundServiceIfNeeded()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.setProtectionActive(PermissionManager.isAccessibilityEnabled(this))
+    }
+
+    private fun startForegroundServiceIfNeeded() {
+        runCatching { GuardianForegroundService.start(this) }
+    }
+
+    private fun render(state: com.guardian.shield.viewmodel.DashboardUiState) {
+        // Status card
+        when {
+            !state.protectionActive -> {
+                binding.txtStatusTitle.text = getString(R.string.status_service_off)
+                binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
+                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+                binding.statusCard.setStrokeColor(getColor(R.color.error))
+            }
+            !state.protectionEnabled -> {
+                binding.txtStatusTitle.text = getString(R.string.status_paused)
+                binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
+                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+                binding.statusCard.setStrokeColor(getColor(R.color.on_surface_dim))
+            }
+            else -> {
+                binding.txtStatusTitle.text = getString(R.string.status_active)
+                binding.txtStatusSubtitle.text = getString(
+                    R.string.status_active_sub_fmt,
+                    state.todayCount
+                )
+                binding.imgShield.setImageResource(R.drawable.ic_shield_on)
+                binding.statusCard.setStrokeColor(getColor(R.color.primary))
+            }
+        }
+
+        // Stats
+        binding.txtStatTotal.text = state.stats.totalBlocks.toString()
+        binding.txtStatAi.text = state.stats.aiBlocks.toString()
+        binding.txtStatKeyword.text = state.stats.keywordBlocks.toString()
+        binding.txtStatTopApp.text = state.stats.topApp?.substringAfterLast('.')?.take(8) ?: "—"
+
+        // FAB
+        binding.fabToggle.setImageResource(
+            if (state.protectionEnabled) R.drawable.ic_shield_on else R.drawable.ic_shield_off
+        )
+
+        adapter.submit(state.recent)
+        binding.txtEmpty.visibility = if (state.recent.isEmpty()) android.view.View.VISIBLE
+        else android.view.View.GONE
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -141,87 +129,60 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_export_log -> {
-                exportLog()
-                true
+            R.id.action_export -> { exportCsv(); true }
+            R.id.action_clear -> { confirmClear(); true }
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java)); true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    /** P4-D: write all block events to a CSV in public Downloads. */
-    private fun exportLog() {
+    private fun confirmClear() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.clear_logs)
+            .setMessage(R.string.clear_logs_msg)
+            .setPositiveButton(R.string.confirm) { _, _ -> viewModel.clearAll() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun exportCsv() {
         lifecycleScope.launch {
-            val outcome = withContext(Dispatchers.IO) {
-                runCatching {
-                    val events = vm.getAllEvents()
-                    val csv = buildString {
-                        appendLine("timestamp,package,reason,matched_term")
-                        events.forEach { e ->
-                            val safeTerm = (e.matchedTerm ?: "").replace(',', ' ').replace('\n', ' ')
-                            appendLine("${e.timestamp},${e.packageName},${e.reason.name},$safeTerm")
-                        }
-                    }
-                    val downloads = Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                    )
-                    if (!downloads.exists()) downloads.mkdirs()
-                    val file = File(downloads, "guardian_log_${System.currentTimeMillis()}.csv")
-                    file.writeText(csv)
-                    file.absolutePath
-                }
-            }
-            outcome.onSuccess { path ->
-                Toast.makeText(this@MainActivity, "Exported: $path", Toast.LENGTH_LONG).show()
-            }.onFailure {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Export failed: ${it.message ?: "unknown"}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val active = isAccessibilityEnabled()
-        vm.setProtectionActive(active)
-        if (active) {
-            GuardianForegroundService.start(this)
-            lifecycleScope.launch {
-                runCatching {
-                    val current = prefs.currentRulesVersion()
-                    if (current != cachedRulesVersion) {
-                        cachedRulesVersion = current
-                        rulesEngine.reload()
+            try {
+                val events = viewModel.getAllEvents()
+                val csv = buildString {
+                    append("id,packageName,reason,matchedTerm,timestamp,iso\n")
+                    val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                    events.forEach { ev ->
+                        append(ev.id).append(',')
+                        append(ev.packageName).append(',')
+                        append(ev.reason.name).append(',')
+                        append((ev.matchedTerm ?: "").replace(",", " ")).append(',')
+                        append(ev.timestamp).append(',')
+                        append(fmt.format(Date(ev.timestamp))).append('\n')
                     }
                 }
+                val name = "guardian_blocks_${System.currentTimeMillis()}.csv"
+                val file = withContext(Dispatchers.IO) {
+                    val dir = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                        @Suppress("DEPRECATION")
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    } else {
+                        getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                            ?: filesDir
+                    }
+                    if (!dir.exists()) dir.mkdirs()
+                    val f = File(dir, name)
+                    f.writeText(csv)
+                    f
+                }
+                Snackbar.make(binding.root, getString(R.string.csv_saved, file.absolutePath),
+                    Snackbar.LENGTH_LONG).show()
+            } catch (t: Throwable) {
+                Timber.e(t)
+                Snackbar.make(binding.root, "Export failed", Snackbar.LENGTH_SHORT).show()
             }
         }
-        binding.btnEnableAccessibility.text = getString(
-            if (active) R.string.accessibility_enabled else R.string.enable_accessibility
-        )
-        refreshPermissionBanner()
-    }
-
-    private fun refreshPermissionBanner() {
-        val missing = PermissionManager.missingCritical(this)
-        if (missing.isEmpty()) {
-            binding.tvPermissionWarning.visibility = View.GONE
-        } else {
-            binding.tvPermissionWarning.visibility = View.VISIBLE
-            binding.tvPermissionWarning.text =
-                "⚠ ${missing.size} permission(s) missing — tap to fix"
-            binding.tvPermissionWarning.setOnClickListener {
-                runCatching { startActivity(Intent(this, PermissionsActivity::class.java)) }
-            }
-        }
-    }
-
-    private fun isAccessibilityEnabled(): Boolean {
-        val am = getSystemService(ACCESSIBILITY_SERVICE) as AccessibilityManager
-        return am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
-            .any { it.id.contains(packageName) }
     }
 }

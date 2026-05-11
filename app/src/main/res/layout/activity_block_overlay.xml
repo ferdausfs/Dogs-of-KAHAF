@@ -1,27 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@color/red_500" android:gravity="center"
-    android:orientation="vertical" android:padding="32dp">
-    <ImageView android:layout_width="120dp" android:layout_height="120dp"
-        android:src="@drawable/ic_shield" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="24dp" android:text="@string/content_blocked"
-        android:textColor="@color/white" android:textSize="32sp" android:textStyle="bold" />
-    <TextView android:id="@+id/tvDetail"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="12dp" android:textColor="@color/white" android:textSize="16sp" />
-    <TextView android:id="@+id/tvBlockedPackage"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" android:textColor="@color/white" android:alpha="0.7" />
-    <com.google.android.material.button.MaterialButton android:id="@+id/btnHome"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="32dp" android:text="@string/go_home"
-        android:backgroundTint="@color/white" android:textColor="@color/red_500" />
-    <com.google.android.material.button.MaterialButton android:id="@+id/btnRequestUnlock"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@color/bg_main">
+
+    <ImageView
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:src="@drawable/ic_shield_large"
+        android:contentDescription="@string/app_name"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/overlay_access_blocked"
+        android:textColor="@color/white"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:layout_marginTop="24dp"/>
+
+    <TextView
+        android:id="@+id/txtPackage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="com.example"
+        android:textColor="@color/on_surface_dim"
+        android:textSize="14sp"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:id="@+id/txtReason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/overlay_reason_manual"
+        android:textColor="@color/secondary"
+        android:textSize="15sp"
+        android:layout_marginTop="20dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnHome"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/overlay_go_home"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="32dp"
+        app:cornerRadius="14dp"
+        app:backgroundTint="@color/primary"
+        android:textColor="@color/black"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUnlock"
         style="@style/Widget.Material3.Button.OutlinedButton"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" android:text="@string/request_unlock"
-        android:textColor="@color/white" app:strokeColor="@color/white"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/overlay_request_unlock"
+        android:layout_marginTop="12dp"
+        app:cornerRadius="14dp"
+        app:strokeColor="@color/on_surface_dim"
+        android:textColor="@color/on_surface"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/overlay_motivation"
+        android:textColor="@color/on_surface_dim"
+        android:textSize="12sp"
+        android:layout_marginTop="32dp"/>
 </LinearLayout>

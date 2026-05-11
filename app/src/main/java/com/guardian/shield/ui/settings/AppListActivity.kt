@@ -1,74 +1,58 @@
 package com.guardian.shield.ui.settings
 
-import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import androidx.activity.result.contract.ActivityResultContracts
+import android.text.Editable
+import android.text.TextWatcher
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.guardian.shield.databinding.ActivityAppListBinding
-import com.guardian.shield.service.detection.PinManager
-import com.guardian.shield.ui.setup.PinVerifyActivity
+import com.guardian.shield.viewmodel.AppFilter
 import com.guardian.shield.viewmodel.AppListViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppListActivity : AppCompatActivity() {
+
     private lateinit var binding: ActivityAppListBinding
-    private val vm: AppListViewModel by viewModels()
-
-    @Inject lateinit var pinManager: PinManager
-
-    private val pinVerify = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { res ->
-        if (res.resultCode == RESULT_OK) binding.root.visibility = View.VISIBLE
-        else finish()
-    }
+    private val viewModel: AppListViewModel by viewModels()
+    private lateinit var adapter: AppListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAppListBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.root.visibility = View.INVISIBLE
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
-        if (pinManager.isPinSet()) {
-            pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        } else {
-            binding.root.visibility = View.VISIBLE
-        }
-
-        val adapter = AppListAdapter(
-            onBlockToggle = vm::toggleBlock,
-            onWhitelistToggle = vm::toggleWhitelist
+        adapter = AppListAdapter(
+            pm = packageManager,
+            onBlockChanged = { pkg, blocked -> viewModel.setBlocked(pkg, blocked) },
+            onWhitelistChanged = { pkg, wl -> viewModel.setWhitelisted(pkg, wl) }
         )
-        binding.rv.layoutManager = LinearLayoutManager(this)
-        binding.rv.adapter = adapter
+        binding.recycler.layoutManager = LinearLayoutManager(this)
+        binding.recycler.adapter = adapter
 
-        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                vm.setSearchQuery(query.orEmpty())
-                binding.searchView.clearFocus()
-                return true
-            }
+        binding.chipAll.setOnClickListener { viewModel.setFilter(AppFilter.ALL) }
+        binding.chipBlocked.setOnClickListener { viewModel.setFilter(AppFilter.BLOCKED) }
+        binding.chipWhitelisted.setOnClickListener { viewModel.setFilter(AppFilter.WHITELISTED) }
 
-            override fun onQueryTextChange(newText: String?): Boolean {
-                vm.setSearchQuery(newText.orEmpty())
-                return true
+        binding.editSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.setQuery(s?.toString().orEmpty())
             }
+            override fun afterTextChanged(s: Editable?) {}
         })
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { vm.apps.collect { adapter.submitList(it) } }
-                launch { vm.summary.collect { binding.tvSummary.text = it } }
+                viewModel.state.collect { adapter.submit(it.apps) }
             }
         }
     }

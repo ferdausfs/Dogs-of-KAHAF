@@ -1,16 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:gravity="center" android:orientation="vertical"
-    android:padding="32dp" android:background="@color/navy_900">
-    <TextView android:id="@+id/tvCounter"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:textColor="@color/cyan_400" android:textSize="120sp" android:textStyle="bold" />
-    <TextView android:id="@+id/tvHint"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:textColor="@color/white" android:textSize="18sp"
-        android:gravity="center" />
-    <com.google.android.material.button.MaterialButton android:id="@+id/btnDone"
-        android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:layout_marginTop="32dp" android:text="Continue Anyway" />
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@color/bg_main">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/delay_title"
+        android:textColor="@color/on_surface"
+        android:textSize="22sp"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/txtPackage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/on_surface_dim"
+        android:textSize="13sp"
+        android:layout_marginTop="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/delay_text"
+        android:textColor="@color/on_surface"
+        android:textSize="14sp"
+        android:layout_marginTop="32dp"/>
+
+    <TextView
+        android:id="@+id/txtCountdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="30"
+        android:textColor="@color/primary"
+        android:textSize="92sp"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/seconds"
+        android:textColor="@color/on_surface_dim"
+        android:textSize="14sp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancel"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/cancel"
+        android:layout_marginTop="48dp"
+        app:cornerRadius="14dp"
+        app:strokeColor="@color/error"
+        android:textColor="@color/error"/>
 </LinearLayout>

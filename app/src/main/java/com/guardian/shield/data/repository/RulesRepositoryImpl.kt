@@ -1,7 +1,16 @@
 package com.guardian.shield.data.repository
 
-import com.guardian.shield.data.local.db.*
-import com.guardian.shield.domain.model.*
+import com.guardian.shield.data.local.db.AppRuleDao
+import com.guardian.shield.data.local.db.BlockEventDao
+import com.guardian.shield.data.local.db.KeywordDao
+import com.guardian.shield.data.local.db.ScheduleRuleDao
+import com.guardian.shield.data.local.db.toDomain
+import com.guardian.shield.data.local.db.toEntity
+import com.guardian.shield.domain.model.AppRule
+import com.guardian.shield.domain.model.BlockEvent
+import com.guardian.shield.domain.model.BlockReason
+import com.guardian.shield.domain.model.KeywordRule
+import com.guardian.shield.domain.model.ScheduleRule
 import com.guardian.shield.domain.repository.RulesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -11,60 +20,46 @@ import javax.inject.Singleton
 @Singleton
 class RulesRepositoryImpl @Inject constructor(
     private val appDao: AppRuleDao,
-    private val kwDao: KeywordDao,
-    private val evtDao: BlockEventDao,
-    private val schedDao: ScheduleRuleDao
+    private val keywordDao: KeywordDao,
+    private val eventDao: BlockEventDao,
+    private val scheduleDao: ScheduleRuleDao
 ) : RulesRepository {
 
-    override fun observeAppRules(): Flow<List<AppRule>> =
+    override fun observeApps(): Flow<List<AppRule>> =
         appDao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override fun observeKeywordRules(): Flow<List<KeywordRule>> =
-        kwDao.observeAll().map { list -> list.map { it.toDomain() } }
+    override fun observeKeywords(): Flow<List<KeywordRule>> =
+        keywordDao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override fun observeBlockEvents(limit: Int): Flow<List<BlockEvent>> =
-        evtDao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
+    override fun observeEvents(limit: Int): Flow<List<BlockEvent>> =
+        eventDao.observeRecent(limit).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun getAppRule(packageName: String): AppRule? =
-        appDao.getByPackage(packageName)?.toDomain()
+    override fun observeSchedules(): Flow<List<ScheduleRule>> =
+        scheduleDao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun getAllAppRules(): List<AppRule> = appDao.getAll().map { it.toDomain() }
-    override suspend fun getAllKeywordRules(): List<KeywordRule> = kwDao.getAllEnabled().map { it.toDomain() }
-    override suspend fun upsertAppRule(rule: AppRule) = appDao.upsert(rule.toEntity())
-    override suspend fun deleteAppRule(packageName: String) = appDao.deleteByPackage(packageName)
-    override suspend fun upsertKeyword(rule: KeywordRule) = kwDao.upsert(rule.toEntity())
-    override suspend fun deleteKeyword(id: Long) = kwDao.deleteById(id)
-    override suspend fun logBlockEvent(event: BlockEvent) = evtDao.insert(event.toEntity())
-    override suspend fun clearBlockEvents() = evtDao.deleteAll()
+    override fun countSinceFlow(since: Long): Flow<Int> = eventDao.countSinceFlow(since)
+    override fun countByReasonFlow(since: Long, reason: BlockReason): Flow<Int> =
+        eventDao.countByReasonFlow(since, reason.name)
+    override fun topPackageFlow(since: Long): Flow<String?> = eventDao.topPackageFlow(since)
 
-    override suspend fun countTodayBlocks(): Int {
-        val cal = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }
-        return evtDao.countSince(cal.timeInMillis)
-    }
+    override suspend fun upsertApp(rule: AppRule) = appDao.upsert(rule.toEntity())
+    override suspend fun deleteApp(packageName: String) = appDao.delete(packageName)
+    override suspend fun getApp(packageName: String): AppRule? = appDao.get(packageName)?.toDomain()
+    override suspend fun blockedPackages(): Set<String> = appDao.blockedPackages().toSet()
+    override suspend fun whitelistPackages(): Set<String> = appDao.whitelistPackages().toSet()
 
-    // v9 (2.0.0): full log export + dashboard stats.
-    override suspend fun getAllBlockEvents(): List<BlockEvent> =
-        evtDao.getAll().map { it.toDomain() }
+    override suspend fun upsertKeyword(rule: KeywordRule): Long = keywordDao.upsert(rule.toEntity())
+    override suspend fun deleteKeyword(id: Long) = keywordDao.delete(id)
+    override suspend fun enabledKeywords(): List<KeywordRule> =
+        keywordDao.getEnabled().map { it.toDomain() }
 
-    override fun observeBlockEventsSince(since: Long): Flow<List<BlockEvent>> =
-        evtDao.observeSince(since).map { list -> list.map { it.toDomain() } }
+    override suspend fun upsertSchedule(rule: ScheduleRule) = scheduleDao.upsert(rule.toEntity())
+    override suspend fun deleteSchedule(packageName: String) = scheduleDao.delete(packageName)
+    override suspend fun allSchedules(): List<ScheduleRule> =
+        scheduleDao.getAll().map { it.toDomain() }
 
-    // v9 (2.0.0) — P4-A: schedule rules.
-    override fun observeScheduleRules(): Flow<List<ScheduleRule>> =
-        schedDao.observeAll().map { list -> list.map { it.toDomain() } }
-
-    override suspend fun getAllScheduleRules(): List<ScheduleRule> =
-        schedDao.getAllEnabled().map { it.toDomain() }
-
-    override suspend fun getScheduleRule(packageName: String): ScheduleRule? =
-        schedDao.getByPackage(packageName)?.toDomain()
-
-    override suspend fun upsertScheduleRule(rule: ScheduleRule) =
-        schedDao.upsert(rule.toEntity())
-
-    override suspend fun deleteScheduleRule(packageName: String) =
-        schedDao.deleteByPackage(packageName)
+    override suspend fun logBlock(event: BlockEvent): Long = eventDao.insert(event.toEntity())
+    override suspend fun deleteEvent(id: Long) = eventDao.delete(id)
+    override suspend fun clearEvents() = eventDao.clear()
+    override suspend fun allEvents(): List<BlockEvent> = eventDao.getAll().map { it.toDomain() }
 }

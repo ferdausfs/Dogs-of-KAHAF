@@ -1,163 +1,168 @@
 package com.guardian.shield.ui.settings
 
 import android.app.TimePickerDialog
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityScheduleBinding
+import com.guardian.shield.databinding.ItemScheduleRuleBinding
 import com.guardian.shield.domain.model.ScheduleRule
-import com.guardian.shield.service.detection.PinManager
-import com.guardian.shield.ui.setup.PinVerifyActivity
 import com.guardian.shield.viewmodel.ScheduleViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-/**
- * v9 (2.0.0) — P4-A: simple management UI for time-based schedule rules.
- *
- * Uses a hand-rolled adapter (no DiffUtil dependency) to keep the diff small;
- * the list is short (one entry per scheduled package).
- */
 @AndroidEntryPoint
 class ScheduleActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityScheduleBinding
-    private val vm: ScheduleViewModel by viewModels()
-    @Inject lateinit var pinManager: PinManager
-
-    private val adapter = Adapter(
-        onEdit = { showEditor(it) },
-        onDelete = { vm.delete(it.packageName) }
-    )
-
-    private val pinVerify = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { res ->
-        if (res.resultCode == RESULT_OK) binding.root.visibility = View.VISIBLE
-        else finish()
-    }
+    private val viewModel: ScheduleViewModel by viewModels()
+    private lateinit var adapter: ScheduleAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityScheduleBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.root.visibility = View.INVISIBLE
-        if (pinManager.isPinSet()) pinVerify.launch(Intent(this, PinVerifyActivity::class.java))
-        else binding.root.visibility = View.VISIBLE
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
-        binding.rv.layoutManager = LinearLayoutManager(this)
-        binding.rv.adapter = adapter
+        adapter = ScheduleAdapter(
+            onEdit = { showEditor(it) },
+            onDelete = { viewModel.delete(it.packageName) }
+        )
+        binding.recycler.layoutManager = LinearLayoutManager(this)
+        binding.recycler.adapter = adapter
 
-        binding.btnAdd.setOnClickListener { showEditor(null) }
+        val swipe = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0,
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun onMove(rv: RecyclerView, v: RecyclerView.ViewHolder, t: RecyclerView.ViewHolder) = false
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val item = adapter.currentList[viewHolder.bindingAdapterPosition]
+                viewModel.delete(item.packageName)
+            }
+        })
+        swipe.attachToRecyclerView(binding.recycler)
+
+        binding.fabAdd.setOnClickListener { showEditor(null) }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.rules.collect { adapter.submit(it) }
+                viewModel.rules.collect {
+                    adapter.submitList(it)
+                    binding.txtEmpty.visibility = if (it.isEmpty())
+                        android.view.View.VISIBLE else android.view.View.GONE
+                }
             }
         }
     }
 
     private fun showEditor(existing: ScheduleRule?) {
-        val view = layoutInflater.inflate(R.layout.dialog_schedule_editor, null, false)
-        val etPackage = view.findViewById<android.widget.EditText>(R.id.etPackage)
-        val tvStart   = view.findViewById<android.widget.TextView>(R.id.tvStart)
-        val tvEnd     = view.findViewById<android.widget.TextView>(R.id.tvEnd)
-        val btnStart  = view.findViewById<android.widget.Button>(R.id.btnStart)
-        val btnEnd    = view.findViewById<android.widget.Button>(R.id.btnEnd)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_schedule_editor, null)
+        val editPkg = view.findViewById<EditText>(R.id.editPackage)
+        val txtStart = view.findViewById<TextView>(R.id.txtStart)
+        val txtEnd = view.findViewById<TextView>(R.id.txtEnd)
+        val chipSu = view.findViewById<Chip>(R.id.chipSun)
+        val chipMo = view.findViewById<Chip>(R.id.chipMon)
+        val chipTu = view.findViewById<Chip>(R.id.chipTue)
+        val chipWe = view.findViewById<Chip>(R.id.chipWed)
+        val chipTh = view.findViewById<Chip>(R.id.chipThu)
+        val chipFr = view.findViewById<Chip>(R.id.chipFri)
+        val chipSa = view.findViewById<Chip>(R.id.chipSat)
+        val chips = listOf(chipSu, chipMo, chipTu, chipWe, chipTh, chipFr, chipSa)
 
         var startH = existing?.startHour ?: 22
         var startM = existing?.startMinute ?: 0
-        var endH   = existing?.endHour ?: 6
-        var endM   = existing?.endMinute ?: 0
+        var endH = existing?.endHour ?: 6
+        var endM = existing?.endMinute ?: 0
+        editPkg.setText(existing?.packageName.orEmpty())
+        txtStart.text = "%02d:%02d".format(startH, startM)
+        txtEnd.text = "%02d:%02d".format(endH, endM)
+        val days = existing?.enabledDays ?: (0..6).toSet()
+        chips.forEachIndexed { i, c -> c.isChecked = days.contains(i) }
 
-        etPackage.setText(existing?.packageName ?: "")
-        etPackage.isEnabled = (existing == null)
-        tvStart.text = "%02d:%02d".format(startH, startM)
-        tvEnd.text   = "%02d:%02d".format(endH, endM)
-
-        btnStart.setOnClickListener {
+        txtStart.setOnClickListener {
             TimePickerDialog(this, { _, h, m ->
                 startH = h; startM = m
-                tvStart.text = "%02d:%02d".format(h, m)
+                txtStart.text = "%02d:%02d".format(h, m)
             }, startH, startM, true).show()
         }
-        btnEnd.setOnClickListener {
+        txtEnd.setOnClickListener {
             TimePickerDialog(this, { _, h, m ->
                 endH = h; endM = m
-                tvEnd.text = "%02d:%02d".format(h, m)
+                txtEnd.text = "%02d:%02d".format(h, m)
             }, endH, endM, true).show()
         }
 
         AlertDialog.Builder(this)
-            .setTitle(if (existing == null) "Add Schedule Rule" else "Edit Schedule Rule")
+            .setTitle(if (existing == null) R.string.add_schedule else R.string.edit_schedule)
             .setView(view)
-            .setPositiveButton("Save") { _, _ ->
-                val pkg = etPackage.text.toString().trim()
-                if (pkg.isBlank()) {
-                    Toast.makeText(this, "Package name required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                vm.save(
+            .setPositiveButton(R.string.save) { _, _ ->
+                val pkg = editPkg.text.toString().trim()
+                if (pkg.isEmpty()) return@setPositiveButton
+                val enabledDays = mutableSetOf<Int>()
+                chips.forEachIndexed { i, c -> if (c.isChecked) enabledDays.add(i) }
+                viewModel.save(
                     ScheduleRule(
                         packageName = pkg,
                         startHour = startH, startMinute = startM,
-                        endHour = endH, endMinute = endM
+                        endHour = endH, endMinute = endM,
+                        enabledDays = enabledDays.ifEmpty { (0..6).toSet() },
+                        enabled = true,
+                        createdAt = existing?.createdAt ?: System.currentTimeMillis()
                     )
                 )
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
+}
 
-    // ── Inline adapter ─────────────────────────────────────────────────
-    private class Adapter(
-        val onEdit: (ScheduleRule) -> Unit,
-        val onDelete: (ScheduleRule) -> Unit
-    ) : RecyclerView.Adapter<Adapter.VH>() {
-        private val items = mutableListOf<ScheduleRule>()
+class ScheduleAdapter(
+    private val onEdit: (ScheduleRule) -> Unit,
+    private val onDelete: (ScheduleRule) -> Unit
+) : ListAdapter<ScheduleRule, ScheduleAdapter.VH>(DIFF) {
 
-        fun submit(list: List<ScheduleRule>) {
-            items.clear(); items.addAll(list); notifyDataSetChanged()
-        }
+    override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
+        val b = ItemScheduleRuleBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(b)
+    }
 
-        class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val tvPkg: TextView = v.findViewById(R.id.tvPkg)
-            val tvWindow: TextView = v.findViewById(R.id.tvWindow)
-            val btnDel: View = v.findViewById(R.id.btnDelete)
-            val rowRoot: View = v
-        }
+    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_schedule_rule, parent, false)
-            return VH(v)
-        }
-
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val item = items[position]
-            holder.tvPkg.text = item.packageName
-            holder.tvWindow.text = "%02d:%02d – %02d:%02d".format(
-                item.startHour, item.startMinute, item.endHour, item.endMinute
+    inner class VH(private val b: ItemScheduleRuleBinding) : RecyclerView.ViewHolder(b.root) {
+        fun bind(rule: ScheduleRule) {
+            b.txtPackage.text = rule.packageName
+            val daysShort = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
+            val daysText = (0..6).filter { rule.enabledDays.contains(it) }
+                .joinToString("") { daysShort[it] + " " }
+            b.txtSchedule.text = "%02d:%02d – %02d:%02d  %s".format(
+                rule.startHour, rule.startMinute,
+                rule.endHour, rule.endMinute,
+                daysText.trim()
             )
-            holder.rowRoot.setOnClickListener { onEdit(item) }
-            holder.btnDel.setOnClickListener { onDelete(item) }
+            b.btnEdit.setOnClickListener { onEdit(rule) }
+            b.root.setOnLongClickListener { onDelete(rule); true }
         }
+    }
 
-        override fun getItemCount(): Int = items.size
+    companion object {
+        val DIFF = object : DiffUtil.ItemCallback<ScheduleRule>() {
+            override fun areItemsTheSame(o: ScheduleRule, n: ScheduleRule) = o.packageName == n.packageName
+            override fun areContentsTheSame(o: ScheduleRule, n: ScheduleRule) = o == n
+        }
     }
 }

@@ -1,9 +1,9 @@
 package com.guardian.shield.domain.model
 
 data class KeywordRule(
-    val id: Long = 0,
+    val id: Long,
     val keyword: String,
-    val isRegex: Boolean = false,
-    val severity: Int = 1,
-    val enabled: Boolean = true
+    val isRegex: Boolean,
+    val severity: Int,
+    val enabled: Boolean
 )

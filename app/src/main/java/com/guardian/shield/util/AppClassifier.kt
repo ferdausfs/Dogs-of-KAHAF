@@ -1,68 +1,41 @@
 package com.guardian.shield.util
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.os.Build
-import android.view.inputmethod.InputMethod
+import android.view.inputmethod.InputMethodManager
+import timber.log.Timber
 
 object AppClassifier {
-
-    private val ALWAYS_ALLOW_EXACT = setOf(
+    private val SYSTEM_ALWAYS_ALLOW = setOf(
         "android",
         "com.android.systemui",
-        "com.android.settings",
-        "com.android.permissioncontroller",
-        "com.google.android.permissioncontroller",
-        "com.google.android.gms",
-        "com.google.android.googlequicksearchbox",
+        "com.android.launcher",
+        "com.android.launcher3",
+        "com.google.android.apps.nexuslauncher",
         "com.google.android.inputmethod.latin",
         "com.samsung.android.honeyboard",
-        "com.sec.android.inputmethod"
+        "com.android.settings"
     )
-
-    private val ALWAYS_ALLOW_PREFIXES = listOf(
-        "com.android.launcher",
-        "com.google.android.apps.nexuslauncher",
-        "com.sec.android.app.launcher",
-        "com.miui.home",
-        "com.huawei.android.launcher",
-        "com.oppo.launcher",
-        "com.realme.launcher",
-        "com.vivo.launcher",
-        "com.google.android.inputmethod",
-        "com.samsung.android.honeyboard",
-        "com.sec.android.inputmethod",
-        "com.touchtype.swiftkey",
-        "com.microsoft.swiftkey"
-    )
-
-    fun loadInputMethodPackages(context: Context): Set<String> {
-        val pm = context.packageManager
-        val intent = Intent(InputMethod.SERVICE_INTERFACE)
-        val services = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.queryIntentServices(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
-        } else {
-            @Suppress("DEPRECATION")
-            pm.queryIntentServices(intent, PackageManager.MATCH_ALL)
-        }
-        return services.mapNotNull { it.serviceInfo?.packageName }.toSet()
-    }
 
     fun isAlwaysAllowedPackage(
-        ownPackage: String,
-        pkg: String,
-        inputMethodPackages: Set<String>
+        ownPkg: String,
+        targetPkg: String,
+        inputMethods: Set<String>
     ): Boolean {
-        if (pkg == ownPackage) return true
-        if (pkg in ALWAYS_ALLOW_EXACT) return true
-        if (pkg in inputMethodPackages) return true
-        return ALWAYS_ALLOW_PREFIXES.any { pkg.startsWith(it) }
+        if (targetPkg.isBlank()) return true
+        if (targetPkg == ownPkg) return true
+        if (SYSTEM_ALWAYS_ALLOW.any { targetPkg == it || targetPkg.startsWith("$it.") }) return true
+        if (inputMethods.contains(targetPkg)) return true
+        return false
     }
 
-    fun isSystemApp(info: ApplicationInfo): Boolean {
-        val mask = ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
-        return (info.flags and mask) != 0
+    fun loadInputMethodPackages(context: Context): Set<String> {
+        return try {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                ?: return emptySet()
+            imm.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
+        } catch (t: Throwable) {
+            Timber.w(t, "Failed to load IME packages")
+            emptySet()
+        }
     }
 }

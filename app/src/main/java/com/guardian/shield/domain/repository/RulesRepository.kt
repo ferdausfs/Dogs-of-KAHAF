@@ -2,33 +2,37 @@ package com.guardian.shield.domain.repository
 
 import com.guardian.shield.domain.model.AppRule
 import com.guardian.shield.domain.model.BlockEvent
+import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.KeywordRule
 import com.guardian.shield.domain.model.ScheduleRule
 import kotlinx.coroutines.flow.Flow
 
 interface RulesRepository {
-    fun observeAppRules(): Flow<List<AppRule>>
-    fun observeKeywordRules(): Flow<List<KeywordRule>>
-    fun observeBlockEvents(limit: Int = 50): Flow<List<BlockEvent>>
-    suspend fun getAppRule(packageName: String): AppRule?
-    suspend fun getAllAppRules(): List<AppRule>
-    suspend fun getAllKeywordRules(): List<KeywordRule>
-    suspend fun upsertAppRule(rule: AppRule)
-    suspend fun deleteAppRule(packageName: String)
-    suspend fun upsertKeyword(rule: KeywordRule)
+    fun observeApps(): Flow<List<AppRule>>
+    fun observeKeywords(): Flow<List<KeywordRule>>
+    fun observeEvents(limit: Int = 50): Flow<List<BlockEvent>>
+    fun observeSchedules(): Flow<List<ScheduleRule>>
+
+    fun countSinceFlow(since: Long): Flow<Int>
+    fun countByReasonFlow(since: Long, reason: BlockReason): Flow<Int>
+    fun topPackageFlow(since: Long): Flow<String?>
+
+    suspend fun upsertApp(rule: AppRule)
+    suspend fun deleteApp(packageName: String)
+    suspend fun getApp(packageName: String): AppRule?
+    suspend fun blockedPackages(): Set<String>
+    suspend fun whitelistPackages(): Set<String>
+
+    suspend fun upsertKeyword(rule: KeywordRule): Long
     suspend fun deleteKeyword(id: Long)
-    suspend fun logBlockEvent(event: BlockEvent)
-    suspend fun clearBlockEvents()
-    suspend fun countTodayBlocks(): Int
+    suspend fun enabledKeywords(): List<KeywordRule>
 
-    // v9 (2.0.0): block log export + dashboard stats.
-    suspend fun getAllBlockEvents(): List<BlockEvent>
-    fun observeBlockEventsSince(since: Long): Flow<List<BlockEvent>>
+    suspend fun upsertSchedule(rule: ScheduleRule)
+    suspend fun deleteSchedule(packageName: String)
+    suspend fun allSchedules(): List<ScheduleRule>
 
-    // v9 (2.0.0) — P4-A: schedule rules.
-    fun observeScheduleRules(): Flow<List<ScheduleRule>>
-    suspend fun getAllScheduleRules(): List<ScheduleRule>
-    suspend fun getScheduleRule(packageName: String): ScheduleRule?
-    suspend fun upsertScheduleRule(rule: ScheduleRule)
-    suspend fun deleteScheduleRule(packageName: String)
+    suspend fun logBlock(event: BlockEvent): Long
+    suspend fun deleteEvent(id: Long)
+    suspend fun clearEvents()
+    suspend fun allEvents(): List<BlockEvent>
 }
