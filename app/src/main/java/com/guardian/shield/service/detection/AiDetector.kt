@@ -113,7 +113,7 @@ class AiDetector @Inject constructor(
         try {
             val cl = CompatibilityList()
             if (cl.isDelegateSupportedOnThisDevice) {
-                gpuDelegate = GpuDelegate(cl.bestOptionsForThisDevice)
+                gpuDelegate = GpuDelegate()
                 opts.addDelegate(gpuDelegate)
                 Timber.i("GPU delegate enabled")
             } else {
