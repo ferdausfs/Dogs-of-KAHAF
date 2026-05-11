@@ -63,7 +63,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         Timber.i("Accessibility connected")
 
-        // Register screen state receiver
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -79,11 +78,21 @@ class GuardianAccessibilityService : AccessibilityService() {
         val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
         isScreenOn = pm?.isInteractive ?: true
 
-        // Initial rules load + observe changes
+        // ✅ FIX: rulesVersion এ change হলে reload() call করো
+        // এটাই মূল fix — keyword/app change হলে snapshot update হবে
         ioScope.launch {
             try {
-                rulesEngine.reload()
-            } catch (t: Throwable) { Timber.e(t) }
+                prefs.rulesVersion.collect {
+                    try {
+                        rulesEngine.reload()
+                        Timber.d("Rules reloaded (version=$it)")
+                    } catch (t: Throwable) {
+                        Timber.e(t, "Rules reload failed")
+                    }
+                }
+            } catch (t: Throwable) {
+                Timber.e(t)
+            }
         }
 
         serviceScope.launch {
@@ -92,7 +101,6 @@ class GuardianAccessibilityService : AccessibilityService() {
             } catch (t: Throwable) { Timber.e(t) }
         }
 
-        // Prefs cache for AI detector
         aiDetector.startPrefsCache(serviceScope)
         serviceScope.launch {
             try {
@@ -170,21 +178,15 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (!visited.add(node)) continue
                 count++
                 val txt = node.text?.toString()
-                if (!txt.isNullOrBlank()) {
-                    builder.append(txt).append(' ')
-                }
+                if (!txt.isNullOrBlank()) builder.append(txt).append(' ')
                 val desc = node.contentDescription?.toString()
-                if (!desc.isNullOrBlank()) {
-                    builder.append(desc).append(' ')
-                }
+                if (!desc.isNullOrBlank()) builder.append(desc).append(' ')
                 for (i in 0 until node.childCount) {
                     val c = node.getChild(i) ?: continue
                     queue.add(c)
                 }
             }
-        } finally {
-            // Don't recycle root - system owns it; child recycling not safe on modern API
-        }
+        } finally { /* root owned by system */ }
         val s = builder.toString().trim()
         return s.ifEmpty { null }
     }
@@ -211,8 +213,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             takeScreenshot(
                 Display.DEFAULT_DISPLAY,
                 mainExecutor,
-                object : AccessibilityService.TakeScreenshotCallback {
-                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
                         var bmp: Bitmap? = null
                         serviceScope.launch {
                             try {
@@ -244,7 +246,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                             }
                         }
                     }
-
                     override fun onFailure(errorCode: Int) {
                         Timber.w("Screenshot fail: $errorCode")
                     }
