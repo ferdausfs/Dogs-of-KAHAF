@@ -30,6 +30,7 @@ class GuardianPreferences @Inject constructor(
         val USER_GENDER = stringPreferencesKey("user_gender")
         val RULES_VERSION = intPreferencesKey("rules_version")
         val PROTECTION_ENABLED = booleanPreferencesKey("protection_enabled")
+        val TEMP_BLOCK_DURATION_MINS = intPreferencesKey("temp_block_duration_mins")
     }
 
     val keywordFilter: Flow<Boolean> = ds.data.map { it[Keys.KEYWORD_FILTER] ?: true }
@@ -40,6 +41,7 @@ class GuardianPreferences @Inject constructor(
     val userGender: Flow<String> = ds.data.map { it[Keys.USER_GENDER] ?: "NONE" }
     val rulesVersion: Flow<Int> = ds.data.map { it[Keys.RULES_VERSION] ?: 0 }
     val protectionEnabled: Flow<Boolean> = ds.data.map { it[Keys.PROTECTION_ENABLED] ?: true }
+    val tempBlockDurationMins: Flow<Int> = ds.data.map { it[Keys.TEMP_BLOCK_DURATION_MINS] ?: 15 }
 
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
     suspend fun setAiDetection(v: Boolean) { ds.edit { it[Keys.AI_DETECTION] = v } }
@@ -47,6 +49,9 @@ class GuardianPreferences @Inject constructor(
     suspend fun setAiThreshold(v: Float) { ds.edit { it[Keys.AI_THRESHOLD] = v } }
     suspend fun setFirstRun(v: Boolean) { ds.edit { it[Keys.FIRST_RUN] = v } }
     suspend fun setUserGender(v: String) { ds.edit { it[Keys.USER_GENDER] = v } }
-    suspend fun bumpRulesVersion() { ds.edit { it[Keys.RULES_VERSION] = (it[Keys.RULES_VERSION] ?: 0) + 1 } }
     suspend fun setProtectionEnabled(v: Boolean) { ds.edit { it[Keys.PROTECTION_ENABLED] = v } }
+    suspend fun setTempBlockDurationMins(v: Int) { ds.edit { it[Keys.TEMP_BLOCK_DURATION_MINS] = v } }
+    suspend fun bumpRulesVersion() {
+        ds.edit { it[Keys.RULES_VERSION] = (it[Keys.RULES_VERSION] ?: 0) + 1 }
+    }
 }

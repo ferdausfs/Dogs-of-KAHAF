@@ -7,7 +7,6 @@ import timber.log.Timber
 
 object AppClassifier {
 
-    // Static always-allow list
     private val SYSTEM_ALWAYS_ALLOW = setOf(
         "android",
         "com.android.systemui",
@@ -18,16 +17,16 @@ object AppClassifier {
         "com.google.android.inputmethod.latin",
         "com.samsung.android.honeyboard",
         "com.samsung.android.app.launcher",
-        "com.sec.android.app.launcher",       // Samsung
-        "com.miui.home",                       // Xiaomi
-        "com.oneplus.launcher",                // OnePlus
-        "com.oppo.launcher",                   // Oppo
-        "com.vivo.launcher",                   // Vivo
-        "com.huawei.android.launcher",         // Huawei
-        "com.realme.launcher",                 // Realme
-        "com.asus.launcher",                   // Asus
-        "com.teslacoilsw.launcher",            // Nova Launcher
-        "com.actionlauncher.playstore",        // Action Launcher
+        "com.sec.android.app.launcher",
+        "com.miui.home",
+        "com.oneplus.launcher",
+        "com.oppo.launcher",
+        "com.vivo.launcher",
+        "com.huawei.android.launcher",
+        "com.realme.launcher",
+        "com.asus.launcher",
+        "com.teslacoilsw.launcher",
+        "com.actionlauncher.playstore",
         "com.android.settings",
         "com.android.phone",
         "com.android.dialer",
@@ -39,7 +38,6 @@ object AppClassifier {
         "com.google.android.packageinstaller"
     )
 
-    // Runtime এ detect করা home package cache
     @Volatile private var cachedHomePkg: String? = null
 
     fun getHomePkg(context: Context): String? {
@@ -64,11 +62,8 @@ object AppClassifier {
     ): Boolean {
         if (targetPkg.isBlank()) return true
         if (targetPkg == ownPkg) return true
-        // Static list check
         if (SYSTEM_ALWAYS_ALLOW.any { targetPkg == it || targetPkg.startsWith("$it.") }) return true
-        // Runtime detected home launcher
         if (homePkg != null && targetPkg == homePkg) return true
-        // IME packages
         if (inputMethods.contains(targetPkg)) return true
         return false
     }

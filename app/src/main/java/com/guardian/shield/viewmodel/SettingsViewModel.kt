@@ -30,6 +30,7 @@ data class SettingsUiState(
     val delaySeconds: Int = 30,
     val aiThreshold: Float = 0.7f,
     val userGender: String = "NONE",
+    val tempBlockDurationMins: Int = 15,
     val modelLoaded: Boolean = false,
     val genderModelAvailable: Boolean = false,
     val legacyModel: ModelSlotUi = ModelSlotUi(),
@@ -52,7 +53,6 @@ class SettingsViewModel @Inject constructor(
 
     private val _events = Channel<SettingsEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
-
     private val refreshTick = MutableStateFlow(0)
 
     val uiState: StateFlow<SettingsUiState> = combine(
@@ -61,19 +61,16 @@ class SettingsViewModel @Inject constructor(
         prefs.delaySeconds,
         prefs.aiThreshold,
         prefs.userGender,
+        prefs.tempBlockDurationMins,
         refreshTick
     ) { values ->
-        val kw = values[0] as Boolean
-        val ai = values[1] as Boolean
-        val delay = values[2] as Int
-        val th = values[3] as Float
-        val gender = values[4] as String
         SettingsUiState(
-            keywordFilter = kw,
-            aiDetection = ai,
-            delaySeconds = delay,
-            aiThreshold = th,
-            userGender = gender,
+            keywordFilter = values[0] as Boolean,
+            aiDetection = values[1] as Boolean,
+            delaySeconds = values[2] as Int,
+            aiThreshold = values[3] as Float,
+            userGender = values[4] as String,
+            tempBlockDurationMins = values[5] as Int,
             modelLoaded = importer.isModelImported(AiDetector.MODEL_LEGACY),
             genderModelAvailable = importer.isModelImported(AiDetector.MODEL_GENDER),
             legacyModel = slot(AiDetector.MODEL_LEGACY),
@@ -85,44 +82,21 @@ class SettingsViewModel @Inject constructor(
     private fun slot(name: String): ModelSlotUi {
         val imported = importer.isModelImported(name)
         val size = importer.modelSizeBytes(name)
-        val readable = if (size > 0) formatBytes(size) else null
-        return ModelSlotUi(isImported = imported, isImporting = false, readableSize = readable)
+        return ModelSlotUi(isImported = imported, readableSize = if (size > 0) "%.1f MB".format(size / 1_048_576.0) else null)
     }
 
-    private fun formatBytes(b: Long): String {
-        val mb = b / (1024.0 * 1024.0)
-        return "%.1f MB".format(mb)
-    }
-
-    fun setKeywordFilter(v: Boolean) {
-        viewModelScope.launch {
-            prefs.setKeywordFilter(v)
-            prefs.bumpRulesVersion() // ✅ service কে notify করো
-        }
-    }
-
-    fun setAiDetection(v: Boolean) {
-        viewModelScope.launch {
-            prefs.setAiDetection(v)
-            prefs.bumpRulesVersion() // ✅ AI toggle হলে service জানবে
-        }
-    }
-
+    fun setKeywordFilter(v: Boolean) { viewModelScope.launch { prefs.setKeywordFilter(v); prefs.bumpRulesVersion() } }
+    fun setAiDetection(v: Boolean) { viewModelScope.launch { prefs.setAiDetection(v); prefs.bumpRulesVersion() } }
     fun setDelaySeconds(v: Int) { viewModelScope.launch { prefs.setDelaySeconds(v) } }
     fun setAiThreshold(v: Float) { viewModelScope.launch { prefs.setAiThreshold(v) } }
-
-    fun setUserGender(v: String) {
-        viewModelScope.launch {
-            prefs.setUserGender(v)
-            prefs.bumpRulesVersion() // ✅ gender change হলে service এর cache তুরন্ত update হবে
-        }
-    }
+    fun setUserGender(v: String) { viewModelScope.launch { prefs.setUserGender(v); prefs.bumpRulesVersion() } }
+    fun setTempBlockDurationMins(v: Int) { viewModelScope.launch { prefs.setTempBlockDurationMins(v) } }
 
     fun importModel(uri: Uri, modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = importer.importModel(uri, modelName)
-            refreshTick.value = refreshTick.value + 1
-            prefs.bumpRulesVersion() // ✅ model import হলে service reload করবে
+            refreshTick.value++
+            prefs.bumpRulesVersion()
             if (r.isSuccess) _events.trySend(SettingsEvent.ImportSuccess(modelName))
             else _events.trySend(SettingsEvent.ImportFailure(r.exceptionOrNull()?.message ?: "Failed"))
         }
@@ -131,7 +105,7 @@ class SettingsViewModel @Inject constructor(
     fun deleteModel(modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             importer.deleteModel(modelName)
-            refreshTick.value = refreshTick.value + 1
+            refreshTick.value++
             prefs.bumpRulesVersion()
             _events.trySend(SettingsEvent.ModelDeleted(modelName))
         }

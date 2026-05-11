@@ -2,11 +2,13 @@ package com.guardian.shield.ui.overlay
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -22,8 +24,8 @@ class BlockOverlayActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -33,17 +35,28 @@ class BlockOverlayActivity : AppCompatActivity() {
         val detail = intent.getStringExtra(EXTRA_DETAIL).orEmpty()
 
         binding.txtPackage.text = pkg
-        binding.txtReason.text = formatReason(reason, detail)
 
-        binding.btnHome.setOnClickListener { goHome() }
-        binding.btnUnlock.setOnClickListener {
-            startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
-                putExtra(DelayUnlockActivity.EXTRA_PACKAGE, pkg)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-            finish()
+        // Temp block কিনা check করো
+        if (detail.startsWith("temp_block:")) {
+            val mins = detail.removePrefix("temp_block:").removeSuffix("min").trim()
+            binding.txtReason.text = "🚫 $mins মিনিটের জন্য ব্লক করা হয়েছে"
+            binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
+            // Unlock button temp block এ hide
+            binding.btnUnlock.visibility = View.GONE
+        } else {
+            binding.txtReason.text = formatReason(reason, detail)
+            binding.txtReason.setTextColor(Color.parseColor("#FFB300"))
+            binding.btnUnlock.visibility = View.VISIBLE
+            binding.btnUnlock.setOnClickListener {
+                startActivity(Intent(this, DelayUnlockActivity::class.java).apply {
+                    putExtra(DelayUnlockActivity.EXTRA_PACKAGE, pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+                finish()
+            }
         }
 
+        binding.btnHome.setOnClickListener { goHome() }
         vibrate()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -62,15 +75,12 @@ class BlockOverlayActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun formatReason(reason: String, detail: String): String {
-        val r = when (reason) {
-            "AI_DETECTION" -> getString(R.string.overlay_reason_ai)
-            "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
-            "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
-            "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
-            else -> getString(R.string.overlay_reason_manual)
-        }
-        return r
+    private fun formatReason(reason: String, detail: String): String = when (reason) {
+        "AI_DETECTION" -> getString(R.string.overlay_reason_ai)
+        "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
+        "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
+        "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
+        else -> getString(R.string.overlay_reason_manual)
     }
 
     private fun vibrate() {
@@ -80,8 +90,8 @@ class BlockOverlayActivity : AppCompatActivity() {
                 vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
-                val v = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                v?.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
+                (getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
+                    ?.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
             }
         } catch (_: Throwable) {}
     }

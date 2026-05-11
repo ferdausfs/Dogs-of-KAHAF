@@ -2,13 +2,15 @@ package com.guardian.shield.service.blocker
 
 import android.content.Context
 import android.content.Intent
-import com.guardian.shield.domain.model.BlockEvent
+import com.guardian.shield.data.local.db.Daos
+import com.guardian.shield.data.local.db.BlockEventEntity
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
-import com.guardian.shield.domain.repository.RulesRepository
 import com.guardian.shield.ui.overlay.BlockOverlayActivity
 import com.guardian.shield.util.GuardianConstants
-import com.guardian.shield.util.Scopes
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -17,65 +19,91 @@ import javax.inject.Singleton
 @Singleton
 class BlockingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repo: RulesRepository
+    private val blockEventDao: Daos.BlockEventDao,
+    private val tempBlockManager: TempBlockManager,
+    private val prefs: GuardianPreferences
 ) {
-    private val throttle = LinkedHashMap<String, Long>()
-    private val ioScope = Scopes.io()
+    private val ioScope = CoroutineScope(Dispatchers.IO)
+    private val blockThrottleMap = LinkedHashMap<String, Long>()
 
-    @Synchronized
-    private fun shouldBlock(pkg: String): Boolean {
-        val now = System.currentTimeMillis()
-        val last = throttle[pkg] ?: 0L
-        if (now - last < GuardianConstants.BLOCK_THROTTLE_MS) return false
-        throttle[pkg] = now
-        if (throttle.size > GuardianConstants.MAX_THROTTLE_MAP) {
-            val it = throttle.entries.iterator()
-            if (it.hasNext()) { it.next(); it.remove() }
-        }
-        return true
-    }
+    // Cached temp block duration (minutes)
+    @Volatile private var cachedTempBlockMins: Int = 15
 
-    fun block(pkg: String, reason: BlockReason, detail: String? = null) {
-        if (!shouldBlock(pkg)) return
-        Timber.i("Blocking %s reason=%s detail=%s", pkg, reason, detail)
-
-        // 1) Launch HOME first
-        runCatching {
-            val home = Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_HOME)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            context.startActivity(home)
-        }
-
-        // 2) Launch BlockOverlayActivity
-        runCatching {
-            val overlay = Intent(context, BlockOverlayActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_NO_HISTORY
-                )
-                putExtra(BlockOverlayActivity.EXTRA_PACKAGE, pkg)
-                putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
-                putExtra(BlockOverlayActivity.EXTRA_DETAIL, detail)
-            }
-            context.startActivity(overlay)
-        }
-
-        // 3) Log event
+    init {
         ioScope.launch {
             try {
-                repo.logBlock(
-                    BlockEvent(
-                        id = 0,
+                prefs.tempBlockDurationMins.collect { cachedTempBlockMins = it }
+            } catch (t: Throwable) { Timber.e(t) }
+        }
+    }
+
+    fun block(pkg: String, reason: BlockReason, detail: String) {
+        val now = System.currentTimeMillis()
+        synchronized(blockThrottleMap) {
+            val last = blockThrottleMap[pkg] ?: 0L
+            if (now - last < GuardianConstants.BLOCK_THROTTLE_MS) return
+            blockThrottleMap[pkg] = now
+            if (blockThrottleMap.size > GuardianConstants.MAX_THROTTLE_MAP) {
+                val it = blockThrottleMap.entries.iterator()
+                if (it.hasNext()) { it.next(); it.remove() }
+            }
+        }
+
+        // AI detection হলে strike record করো → threshold পার হলে temp block
+        val finalDetail = if (reason == BlockReason.AI_DETECTION) {
+            val durationMs = cachedTempBlockMins * 60 * 1_000L
+            val tempBlocked = tempBlockManager.recordAiDetection(pkg, durationMs)
+            if (tempBlocked) {
+                val block = tempBlockManager.isTempBlocked(pkg)
+                "temp_block:${block?.remainingMinutes ?: cachedTempBlockMins}min"
+            } else {
+                val strike = tempBlockManager.getStrikeCount(pkg)
+                "$detail (strike $strike/${GuardianConstants.STRIKE_THRESHOLD})"
+            }
+        } else detail
+
+        goHome()
+        launchOverlay(pkg, reason, finalDetail)
+        logEvent(pkg, reason, finalDetail)
+    }
+
+    fun isTempBlocked(pkg: String): TempBlock? = tempBlockManager.isTempBlocked(pkg)
+
+    private fun goHome() {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            )
+        }
+    }
+
+    private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
+        runCatching {
+            context.startActivity(
+                Intent(context, BlockOverlayActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra(BlockOverlayActivity.EXTRA_PACKAGE, pkg)
+                    putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
+                    putExtra(BlockOverlayActivity.EXTRA_DETAIL, detail)
+                }
+            )
+        }
+    }
+
+    private fun logEvent(pkg: String, reason: BlockReason, detail: String) {
+        ioScope.launch {
+            runCatching {
+                blockEventDao.insert(
+                    BlockEventEntity(
                         packageName = pkg,
-                        reason = reason,
-                        matchedTerm = detail,
+                        reason = reason.name,
+                        matchedTerm = detail.ifBlank { null },
                         timestamp = System.currentTimeMillis()
                     )
                 )
-            } catch (t: Throwable) {
-                Timber.e(t, "Failed to log block event")
             }
         }
     }

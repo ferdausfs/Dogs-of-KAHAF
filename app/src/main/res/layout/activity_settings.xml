@@ -25,6 +25,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- PROTECTION -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -132,6 +133,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- GENDER FILTER -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -193,6 +195,68 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- TEMP BLOCK DURATION — নতুন section -->
+            <TextView
+                style="@style/TextAppearance.GuardianShield.SectionHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_temp_block"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/temp_block_info"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupBlockDuration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip15min"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="15 min"
+                            android:checked="true"/>
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip30min"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="30 min"/>
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip60min"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1 ঘণ্টা"/>
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- BLOCKING RULES -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -227,6 +291,7 @@
                 android:text="@string/btn_schedule"
                 app:cornerRadius="12dp"/>
 
+            <!-- AI MODELS -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -247,130 +312,57 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Legacy model -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/legacy_model"
-                        android:textColor="@color/on_surface"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/txtLegacyStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/model_missing"
-                        android:textColor="@color/on_surface_dim"
-                        android:textSize="12sp"/>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="16dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnImportLegacy"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/import_"
-                            app:cornerRadius="10dp"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRemoveLegacy"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/remove"
-                            android:textColor="@color/error"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/legacy_model" android:textColor="@color/on_surface" android:textStyle="bold"/>
+                    <TextView android:id="@+id/txtLegacyStatus" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim" android:textSize="12sp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="4dp" android:layout_marginBottom="16dp">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnImportLegacy"
+                            style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="@string/import_" app:cornerRadius="10dp"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnRemoveLegacy"
+                            style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:text="@string/remove" android:textColor="@color/error"/>
                     </LinearLayout>
 
-                    <!-- NSFW model -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/nsfw_model"
-                        android:textColor="@color/on_surface"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/txtNsfwStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/model_missing"
-                        android:textColor="@color/on_surface_dim"
-                        android:textSize="12sp"/>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="16dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnImportNsfw"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/import_"
-                            app:cornerRadius="10dp"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRemoveNsfw"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/remove"
-                            android:textColor="@color/error"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/nsfw_model" android:textColor="@color/on_surface" android:textStyle="bold"/>
+                    <TextView android:id="@+id/txtNsfwStatus" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim" android:textSize="12sp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="4dp" android:layout_marginBottom="16dp">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnImportNsfw"
+                            style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="@string/import_" app:cornerRadius="10dp"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnRemoveNsfw"
+                            style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:text="@string/remove" android:textColor="@color/error"/>
                     </LinearLayout>
 
-                    <!-- Gender model -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/gender_model"
-                        android:textColor="@color/on_surface"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/txtGenderModelStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/model_missing"
-                        android:textColor="@color/on_surface_dim"
-                        android:textSize="12sp"/>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnImportGender"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/import_"
-                            app:cornerRadius="10dp"/>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRemoveGender"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/remove"
-                            android:textColor="@color/error"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/gender_model" android:textColor="@color/on_surface" android:textStyle="bold"/>
+                    <TextView android:id="@+id/txtGenderModelStatus" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim" android:textSize="12sp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:layout_marginTop="4dp">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnImportGender"
+                            style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="@string/import_" app:cornerRadius="10dp"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnRemoveGender"
+                            style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:text="@string/remove" android:textColor="@color/error"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- SECURITY -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -396,9 +388,7 @@
                 android:text="@string/btn_permissions"
                 app:cornerRadius="12dp"/>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="40dp"/>
+            <View android:layout_width="match_parent" android:layout_height="40dp"/>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

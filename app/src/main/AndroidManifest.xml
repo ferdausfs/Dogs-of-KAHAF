@@ -68,7 +68,14 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@style/Theme.GuardianShield.Overlay"/>
-
+         <activity
+            android:name=".ui.guard.AccessibilityPromptActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"/>
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
             android:exported="true"

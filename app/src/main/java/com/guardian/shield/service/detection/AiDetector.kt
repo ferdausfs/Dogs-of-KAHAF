@@ -6,7 +6,6 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -39,7 +38,6 @@ class AiDetector @Inject constructor(
     private var genderInterpreter: Interpreter? = null
     private var gpuDelegate: GpuDelegate? = null
 
-    // ✅ Fix: @Volatile cache — collector restart এ সবসময় fresh থাকবে
     @Volatile var cachedAiEnabled: Boolean = false
         private set
     @Volatile var cachedUserGender: String = "NONE"
@@ -47,39 +45,23 @@ class AiDetector @Inject constructor(
     @Volatile var cachedThreshold: Float = 0.7f
         private set
 
-    // ✅ Fix: collector গুলো while(isActive) loop এ — crash হলে 1s পরে restart
     fun startPrefsCache(scope: CoroutineScope) {
         scope.launch {
             while (isActive) {
-                try {
-                    prefs.aiDetection.collect { cachedAiEnabled = it }
-                } catch (t: Throwable) {
-                    Timber.e(t, "aiDetection collector crashed, restarting")
-                    delay(1_000)
-                }
+                try { prefs.aiDetection.collect { cachedAiEnabled = it } }
+                catch (t: Throwable) { Timber.e(t, "aiDetection collector crashed"); delay(1_000) }
             }
         }
         scope.launch {
             while (isActive) {
-                try {
-                    prefs.userGender.collect { v ->
-                        cachedUserGender = v
-                        Timber.d("Gender cache updated: $v")
-                    }
-                } catch (t: Throwable) {
-                    Timber.e(t, "userGender collector crashed, restarting")
-                    delay(1_000)
-                }
+                try { prefs.userGender.collect { cachedUserGender = it; Timber.d("Gender cache: $it") } }
+                catch (t: Throwable) { Timber.e(t, "userGender collector crashed"); delay(1_000) }
             }
         }
         scope.launch {
             while (isActive) {
-                try {
-                    prefs.aiThreshold.collect { cachedThreshold = it }
-                } catch (t: Throwable) {
-                    Timber.e(t, "aiThreshold collector crashed, restarting")
-                    delay(1_000)
-                }
+                try { prefs.aiThreshold.collect { cachedThreshold = it } }
+                catch (t: Throwable) { Timber.e(t, "aiThreshold collector crashed"); delay(1_000) }
             }
         }
     }
@@ -200,27 +182,17 @@ class AiDetector @Inject constructor(
         val nsfw = nsfwInterpreter ?: return false
         val gender = genderInterpreter ?: return false
         if (userGender != "MALE" && userGender != "FEMALE") return false
-
         return inferenceLock.withLock {
             try {
-                // ✅ Fix: cached value এর বদলে detection এর সময় live prefs read
-                // এতে stale cache এর সমস্যা থাকবে না
-                val currentGender = runCatching {
-                    prefs.userGender.first()
-                }.getOrElse { userGender }
-
+                val currentGender = runCatching { prefs.userGender.first() }.getOrElse { userGender }
                 if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
-
-                val nsfwScores = runInference(nsfw, bitmap)
-                val nsfwProb = extractNsfwScore(nsfwScores)
-                Timber.d("NSFW gate score: $nsfwProb (threshold: ${GuardianConstants.NSFW_GATE_THRESHOLD})")
+                val nsfwProb = extractNsfwScore(runInference(nsfw, bitmap))
+                Timber.d("NSFW gate: $nsfwProb")
                 if (nsfwProb < GuardianConstants.NSFW_GATE_THRESHOLD) return@withLock false
-
                 val genderScores = runInference(gender, bitmap)
                 val maleProb = genderScores.getOrNull(0) ?: 0f
                 val femaleProb = genderScores.getOrNull(1) ?: 0f
-                Timber.d("Gender scores: male=$maleProb female=$femaleProb, userGender=$currentGender")
-
+                Timber.d("Gender: male=$maleProb female=$femaleProb user=$currentGender")
                 when (currentGender) {
                     "MALE" -> femaleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
                     "FEMALE" -> maleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
@@ -258,9 +230,7 @@ class AiDetector @Inject constructor(
 
     private fun cropSquare(b: Bitmap): Bitmap {
         val side = minOf(b.width, b.height)
-        val x = (b.width - side) / 2
-        val y = (b.height - side) / 2
-        return Bitmap.createBitmap(b, x, y, side, side)
+        return Bitmap.createBitmap(b, (b.width - side) / 2, (b.height - side) / 2, side, side)
     }
 
     private fun cropVertical(b: Bitmap, fromRatio: Float, toRatio: Float): Bitmap {
@@ -270,7 +240,7 @@ class AiDetector @Inject constructor(
     }
 
     fun close() {
-        runBlocking(Dispatchers.IO) {
+        runBlocking(kotlinx.coroutines.Dispatchers.IO) {
             withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
                 inferenceLock.withLock { tearDown() }
             } ?: tearDown()
@@ -282,10 +252,8 @@ class AiDetector @Inject constructor(
         try { nsfwInterpreter?.close() } catch (_: Throwable) {}
         try { genderInterpreter?.close() } catch (_: Throwable) {}
         try { gpuDelegate?.close() } catch (_: Throwable) {}
-        legacyInterpreter = null
-        nsfwInterpreter = null
-        genderInterpreter = null
-        gpuDelegate = null
+        legacyInterpreter = null; nsfwInterpreter = null
+        genderInterpreter = null; gpuDelegate = null
     }
 
     companion object {

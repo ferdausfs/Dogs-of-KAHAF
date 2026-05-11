@@ -8,39 +8,104 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.guardian.shield.GuardianApp
 import com.guardian.shield.R
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.ui.dashboard.MainActivity
+import com.guardian.shield.ui.guard.AccessibilityPromptActivity
+import com.guardian.shield.util.GuardianConstants
+import com.guardian.shield.util.Scopes
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class GuardianForegroundService : Service() {
+
+    @Inject lateinit var prefs: GuardianPreferences
+
+    private val serviceScope: CoroutineScope = Scopes.default()
+    private var watchdogJob: Job? = null
+
+    @Volatile private var protectionEnabled: Boolean = true
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundCompat()
+        startPrefsObserver()
+        startAccessibilityWatchdog()
         return START_STICKY
     }
 
     private fun startForegroundCompat() {
         val notif = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIF_ID,
-                notif,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
+            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(NOTIF_ID, notif)
         }
     }
 
-    private fun buildNotification(): Notification {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    private fun startPrefsObserver() {
+        serviceScope.launch {
+            try { prefs.protectionEnabled.collect { protectionEnabled = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
+    }
+
+    private fun startAccessibilityWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = serviceScope.launch {
+            while (isActive) {
+                delay(GuardianConstants.ACCESSIBILITY_WATCHDOG_MS)
+                try {
+                    if (!protectionEnabled) continue
+                    if (!isAccessibilityEnabled()) {
+                        Timber.w("Accessibility disabled! Prompting user.")
+                        launchAccessibilityPrompt()
+                    }
+                } catch (t: Throwable) {
+                    Timber.e(t, "Watchdog error")
+                }
+            }
+        }
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        return try {
+            val service = "$packageName/.service.accessibility.GuardianAccessibilityService"
+            val enabled = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            enabled.split(":").any { it.equals(service, ignoreCase = true) }
+        } catch (_: Throwable) { true } // error হলে assume enabled
+    }
+
+    private fun launchAccessibilityPrompt() {
+        runCatching {
+            startActivity(
+                Intent(this, AccessibilityPromptActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+            )
+        }
+    }
+
+    private fun buildNotification(): Notification {
         val pi = PendingIntent.getActivity(
-            this, 0, intent,
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, GuardianApp.CHANNEL_GUARDIAN)
@@ -52,6 +117,11 @@ class GuardianForegroundService : Service() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        watchdogJob?.cancel()
     }
 
     companion object {
