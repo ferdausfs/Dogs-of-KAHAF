@@ -12,7 +12,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -95,16 +94,35 @@ class SettingsViewModel @Inject constructor(
         return "%.1f MB".format(mb)
     }
 
-    fun setKeywordFilter(v: Boolean) { viewModelScope.launch { prefs.setKeywordFilter(v) } }
-    fun setAiDetection(v: Boolean) { viewModelScope.launch { prefs.setAiDetection(v) } }
+    fun setKeywordFilter(v: Boolean) {
+        viewModelScope.launch {
+            prefs.setKeywordFilter(v)
+            prefs.bumpRulesVersion() // ✅ service কে notify করো
+        }
+    }
+
+    fun setAiDetection(v: Boolean) {
+        viewModelScope.launch {
+            prefs.setAiDetection(v)
+            prefs.bumpRulesVersion() // ✅ AI toggle হলে service জানবে
+        }
+    }
+
     fun setDelaySeconds(v: Int) { viewModelScope.launch { prefs.setDelaySeconds(v) } }
     fun setAiThreshold(v: Float) { viewModelScope.launch { prefs.setAiThreshold(v) } }
-    fun setUserGender(v: String) { viewModelScope.launch { prefs.setUserGender(v) } }
+
+    fun setUserGender(v: String) {
+        viewModelScope.launch {
+            prefs.setUserGender(v)
+            prefs.bumpRulesVersion() // ✅ gender change হলে service এর cache তুরন্ত update হবে
+        }
+    }
 
     fun importModel(uri: Uri, modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = importer.importModel(uri, modelName)
             refreshTick.value = refreshTick.value + 1
+            prefs.bumpRulesVersion() // ✅ model import হলে service reload করবে
             if (r.isSuccess) _events.trySend(SettingsEvent.ImportSuccess(modelName))
             else _events.trySend(SettingsEvent.ImportFailure(r.exceptionOrNull()?.message ?: "Failed"))
         }
@@ -114,6 +132,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             importer.deleteModel(modelName)
             refreshTick.value = refreshTick.value + 1
+            prefs.bumpRulesVersion()
             _events.trySend(SettingsEvent.ModelDeleted(modelName))
         }
     }

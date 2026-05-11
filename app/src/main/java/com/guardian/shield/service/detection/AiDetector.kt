@@ -7,6 +7,9 @@ import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -36,6 +39,7 @@ class AiDetector @Inject constructor(
     private var genderInterpreter: Interpreter? = null
     private var gpuDelegate: GpuDelegate? = null
 
+    // ✅ Fix: @Volatile cache — collector restart এ সবসময় fresh থাকবে
     @Volatile var cachedAiEnabled: Boolean = false
         private set
     @Volatile var cachedUserGender: String = "NONE"
@@ -43,18 +47,40 @@ class AiDetector @Inject constructor(
     @Volatile var cachedThreshold: Float = 0.7f
         private set
 
+    // ✅ Fix: collector গুলো while(isActive) loop এ — crash হলে 1s পরে restart
     fun startPrefsCache(scope: CoroutineScope) {
         scope.launch {
-            try { prefs.aiDetection.collect { cachedAiEnabled = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try {
+                    prefs.aiDetection.collect { cachedAiEnabled = it }
+                } catch (t: Throwable) {
+                    Timber.e(t, "aiDetection collector crashed, restarting")
+                    delay(1_000)
+                }
+            }
         }
         scope.launch {
-            try { prefs.userGender.collect { cachedUserGender = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try {
+                    prefs.userGender.collect { v ->
+                        cachedUserGender = v
+                        Timber.d("Gender cache updated: $v")
+                    }
+                } catch (t: Throwable) {
+                    Timber.e(t, "userGender collector crashed, restarting")
+                    delay(1_000)
+                }
+            }
         }
         scope.launch {
-            try { prefs.aiThreshold.collect { cachedThreshold = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try {
+                    prefs.aiThreshold.collect { cachedThreshold = it }
+                } catch (t: Throwable) {
+                    Timber.e(t, "aiThreshold collector crashed, restarting")
+                    delay(1_000)
+                }
+            }
         }
     }
 
@@ -89,10 +115,9 @@ class AiDetector @Inject constructor(
                 } as MappedByteBuffer
             } catch (t: Throwable) {
                 Timber.w(t, "mmap failed; byte copy $name")
-                f.readBytes().let { bytes ->
-                    ByteBuffer.allocateDirect(bytes.size)
-                        .order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
-                }
+                val bytes = f.readBytes()
+                ByteBuffer.allocateDirect(bytes.size)
+                    .order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
             }
         }
         return try {
@@ -110,7 +135,6 @@ class AiDetector @Inject constructor(
         try {
             val cl = CompatibilityList()
             if (cl.isDelegateSupportedOnThisDevice) {
-                // ✅ Fix: GpuDelegate() — bestOptionsForThisDevice type mismatch ছিল
                 gpuDelegate = GpuDelegate()
                 opts.addDelegate(gpuDelegate)
                 Timber.i("GPU delegate enabled")
@@ -136,30 +160,21 @@ class AiDetector @Inject constructor(
         return inferenceLock.withLock {
             try {
                 val threshold = cachedThreshold
-
-                // Full image
                 val fullScores = runInference(interp, bitmap)
                 val fullNsfw = extractNsfwScore(fullScores)
-
-                // Early exit — সব score খুব কম হলে safe
-                if (fullNsfw < threshold * GuardianConstants.EARLY_EXIT_RATIO) {
-                    return@withLock false
-                }
+                if (fullNsfw < threshold * GuardianConstants.EARLY_EXIT_RATIO) return@withLock false
                 if (fullNsfw >= threshold) return@withLock true
 
-                // Center square crop
                 val centerCrop = cropSquare(bitmap)
                 val centerNsfw = extractNsfwScore(runInference(interp, centerCrop))
                 centerCrop.recycle()
                 if (centerNsfw >= threshold) return@withLock true
 
-                // Top 72% crop
                 val topCrop = cropVertical(bitmap, 0f, 0.72f)
                 val topNsfw = extractNsfwScore(runInference(interp, topCrop))
                 topCrop.recycle()
                 if (topNsfw >= threshold) return@withLock true
 
-                // Lower 82% crop
                 val lowerCrop = cropVertical(bitmap, 0.18f, 1f)
                 val lowerNsfw = extractNsfwScore(runInference(interp, lowerCrop))
                 lowerCrop.recycle()
@@ -172,24 +187,12 @@ class AiDetector @Inject constructor(
         }
     }
 
-    /**
-     * ✅ Bug fix: আগে maxOrNull() ছিল — 2-class model এ safe_prob=0.85 হলেও block হতো।
-     * এখন model output size অনুযায়ী সঠিক nsfw score নেওয়া হচ্ছে:
-     *   - 1 output  → single probability, directly use
-     *   - 2 outputs → [safe, nsfw] → index 1
-     *   - 5 outputs → [drawings, hentai, neutral, porn, sexy] → sum of 1+3+4
-     *   - অন্য size → last index use করো
-     */
     private fun extractNsfwScore(scores: FloatArray): Float {
         return when (scores.size) {
             1 -> scores[0]
-            2 -> scores[1]  // [safe, nsfw] → nsfw is index 1
-            5 -> {          // 5-class NSFW model
-                (scores.getOrElse(1) { 0f } +   // hentai
-                 scores.getOrElse(3) { 0f } +   // porn
-                 scores.getOrElse(4) { 0f })     // sexy
-            }
-            else -> scores.last()  // unknown model — last index assume nsfw
+            2 -> scores[1]
+            5 -> scores.getOrElse(1){0f} + scores.getOrElse(3){0f} + scores.getOrElse(4){0f}
+            else -> scores.last()
         }
     }
 
@@ -197,15 +200,28 @@ class AiDetector @Inject constructor(
         val nsfw = nsfwInterpreter ?: return false
         val gender = genderInterpreter ?: return false
         if (userGender != "MALE" && userGender != "FEMALE") return false
+
         return inferenceLock.withLock {
             try {
+                // ✅ Fix: cached value এর বদলে detection এর সময় live prefs read
+                // এতে stale cache এর সমস্যা থাকবে না
+                val currentGender = runCatching {
+                    prefs.userGender.first()
+                }.getOrElse { userGender }
+
+                if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
+
                 val nsfwScores = runInference(nsfw, bitmap)
                 val nsfwProb = extractNsfwScore(nsfwScores)
+                Timber.d("NSFW gate score: $nsfwProb (threshold: ${GuardianConstants.NSFW_GATE_THRESHOLD})")
                 if (nsfwProb < GuardianConstants.NSFW_GATE_THRESHOLD) return@withLock false
+
                 val genderScores = runInference(gender, bitmap)
                 val maleProb = genderScores.getOrNull(0) ?: 0f
                 val femaleProb = genderScores.getOrNull(1) ?: 0f
-                when (userGender) {
+                Timber.d("Gender scores: male=$maleProb female=$femaleProb, userGender=$currentGender")
+
+                when (currentGender) {
                     "MALE" -> femaleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
                     "FEMALE" -> maleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
                     else -> false
@@ -221,7 +237,8 @@ class AiDetector @Inject constructor(
         val inputShape = interp.getInputTensor(0).shape()
         val h = inputShape.getOrNull(1) ?: 224
         val w = inputShape.getOrNull(2) ?: 224
-        val resized = Bitmap.createScaledBitmap(bitmap, w, h, true)
+        val resized = if (bitmap.width != w || bitmap.height != h)
+            Bitmap.createScaledBitmap(bitmap, w, h, true) else bitmap
         val input = ByteBuffer.allocateDirect(4 * w * h * 3).order(ByteOrder.nativeOrder())
         val pixels = IntArray(w * h)
         resized.getPixels(pixels, 0, w, 0, 0, w, h)
