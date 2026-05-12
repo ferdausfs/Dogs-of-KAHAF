@@ -57,7 +57,8 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> isScreenOn = true
+                Intent.ACTION_SCREEN_ON,
+                Intent.ACTION_USER_PRESENT -> isScreenOn = true
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     currentPackage = null
@@ -83,7 +84,8 @@ class GuardianAccessibilityService : AccessibilityService() {
                 registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED)
             else registerReceiver(screenReceiver, filter)
         }
-        isScreenOn = (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive ?: true
+        isScreenOn =
+            (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive ?: true
 
         // Rules version change → reload rules + models
         ioScope.launch {
@@ -135,18 +137,26 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (isSafePackage(pkg)) { currentPackage = null; return }
         currentPackage = pkg
 
-        // Temp block check — সবার আগে
+        // ✅ Temp block check — performGlobalAction instant home
         val tempBlock = blockingEngine.isTempBlocked(pkg)
         if (tempBlock != null) {
-            blockingEngine.block(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            blockingEngine.block(
+                pkg, BlockReason.APP_BLOCKED,
+                "temp_block:${tempBlock.remainingMinutes}min"
+            )
             return
         }
 
+        // Package/schedule rules check
         val result = rulesEngine.evaluatePackage(pkg)
         if (result is DetectionResult.Block) {
+            performGlobalAction(GLOBAL_ACTION_HOME) // ✅ instant — Intent এর চেয়ে অনেক faster
             blockingEngine.block(pkg, result.reason, result.detail)
             return
         }
+
+        // AI check
         if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
         ) triggerAiCheckThrottled(pkg)
@@ -164,7 +174,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                 val text = withContext(Dispatchers.Default) { collectVisibleText() }
                 if (!text.isNullOrBlank()) {
                     val r = rulesEngine.evaluateText(text)
-                    if (r is DetectionResult.Block) blockingEngine.block(pkg, r.reason, r.detail)
+                    if (r is DetectionResult.Block) {
+                        performGlobalAction(GLOBAL_ACTION_HOME) // ✅ keyword match → instant home
+                        blockingEngine.block(pkg, r.reason, r.detail)
+                    }
                 }
             } catch (t: Throwable) { Timber.e(t) }
         }
@@ -182,7 +195,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             if (!visited.add(node)) continue
             count++
             node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
-            node.contentDescription?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+            node.contentDescription?.toString()
+                ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
         }
         return builder.toString().trim().ifEmpty { null }
@@ -205,33 +219,54 @@ class GuardianAccessibilityService : AccessibilityService() {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String) {
         try {
-            takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
-                override fun onSuccess(screenshot: ScreenshotResult) {
-                    var bmp: Bitmap? = null
-                    serviceScope.launch {
-                        try {
-                            val hw = screenshot.hardwareBuffer
-                            val cs = screenshot.colorSpace
-                            bmp = Bitmap.wrapHardwareBuffer(hw, cs)?.copy(Bitmap.Config.ARGB_8888, false)
-                            try { hw.close() } catch (_: Throwable) {}
-                            val b = bmp ?: return@launch
-                            val gender = aiDetector.cachedUserGender
-                            var blocked = false
-                            if (gender != "NONE" && aiDetector.isGenderModelAvailable() && aiDetector.isNsfwGateAvailable()) {
-                                if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                    blockingEngine.block(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
-                                    blocked = true
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
+                        var bmp: Bitmap? = null
+                        serviceScope.launch {
+                            try {
+                                val hw = screenshot.hardwareBuffer
+                                val cs = screenshot.colorSpace
+                                bmp = Bitmap.wrapHardwareBuffer(hw, cs)
+                                    ?.copy(Bitmap.Config.ARGB_8888, false)
+                                try { hw.close() } catch (_: Throwable) {}
+                                val b = bmp ?: return@launch
+                                val gender = aiDetector.cachedUserGender
+                                var blocked = false
+                                if (gender != "NONE"
+                                    && aiDetector.isGenderModelAvailable()
+                                    && aiDetector.isNsfwGateAvailable()
+                                ) {
+                                    if (aiDetector.isOppositeGenderNsfw(b, gender)) {
+                                        performGlobalAction(GLOBAL_ACTION_HOME)
+                                        blockingEngine.block(
+                                            pkg, BlockReason.AI_DETECTION, "gender-nsfw"
+                                        )
+                                        blocked = true
+                                    }
                                 }
+                                if (!blocked && aiDetector.isLegacyAvailable()) {
+                                    if (aiDetector.isUnsafe(b)) {
+                                        performGlobalAction(GLOBAL_ACTION_HOME)
+                                        blockingEngine.block(
+                                            pkg, BlockReason.AI_DETECTION, "legacy"
+                                        )
+                                    }
+                                }
+                            } catch (t: Throwable) {
+                                Timber.e(t, "AI check failed")
+                            } finally {
+                                try { bmp?.recycle() } catch (_: Throwable) {}
                             }
-                            if (!blocked && aiDetector.isLegacyAvailable()) {
-                                if (aiDetector.isUnsafe(b)) blockingEngine.block(pkg, BlockReason.AI_DETECTION, "legacy")
-                            }
-                        } catch (t: Throwable) { Timber.e(t, "AI check failed") }
-                        finally { try { bmp?.recycle() } catch (_: Throwable) {} }
+                        }
+                    }
+                    override fun onFailure(errorCode: Int) {
+                        Timber.w("Screenshot fail: $errorCode")
                     }
                 }
-                override fun onFailure(errorCode: Int) { Timber.w("Screenshot fail: $errorCode") }
-            })
+            )
         } catch (t: Throwable) { Timber.e(t) }
     }
 
@@ -240,7 +275,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         periodicJob = serviceScope.launch {
             while (isActive) {
                 try {
-                    delay(if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS else GuardianConstants.AI_PERIODIC_MS)
+                    delay(
+                        if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS
+                        else GuardianConstants.AI_PERIODIC_MS
+                    )
                     if (!isScreenOn || !protectionEnabled || isDeviceLocked()) continue
                     val pkg = currentPackage ?: continue
                     if (isSafePackage(pkg)) continue
@@ -248,19 +286,29 @@ class GuardianAccessibilityService : AccessibilityService() {
                     // Temp block check
                     val tempBlock = blockingEngine.isTempBlocked(pkg)
                     if (tempBlock != null) {
-                        blockingEngine.block(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                        blockingEngine.block(
+                            pkg, BlockReason.APP_BLOCKED,
+                            "temp_block:${tempBlock.remainingMinutes}min"
+                        )
                         continue
                     }
 
                     if (!rulesEngine.canBlock(pkg)) continue
+
+                    // Package/schedule rules
                     val r = rulesEngine.evaluatePackage(pkg)
                     if (r is DetectionResult.Block) {
+                        performGlobalAction(GLOBAL_ACTION_HOME)
                         blockingEngine.block(pkg, r.reason, r.detail)
                         continue
                     }
+
+                    // Periodic AI scan
                     if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
                         && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                     ) triggerAiCheckThrottled(pkg)
+
                 } catch (t: Throwable) { Timber.e(t) }
             }
         }

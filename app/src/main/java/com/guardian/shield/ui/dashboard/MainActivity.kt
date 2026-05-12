@@ -1,11 +1,14 @@
 package com.guardian.shield.ui.dashboard
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +18,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
+import com.guardian.shield.admin.GuardianDeviceAdminReceiver
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.ui.permissions.PermissionsActivity
@@ -69,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         startForegroundServiceIfNeeded()
+        checkDeviceAdmin()
     }
 
     override fun onResume() {
@@ -80,8 +85,37 @@ class MainActivity : AppCompatActivity() {
         runCatching { GuardianForegroundService.start(this) }
     }
 
+    // ✅ Uninstall protection — Device Admin mandatory
+    private fun checkDeviceAdmin() {
+        val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = ComponentName(this, GuardianDeviceAdminReceiver::class.java)
+        if (!dpm.isAdminActive(admin)) {
+            AlertDialog.Builder(this)
+                .setTitle("⚠️ Uninstall Protection")
+                .setMessage(
+                    "App কে uninstall থেকে রক্ষা করতে Device Admin enable করুন।\n\n" +
+                    "এটা ছাড়া যেকেউ Guardian Shield delete করে protection বন্ধ করতে পারবে।"
+                )
+                .setCancelable(false)
+                .setPositiveButton("Enable করুন") { _, _ ->
+                    runCatching {
+                        startActivity(
+                            Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                                putExtra(
+                                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                    "Guardian Shield কে uninstall থেকে রক্ষা করতে এটা প্রয়োজন।"
+                                )
+                            }
+                        )
+                    }
+                }
+                .setNegativeButton("পরে") { _, _ -> }
+                .show()
+        }
+    }
+
     private fun render(state: com.guardian.shield.viewmodel.DashboardUiState) {
-        // Status card
         when {
             !state.protectionActive -> {
                 binding.txtStatusTitle.text = getString(R.string.status_service_off)
@@ -106,20 +140,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Stats
         binding.txtStatTotal.text = state.stats.totalBlocks.toString()
         binding.txtStatAi.text = state.stats.aiBlocks.toString()
         binding.txtStatKeyword.text = state.stats.keywordBlocks.toString()
         binding.txtStatTopApp.text = state.stats.topApp?.substringAfterLast('.')?.take(8) ?: "—"
 
-        // FAB
         binding.fabToggle.setImageResource(
             if (state.protectionEnabled) R.drawable.ic_shield_on else R.drawable.ic_shield_off
         )
 
         adapter.submit(state.recent)
-        binding.txtEmpty.visibility = if (state.recent.isEmpty()) android.view.View.VISIBLE
-        else android.view.View.GONE
+        binding.txtEmpty.visibility =
+            if (state.recent.isEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -169,16 +201,18 @@ class MainActivity : AppCompatActivity() {
                         @Suppress("DEPRECATION")
                         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                     } else {
-                        getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                            ?: filesDir
+                        getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir
                     }
                     if (!dir.exists()) dir.mkdirs()
                     val f = File(dir, name)
                     f.writeText(csv)
                     f
                 }
-                Snackbar.make(binding.root, getString(R.string.csv_saved, file.absolutePath),
-                    Snackbar.LENGTH_LONG).show()
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.csv_saved, file.absolutePath),
+                    Snackbar.LENGTH_LONG
+                ).show()
             } catch (t: Throwable) {
                 Timber.e(t)
                 Snackbar.make(binding.root, "Export failed", Snackbar.LENGTH_SHORT).show()

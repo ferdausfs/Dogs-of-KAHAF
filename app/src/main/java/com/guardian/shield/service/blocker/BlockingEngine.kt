@@ -38,9 +38,18 @@ class BlockingEngine @Inject constructor(
 
     fun block(pkg: String, reason: BlockReason, detail: String) {
         val now = System.currentTimeMillis()
+
+        // ✅ APP_BLOCKED/SCHEDULE → 500ms throttle (instant re-block)
+        // AI_DETECTION/KEYWORD → 3000ms throttle (avoid spam)
+        val throttleMs = when (reason) {
+            BlockReason.APP_BLOCKED,
+            BlockReason.SCHEDULE_BLOCKED -> 500L
+            else -> GuardianConstants.BLOCK_THROTTLE_MS
+        }
+
         synchronized(blockThrottleMap) {
             val last = blockThrottleMap[pkg] ?: 0L
-            if (now - last < GuardianConstants.BLOCK_THROTTLE_MS) return
+            if (now - last < throttleMs) return
             blockThrottleMap[pkg] = now
             if (blockThrottleMap.size > GuardianConstants.MAX_THROTTLE_MAP) {
                 val it = blockThrottleMap.entries.iterator()
@@ -48,6 +57,7 @@ class BlockingEngine @Inject constructor(
             }
         }
 
+        // AI detection → strike system
         val finalDetail = if (reason == BlockReason.AI_DETECTION) {
             val durationMs = cachedTempBlockMins * 60 * 1_000L
             val tempBlocked = tempBlockManager.recordAiDetection(pkg, durationMs)
@@ -60,23 +70,13 @@ class BlockingEngine @Inject constructor(
             }
         } else detail
 
-        goHome()
+        // Note: goHome() এখন AccessibilityService এ performGlobalAction দিয়ে হয়
+        // এখানে শুধু overlay + log
         launchOverlay(pkg, reason, finalDetail)
         logEvent(pkg, reason, finalDetail)
     }
 
     fun isTempBlocked(pkg: String): TempBlock? = tempBlockManager.isTempBlocked(pkg)
-
-    private fun goHome() {
-        runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_HOME)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-            )
-        }
-    }
 
     private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
         runCatching {
