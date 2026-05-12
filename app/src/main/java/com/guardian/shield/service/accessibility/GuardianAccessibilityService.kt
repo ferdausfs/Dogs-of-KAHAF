@@ -45,11 +45,8 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
 
-    // ✅ Fix: service owned scope — onDestroy এ cancel হবে
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // ✅ Main thread handler — performGlobalAction এর জন্য
     private val mainHandler = Handler(Looper.getMainLooper())
 
     @Volatile private var isScreenOn: Boolean = true
@@ -138,11 +135,8 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
-    // ✅ Fix: goHome() main thread এ call — then block
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
-        // onAccessibilityEvent main thread এ চলে — performGlobalAction এখানে safe
         performGlobalAction(GLOBAL_ACTION_HOME)
-        // ✅ 120ms delay — home screen appear হওয়ার পরে overlay launch করো
         mainHandler.postDelayed({
             blockingEngine.block(pkg, reason, detail)
         }, 120)
@@ -151,22 +145,33 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
         if (isSafePackage(pkg)) { currentPackage = null; return }
-        currentPackage = pkg
 
-        // Temp block
-        val tempBlock = blockingEngine.isTempBlocked(pkg)
-        if (tempBlock != null) {
-            goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
+        // ✅ Fix: Whitelist check FIRST — blocking logic এর আগে
+        if (!rulesEngine.canBlock(pkg)) {
+            currentPackage = pkg
             return
         }
 
-        // Rules check
+        currentPackage = pkg
+
+        // Temp block check
+        val tempBlock = blockingEngine.isTempBlocked(pkg)
+        if (tempBlock != null) {
+            goHomeAndBlock(
+                pkg, BlockReason.APP_BLOCKED,
+                "temp_block:${tempBlock.remainingMinutes}min"
+            )
+            return
+        }
+
+        // Rules/schedule check
         val result = rulesEngine.evaluatePackage(pkg)
         if (result is DetectionResult.Block) {
             goHomeAndBlock(pkg, result.reason, result.detail)
             return
         }
 
+        // AI check
         if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
         ) triggerAiCheckThrottled(pkg)
@@ -174,10 +179,11 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun handleContentChange(pkg: String) {
         if (pkg.isBlank() || isSafePackage(pkg)) return
+        // ✅ canBlock() whitelist check করে — whitelisted app এ text scan হবে না
+        if (!rulesEngine.canBlock(pkg)) return
         val now = System.currentTimeMillis()
         if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
         lastTextScan = now
-        if (!rulesEngine.canBlock(pkg)) return
 
         serviceScope.launch {
             try {
@@ -185,7 +191,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (!text.isNullOrBlank()) {
                     val r = rulesEngine.evaluateText(text)
                     if (r is DetectionResult.Block) {
-                        // ✅ Fix: performGlobalAction Main thread এ
                         withContext(Dispatchers.Main) {
                             goHomeAndBlock(pkg, r.reason, r.detail)
                         }
@@ -206,7 +211,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             val node = queue.poll() ?: continue
             if (!visited.add(node)) continue
             count++
-            node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+            node.text?.toString()
+                ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
             node.contentDescription?.toString()
                 ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
@@ -245,15 +251,17 @@ class GuardianAccessibilityService : AccessibilityService() {
                                     ?.copy(Bitmap.Config.ARGB_8888, false)
                                 try { hw.close() } catch (_: Throwable) {}
                                 val b = bmp ?: return@launch
+
+                                // ✅ AI block এর আগেও whitelist check
+                                if (!rulesEngine.canBlock(pkg)) return@launch
+
                                 val gender = aiDetector.cachedUserGender
                                 var blocked = false
-
                                 if (gender != "NONE"
                                     && aiDetector.isGenderModelAvailable()
                                     && aiDetector.isNsfwGateAvailable()
                                 ) {
                                     if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                        // ✅ Fix: Main thread এ go home
                                         withContext(Dispatchers.Main) {
                                             goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
                                         }
@@ -295,6 +303,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val pkg = currentPackage ?: continue
                     if (isSafePackage(pkg)) continue
 
+                    // ✅ Fix: Whitelist FIRST — temp block এর আগে
+                    if (!rulesEngine.canBlock(pkg)) continue
+
+                    // Temp block check
                     val tempBlock = blockingEngine.isTempBlocked(pkg)
                     if (tempBlock != null) {
                         withContext(Dispatchers.Main) {
@@ -306,8 +318,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                         continue
                     }
 
-                    if (!rulesEngine.canBlock(pkg)) continue
-
+                    // Rules/schedule check
                     val r = rulesEngine.evaluatePackage(pkg)
                     if (r is DetectionResult.Block) {
                         withContext(Dispatchers.Main) {
@@ -316,6 +327,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                         continue
                     }
 
+                    // Periodic AI scan
                     if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
                         && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                     ) {
@@ -335,7 +347,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onDestroy()
         runCatching { unregisterReceiver(screenReceiver) }
         periodicJob?.cancel()
-        // ✅ Fix: scope cancel করো — resource leak বন্ধ
         serviceScope.cancel()
         ioScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
