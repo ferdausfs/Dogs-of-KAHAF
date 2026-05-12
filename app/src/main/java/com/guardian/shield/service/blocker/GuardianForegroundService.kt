@@ -35,6 +35,7 @@ class GuardianForegroundService : Service() {
     private var watchdogJob: Job? = null
 
     @Volatile private var protectionEnabled: Boolean = true
+    private var consecutiveFailCount = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -56,8 +57,11 @@ class GuardianForegroundService : Service() {
 
     private fun startPrefsObserver() {
         serviceScope.launch {
-            try { prefs.protectionEnabled.collect { protectionEnabled = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            try {
+                prefs.protectionEnabled.collect { protectionEnabled = it }
+            } catch (t: Throwable) {
+                Timber.e(t, "protectionEnabled collector failed")
+            }
         }
     }
 
@@ -67,13 +71,26 @@ class GuardianForegroundService : Service() {
             while (isActive) {
                 delay(GuardianConstants.ACCESSIBILITY_WATCHDOG_MS)
                 try {
-                    if (!protectionEnabled) continue
+                    if (!protectionEnabled) {
+                        consecutiveFailCount = 0
+                        continue
+                    }
                     if (!isAccessibilityEnabled()) {
-                        Timber.w("Accessibility disabled! Prompting user.")
-                        launchAccessibilityPrompt()
+                        consecutiveFailCount++
+                        Timber.w("Accessibility check failed ($consecutiveFailCount/3)")
+                        // ✅ 3 বার consecutive fail হলে তবেই prompt
+                        // false positive এড়ানোর জন্য
+                        if (consecutiveFailCount >= 3) {
+                            Timber.w("Accessibility confirmed disabled. Showing prompt.")
+                            launchAccessibilityPrompt()
+                            consecutiveFailCount = 0
+                        }
+                    } else {
+                        consecutiveFailCount = 0
                     }
                 } catch (t: Throwable) {
                     Timber.e(t, "Watchdog error")
+                    consecutiveFailCount = 0
                 }
             }
         }
@@ -81,13 +98,16 @@ class GuardianForegroundService : Service() {
 
     private fun isAccessibilityEnabled(): Boolean {
         return try {
-            val service = "$packageName/.service.accessibility.GuardianAccessibilityService"
-            val enabled = Settings.Secure.getString(
+            val enabledServices = Settings.Secure.getString(
                 contentResolver,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
-            enabled.split(":").any { it.equals(service, ignoreCase = true) }
-        } catch (_: Throwable) { true } // error হলে assume enabled
+            // ✅ Fix: simple contains check — package name থাকলেই enabled
+            // আগে ভুল format ছিল: "$packageName/.service..." যেটা সবসময় false দিত
+            enabledServices.contains(packageName, ignoreCase = true)
+        } catch (_: Throwable) {
+            true // error হলে assume enabled — prompt দেখাবে না
+        }
     }
 
     private fun launchAccessibilityPrompt() {
