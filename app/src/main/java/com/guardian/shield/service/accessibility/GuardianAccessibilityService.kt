@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
@@ -21,11 +23,12 @@ import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
-import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -42,8 +45,12 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
 
-    private val serviceScope: CoroutineScope = Scopes.default()
-    private val ioScope: CoroutineScope = Scopes.io()
+    // ✅ Fix: service owned scope — onDestroy এ cancel হবে
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // ✅ Main thread handler — performGlobalAction এর জন্য
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     @Volatile private var isScreenOn: Boolean = true
     @Volatile private var protectionEnabled: Boolean = true
@@ -87,7 +94,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         isScreenOn =
             (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive ?: true
 
-        // Rules version change → reload rules + models
         ioScope.launch {
             try {
                 prefs.rulesVersion.collect {
@@ -132,31 +138,35 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
+    // ✅ Fix: goHome() main thread এ call — then block
+    private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
+        // onAccessibilityEvent main thread এ চলে — performGlobalAction এখানে safe
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        // ✅ 120ms delay — home screen appear হওয়ার পরে overlay launch করো
+        mainHandler.postDelayed({
+            blockingEngine.block(pkg, reason, detail)
+        }, 120)
+    }
+
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
         if (isSafePackage(pkg)) { currentPackage = null; return }
         currentPackage = pkg
 
-        // ✅ Temp block check — performGlobalAction instant home
+        // Temp block
         val tempBlock = blockingEngine.isTempBlocked(pkg)
         if (tempBlock != null) {
-            performGlobalAction(GLOBAL_ACTION_HOME)
-            blockingEngine.block(
-                pkg, BlockReason.APP_BLOCKED,
-                "temp_block:${tempBlock.remainingMinutes}min"
-            )
+            goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
             return
         }
 
-        // Package/schedule rules check
+        // Rules check
         val result = rulesEngine.evaluatePackage(pkg)
         if (result is DetectionResult.Block) {
-            performGlobalAction(GLOBAL_ACTION_HOME) // ✅ instant — Intent এর চেয়ে অনেক faster
-            blockingEngine.block(pkg, result.reason, result.detail)
+            goHomeAndBlock(pkg, result.reason, result.detail)
             return
         }
 
-        // AI check
         if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
         ) triggerAiCheckThrottled(pkg)
@@ -175,8 +185,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (!text.isNullOrBlank()) {
                     val r = rulesEngine.evaluateText(text)
                     if (r is DetectionResult.Block) {
-                        performGlobalAction(GLOBAL_ACTION_HOME) // ✅ keyword match → instant home
-                        blockingEngine.block(pkg, r.reason, r.detail)
+                        // ✅ Fix: performGlobalAction Main thread এ
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(pkg, r.reason, r.detail)
+                        }
                     }
                 }
             } catch (t: Throwable) { Timber.e(t) }
@@ -235,24 +247,24 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 val b = bmp ?: return@launch
                                 val gender = aiDetector.cachedUserGender
                                 var blocked = false
+
                                 if (gender != "NONE"
                                     && aiDetector.isGenderModelAvailable()
                                     && aiDetector.isNsfwGateAvailable()
                                 ) {
                                     if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                        performGlobalAction(GLOBAL_ACTION_HOME)
-                                        blockingEngine.block(
-                                            pkg, BlockReason.AI_DETECTION, "gender-nsfw"
-                                        )
+                                        // ✅ Fix: Main thread এ go home
+                                        withContext(Dispatchers.Main) {
+                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                        }
                                         blocked = true
                                     }
                                 }
                                 if (!blocked && aiDetector.isLegacyAvailable()) {
                                     if (aiDetector.isUnsafe(b)) {
-                                        performGlobalAction(GLOBAL_ACTION_HOME)
-                                        blockingEngine.block(
-                                            pkg, BlockReason.AI_DETECTION, "legacy"
-                                        )
+                                        withContext(Dispatchers.Main) {
+                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                        }
                                     }
                                 }
                             } catch (t: Throwable) {
@@ -283,31 +295,34 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val pkg = currentPackage ?: continue
                     if (isSafePackage(pkg)) continue
 
-                    // Temp block check
                     val tempBlock = blockingEngine.isTempBlocked(pkg)
                     if (tempBlock != null) {
-                        performGlobalAction(GLOBAL_ACTION_HOME)
-                        blockingEngine.block(
-                            pkg, BlockReason.APP_BLOCKED,
-                            "temp_block:${tempBlock.remainingMinutes}min"
-                        )
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(
+                                pkg, BlockReason.APP_BLOCKED,
+                                "temp_block:${tempBlock.remainingMinutes}min"
+                            )
+                        }
                         continue
                     }
 
                     if (!rulesEngine.canBlock(pkg)) continue
 
-                    // Package/schedule rules
                     val r = rulesEngine.evaluatePackage(pkg)
                     if (r is DetectionResult.Block) {
-                        performGlobalAction(GLOBAL_ACTION_HOME)
-                        blockingEngine.block(pkg, r.reason, r.detail)
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(pkg, r.reason, r.detail)
+                        }
                         continue
                     }
 
-                    // Periodic AI scan
                     if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
                         && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                    ) triggerAiCheckThrottled(pkg)
+                    ) {
+                        withContext(Dispatchers.Main) {
+                            triggerAiCheckThrottled(pkg)
+                        }
+                    }
 
                 } catch (t: Throwable) { Timber.e(t) }
             }
@@ -320,6 +335,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         super.onDestroy()
         runCatching { unregisterReceiver(screenReceiver) }
         periodicJob?.cancel()
+        // ✅ Fix: scope cancel করো — resource leak বন্ধ
+        serviceScope.cancel()
+        ioScope.cancel()
+        mainHandler.removeCallbacksAndMessages(null)
         try { aiDetector.close() } catch (_: Throwable) {}
     }
 }

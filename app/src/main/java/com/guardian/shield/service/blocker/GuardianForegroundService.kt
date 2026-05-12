@@ -16,10 +16,12 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.ui.dashboard.MainActivity
 import com.guardian.shield.ui.guard.AccessibilityPromptActivity
 import com.guardian.shield.util.GuardianConstants
-import com.guardian.shield.util.Scopes
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -31,7 +33,8 @@ class GuardianForegroundService : Service() {
 
     @Inject lateinit var prefs: GuardianPreferences
 
-    private val serviceScope: CoroutineScope = Scopes.default()
+    // ✅ Fix: service owned scope
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var watchdogJob: Job? = null
 
     @Volatile private var protectionEnabled: Boolean = true
@@ -57,11 +60,8 @@ class GuardianForegroundService : Service() {
 
     private fun startPrefsObserver() {
         serviceScope.launch {
-            try {
-                prefs.protectionEnabled.collect { protectionEnabled = it }
-            } catch (t: Throwable) {
-                Timber.e(t, "protectionEnabled collector failed")
-            }
+            try { prefs.protectionEnabled.collect { protectionEnabled = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
     }
 
@@ -77,11 +77,8 @@ class GuardianForegroundService : Service() {
                     }
                     if (!isAccessibilityEnabled()) {
                         consecutiveFailCount++
-                        Timber.w("Accessibility check failed ($consecutiveFailCount/3)")
-                        // ✅ 3 বার consecutive fail হলে তবেই prompt
-                        // false positive এড়ানোর জন্য
+                        Timber.w("Accessibility fail $consecutiveFailCount/3")
                         if (consecutiveFailCount >= 3) {
-                            Timber.w("Accessibility confirmed disabled. Showing prompt.")
                             launchAccessibilityPrompt()
                             consecutiveFailCount = 0
                         }
@@ -102,12 +99,8 @@ class GuardianForegroundService : Service() {
                 contentResolver,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
-            // ✅ Fix: simple contains check — package name থাকলেই enabled
-            // আগে ভুল format ছিল: "$packageName/.service..." যেটা সবসময় false দিত
             enabledServices.contains(packageName, ignoreCase = true)
-        } catch (_: Throwable) {
-            true // error হলে assume enabled — prompt দেখাবে না
-        }
+        } catch (_: Throwable) { true }
     }
 
     private fun launchAccessibilityPrompt() {
@@ -142,6 +135,7 @@ class GuardianForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         watchdogJob?.cancel()
+        serviceScope.cancel() // ✅ scope cancel
     }
 
     companion object {
