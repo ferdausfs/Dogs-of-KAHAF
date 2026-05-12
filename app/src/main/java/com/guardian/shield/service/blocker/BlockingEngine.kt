@@ -2,7 +2,7 @@ package com.guardian.shield.service.blocker
 
 import android.content.Context
 import android.content.Intent
-import com.guardian.shield.data.local.db.Daos
+import com.guardian.shield.data.local.db.BlockEventDao
 import com.guardian.shield.data.local.db.BlockEventEntity
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
@@ -19,14 +19,13 @@ import javax.inject.Singleton
 @Singleton
 class BlockingEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val blockEventDao: Daos.BlockEventDao,
+    private val blockEventDao: BlockEventDao,
     private val tempBlockManager: TempBlockManager,
     private val prefs: GuardianPreferences
 ) {
     private val ioScope = CoroutineScope(Dispatchers.IO)
     private val blockThrottleMap = LinkedHashMap<String, Long>()
 
-    // Cached temp block duration (minutes)
     @Volatile private var cachedTempBlockMins: Int = 15
 
     init {
@@ -49,7 +48,6 @@ class BlockingEngine @Inject constructor(
             }
         }
 
-        // AI detection হলে strike record করো → threshold পার হলে temp block
         val finalDetail = if (reason == BlockReason.AI_DETECTION) {
             val durationMs = cachedTempBlockMins * 60 * 1_000L
             val tempBlocked = tempBlockManager.recordAiDetection(pkg, durationMs)
