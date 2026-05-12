@@ -1,20 +1,19 @@
-name: Build Debug APK
+name: Build Release APK
 
 on:
   push:
-    branches: [main, master, develop]
-  pull_request:
     branches: [main, master]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup JDK 17
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -26,12 +25,28 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/guardian-shield.jks
+          echo "Keystore decoded successfully"
 
-      - name: Upload APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        env:
+          KEYSTORE_PATH: guardian-shield.jks
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+
+      - name: Verify APK signed
+        run: |
+          APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "APK: $APK"
+          ls -lh "$APK"
+
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: guardian-shield-debug
-          path: app/build/outputs/apk/debug/*.apk
-          retention-days: 30
+          name: guardian-shield-release-v2.1.0
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 90
