@@ -1,14 +1,19 @@
 package com.guardian.shield.ui.dashboard
 
+import android.animation.AnimatorInflater
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.animation.AnimationUtils
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -46,6 +51,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var timeLockManager: TimeLockManager
 
+    private var shieldPulseSet: AnimatorSet? = null
+    private var lastProtectionEnabled: Boolean? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -53,21 +61,20 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         adapter = BlockEventAdapter(
+            pm = packageManager,
             onDelete = { viewModel.deleteEvent(it.id) }
         )
         binding.recyclerRecent.layoutManager = LinearLayoutManager(this)
         binding.recyclerRecent.adapter = adapter
 
-        binding.fabToggle.setOnClickListener {
-            handleToggle()
-        }
-
+        binding.fabToggle.setOnClickListener { handleToggle() }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+            overridePendingTransition(R.anim.slide_in_bottom, R.anim.fade_out)
         }
-
         binding.btnPermissions.setOnClickListener {
             startActivity(Intent(this, PermissionsActivity::class.java))
+            overridePendingTransition(R.anim.slide_in_bottom, R.anim.fade_out)
         }
 
         lifecycleScope.launch {
@@ -87,7 +94,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleToggle() {
         timeLockManager.clearIfExpired()
-        if (timeLockManager.isLocked()) {
+        if (timeLockManager.isLocked() || timeLockManager.isInCooldown()) {
+            // Shake the lock icon
+            val shakeAnim = AnimatorInflater.loadAnimator(this, R.animator.lock_shake)
+            shakeAnim.setTarget(binding.imgShield)
+            shakeAnim.start()
             Snackbar.make(
                 binding.root,
                 "🔒 Commitment Lock active — ${timeLockManager.getRemainingFormatted()}",
@@ -98,7 +109,124 @@ class MainActivity : AppCompatActivity() {
         viewModel.toggleProtection()
     }
 
+    private fun render(state: com.guardian.shield.viewmodel.DashboardUiState) {
+        val wasEnabled = lastProtectionEnabled
+        lastProtectionEnabled = state.protectionEnabled
 
+        when {
+            !state.protectionActive -> {
+                binding.txtStatusTitle.text = getString(R.string.status_service_off)
+                binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
+                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+                binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+                binding.txtStatusDot.text = "Service Off"
+                binding.txtStatusDot.setTextColor(getColor(R.color.on_surface_dim))
+                binding.fabToggle.text = "Enable"
+                binding.fabToggle.setBackgroundColor(getColor(R.color.on_surface_dim))
+                stopShieldPulse()
+            }
+            !state.protectionEnabled -> {
+                binding.txtStatusTitle.text = getString(R.string.status_paused)
+                binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
+                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+                binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+                binding.txtStatusDot.text = "Paused"
+                binding.txtStatusDot.setTextColor(getColor(R.color.secondary))
+                binding.fabToggle.text = "Resume"
+                binding.fabToggle.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
+                stopShieldPulse()
+            }
+            else -> {
+                binding.txtStatusTitle.text = getString(R.string.status_active)
+                binding.txtStatusSubtitle.text = getString(
+                    R.string.status_active_sub_fmt, state.todayCount
+                )
+                binding.imgShield.setImageResource(R.drawable.ic_shield_on)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
+                binding.statusCard.setBackgroundResource(R.drawable.bg_status_active)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
+                binding.txtStatusDot.text = "Active"
+                binding.txtStatusDot.setTextColor(getColor(R.color.success))
+                binding.fabToggle.text = "Pause"
+                binding.fabToggle.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
+                startShieldPulse()
+            }
+        }
+
+        // Animate status change
+        if (wasEnabled != null && wasEnabled != state.protectionEnabled) {
+            binding.statusCard.startAnimation(
+                AnimationUtils.loadAnimation(this, R.anim.fade_in)
+            )
+        }
+
+        // Count-up animation for stats
+        animateNumber(binding.txtStatTotal, state.stats.totalBlocks)
+        animateNumber(binding.txtStatAi, state.stats.aiBlocks)
+        animateNumber(binding.txtStatKeyword, state.stats.keywordBlocks)
+        binding.txtStatTopApp.text = state.stats.topApp
+            ?.substringAfterLast('.')?.take(8) ?: "—"
+
+        adapter.submit(state.recent)
+        binding.txtEmpty.visibility =
+            if (state.recent.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    // ── Shield pulse animation ────────────────────────────────────
+
+    private fun startShieldPulse() {
+        if (shieldPulseSet?.isRunning == true) return
+        val scaleX = ObjectAnimator.ofFloat(binding.imgShield, "scaleX", 1f, 1.1f, 1f).apply {
+            duration = 1800
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val scaleY = ObjectAnimator.ofFloat(binding.imgShield, "scaleY", 1f, 1.1f, 1f).apply {
+            duration = 1800
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val glowAlpha = ObjectAnimator.ofFloat(binding.shieldGlow, "alpha", 0.4f, 0.9f, 0.4f).apply {
+            duration = 1800
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        shieldPulseSet = AnimatorSet().apply {
+            playTogether(scaleX, scaleY, glowAlpha)
+            start()
+        }
+    }
+
+    private fun stopShieldPulse() {
+        shieldPulseSet?.cancel()
+        shieldPulseSet = null
+        binding.imgShield.scaleX = 1f
+        binding.imgShield.scaleY = 1f
+        binding.shieldGlow.alpha = 0.3f
+    }
+
+    // ── Stat number animation ─────────────────────────────────────
+
+    private fun animateNumber(view: android.widget.TextView, target: Int) {
+        val current = view.text.toString().toIntOrNull() ?: 0
+        if (current == target) return
+        val animator = ObjectAnimator.ofInt(current, target).apply {
+            duration = 600
+            addUpdateListener { view.text = it.animatedValue.toString() }
+        }
+        animator.start()
+    }
+
+    // ── Other ─────────────────────────────────────────────────────
 
     private fun startForegroundServiceIfNeeded() {
         runCatching { GuardianForegroundService.start(this) }
@@ -112,7 +240,7 @@ class MainActivity : AppCompatActivity() {
                 .setTitle("⚠️ Uninstall Protection")
                 .setMessage(
                     "App কে uninstall থেকে রক্ষা করতে Device Admin enable করুন।\n\n" +
-                    "এটা ছাড়া যেকেউ Guardian Shield delete করে protection বন্ধ করতে পারবে।"
+                    "এটা ছাড়া Guardian Shield delete করা যাবে।"
                 )
                 .setCancelable(false)
                 .setPositiveButton("Enable করুন") { _, _ ->
@@ -122,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                                 putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
                                 putExtra(
                                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                                    "Guardian Shield কে uninstall থেকে রক্ষা করতে এটা প্রয়োজন।"
+                                    "Guardian Shield কে uninstall থেকে রক্ষা করতে প্রয়োজন।"
                                 )
                             }
                         )
@@ -133,45 +261,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun render(state: com.guardian.shield.viewmodel.DashboardUiState) {
-        when {
-            !state.protectionActive -> {
-                binding.txtStatusTitle.text = getString(R.string.status_service_off)
-                binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
-                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.statusCard.setStrokeColor(getColor(R.color.error))
-            }
-            !state.protectionEnabled -> {
-                binding.txtStatusTitle.text = getString(R.string.status_paused)
-                binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
-                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.statusCard.setStrokeColor(getColor(R.color.on_surface_dim))
-            }
-            else -> {
-                binding.txtStatusTitle.text = getString(R.string.status_active)
-                binding.txtStatusSubtitle.text = getString(
-                    R.string.status_active_sub_fmt,
-                    state.todayCount
-                )
-                binding.imgShield.setImageResource(R.drawable.ic_shield_on)
-                binding.statusCard.setStrokeColor(getColor(R.color.primary))
-            }
-        }
-
-        binding.txtStatTotal.text = state.stats.totalBlocks.toString()
-        binding.txtStatAi.text = state.stats.aiBlocks.toString()
-        binding.txtStatKeyword.text = state.stats.keywordBlocks.toString()
-        binding.txtStatTopApp.text = state.stats.topApp?.substringAfterLast('.')?.take(8) ?: "—"
-
-        binding.fabToggle.setImageResource(
-            if (state.protectionEnabled) R.drawable.ic_shield_on else R.drawable.ic_shield_off
-        )
-
-        adapter.submit(state.recent)
-        binding.txtEmpty.visibility =
-            if (state.recent.isEmpty()) View.VISIBLE else View.GONE
-    }
-
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_dashboard, menu)
         return true
@@ -180,7 +269,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_export -> { exportCsv(); true }
-            R.id.action_clear -> { confirmClear(); true }
+            R.id.action_clear  -> { confirmClear(); true }
             R.id.action_settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java)); true
             }
@@ -236,5 +325,10 @@ class MainActivity : AppCompatActivity() {
                 Snackbar.make(binding.root, "Export failed", Snackbar.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopShieldPulse()
     }
 }

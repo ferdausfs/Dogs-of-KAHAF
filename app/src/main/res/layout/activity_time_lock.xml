@@ -22,6 +22,9 @@
             android:orientation="vertical"
             android:padding="20dp">
 
+            <!-- ══════════════════════════════════════════
+                 LOCKED / COOLDOWN STATE
+            ══════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/groupLocked"
                 android:layout_width="match_parent"
@@ -55,6 +58,7 @@
                     android:textSize="13sp"
                     android:layout_marginTop="4dp"/>
 
+                <!-- Countdown card (cooldown চলাকালীন) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -93,6 +97,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Cooldown note (cooldown চলাকালীন দেখাবে) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -111,6 +116,7 @@
                         android:visibility="gone"/>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Unlock request button (LOCKED state এ দেখাবে, COOLDOWN এ নয়) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRequestUnlock"
                     android:layout_width="match_parent"
@@ -133,6 +139,9 @@
 
             </LinearLayout>
 
+            <!-- ══════════════════════════════════════════
+                 UNLOCKED STATE — duration picker
+            ══════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/groupUnlocked"
                 android:layout_width="match_parent"
