@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
@@ -21,6 +22,7 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +46,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var blockingEngine: BlockingEngine
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
+    @Inject lateinit var timeLockManager: TimeLockManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -57,6 +60,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     private var periodicJob: Job? = null
     private var homePkg: String? = null
     private var keyguardManager: KeyguardManager? = null
+
+    // Device Admin screen এ back press spam রোধ করতে cooldown
+    private var lastAdminBlockMs = 0L
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -106,9 +112,19 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val ev = event ?: return
-        if (!protectionEnabled || isDeviceLocked()) return
         try {
             val pkg = ev.packageName?.toString().orEmpty()
+            val className = ev.className?.toString().orEmpty()
+
+            // ── Commitment Lock: Device Admin screen block ──────────────
+            if (ev.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                if (isDeviceAdminScreen(pkg, className)) {
+                    blockDeviceAdminScreen()
+                    return
+                }
+            }
+
+            if (!protectionEnabled || isDeviceLocked()) return
             when (ev.eventType) {
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> handleWindowChange(pkg)
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
@@ -118,6 +134,48 @@ class GuardianAccessibilityService : AccessibilityService() {
             }
         } catch (t: Throwable) { Timber.e(t) }
     }
+
+    // ── Device Admin screen detection ─────────────────────────────────
+
+    /**
+     * Device Admin screen detect করার conditions:
+     * 1. Settings package
+     * 2. className এ "DeviceAdmin" / "ActiveAdminDetails" আছে
+     * Samsung এ "DeviceAdminAdd" ও হতে পারে
+     */
+    private fun isDeviceAdminScreen(pkg: String, className: String): Boolean {
+        val isSettings = pkg == "com.android.settings" ||
+                         pkg == "com.samsung.android.settings" ||
+                         pkg.endsWith(".settings")
+        if (!isSettings) return false
+
+        val cls = className.lowercase()
+        return cls.contains("deviceadmin") ||
+               cls.contains("activeadmin") ||
+               cls.contains("device_admin")
+    }
+
+    private fun blockDeviceAdminScreen() {
+        timeLockManager.clearIfExpired()
+        if (!timeLockManager.isLocked() && !timeLockManager.isInCooldown()) return
+
+        val now = System.currentTimeMillis()
+        if (now - lastAdminBlockMs < 2_000) return // spam রোধ
+        lastAdminBlockMs = now
+
+        Timber.w("Commitment Lock: blocking Device Admin screen access")
+        performGlobalAction(GLOBAL_ACTION_BACK)
+
+        mainHandler.post {
+            Toast.makeText(
+                this,
+                "🔒 Commitment Lock সক্রিয় — Device Admin পরিবর্তন করা যাবে না",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // ── existing logic (unchanged) ────────────────────────────────────
 
     private fun isDeviceLocked() = try {
         keyguardManager?.isKeyguardLocked == true
@@ -135,8 +193,6 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
         if (isSafePackage(pkg)) { currentPackage = null; return }
-
-        // ✅ Whitelist FIRST
         if (!rulesEngine.canBlock(pkg)) { currentPackage = pkg; return }
 
         currentPackage = pkg
