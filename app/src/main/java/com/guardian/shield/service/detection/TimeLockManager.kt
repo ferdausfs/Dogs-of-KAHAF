@@ -16,7 +16,6 @@ import javax.inject.Singleton
 class TimeLockManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    constructor(context: Context) : this(context)
 
     private val prefs: SharedPreferences by lazy {
         try {
