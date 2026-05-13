@@ -50,9 +50,28 @@ jobs:
           echo "APK: $APK"
           ls -lh "$APK"
 
-      - name: Upload Release APK
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: guardian-shield-release-v2.1.0
           path: app/build/outputs/apk/release/*.apk
           retention-days: 90
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v2.1.0
+          name: Guardian Shield v2.1.0
+          body: |
+            ### What's New
+            - 🔒 Commitment Lock: indefinite lock + cooldown unlock system
+            - 🛡️ Device Admin bypass blocked via AccessibilityService
+            - 📥 Model import fixed (any valid .tflite file)
+            - 🔐 App / Keyword / Schedule screens fully locked during commitment
+            - ⚡ Protection toggle blocked during active lock
+          files: app/build/outputs/apk/release/*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
