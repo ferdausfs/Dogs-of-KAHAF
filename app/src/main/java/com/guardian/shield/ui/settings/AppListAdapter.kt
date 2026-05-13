@@ -11,6 +11,7 @@ import com.guardian.shield.domain.model.AppRule
 
 class AppListAdapter(
     private val pm: PackageManager,
+    private val isLocked: Boolean = false,
     private val onBlockChanged: (String, Boolean) -> Unit,
     private val onWhitelistChanged: (String, Boolean) -> Unit
 ) : ListAdapter<AppRule, AppListAdapter.VH>(DIFF) {
@@ -36,11 +37,12 @@ class AppListAdapter(
             } catch (_: Throwable) {
                 b.imgIcon.setImageDrawable(null)
             }
-            // detach listeners while setting state
             b.switchBlock.setOnCheckedChangeListener(null)
             b.switchWhitelist.setOnCheckedChangeListener(null)
             b.switchBlock.isChecked = rule.isBlocked
             b.switchWhitelist.isChecked = rule.isWhitelisted
+            b.switchBlock.isEnabled = !isLocked
+            b.switchWhitelist.isEnabled = !isLocked
             b.switchBlock.setOnCheckedChangeListener { _, v ->
                 onBlockChanged(rule.packageName, v)
             }

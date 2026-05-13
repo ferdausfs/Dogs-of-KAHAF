@@ -19,6 +19,35 @@
             app:title="@string/keywords_title"
             app:titleTextColor="@color/on_surface"
             app:navigationIcon="@drawable/ic_arrow_back"/>
+        <!-- Lock banner -->
+        <LinearLayout
+            android:id="@+id/lockBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:background="@color/surface"
+            android:visibility="gone">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_lock"
+                android:contentDescription="@null" />
+            <TextView
+                android:id="@+id/txtLockRemaining"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:textColor="@color/primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:text="" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/txtEmpty"

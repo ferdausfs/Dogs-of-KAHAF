@@ -3,6 +3,7 @@ package com.guardian.shield.ui.settings
 import android.app.TimePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -17,13 +18,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
+import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityScheduleBinding
 import com.guardian.shield.databinding.ItemScheduleRuleBinding
 import com.guardian.shield.domain.model.ScheduleRule
+import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.viewmodel.ScheduleViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ScheduleActivity : AppCompatActivity() {
@@ -31,6 +35,8 @@ class ScheduleActivity : AppCompatActivity() {
     private lateinit var binding: ActivityScheduleBinding
     private val viewModel: ScheduleViewModel by viewModels()
     private lateinit var adapter: ScheduleAdapter
+
+    @Inject lateinit var timeLockManager: TimeLockManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,31 +46,50 @@ class ScheduleActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
+        timeLockManager.clearIfExpired()
+        val locked = timeLockManager.isLocked()
+
+        if (locked) {
+            binding.lockBanner.visibility = View.VISIBLE
+            binding.txtLockRemaining.text = "🔒 ${timeLockManager.getRemainingFormatted()}"
+            binding.fabAdd.hide()
+        } else {
+            binding.lockBanner.visibility = View.GONE
+        }
+
         adapter = ScheduleAdapter(
-            onEdit = { showEditor(it) },
-            onDelete = { viewModel.delete(it.packageName) }
+            isLocked = locked,
+            onEdit = { rule ->
+                if (locked) showLockedSnack()
+                else showEditor(rule)
+            },
+            onDelete = { rule ->
+                if (locked) showLockedSnack()
+                else viewModel.delete(rule.packageName)
+            }
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
 
-        val swipe = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
-            override fun onMove(rv: RecyclerView, v: RecyclerView.ViewHolder, t: RecyclerView.ViewHolder) = false
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val item = adapter.currentList[viewHolder.bindingAdapterPosition]
-                viewModel.delete(item.packageName)
-            }
-        })
-        swipe.attachToRecyclerView(binding.recycler)
-
-        binding.fabAdd.setOnClickListener { showEditor(null) }
+        if (!locked) {
+            val swipe = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0,
+                ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+                override fun onMove(rv: RecyclerView, v: RecyclerView.ViewHolder, t: RecyclerView.ViewHolder) = false
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    val item = adapter.currentList[viewHolder.bindingAdapterPosition]
+                    viewModel.delete(item.packageName)
+                }
+            })
+            swipe.attachToRecyclerView(binding.recycler)
+            binding.fabAdd.setOnClickListener { showEditor(null) }
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.rules.collect {
                     adapter.submitList(it)
                     binding.txtEmpty.visibility = if (it.isEmpty())
-                        android.view.View.VISIBLE else android.view.View.GONE
+                        View.VISIBLE else View.GONE
                 }
             }
         }
@@ -129,9 +154,14 @@ class ScheduleActivity : AppCompatActivity() {
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
+
+    private fun showLockedSnack() {
+        Snackbar.make(binding.root, "🔒 Commitment Lock active — editing disabled", Snackbar.LENGTH_SHORT).show()
+    }
 }
 
 class ScheduleAdapter(
+    private val isLocked: Boolean = false,
     private val onEdit: (ScheduleRule) -> Unit,
     private val onDelete: (ScheduleRule) -> Unit
 ) : ListAdapter<ScheduleRule, ScheduleAdapter.VH>(DIFF) {
@@ -154,6 +184,7 @@ class ScheduleAdapter(
                 rule.endHour, rule.endMinute,
                 daysText.trim()
             )
+            b.btnEdit.isEnabled = !isLocked
             b.btnEdit.setOnClickListener { onEdit(rule) }
             b.root.setOnLongClickListener { onDelete(rule); true }
         }

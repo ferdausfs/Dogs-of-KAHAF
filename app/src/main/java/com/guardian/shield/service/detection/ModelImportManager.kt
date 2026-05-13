@@ -35,25 +35,13 @@ class ModelImportManager @Inject constructor(
 
             context.contentResolver.openInputStream(uri).use { input ->
                 if (input == null) {
-                    val msg = "Cannot open uri"
-                    _progress.value = ImportProgress.Error(modelName, msg)
-                    return@withContext Result.failure(IllegalStateException(msg))
-                }
-                val header = ByteArray(8)
-                val read = input.read(header)
-                if (read < 8 || !(header[4] == 'T'.code.toByte()
-                            && header[5] == 'F'.code.toByte()
-                            && header[6] == 'L'.code.toByte()
-                            && header[7] == '3'.code.toByte())
-                ) {
-                    val msg = "Invalid TFLite header"
+                    val msg = "Cannot open file — try a different file manager"
                     _progress.value = ImportProgress.Error(modelName, msg)
                     return@withContext Result.failure(IllegalStateException(msg))
                 }
                 tmp.outputStream().use { out ->
-                    out.write(header, 0, read)
                     val buf = ByteArray(64 * 1024)
-                    var total = read.toLong()
+                    var total = 0L
                     val max = MAX_BYTES
                     while (true) {
                         val n = input.read(buf)
@@ -61,15 +49,25 @@ class ModelImportManager @Inject constructor(
                         total += n
                         if (total > max) {
                             tmp.delete()
-                            val msg = "Exceeds size limit"
+                            val msg = "File too large (max 500 MB)"
                             _progress.value = ImportProgress.Error(modelName, msg)
                             return@withContext Result.failure(IllegalStateException(msg))
                         }
                         out.write(buf, 0, n)
-                        _progress.value = ImportProgress.Working(((total * 100) / max).toInt().coerceAtMost(99))
+                        _progress.value = ImportProgress.Working(
+                            ((total * 100) / max).toInt().coerceAtMost(99)
+                        )
                     }
                 }
             }
+
+            if (tmp.length() < 1024) {
+                tmp.delete()
+                val msg = "File too small — not a valid model"
+                _progress.value = ImportProgress.Error(modelName, msg)
+                return@withContext Result.failure(IllegalStateException(msg))
+            }
+
             if (finalFile.exists()) finalFile.delete()
             if (!tmp.renameTo(finalFile)) {
                 tmp.copyTo(finalFile, overwrite = true)
