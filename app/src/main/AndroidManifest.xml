@@ -16,8 +16,6 @@
     <uses-permission android:name="android.permission.REQUEST_DISABLE_APP_HIBERNATION"/>
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
         tools:ignore="ProtectedPermissions"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"/>
 
     <queries>
         <intent>
@@ -31,13 +29,12 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_shield_on"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_shield_on"
         android:supportsRtl="true"
         android:theme="@style/Theme.GuardianShield"
-        android:enableOnBackInvokedCallback="true"
-        tools:targetApi="34">
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".ui.dashboard.MainActivity"
@@ -49,14 +46,48 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.settings.SettingsActivity" android:exported="false"/>
-        <activity android:name=".ui.settings.AppListActivity" android:exported="false"/>
-        <activity android:name=".ui.settings.KeywordActivity" android:exported="false"/>
-        <activity android:name=".ui.settings.ScheduleActivity" android:exported="false"/>
-        <activity android:name=".ui.permissions.PermissionsActivity" android:exported="false"/>
-        <activity android:name=".ui.setup.PinSetupActivity" android:exported="false"/>
-        <activity android:name=".ui.setup.PinVerifyActivity" android:exported="false"/>
-        <activity android:name=".ui.unlock.DelayUnlockActivity" android:exported="false"/>
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity"/>
+
+        <activity
+            android:name=".ui.settings.AppListActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <activity
+            android:name=".ui.settings.KeywordActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <activity
+            android:name=".ui.settings.ScheduleActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <activity
+            android:name=".ui.settings.TimeLockActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <activity
+            android:name=".ui.permissions.PermissionsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <activity
+            android:name=".ui.setup.PinSetupActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.setup.PinVerifyActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.unlock.DelayUnlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"/>
 
         <activity
             android:name=".ui.overlay.BlockOverlayActivity"
@@ -66,9 +97,9 @@
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
             android:launchMode="singleInstance"
-            android:taskAffinity=""
-            android:theme="@style/Theme.GuardianShield.Overlay"/>
-         <activity
+            android:taskAffinity=""/>
+
+        <activity
             android:name=".ui.guard.AccessibilityPromptActivity"
             android:exported="false"
             android:excludeFromRecents="true"
@@ -76,6 +107,7 @@
             android:taskAffinity=""
             android:showOnLockScreen="true"
             android:turnScreenOn="true"/>
+
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
             android:exported="true"
@@ -92,7 +124,8 @@
         <service
             android:name=".service.blocker.GuardianForegroundService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="content_blocker"/>
@@ -100,8 +133,9 @@
 
         <receiver
             android:name=".receiver.BootReceiver"
-            android:exported="true">
-            <intent-filter>
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter android:priority="999">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>

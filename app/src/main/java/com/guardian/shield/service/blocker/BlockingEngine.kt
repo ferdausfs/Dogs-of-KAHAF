@@ -30,23 +30,18 @@ class BlockingEngine @Inject constructor(
 
     init {
         ioScope.launch {
-            try {
-                prefs.tempBlockDurationMins.collect { cachedTempBlockMins = it }
-            } catch (t: Throwable) { Timber.e(t) }
+            try { prefs.tempBlockDurationMins.collect { cachedTempBlockMins = it } }
+            catch (t: Throwable) { Timber.e(t) }
         }
     }
 
     fun block(pkg: String, reason: BlockReason, detail: String) {
         val now = System.currentTimeMillis()
-
-        // ✅ APP_BLOCKED/SCHEDULE → 500ms throttle (instant re-block)
-        // AI_DETECTION/KEYWORD → 3000ms throttle (avoid spam)
         val throttleMs = when (reason) {
             BlockReason.APP_BLOCKED,
             BlockReason.SCHEDULE_BLOCKED -> 500L
             else -> GuardianConstants.BLOCK_THROTTLE_MS
         }
-
         synchronized(blockThrottleMap) {
             val last = blockThrottleMap[pkg] ?: 0L
             if (now - last < throttleMs) return
@@ -57,7 +52,6 @@ class BlockingEngine @Inject constructor(
             }
         }
 
-        // AI detection → strike system
         val finalDetail = if (reason == BlockReason.AI_DETECTION) {
             val durationMs = cachedTempBlockMins * 60 * 1_000L
             val tempBlocked = tempBlockManager.recordAiDetection(pkg, durationMs)
@@ -70,8 +64,6 @@ class BlockingEngine @Inject constructor(
             }
         } else detail
 
-        // Note: goHome() এখন AccessibilityService এ performGlobalAction দিয়ে হয়
-        // এখানে শুধু overlay + log
         launchOverlay(pkg, reason, finalDetail)
         logEvent(pkg, reason, finalDetail)
     }

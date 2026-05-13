@@ -3,19 +3,27 @@ package com.guardian.shield
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
+import com.guardian.shield.service.blocker.GuardianForegroundService
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
 @HiltAndroidApp
 class GuardianApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         createNotificationChannels()
+        scheduleWatchdog()
     }
 
     private fun createNotificationChannels() {
@@ -33,7 +41,41 @@ class GuardianApp : Application() {
         }
     }
 
+    private fun scheduleWatchdog() {
+        try {
+            val request = PeriodicWorkRequestBuilder<ServiceWatchdogWorker>(
+                15, TimeUnit.MINUTES
+            ).setConstraints(Constraints.Builder().build()).build()
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                WATCHDOG_WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                request
+            )
+            Timber.d("Watchdog scheduled")
+        } catch (t: Throwable) {
+            Timber.e(t, "Failed to schedule watchdog")
+        }
+    }
+
     companion object {
         const val CHANNEL_GUARDIAN = "guardian_channel"
+        const val WATCHDOG_WORK_NAME = "guardian_watchdog"
+    }
+}
+
+class ServiceWatchdogWorker(
+    context: Context,
+    params: WorkerParameters
+) : Worker(context, params) {
+    override fun doWork(): Result {
+        return try {
+            GuardianForegroundService.start(applicationContext)
+            Timber.d("Watchdog: service pinged")
+            Result.success()
+        } catch (t: Throwable) {
+            Timber.e(t, "Watchdog failed")
+            Result.retry()
+        }
     }
 }

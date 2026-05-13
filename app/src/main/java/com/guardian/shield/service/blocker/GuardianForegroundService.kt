@@ -33,7 +33,6 @@ class GuardianForegroundService : Service() {
 
     @Inject lateinit var prefs: GuardianPreferences
 
-    // ✅ Fix: service owned scope
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var watchdogJob: Job? = null
 
@@ -47,6 +46,17 @@ class GuardianForegroundService : Service() {
         startPrefsObserver()
         startAccessibilityWatchdog()
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Timber.w("Task removed — restarting")
+        val restart = Intent(applicationContext, GuardianForegroundService::class.java)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                startForegroundService(restart)
+            else startService(restart)
+        }
     }
 
     private fun startForegroundCompat() {
@@ -71,10 +81,7 @@ class GuardianForegroundService : Service() {
             while (isActive) {
                 delay(GuardianConstants.ACCESSIBILITY_WATCHDOG_MS)
                 try {
-                    if (!protectionEnabled) {
-                        consecutiveFailCount = 0
-                        continue
-                    }
+                    if (!protectionEnabled) { consecutiveFailCount = 0; continue }
                     if (!isAccessibilityEnabled()) {
                         consecutiveFailCount++
                         Timber.w("Accessibility fail $consecutiveFailCount/3")
@@ -95,11 +102,11 @@ class GuardianForegroundService : Service() {
 
     private fun isAccessibilityEnabled(): Boolean {
         return try {
-            val enabledServices = Settings.Secure.getString(
+            val enabled = Settings.Secure.getString(
                 contentResolver,
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
-            enabledServices.contains(packageName, ignoreCase = true)
+            enabled.contains(packageName, ignoreCase = true)
         } catch (_: Throwable) { true }
     }
 
@@ -135,7 +142,7 @@ class GuardianForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         watchdogJob?.cancel()
-        serviceScope.cancel() // ✅ scope cancel
+        serviceScope.cancel()
     }
 
     companion object {
@@ -143,11 +150,9 @@ class GuardianForegroundService : Service() {
 
         fun start(context: Context) {
             val intent = Intent(context, GuardianForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            else context.startService(intent)
         }
 
         fun stop(context: Context) {
