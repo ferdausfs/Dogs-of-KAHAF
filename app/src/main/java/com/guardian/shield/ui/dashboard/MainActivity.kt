@@ -21,6 +21,7 @@ import com.guardian.shield.R
 import com.guardian.shield.admin.GuardianDeviceAdminReceiver
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
+import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.SettingsActivity
 import com.guardian.shield.util.PermissionManager
@@ -34,6 +35,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -41,6 +43,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: DashboardViewModel by viewModels()
     private lateinit var adapter: BlockEventAdapter
+
+    @Inject lateinit var timeLockManager: TimeLockManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerRecent.adapter = adapter
 
         binding.fabToggle.setOnClickListener {
-            viewModel.toggleProtection()
+            handleToggle()
         }
 
         binding.btnSettings.setOnClickListener {
@@ -81,11 +85,25 @@ class MainActivity : AppCompatActivity() {
         viewModel.setProtectionActive(PermissionManager.isAccessibilityEnabled(this))
     }
 
+    private fun handleToggle() {
+        timeLockManager.clearIfExpired()
+        if (timeLockManager.isLocked()) {
+            Snackbar.make(
+                binding.root,
+                "🔒 Commitment Lock active — ${timeLockManager.getRemainingFormatted()}",
+                Snackbar.LENGTH_SHORT
+            ).show()
+            return
+        }
+        viewModel.toggleProtection()
+    }
+
+
+
     private fun startForegroundServiceIfNeeded() {
         runCatching { GuardianForegroundService.start(this) }
     }
 
-    // ✅ Uninstall protection — Device Admin mandatory
     private fun checkDeviceAdmin() {
         val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(this, GuardianDeviceAdminReceiver::class.java)
