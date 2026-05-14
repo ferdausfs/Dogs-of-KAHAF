@@ -79,7 +79,7 @@ class RulesEngine @Inject constructor(
     }
 
     fun evaluateText(text: String): DetectionResult {
-        if (text.isBlank()) return DetectionResult.Allow
+        if (text.isBlank() || text.length < 10) return DetectionResult.Allow
         val s = snapshot
         for ((kw, isRegex) in s.keywords) {
             try {
@@ -89,7 +89,15 @@ class RulesEngine @Inject constructor(
                         return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
                     }
                 } else {
-                    if (text.contains(kw, ignoreCase = true)) {
+                    // Keyword ছোট (< 4 chars) হলে whole-word match করো
+                    // বড় keyword হলে contains match যথেষ্ট
+                    val matched = if (kw.length < 4) {
+                        val wordBoundary = Regex("\b${Regex.escape(kw)}\b", RegexOption.IGNORE_CASE)
+                        wordBoundary.containsMatchIn(text)
+                    } else {
+                        text.contains(kw, ignoreCase = true)
+                    }
+                    if (matched) {
                         return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
                     }
                 }

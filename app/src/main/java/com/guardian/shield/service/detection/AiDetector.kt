@@ -142,26 +142,47 @@ class AiDetector @Inject constructor(
         return inferenceLock.withLock {
             try {
                 val threshold = cachedThreshold
-                val fullScores = runInference(interp, bitmap)
-                val fullNsfw = extractNsfwScore(fullScores)
-                if (fullNsfw < threshold * GuardianConstants.EARLY_EXIT_RATIO) return@withLock false
-                if (fullNsfw >= threshold) return@withLock true
 
+                // ── Step 1: Full image check ──────────────────────────
+                val fullNsfw = extractNsfwScore(runInference(interp, bitmap))
+                Timber.d("AI full=$fullNsfw threshold=$threshold")
+
+                // Early exit: full image score অনেক কম → definitely safe
+                if (fullNsfw < threshold * GuardianConstants.EARLY_EXIT_RATIO) return@withLock false
+
+                // ── Step 2: Crop confirmation ─────────────────────────
+                // false positive কমাতে: full image নিজেই threshold পার করলে
+                // তবুও একটা crop confirm করতে হবে (double-check)
                 val centerCrop = cropSquare(bitmap)
                 val centerNsfw = extractNsfwScore(runInference(interp, centerCrop))
                 centerCrop.recycle()
-                if (centerNsfw >= threshold) return@withLock true
+                Timber.d("AI center=$centerNsfw")
 
-                val topCrop = cropVertical(bitmap, 0f, 0.72f)
-                val topNsfw = extractNsfwScore(runInference(interp, topCrop))
-                topCrop.recycle()
-                if (topNsfw >= threshold) return@withLock true
+                // Full image high AND center crop confirm → block
+                if (fullNsfw >= threshold && centerNsfw >= threshold * 0.85f) {
+                    return@withLock true
+                }
 
-                val lowerCrop = cropVertical(bitmap, 0.18f, 1f)
-                val lowerNsfw = extractNsfwScore(runInference(interp, lowerCrop))
-                lowerCrop.recycle()
+                // Full image medium-high → need stronger crop confirmation
+                if (fullNsfw >= threshold * 0.88f) {
+                    val topCrop = cropVertical(bitmap, 0f, 0.72f)
+                    val topNsfw = extractNsfwScore(runInference(interp, topCrop))
+                    topCrop.recycle()
+                    Timber.d("AI top=$topNsfw")
 
-                maxOf(fullNsfw, centerNsfw, topNsfw, lowerNsfw) >= threshold
+                    val lowerCrop = cropVertical(bitmap, 0.18f, 1f)
+                    val lowerNsfw = extractNsfwScore(runInference(interp, lowerCrop))
+                    lowerCrop.recycle()
+                    Timber.d("AI lower=$lowerNsfw")
+
+                    // কমপক্ষে ২টা crop threshold পার করলে block
+                    val highCrops = listOf(centerNsfw, topNsfw, lowerNsfw)
+                        .count { it >= threshold * 0.85f }
+                    return@withLock highCrops >= 2
+                }
+
+                // Otherwise safe
+                false
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
                 false
