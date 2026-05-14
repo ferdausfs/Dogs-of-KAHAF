@@ -188,7 +188,7 @@ class AiDetector @Inject constructor(
                     val highVotes  = scores.count { it >= threshold }          // 100% নিশ্চিত
                     val medVotes   = scores.count { it >= threshold * 0.80f }  // 80% threshold
 
-                    Timber.d("AI votes: high=$highVotes med=$medVotes max=${scores.max()}")
+                    Timber.d("AI votes: high=$highVotes med=$medVotes max=${scores.maxOrNull() ?: 0f}")
 
                     when {
                         // যেকোনো ১টা crop fully threshold পার করলে → block
@@ -261,4 +261,19 @@ class AiDetector @Inject constructor(
                 false
             }
         }
-    }}
+    
+    fun close() {
+        runCatching { legacyInterpreter?.close() }
+        runCatching { nsfwInterpreter?.close() }
+        runCatching { genderInterpreter?.close() }
+        legacyInterpreter = null
+        nsfwInterpreter = null
+        genderInterpreter = null
+    }
+
+    companion object {
+        const val MODEL_LEGACY = "guardian_model.tflite"
+        const val MODEL_NSFW   = "nsfw_model.tflite"
+        const val MODEL_GENDER = "gender_model.tflite"
+    }
+}
