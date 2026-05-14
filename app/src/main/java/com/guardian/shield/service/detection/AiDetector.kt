@@ -261,7 +261,8 @@ class AiDetector @Inject constructor(
                 false
             }
         }
-    
+    }
+
     fun close() {
         runCatching { legacyInterpreter?.close() }
         runCatching { nsfwInterpreter?.close() }
