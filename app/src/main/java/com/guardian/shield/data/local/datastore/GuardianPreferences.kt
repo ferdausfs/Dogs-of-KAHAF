@@ -36,7 +36,7 @@ class GuardianPreferences @Inject constructor(
     val keywordFilter: Flow<Boolean> = ds.data.map { it[Keys.KEYWORD_FILTER] ?: true }
     val aiDetection: Flow<Boolean> = ds.data.map { it[Keys.AI_DETECTION] ?: false }
     val delaySeconds: Flow<Int> = ds.data.map { it[Keys.DELAY_SECONDS] ?: 30 }
-    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.7f }
+    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.5f }
     val firstRun: Flow<Boolean> = ds.data.map { it[Keys.FIRST_RUN] ?: true }
     val userGender: Flow<String> = ds.data.map { it[Keys.USER_GENDER] ?: "NONE" }
     val rulesVersion: Flow<Int> = ds.data.map { it[Keys.RULES_VERSION] ?: 0 }
