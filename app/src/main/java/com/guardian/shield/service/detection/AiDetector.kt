@@ -42,7 +42,7 @@ class AiDetector @Inject constructor(
         private set
     @Volatile var cachedUserGender: String = "NONE"
         private set
-    @Volatile var cachedThreshold: Float = 0.7f
+    @Volatile var cachedThreshold: Float = 0.5f
         private set
 
     fun startPrefsCache(scope: CoroutineScope) {
@@ -138,46 +138,48 @@ class AiDetector @Inject constructor(
         }
     }
 
-    // =============================================
-    // GUARDIAN MODEL — [1, 3] output
-    // Classes: [safe/sfw, nsfw/porn, explicit/sexy] (3-class)
-    // ✅ Fix: index 1+2 sum = total harmful score
-    // Threshold: user setting (default 0.5, NOT 0.7)
-    // =============================================
+    // =========================================
+    // GUARDIAN MODEL [1,3] — Grid Scan
+    // =========================================
     suspend fun isUnsafe(bitmap: Bitmap): Boolean {
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
             try {
-                // ✅ guardian_model threshold is lower — 0.5 default
+                // guardian_model threshold: user setting - 0.2, min 0.3
                 val threshold = (cachedThreshold - 0.2f).coerceAtLeast(0.3f)
-                val fullScores = runInference(interp, bitmap)
-                val nsfwScore = extractGuardianScore(fullScores)
-                Timber.d("Guardian scores: ${fullScores.toList()} → nsfw=$nsfwScore threshold=$threshold")
 
-                // Early exit — very safe
-                if (nsfwScore < threshold * GuardianConstants.EARLY_EXIT_RATIO) return@withLock false
-                if (nsfwScore >= threshold) return@withLock true
+                // Step 1: Full image — fast check
+                val fullScore = extractGuardianScore(runInference(interp, bitmap))
+                Timber.d("Guardian full: $fullScore threshold: $threshold")
+                if (fullScore >= threshold) return@withLock true
 
-                // Center crop
-                val center = cropSquare(bitmap)
-                val centerScore = extractGuardianScore(runInference(interp, center))
-                center.recycle()
-                if (centerScore >= threshold) return@withLock true
+                // Step 2: Very safe → skip grid (performance)
+                if (fullScore < threshold * GuardianConstants.EARLY_EXIT_RATIO) {
+                    return@withLock false
+                }
 
-                // Top 72%
-                val top = cropVertical(bitmap, 0f, 0.72f)
-                val topScore = extractGuardianScore(runInference(interp, top))
-                top.recycle()
-                if (topScore >= threshold) return@withLock true
+                // Step 3: Grid scan — 2 cols × 3 rows = 6 regions
+                // YouTube feed এ top content + bottom UI mix থাকে
+                // Grid দিয়ে প্রতিটা region আলাদা check করো
+                val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
+                var blocked = false
+                for ((idx, region) in regions.withIndex()) {
+                    try {
+                        val score = extractGuardianScore(runInference(interp, region))
+                        Timber.d("Grid[$idx]: $score")
+                        if (score >= threshold) {
+                            blocked = true
+                            region.recycle()
+                            break
+                        }
+                    } catch (t: Throwable) {
+                        Timber.e(t, "Grid[$idx] error")
+                    } finally {
+                        if (!region.isRecycled) region.recycle()
+                    }
+                }
 
-                // Bottom 82%
-                val bot = cropVertical(bitmap, 0.18f, 1f)
-                val botScore = extractGuardianScore(runInference(interp, bot))
-                bot.recycle()
-
-                val maxScore = maxOf(nsfwScore, centerScore, topScore, botScore)
-                Timber.d("Guardian max score: $maxScore")
-                maxScore >= threshold
+                blocked
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
                 false
@@ -185,73 +187,9 @@ class AiDetector @Inject constructor(
         }
     }
 
-    /**
-     * guardian_model output [1, 3]:
-     * Index 0 = safe/sfw probability
-     * Index 1 = nsfw/porn probability
-     * Index 2 = explicit/sexy probability
-     * ✅ Fix: sum of index 1 + index 2 = total harmful
-     * Previous bug: maxOrNull() would return safe=0.9 and block!
-     */
-    private fun extractGuardianScore(scores: FloatArray): Float {
-        return when (scores.size) {
-            1 -> scores[0]
-            2 -> scores[1]  // [safe, nsfw]
-            3 -> {
-                // [safe, harmful1, harmful2] → sum of harmful classes
-                val harmful = scores.getOrElse(1){0f} + scores.getOrElse(2){0f}
-                harmful.coerceAtMost(1.0f)
-            }
-            5 -> {
-                // Yahoo NSFW: [drawings, hentai, neutral, porn, sexy]
-                // ✅ Use MAX not SUM — sum can exceed 1.0
-                maxOf(
-                    scores.getOrElse(1){0f},  // hentai
-                    scores.getOrElse(3){0f},  // porn
-                    scores.getOrElse(4){0f}   // sexy
-                )
-            }
-            else -> scores.drop(1).max()  // skip index 0 (safe), take max
-        }
-    }
-
-    // =============================================
-    // NSFW MODEL — [1, 5] output
-    // Yahoo Open NSFW: [drawings, hentai, neutral, porn, sexy]
-    // ✅ Fix: use MAX of harmful classes, NOT sum
-    // Gate threshold: 0.45 (lower = more sensitive)
-    // =============================================
-    private fun extractNsfwGateScore(scores: FloatArray): Float {
-        return when (scores.size) {
-            1 -> scores[0]
-            2 -> scores[1]
-            5 -> {
-                // ✅ MAX of harmful: hentai(1), porn(3), sexy(4)
-                // NOT sum — sum of 3 classes can give 1.5+ which breaks thresholds
-                maxOf(
-                    scores.getOrElse(1){0f},  // hentai
-                    scores.getOrElse(3){0f},  // porn
-                    scores.getOrElse(4){0f}   // sexy
-                )
-            }
-            else -> scores.drop(1).max()
-        }
-    }
-
-    // =============================================
-    // GENDER MODEL — [1, 133] output
-    // MobileNetV2 age+gender combined model
-    // Output: 133 classes (age groups + gender)
-    // ✅ Fix: gender_model এর সঠিক index বের করো
-    //
-    // Common layout for age+gender models:
-    // First half: age probabilities
-    // Last 2: male probability, female probability
-    // OR: index 0=male, last=female
-    //
-    // Since we can't run inference here, use a safe approach:
-    // Sum first 67 = one gender, sum last 66 = other gender
-    // =============================================
+    // =========================================
+    // NSFW MODEL [1,5] gate — Grid Scan
+    // =========================================
     suspend fun isOppositeGenderNsfw(bitmap: Bitmap, userGender: String): Boolean {
         val nsfw = nsfwInterpreter ?: return false
         val gender = genderInterpreter ?: return false
@@ -259,49 +197,51 @@ class AiDetector @Inject constructor(
 
         return inferenceLock.withLock {
             try {
-                val currentGender = runCatching { prefs.userGender.first() }.getOrElse { userGender }
+                val currentGender = runCatching {
+                    prefs.userGender.first()
+                }.getOrElse { userGender }
                 if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
 
-                // Step 1: NSFW gate check
-                val nsfwScores = runInference(nsfw, bitmap)
-                val nsfwProb = extractNsfwGateScore(nsfwScores)
-                Timber.d("NSFW gate: $nsfwProb (threshold: ${GuardianConstants.NSFW_GATE_THRESHOLD})")
-                if (nsfwProb < GuardianConstants.NSFW_GATE_THRESHOLD) return@withLock false
+                // Step 1: NSFW gate — full image first
+                val fullNsfwScore = extractNsfwGateScore(runInference(nsfw, bitmap))
+                Timber.d("NSFW gate full: $fullNsfwScore")
 
-                // Step 2: Gender check
+                // Step 2: Grid scan for NSFW gate
+                var maxNsfwScore = fullNsfwScore
+                if (fullNsfwScore < GuardianConstants.NSFW_GATE_THRESHOLD) {
+                    val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
+                    for ((idx, region) in regions.withIndex()) {
+                        try {
+                            val score = extractNsfwGateScore(runInference(nsfw, region))
+                            Timber.d("NSFW Grid[$idx]: $score")
+                            if (score > maxNsfwScore) maxNsfwScore = score
+                        } catch (t: Throwable) {
+                            Timber.e(t, "NSFW Grid[$idx] error")
+                        } finally {
+                            if (!region.isRecycled) region.recycle()
+                        }
+                    }
+                }
+
+                Timber.d("NSFW max score: $maxNsfwScore threshold: ${GuardianConstants.NSFW_GATE_THRESHOLD}")
+                if (maxNsfwScore < GuardianConstants.NSFW_GATE_THRESHOLD) return@withLock false
+
+                // Step 3: Gender check — full image only (faster)
                 val genderScores = runInference(gender, bitmap)
-
-                // ✅ Fix for [1, 133] output:
-                // MobileNetV2 age+gender model layout varies
-                // Strategy: split 133 outputs into two halves
-                // First half (0..65) = one gender group
-                // Second half (66..132) = other gender group
-                // Sum each half — higher sum = that gender
                 val half = genderScores.size / 2
                 val firstHalfSum = genderScores.take(half).sum()
                 val secondHalfSum = genderScores.drop(half).sum()
-
-                // Normalize
                 val total = (firstHalfSum + secondHalfSum).coerceAtLeast(0.001f)
-                val firstProb = firstHalfSum / total
-                val secondProb = secondHalfSum / total
+                val femaleProb = firstHalfSum / total
+                val maleProb = secondHalfSum / total
 
-                Timber.d("Gender halves: first=$firstProb second=$secondProb user=$currentGender")
+                Timber.d("Gender: male=$maleProb female=$femaleProb user=$currentGender")
 
-                // First half typically = female (lower age indices)
-                // Second half typically = male (higher age indices)
-                // This is heuristic — adjust based on testing
-                val femaleProb = firstProb
-                val maleProb = secondProb
-
-                val threshold = GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
-                val result = when (currentGender) {
-                    "MALE" -> femaleProb >= threshold    // Male user — block female content
-                    "FEMALE" -> maleProb >= threshold    // Female user — block male content
+                when (currentGender) {
+                    "MALE" -> femaleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
+                    "FEMALE" -> maleProb >= GuardianConstants.GENDER_CONFIDENCE_THRESHOLD
                     else -> false
                 }
-                Timber.d("Gender detection: male=$maleProb female=$femaleProb → block=$result")
-                result
             } catch (t: Throwable) {
                 Timber.e(t, "Gender NSFW failed")
                 false
@@ -309,6 +249,76 @@ class AiDetector @Inject constructor(
         }
     }
 
+    // =========================================
+    // Grid split — bitmap কে regions এ ভাগ করো
+    // =========================================
+    private fun splitIntoGrid(bitmap: Bitmap, cols: Int, rows: Int): List<Bitmap> {
+        val regions = mutableListOf<Bitmap>()
+        val cellW = bitmap.width / cols
+        val cellH = bitmap.height / rows
+        for (row in 0 until rows) {
+            for (col in 0 until cols) {
+                val x = col * cellW
+                val y = row * cellH
+                val w = if (col == cols - 1) bitmap.width - x else cellW
+                val h = if (row == rows - 1) bitmap.height - y else cellH
+                if (w > 32 && h > 32) {
+                    runCatching {
+                        regions.add(Bitmap.createBitmap(bitmap, x, y, w, h))
+                    }.onFailure { Timber.e(it, "Grid crop failed [$row,$col]") }
+                }
+            }
+        }
+        return regions
+    }
+
+    // =========================================
+    // Score extractors
+    // =========================================
+
+    /**
+     * guardian_model [1,3]:
+     * index 0 = safe
+     * index 1 = nsfw/porn
+     * index 2 = explicit/sexy
+     * → sum of index 1+2 = total harmful score
+     */
+    private fun extractGuardianScore(scores: FloatArray): Float {
+        return when (scores.size) {
+            1 -> scores[0]
+            2 -> scores[1]
+            3 -> (scores.getOrElse(1){0f} + scores.getOrElse(2){0f}).coerceAtMost(1.0f)
+            5 -> maxOf(
+                scores.getOrElse(1){0f},  // hentai
+                scores.getOrElse(3){0f},  // porn
+                scores.getOrElse(4){0f}   // sexy
+            )
+            else -> scores.drop(1).max()
+        }
+    }
+
+    /**
+     * nsfw_model [1,5]:
+     * Yahoo Open NSFW: [drawings, hentai, neutral, porn, sexy]
+     * → MAX of harmful (hentai, porn, sexy)
+     * NOT sum — sum can exceed 1.0
+     */
+    private fun extractNsfwGateScore(scores: FloatArray): Float {
+        return when (scores.size) {
+            1 -> scores[0]
+            2 -> scores[1]
+            5 -> maxOf(
+                scores.getOrElse(1){0f},  // hentai
+                scores.getOrElse(3){0f},  // porn
+                scores.getOrElse(4){0f}   // sexy
+            )
+            else -> scores.drop(1).max()
+        }
+    }
+
+    // =========================================
+    // Inference runner
+    // =========================================
     private fun runInference(interp: Interpreter, bitmap: Bitmap): FloatArray {
         val inputShape = interp.getInputTensor(0).shape()
         val h = inputShape.getOrNull(1) ?: 224
@@ -356,8 +366,10 @@ class AiDetector @Inject constructor(
         try { nsfwInterpreter?.close() } catch (_: Throwable) {}
         try { genderInterpreter?.close() } catch (_: Throwable) {}
         try { gpuDelegate?.close() } catch (_: Throwable) {}
-        legacyInterpreter = null; nsfwInterpreter = null
-        genderInterpreter = null; gpuDelegate = null
+        legacyInterpreter = null
+        nsfwInterpreter = null
+        genderInterpreter = null
+        gpuDelegate = null
     }
 
     companion object {
