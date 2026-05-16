@@ -14,7 +14,6 @@ import android.os.PowerManager
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
@@ -22,7 +21,6 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
-import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,7 +44,6 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var blockingEngine: BlockingEngine
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
-    @Inject lateinit var timeLockManager: TimeLockManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -56,20 +53,24 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Volatile private var protectionEnabled = true
     @Volatile private var currentPackage: String? = null
     @Volatile private var lastTextScan = 0L
+    // ✅ Fix: duplicate block prevent
+    @Volatile private var isBlockingInProgress = false
     private val aiScanMap = LinkedHashMap<String, Long>()
     private var periodicJob: Job? = null
     private var homePkg: String? = null
     private var keyguardManager: KeyguardManager? = null
-
-    // Device Admin screen এ back press spam রোধ করতে cooldown
-    private var lastAdminBlockMs = 0L
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_ON,
                 Intent.ACTION_USER_PRESENT -> isScreenOn = true
-                Intent.ACTION_SCREEN_OFF -> { isScreenOn = false; currentPackage = null }
+                Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
+                    currentPackage = null
+                    // ✅ Screen off হলে blocking flag reset
+                    isBlockingInProgress = false
+                }
             }
         }
     }
@@ -112,19 +113,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val ev = event ?: return
+        if (!protectionEnabled || isDeviceLocked()) return
         try {
             val pkg = ev.packageName?.toString().orEmpty()
-            val className = ev.className?.toString().orEmpty()
-
-            // ── Commitment Lock: Device Admin screen block ──────────────
-            if (ev.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                if (isDeviceAdminScreen(pkg, className)) {
-                    blockDeviceAdminScreen()
-                    return
-                }
-            }
-
-            if (!protectionEnabled || isDeviceLocked()) return
             when (ev.eventType) {
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> handleWindowChange(pkg)
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
@@ -135,48 +126,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         } catch (t: Throwable) { Timber.e(t) }
     }
 
-    // ── Device Admin screen detection ─────────────────────────────────
-
-    /**
-     * Device Admin screen detect করার conditions:
-     * 1. Settings package
-     * 2. className এ "DeviceAdmin" / "ActiveAdminDetails" আছে
-     * Samsung এ "DeviceAdminAdd" ও হতে পারে
-     */
-    private fun isDeviceAdminScreen(pkg: String, className: String): Boolean {
-        val isSettings = pkg == "com.android.settings" ||
-                         pkg == "com.samsung.android.settings" ||
-                         pkg.endsWith(".settings")
-        if (!isSettings) return false
-
-        val cls = className.lowercase()
-        return cls.contains("deviceadmin") ||
-               cls.contains("activeadmin") ||
-               cls.contains("device_admin")
-    }
-
-    private fun blockDeviceAdminScreen() {
-        timeLockManager.clearIfExpired()
-        if (!timeLockManager.isLocked() && !timeLockManager.isInCooldown()) return
-
-        val now = System.currentTimeMillis()
-        if (now - lastAdminBlockMs < 2_000) return // spam রোধ
-        lastAdminBlockMs = now
-
-        Timber.w("Commitment Lock: blocking Device Admin screen access")
-        performGlobalAction(GLOBAL_ACTION_BACK)
-
-        mainHandler.post {
-            Toast.makeText(
-                this,
-                "🔒 Commitment Lock সক্রিয় — Device Admin পরিবর্তন করা যাবে না",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    // ── existing logic (unchanged) ────────────────────────────────────
-
     private fun isDeviceLocked() = try {
         keyguardManager?.isKeyguardLocked == true
     } catch (_: Throwable) { false }
@@ -185,14 +134,32 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
+    // ✅ Fix: isBlocking check + 3s reset
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
+        if (isBlockingInProgress) {
+            Timber.d("Block in progress, skip: $pkg")
+            return
+        }
+        isBlockingInProgress = true
         performGlobalAction(GLOBAL_ACTION_HOME)
-        mainHandler.postDelayed({ blockingEngine.block(pkg, reason, detail) }, 120)
+        mainHandler.postDelayed({
+            blockingEngine.block(pkg, reason, detail)
+            mainHandler.postDelayed({
+                isBlockingInProgress = false
+            }, 3_000)
+        }, 120)
     }
 
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
-        if (isSafePackage(pkg)) { currentPackage = null; return }
+        if (isSafePackage(pkg)) {
+            currentPackage = null
+            // ✅ Safe package এ গেলে blocking flag reset
+            isBlockingInProgress = false
+            return
+        }
+
+        // ✅ Whitelist FIRST
         if (!rulesEngine.canBlock(pkg)) { currentPackage = pkg; return }
 
         currentPackage = pkg
@@ -217,6 +184,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleContentChange(pkg: String) {
         if (pkg.isBlank() || isSafePackage(pkg)) return
         if (!rulesEngine.canBlock(pkg)) return
+        if (isBlockingInProgress) return // ✅ Block চলাকালীন content scan skip
         val now = System.currentTimeMillis()
         if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
         lastTextScan = now
@@ -253,6 +221,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun triggerAiCheckThrottled(pkg: String) {
+        if (isBlockingInProgress) return // ✅ Block চলাকালীন AI scan skip
         val now = System.currentTimeMillis()
         synchronized(aiScanMap) {
             val last = aiScanMap[pkg] ?: 0L
@@ -274,23 +243,32 @@ class GuardianAccessibilityService : AccessibilityService() {
                     var bmp: Bitmap? = null
                     serviceScope.launch {
                         try {
+                            if (isBlockingInProgress) return@launch // ✅ Skip if already blocking
                             val hw = screenshot.hardwareBuffer
                             val cs = screenshot.colorSpace
                             bmp = Bitmap.wrapHardwareBuffer(hw, cs)?.copy(Bitmap.Config.ARGB_8888, false)
                             try { hw.close() } catch (_: Throwable) {}
                             val b = bmp ?: return@launch
                             if (!rulesEngine.canBlock(pkg)) return@launch
+
                             val gender = aiDetector.cachedUserGender
                             var blocked = false
-                            if (gender != "NONE" && aiDetector.isGenderModelAvailable() && aiDetector.isNsfwGateAvailable()) {
+
+                            if (gender != "NONE" && aiDetector.isGenderModelAvailable()
+                                && aiDetector.isNsfwGateAvailable()
+                            ) {
                                 if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                    withContext(Dispatchers.Main) { goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw") }
+                                    withContext(Dispatchers.Main) {
+                                        goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                    }
                                     blocked = true
                                 }
                             }
                             if (!blocked && aiDetector.isLegacyAvailable()) {
                                 if (aiDetector.isUnsafe(b)) {
-                                    withContext(Dispatchers.Main) { goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy") }
+                                    withContext(Dispatchers.Main) {
+                                        goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                    }
                                 }
                             }
                         } catch (t: Throwable) { Timber.e(t, "AI check failed") }
@@ -307,15 +285,22 @@ class GuardianAccessibilityService : AccessibilityService() {
         periodicJob = serviceScope.launch {
             while (isActive) {
                 try {
-                    delay(if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS else GuardianConstants.AI_PERIODIC_MS)
+                    delay(if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS
+                          else GuardianConstants.AI_PERIODIC_MS)
+
                     if (!isScreenOn || !protectionEnabled || isDeviceLocked()) continue
+                    // ✅ Block চলাকালীন periodic scan skip
+                    if (isBlockingInProgress) continue
+
                     val pkg = currentPackage ?: continue
                     if (isSafePackage(pkg)) continue
                     if (!rulesEngine.canBlock(pkg)) continue
 
                     val tempBlock = blockingEngine.isTempBlocked(pkg)
                     if (tempBlock != null) {
-                        withContext(Dispatchers.Main) { goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min") }
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
+                        }
                         continue
                     }
 
