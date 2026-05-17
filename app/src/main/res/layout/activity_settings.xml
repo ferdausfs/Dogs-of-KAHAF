@@ -16,7 +16,7 @@
         app:titleTextColor="@color/on_surface"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
-    <!-- Lock banner: shown when commitment lock is active -->
+    <!-- Lock banner -->
     <LinearLayout
         android:id="@+id/lockBanner"
         android:layout_width="match_parent"
@@ -58,7 +58,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- ═══ PROTECTION ═══ -->
+            <!-- PROTECTION -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -166,7 +166,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ GENDER FILTER ═══ -->
+            <!-- GENDER FILTER -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -228,7 +228,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ TEMP BLOCK DURATION ═══ -->
+            <!-- TEMP BLOCK DURATION -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -289,7 +289,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ BLOCKING RULES ═══ -->
+            <!-- BLOCKING RULES -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -324,179 +324,191 @@
                 android:text="@string/btn_schedule"
                 app:cornerRadius="12dp" />
 
-      <!-- AI DETECTION SENSITIVITY — নতুন section -->
-             <TextView
-    style="@style/TextAppearance.GuardianShield.SectionHeader"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="AI DETECTION SENSITIVITY"
-    android:layout_marginTop="20dp"
-    android:layout_marginBottom="8dp"/>
+            <!-- AI DETECTION SENSITIVITY -->
+            <TextView
+                style="@style/TextAppearance.GuardianShield.SectionHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI DETECTION SENSITIVITY"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp" />
 
-                <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/surface"
                 app:cardCornerRadius="16dp"
                 android:layout_marginBottom="8dp">
 
-              <LinearLayout
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:orientation="vertical"
-              android:padding="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-        <!-- Guardian Threshold -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Guardian Model"
-                android:textColor="@color/on_surface"
-                android:textSize="14sp"/>
-            <TextView
-                android:id="@+id/txtGuardianThresholdValue"
-                android:layout_width="48dp"
-                android:layout_height="wrap_content"
-                android:text="0.65"
-                android:textColor="@color/primary"
-                android:textSize="13sp"
-                android:gravity="end"/>
+                    <!-- Guardian Threshold -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Guardian Model"
+                            android:textColor="@color/on_surface"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/txtGuardianThresholdValue"
+                            android:layout_width="48dp"
+                            android:layout_height="wrap_content"
+                            android:text="0.65"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderGuardianThreshold"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="0.3"
+                        android:valueTo="0.95"
+                        android:stepSize="0.05"
+                        android:value="0.65"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- NSFW Gate -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="NSFW Gate"
+                            android:textColor="@color/on_surface"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/txtNsfwThresholdValue"
+                            android:layout_width="48dp"
+                            android:layout_height="wrap_content"
+                            android:text="0.60"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderNsfwThreshold"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="0.3"
+                        android:valueTo="0.95"
+                        android:stepSize="0.05"
+                        android:value="0.60"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Gender Confidence -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Gender Confidence"
+                            android:textColor="@color/on_surface"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/txtGenderThresholdValue"
+                            android:layout_width="48dp"
+                            android:layout_height="wrap_content"
+                            android:text="0.70"
+                            android:textColor="@color/primary"
+                            android:textSize="13sp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/sliderGenderThreshold"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="0.5"
+                        android:valueTo="0.95"
+                        android:stepSize="0.05"
+                        android:value="0.70"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Grid Vote Count -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Block করতে কতটা region লাগবে"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupGridVote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipVote1"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="১টা (Sensitive)" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipVote2"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="২টা (Balanced)"
+                            android:checked="true" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipVote3"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="৩টা (Strict)" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipVote4"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="৪টা (Very Strict)" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="↑ বাড়ালে কম false positive, কম detection&#10;↓ কমালে বেশি detection, বেশি false positive"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="11sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:layout_marginTop="8dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderGuardianThreshold"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:valueFrom="0.3"
-            android:valueTo="0.95"
-            android:stepSize="0.05"
-            android:value="0.65"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- NSFW Gate Threshold -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="NSFW Gate"
-                android:textColor="@color/on_surface"
-                android:textSize="14sp"/>
-            <TextView
-                android:id="@+id/txtNsfwThresholdValue"
-                android:layout_width="48dp"
-                android:layout_height="wrap_content"
-                android:text="0.60"
-                android:textColor="@color/primary"
-                android:textSize="13sp"
-                android:gravity="end"/>
-        </LinearLayout>
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderNsfwThreshold"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:valueFrom="0.3"
-            android:valueTo="0.95"
-            android:stepSize="0.05"
-            android:value="0.60"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Gender Confidence -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Gender Confidence"
-                android:textColor="@color/on_surface"
-                android:textSize="14sp"/>
-            <TextView
-                android:id="@+id/txtGenderThresholdValue"
-                android:layout_width="48dp"
-                android:layout_height="wrap_content"
-                android:text="0.70"
-                android:textColor="@color/primary"
-                android:textSize="13sp"
-                android:gravity="end"/>
-        </LinearLayout>
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderGenderThreshold"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:valueFrom="0.5"
-            android:valueTo="0.95"
-            android:stepSize="0.05"
-            android:value="0.70"
-            android:layout_marginBottom="12dp"/>
-
-        <!-- Grid Vote Count -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Block করতে কতটা region লাগবে"
-            android:textColor="@color/on_surface_dim"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp"/>
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupGridVote"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:singleSelection="true"
-            app:selectionRequired="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipVote1"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="১টা (Sensitive)"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipVote2"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="২টা (Balanced)"
-                android:checked="true"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipVote3"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="৩টা (Strict)"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipVote4"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="৪টা (Very Strict)"/>
-        </com.google.android.material.chip.ChipGroup>
-
-        <!-- Helper text -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="↑ বাড়ালে কম false positive, কম detection\n↓ কমালে বেশি detection, বেশি false positive"
-            android:textColor="@color/on_surface_dim"
-            android:textSize="11sp"
-            android:lineSpacingMultiplier="1.3"
-            android:layout_marginTop="8dp"/>
-
-    </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+    </ScrollView>
+</LinearLayout>
