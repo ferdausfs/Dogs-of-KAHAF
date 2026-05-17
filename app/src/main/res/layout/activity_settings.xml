@@ -58,7 +58,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- PROTECTION -->
+            <!-- ═══ PROTECTION ═══ -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -97,45 +97,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/ai_sensitivity"
-                        android:textColor="@color/on_surface_dim"
-                        android:textSize="13sp"
-                        android:layout_marginTop="16dp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <com.google.android.material.slider.Slider
-                            android:id="@+id/sliderThreshold"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:valueFrom="0.2"
-                            android:valueTo="0.95"
-                            android:stepSize="0.05"
-                            android:value="0.7" />
-
-                        <TextView
-                            android:id="@+id/txtThresholdValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0.70"
-                            android:textColor="@color/primary"
-                            android:textSize="14sp"
-                            android:minWidth="48dp"
-                            android:gravity="end" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:text="@string/unlock_delay"
                         android:textColor="@color/on_surface_dim"
                         android:textSize="13sp"
-                        android:layout_marginTop="12dp" />
+                        android:layout_marginTop="16dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -166,7 +131,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- GENDER FILTER -->
+            <!-- ═══ GENDER FILTER ═══ -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -228,7 +193,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- TEMP BLOCK DURATION -->
+            <!-- ═══ TEMP BLOCK DURATION ═══ -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -289,7 +254,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- BLOCKING RULES -->
+            <!-- ═══ BLOCKING RULES ═══ -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -322,9 +287,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/btn_schedule"
+                android:layout_marginBottom="8dp"
                 app:cornerRadius="12dp" />
 
-            <!-- AI DETECTION SENSITIVITY -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPermissions"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Permissions"
+                android:layout_marginBottom="8dp"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCommitmentLock"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Commitment Lock"
+                app:cornerRadius="12dp" />
+
+            <!-- ═══ AI DETECTION SENSITIVITY ═══ -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -505,6 +488,193 @@
                         android:textSize="11sp"
                         android:lineSpacingMultiplier="1.3"
                         android:layout_marginTop="8dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ MODEL MANAGEMENT ═══ -->
+            <TextView
+                style="@style/TextAppearance.GuardianShield.SectionHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI MODELS"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="16dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Legacy Model -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Guardian Model (.tflite)"
+                        android:textColor="@color/on_surface"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtLegacyStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnImportLegacy"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Import"
+                            android:layout_marginEnd="8dp"
+                            app:cornerRadius="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRemoveLegacy"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Remove"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/surface"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- NSFW Model -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="NSFW Gate Model (.tflite)"
+                        android:textColor="@color/on_surface"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtNsfwStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnImportNsfw"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Import"
+                            android:layout_marginEnd="8dp"
+                            app:cornerRadius="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRemoveNsfw"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Remove"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/surface"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Gender Model -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gender Model (.tflite)"
+                        android:textColor="@color/on_surface"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtGenderModelStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/model_missing"
+                        android:textColor="@color/on_surface_dim"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnImportGender"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Import"
+                            android:layout_marginEnd="8dp"
+                            app:cornerRadius="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRemoveGender"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Remove"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/surface"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Change PIN -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangePin"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Change PIN"
+                        app:cornerRadius="10dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
