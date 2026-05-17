@@ -28,9 +28,13 @@ data class SettingsUiState(
     val keywordFilter: Boolean = true,
     val aiDetection: Boolean = false,
     val delaySeconds: Int = 30,
-    val aiThreshold: Float = 0.7f,
     val userGender: String = "NONE",
     val tempBlockDurationMins: Int = 15,
+    // ✅ সব threshold
+    val aiThreshold: Float = 0.65f,
+    val nsfwGateThreshold: Float = 0.60f,
+    val genderThreshold: Float = 0.70f,
+    val gridVoteCount: Int = 2,
     val modelLoaded: Boolean = false,
     val genderModelAvailable: Boolean = false,
     val legacyModel: ModelSlotUi = ModelSlotUi(),
@@ -59,18 +63,24 @@ class SettingsViewModel @Inject constructor(
         prefs.keywordFilter,
         prefs.aiDetection,
         prefs.delaySeconds,
-        prefs.aiThreshold,
         prefs.userGender,
         prefs.tempBlockDurationMins,
+        prefs.aiThreshold,
+        prefs.nsfwGateThreshold,
+        prefs.genderThreshold,
+        prefs.gridVoteCount,
         refreshTick
     ) { values ->
         SettingsUiState(
             keywordFilter = values[0] as Boolean,
             aiDetection = values[1] as Boolean,
             delaySeconds = values[2] as Int,
-            aiThreshold = values[3] as Float,
-            userGender = values[4] as String,
-            tempBlockDurationMins = values[5] as Int,
+            userGender = values[3] as String,
+            tempBlockDurationMins = values[4] as Int,
+            aiThreshold = values[5] as Float,
+            nsfwGateThreshold = values[6] as Float,
+            genderThreshold = values[7] as Float,
+            gridVoteCount = values[8] as Int,
             modelLoaded = importer.isModelImported(AiDetector.MODEL_LEGACY),
             genderModelAvailable = importer.isModelImported(AiDetector.MODEL_GENDER),
             legacyModel = slot(AiDetector.MODEL_LEGACY),
@@ -82,15 +92,23 @@ class SettingsViewModel @Inject constructor(
     private fun slot(name: String): ModelSlotUi {
         val imported = importer.isModelImported(name)
         val size = importer.modelSizeBytes(name)
-        return ModelSlotUi(isImported = imported, readableSize = if (size > 0) "%.1f MB".format(size / 1_048_576.0) else null)
+        return ModelSlotUi(
+            isImported = imported,
+            readableSize = if (size > 0) "%.1f MB".format(size / 1_048_576.0) else null
+        )
     }
 
     fun setKeywordFilter(v: Boolean) { viewModelScope.launch { prefs.setKeywordFilter(v); prefs.bumpRulesVersion() } }
     fun setAiDetection(v: Boolean) { viewModelScope.launch { prefs.setAiDetection(v); prefs.bumpRulesVersion() } }
     fun setDelaySeconds(v: Int) { viewModelScope.launch { prefs.setDelaySeconds(v) } }
-    fun setAiThreshold(v: Float) { viewModelScope.launch { prefs.setAiThreshold(v) } }
     fun setUserGender(v: String) { viewModelScope.launch { prefs.setUserGender(v); prefs.bumpRulesVersion() } }
     fun setTempBlockDurationMins(v: Int) { viewModelScope.launch { prefs.setTempBlockDurationMins(v) } }
+
+    // ✅ নতুন setters
+    fun setAiThreshold(v: Float) { viewModelScope.launch { prefs.setAiThreshold(v) } }
+    fun setNsfwGateThreshold(v: Float) { viewModelScope.launch { prefs.setNsfwGateThreshold(v) } }
+    fun setGenderThreshold(v: Float) { viewModelScope.launch { prefs.setGenderThreshold(v) } }
+    fun setGridVoteCount(v: Int) { viewModelScope.launch { prefs.setGridVoteCount(v) } }
 
     fun importModel(uri: Uri, modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {

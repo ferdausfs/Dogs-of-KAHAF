@@ -25,32 +25,47 @@ class GuardianPreferences @Inject constructor(
         val KEYWORD_FILTER = booleanPreferencesKey("keyword_filter")
         val AI_DETECTION = booleanPreferencesKey("ai_detection")
         val DELAY_SECONDS = intPreferencesKey("delay_seconds")
-        val AI_THRESHOLD = floatPreferencesKey("ai_threshold")
         val FIRST_RUN = booleanPreferencesKey("first_run")
         val USER_GENDER = stringPreferencesKey("user_gender")
         val RULES_VERSION = intPreferencesKey("rules_version")
         val PROTECTION_ENABLED = booleanPreferencesKey("protection_enabled")
         val TEMP_BLOCK_DURATION_MINS = intPreferencesKey("temp_block_duration_mins")
+
+        // ✅ AI Thresholds — সব DataStore এ
+        val AI_THRESHOLD = floatPreferencesKey("ai_threshold")
+        val NSFW_GATE_THRESHOLD = floatPreferencesKey("nsfw_gate_threshold")
+        val GENDER_THRESHOLD = floatPreferencesKey("gender_threshold")
+        val GRID_VOTE_COUNT = intPreferencesKey("grid_vote_count")
     }
 
+    // Flows
     val keywordFilter: Flow<Boolean> = ds.data.map { it[Keys.KEYWORD_FILTER] ?: true }
     val aiDetection: Flow<Boolean> = ds.data.map { it[Keys.AI_DETECTION] ?: false }
     val delaySeconds: Flow<Int> = ds.data.map { it[Keys.DELAY_SECONDS] ?: 30 }
-    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.5f }
     val firstRun: Flow<Boolean> = ds.data.map { it[Keys.FIRST_RUN] ?: true }
     val userGender: Flow<String> = ds.data.map { it[Keys.USER_GENDER] ?: "NONE" }
     val rulesVersion: Flow<Int> = ds.data.map { it[Keys.RULES_VERSION] ?: 0 }
     val protectionEnabled: Flow<Boolean> = ds.data.map { it[Keys.PROTECTION_ENABLED] ?: true }
     val tempBlockDurationMins: Flow<Int> = ds.data.map { it[Keys.TEMP_BLOCK_DURATION_MINS] ?: 15 }
 
+    // ✅ AI Threshold flows — সব adjustable
+    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.65f }
+    val nsfwGateThreshold: Flow<Float> = ds.data.map { it[Keys.NSFW_GATE_THRESHOLD] ?: 0.60f }
+    val genderThreshold: Flow<Float> = ds.data.map { it[Keys.GENDER_THRESHOLD] ?: 0.70f }
+    val gridVoteCount: Flow<Int> = ds.data.map { it[Keys.GRID_VOTE_COUNT] ?: 2 }
+
+    // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
     suspend fun setAiDetection(v: Boolean) { ds.edit { it[Keys.AI_DETECTION] = v } }
     suspend fun setDelaySeconds(v: Int) { ds.edit { it[Keys.DELAY_SECONDS] = v } }
-    suspend fun setAiThreshold(v: Float) { ds.edit { it[Keys.AI_THRESHOLD] = v } }
     suspend fun setFirstRun(v: Boolean) { ds.edit { it[Keys.FIRST_RUN] = v } }
     suspend fun setUserGender(v: String) { ds.edit { it[Keys.USER_GENDER] = v } }
     suspend fun setProtectionEnabled(v: Boolean) { ds.edit { it[Keys.PROTECTION_ENABLED] = v } }
     suspend fun setTempBlockDurationMins(v: Int) { ds.edit { it[Keys.TEMP_BLOCK_DURATION_MINS] = v } }
+    suspend fun setAiThreshold(v: Float) { ds.edit { it[Keys.AI_THRESHOLD] = v } }
+    suspend fun setNsfwGateThreshold(v: Float) { ds.edit { it[Keys.NSFW_GATE_THRESHOLD] = v } }
+    suspend fun setGenderThreshold(v: Float) { ds.edit { it[Keys.GENDER_THRESHOLD] = v } }
+    suspend fun setGridVoteCount(v: Int) { ds.edit { it[Keys.GRID_VOTE_COUNT] = v } }
     suspend fun bumpRulesVersion() {
         ds.edit { it[Keys.RULES_VERSION] = (it[Keys.RULES_VERSION] ?: 0) + 1 }
     }

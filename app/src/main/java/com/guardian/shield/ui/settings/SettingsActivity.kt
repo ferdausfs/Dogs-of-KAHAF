@@ -74,7 +74,7 @@ class SettingsActivity : AppCompatActivity() {
         if (uiInitialized) return
         uiInitialized = true
 
-        // ✅ Lock banner
+        // Lock banner
         if (isLocked) {
             binding.lockBanner.visibility = View.VISIBLE
             binding.txtLockRemaining.text = "🔒 ${timeLockManager.getRemainingFormatted()}"
@@ -82,55 +82,127 @@ class SettingsActivity : AppCompatActivity() {
             binding.lockBanner.visibility = View.GONE
         }
 
-        // ✅ Lock থাকলে সব edit disabled
         val editEnabled = !isLocked
-        binding.switchKeyword.isEnabled = editEnabled
-        binding.switchAi.isEnabled = editEnabled
-        binding.sliderThreshold.isEnabled = editEnabled
-        binding.sliderDelay.isEnabled = editEnabled
-        binding.chipMale.isEnabled = editEnabled
-        binding.chipFemale.isEnabled = editEnabled
-        binding.chipNone.isEnabled = editEnabled
-        binding.chip15min.isEnabled = editEnabled
-        binding.chip30min.isEnabled = editEnabled
-        binding.chip60min.isEnabled = editEnabled
-        binding.btnImportLegacy.isEnabled = editEnabled
-        binding.btnImportNsfw.isEnabled = editEnabled
-        binding.btnImportGender.isEnabled = editEnabled
-        binding.btnRemoveLegacy.isEnabled = editEnabled
-        binding.btnRemoveNsfw.isEnabled = editEnabled
-        binding.btnRemoveGender.isEnabled = editEnabled
-        binding.btnChangePin.isEnabled = editEnabled
+
+        // ✅ Enable/disable all controls based on lock state
+        listOf(
+            binding.switchKeyword, binding.switchAi,
+            binding.sliderGuardianThreshold, binding.sliderNsfwThreshold,
+            binding.sliderGenderThreshold, binding.sliderDelay,
+            binding.chipMale, binding.chipFemale, binding.chipNone,
+            binding.chip15min, binding.chip30min, binding.chip60min,
+            binding.chipVote1, binding.chipVote2, binding.chipVote3, binding.chipVote4,
+            binding.btnImportLegacy, binding.btnImportNsfw, binding.btnImportGender,
+            binding.btnRemoveLegacy, binding.btnRemoveNsfw, binding.btnRemoveGender,
+            binding.btnChangePin
+        ).forEach { it.isEnabled = editEnabled }
 
         if (editEnabled) {
-            binding.switchKeyword.setOnCheckedChangeListener { _, v -> viewModel.setKeywordFilter(v) }
-            binding.switchAi.setOnCheckedChangeListener { _, v -> viewModel.setAiDetection(v) }
-            binding.sliderThreshold.addOnChangeListener(Slider.OnChangeListener { _, value, fromUser ->
-                if (fromUser) viewModel.setAiThreshold(value)
-            })
+            // Protection toggles
+            binding.switchKeyword.setOnCheckedChangeListener { _, v ->
+                viewModel.setKeywordFilter(v)
+            }
+            binding.switchAi.setOnCheckedChangeListener { _, v ->
+                viewModel.setAiDetection(v)
+            }
+
+            // Delay slider
             binding.sliderDelay.addOnChangeListener(Slider.OnChangeListener { _, value, fromUser ->
-                if (fromUser) viewModel.setDelaySeconds(value.toInt())
+                if (fromUser) {
+                    viewModel.setDelaySeconds(value.toInt())
+                    binding.txtDelayValue.text = "${value.toInt()}s"
+                }
             })
+
+            // ✅ Guardian threshold
+            binding.sliderGuardianThreshold.addOnChangeListener(
+                Slider.OnChangeListener { _, value, fromUser ->
+                    if (fromUser) {
+                        viewModel.setAiThreshold(value)
+                        binding.txtGuardianThresholdValue.text = "%.2f".format(value)
+                    }
+                }
+            )
+
+            // ✅ NSFW gate threshold
+            binding.sliderNsfwThreshold.addOnChangeListener(
+                Slider.OnChangeListener { _, value, fromUser ->
+                    if (fromUser) {
+                        viewModel.setNsfwGateThreshold(value)
+                        binding.txtNsfwThresholdValue.text = "%.2f".format(value)
+                    }
+                }
+            )
+
+            // ✅ Gender confidence threshold
+            binding.sliderGenderThreshold.addOnChangeListener(
+                Slider.OnChangeListener { _, value, fromUser ->
+                    if (fromUser) {
+                        viewModel.setGenderThreshold(value)
+                        binding.txtGenderThresholdValue.text = "%.2f".format(value)
+                    }
+                }
+            )
+
+            // ✅ Grid vote count chips
+            binding.chipVote1.setOnClickListener { viewModel.setGridVoteCount(1) }
+            binding.chipVote2.setOnClickListener { viewModel.setGridVoteCount(2) }
+            binding.chipVote3.setOnClickListener { viewModel.setGridVoteCount(3) }
+            binding.chipVote4.setOnClickListener { viewModel.setGridVoteCount(4) }
+
+            // Gender chips
             binding.chipMale.setOnClickListener { viewModel.setUserGender("MALE") }
             binding.chipFemale.setOnClickListener { viewModel.setUserGender("FEMALE") }
             binding.chipNone.setOnClickListener { viewModel.setUserGender("NONE") }
+
+            // Temp block duration chips
             binding.chip15min.setOnClickListener { viewModel.setTempBlockDurationMins(15) }
             binding.chip30min.setOnClickListener { viewModel.setTempBlockDurationMins(30) }
             binding.chip60min.setOnClickListener { viewModel.setTempBlockDurationMins(60) }
-            binding.btnImportLegacy.setOnClickListener { pendingModelName = AiDetector.MODEL_LEGACY; pickModel.launch(arrayOf("*/*")) }
-            binding.btnImportNsfw.setOnClickListener { pendingModelName = AiDetector.MODEL_NSFW; pickModel.launch(arrayOf("*/*")) }
-            binding.btnImportGender.setOnClickListener { pendingModelName = AiDetector.MODEL_GENDER; pickModel.launch(arrayOf("*/*")) }
-            binding.btnRemoveLegacy.setOnClickListener { viewModel.deleteModel(AiDetector.MODEL_LEGACY) }
-            binding.btnRemoveNsfw.setOnClickListener { viewModel.deleteModel(AiDetector.MODEL_NSFW) }
-            binding.btnRemoveGender.setOnClickListener { viewModel.deleteModel(AiDetector.MODEL_GENDER) }
-            binding.btnChangePin.setOnClickListener { startActivity(Intent(this, PinSetupActivity::class.java)) }
+
+            // Model buttons
+            binding.btnImportLegacy.setOnClickListener {
+                pendingModelName = AiDetector.MODEL_LEGACY
+                pickModel.launch(arrayOf("*/*"))
+            }
+            binding.btnImportNsfw.setOnClickListener {
+                pendingModelName = AiDetector.MODEL_NSFW
+                pickModel.launch(arrayOf("*/*"))
+            }
+            binding.btnImportGender.setOnClickListener {
+                pendingModelName = AiDetector.MODEL_GENDER
+                pickModel.launch(arrayOf("*/*"))
+            }
+            binding.btnRemoveLegacy.setOnClickListener {
+                viewModel.deleteModel(AiDetector.MODEL_LEGACY)
+            }
+            binding.btnRemoveNsfw.setOnClickListener {
+                viewModel.deleteModel(AiDetector.MODEL_NSFW)
+            }
+            binding.btnRemoveGender.setOnClickListener {
+                viewModel.deleteModel(AiDetector.MODEL_GENDER)
+            }
+            binding.btnChangePin.setOnClickListener {
+                startActivity(Intent(this, PinSetupActivity::class.java))
+            }
         }
 
-        binding.btnApps.setOnClickListener { startActivity(Intent(this, AppListActivity::class.java)) }
-        binding.btnKeywords.setOnClickListener { startActivity(Intent(this, KeywordActivity::class.java)) }
-        binding.btnSchedule.setOnClickListener { startActivity(Intent(this, ScheduleActivity::class.java)) }
-        binding.btnPermissions.setOnClickListener { startActivity(Intent(this, PermissionsActivity::class.java)) }
-        binding.btnCommitmentLock.setOnClickListener { startActivity(Intent(this, TimeLockActivity::class.java)) }
+        // Navigation — lock এ ভিতরে যাওয়া যাবে
+        binding.btnApps.setOnClickListener {
+            startActivity(Intent(this, AppListActivity::class.java))
+        }
+        binding.btnKeywords.setOnClickListener {
+            startActivity(Intent(this, KeywordActivity::class.java))
+        }
+        binding.btnSchedule.setOnClickListener {
+            startActivity(Intent(this, ScheduleActivity::class.java))
+        }
+        binding.btnPermissions.setOnClickListener {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
+        binding.btnCommitmentLock.setOnClickListener {
+            startActivity(Intent(this, TimeLockActivity::class.java))
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -141,24 +213,45 @@ class SettingsActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.events.collect { event ->
                     when (event) {
-                        is SettingsEvent.ImportSuccess -> snack("Imported: ${event.modelName}")
-                        is SettingsEvent.ImportFailure -> snack("Failed: ${event.message}")
-                        is SettingsEvent.ModelDeleted -> snack("Removed: ${event.modelName}")
+                        is SettingsEvent.ImportSuccess ->
+                            snack(getString(R.string.import_success, event.modelName))
+                        is SettingsEvent.ImportFailure ->
+                            snack(getString(R.string.import_failed, event.message))
+                        is SettingsEvent.ModelDeleted ->
+                            snack(getString(R.string.model_deleted, event.modelName))
                     }
                 }
             }
         }
     }
 
-    private fun snack(text: String) = Snackbar.make(binding.root, text, Snackbar.LENGTH_SHORT).show()
+    private fun snack(text: String) =
+        Snackbar.make(binding.root, text, Snackbar.LENGTH_SHORT).show()
 
     private fun render(s: com.guardian.shield.viewmodel.SettingsUiState) {
+        // Protection
         binding.switchKeyword.isChecked = s.keywordFilter
         binding.switchAi.isChecked = s.aiDetection
-        binding.sliderThreshold.value = s.aiThreshold.coerceIn(0.2f, 0.95f)
         binding.sliderDelay.value = s.delaySeconds.coerceIn(5, 120).toFloat()
-        binding.txtThresholdValue.text = "%.2f".format(s.aiThreshold)
         binding.txtDelayValue.text = "${s.delaySeconds}s"
+
+        // ✅ AI Thresholds
+        binding.sliderGuardianThreshold.value = s.aiThreshold.coerceIn(0.3f, 0.95f)
+        binding.sliderNsfwThreshold.value = s.nsfwGateThreshold.coerceIn(0.3f, 0.95f)
+        binding.sliderGenderThreshold.value = s.genderThreshold.coerceIn(0.5f, 0.95f)
+        binding.txtGuardianThresholdValue.text = "%.2f".format(s.aiThreshold)
+        binding.txtNsfwThresholdValue.text = "%.2f".format(s.nsfwGateThreshold)
+        binding.txtGenderThresholdValue.text = "%.2f".format(s.genderThreshold)
+
+        // ✅ Grid vote chips
+        when (s.gridVoteCount) {
+            1 -> binding.chipVote1.isChecked = true
+            2 -> binding.chipVote2.isChecked = true
+            3 -> binding.chipVote3.isChecked = true
+            4 -> binding.chipVote4.isChecked = true
+        }
+
+        // Gender
         when (s.userGender) {
             "MALE" -> binding.chipMale.isChecked = true
             "FEMALE" -> binding.chipFemale.isChecked = true
@@ -169,16 +262,21 @@ class SettingsActivity : AppCompatActivity() {
             "FEMALE" -> getString(R.string.gender_status_female)
             else -> getString(R.string.gender_status_none)
         }
+
+        // Temp block duration
         when (s.tempBlockDurationMins) {
             15 -> binding.chip15min.isChecked = true
             30 -> binding.chip30min.isChecked = true
             60 -> binding.chip60min.isChecked = true
         }
+
+        // Models
         binding.txtLegacyStatus.text = formatStatus(s.legacyModel)
         binding.txtNsfwStatus.text = formatStatus(s.nsfwModel)
         binding.txtGenderModelStatus.text = formatStatus(s.genderModel)
     }
 
     private fun formatStatus(slot: com.guardian.shield.viewmodel.ModelSlotUi): String =
-        if (slot.isImported) "✓ ${slot.readableSize ?: ""}" else getString(R.string.model_missing)
+        if (slot.isImported) "✓ ${slot.readableSize ?: ""}"
+        else getString(R.string.model_missing)
 }
