@@ -32,4 +32,8 @@
     <color name="stat_bg_blue">#00091A</color>
     <color name="stat_bg_amber">#1A0E00</color>
     <color name="stat_bg_purple">#0D001A</color>
+
+    <!-- Missing colors — bg_numpad_button, bg_stat_card, ic_check_circle, activity_permissions -->
+    <color name="surface_high">#1A1A28</color>
+    <color name="success">#00E676</color>
 </resources>
