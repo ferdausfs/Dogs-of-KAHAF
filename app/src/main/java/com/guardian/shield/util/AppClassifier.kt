@@ -47,12 +47,28 @@ object AppClassifier {
         "com.huawei.systemmanager"
     )
 
-    // ✅ Package installer packages — uninstall attempt
+    // ✅ Package installer packages — uninstall attempt (সব major OEM covered)
     val INSTALLER_PACKAGES = setOf(
         "com.android.packageinstaller",
         "com.google.android.packageinstaller",
+        // Samsung
+        "com.samsung.android.packageinstaller",
+        // Xiaomi / MIUI
         "com.miui.packageinstaller",
-        "com.samsung.android.packageinstaller"
+        // Huawei / HarmonyOS
+        "com.huawei.android.packageinstaller",
+        "com.huawei.appmarket",
+        // OnePlus / OxygenOS / ColorOS
+        "com.oneplus.packageinstaller",
+        "com.coloros.packagemanager",
+        "com.oppo.packagemanager",
+        // Vivo / FuntouchOS
+        "com.vivo.packageinstaller",
+        // Realme / Asus
+        "com.realme.packageinstaller",
+        "com.asus.packageinstaller",
+        // ADB-triggered (android.content.pm.PackageInstaller)
+        "com.android.shell"
     )
 
     @Volatile private var cachedHomePkg: String? = null

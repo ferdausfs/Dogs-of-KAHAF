@@ -25,6 +25,9 @@
         <item name="colorOnSurface">@color/on_surface</item>
     </style>
 
+    <!-- Base style — child styles এ dot-notation inherit করার জন্য required -->
+    <style name="TextAppearance.GuardianShield" parent="TextAppearance.Material3.BodyMedium"/>
+
     <style name="TextAppearance.GuardianShield.ToolbarTitle"
         parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textSize">16sp</item>

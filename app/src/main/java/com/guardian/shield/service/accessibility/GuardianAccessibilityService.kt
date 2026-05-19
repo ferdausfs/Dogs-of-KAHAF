@@ -226,11 +226,13 @@ class GuardianAccessibilityService : AccessibilityService() {
                         val isOurAppPage =
                             text.contains("Guardian Shield", ignoreCase = true) ||
                             text.contains("com.guardian.shield", ignoreCase = true)
+                        // শুধু Uninstall বাটন detect করো — "Force stop" বা "Disable"
+                        // অন্য system app page এও থাকে, false-positive এড়াতে বাদ।
                         val hasUninstallOption =
                             text.contains("Uninstall", ignoreCase = true) ||
                             text.contains("আনইন্সটল", ignoreCase = true) ||
-                            text.contains("Force stop", ignoreCase = true) ||
-                            text.contains("Disable", ignoreCase = true)
+                            text.contains("Désinstaller", ignoreCase = true) ||
+                            text.contains("Deinstallieren", ignoreCase = true)
 
                         if (isOurAppPage && hasUninstallOption) {
                             Timber.w("App info page detected during commitment! Blocking.")
