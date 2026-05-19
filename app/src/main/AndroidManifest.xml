@@ -113,6 +113,16 @@
             android:showOnLockScreen="true"
             android:turnScreenOn="true"/>
 
+        <!-- ✅ নতুন: DA re-enable mandatory screen -->
+        <activity
+            android:name=".ui.guard.DeviceAdminRequiredActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"/>
+
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"
             android:exported="true"

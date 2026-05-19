@@ -27,15 +27,32 @@ object AppClassifier {
         "com.asus.launcher",
         "com.teslacoilsw.launcher",
         "com.actionlauncher.playstore",
-        "com.android.settings",
         "com.android.phone",
         "com.android.dialer",
         "com.google.android.dialer",
         "com.samsung.android.incallui",
         "com.android.incallui",
-        "com.android.keyguard",
+        "com.android.keyguard"
+        // ✅ Settings ইচ্ছাকৃতভাবে বাদ — commitment এ monitor করা হবে
+        // ✅ PackageInstaller বাদ — uninstall attempt detect করা হবে
+    )
+
+    // ✅ Settings packages — commitment এ monitor করতে হবে
+    val SETTINGS_PACKAGES = setOf(
+        "com.android.settings",
+        "com.samsung.android.settings",
+        "com.miui.securitycenter",
+        "com.oneplus.settings",
+        "com.oppo.settings",
+        "com.huawei.systemmanager"
+    )
+
+    // ✅ Package installer packages — uninstall attempt
+    val INSTALLER_PACKAGES = setOf(
         "com.android.packageinstaller",
-        "com.google.android.packageinstaller"
+        "com.google.android.packageinstaller",
+        "com.miui.packageinstaller",
+        "com.samsung.android.packageinstaller"
     )
 
     @Volatile private var cachedHomePkg: String? = null
@@ -67,6 +84,12 @@ object AppClassifier {
         if (inputMethods.contains(targetPkg)) return true
         return false
     }
+
+    fun isSettingsPackage(pkg: String): Boolean =
+        SETTINGS_PACKAGES.any { pkg == it || pkg.startsWith(it) }
+
+    fun isInstallerPackage(pkg: String): Boolean =
+        INSTALLER_PACKAGES.any { pkg == it || pkg.startsWith(it) }
 
     fun loadInputMethodPackages(context: Context): Set<String> {
         return try {

@@ -1,12 +1,11 @@
 package com.guardian.shield.admin
 
 import android.app.admin.DeviceAdminReceiver
-import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.TimeLockManager
+import com.guardian.shield.ui.guard.DeviceAdminRequiredActivity
 import timber.log.Timber
 
 class GuardianDeviceAdminReceiver : DeviceAdminReceiver() {
@@ -20,39 +19,30 @@ class GuardianDeviceAdminReceiver : DeviceAdminReceiver() {
     override fun onDisabled(context: Context, intent: Intent) {
         super.onDisabled(context, intent)
         Timber.w("Device Admin disabled!")
+        runCatching { GuardianForegroundService.start(context) }
 
-        // Commitment Lock active থাকলে তাৎক্ষণিক re-request করো
-        val tlm = TimeLockManager(context)
-        if (tlm.isLocked() || tlm.isInCooldown()) {
-            Timber.w("Lock active — re-requesting Device Admin immediately")
+        // ✅ Commitment lock active থাকলে mandatory re-enable prompt
+        val timeLockManager = TimeLockManager(context)
+        if (timeLockManager.isLocked()) {
+            Timber.w("DA disabled during commitment lock! Forcing re-enable.")
             runCatching {
-                val admin = ComponentName(context, GuardianDeviceAdminReceiver::class.java)
-                val reEnable = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
-                    putExtra(
-                        DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                        "🔒 Commitment Lock সক্রিয় — সুরক্ষা বজায় রাখতে Device Admin আবার চালু করুন।"
-                    )
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(reEnable)
+                context.startActivity(
+                    Intent(context, DeviceAdminRequiredActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                )
             }
         }
-        // Service চালু রাখো
-        runCatching { GuardianForegroundService.start(context) }
     }
 
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence {
-        val tlm = TimeLockManager(context)
-        return when {
-            tlm.isInCooldown() ->
-                "🔒 Unlock cooldown চলছে — ${tlm.getRemainingFormatted()}। " +
-                "Device Admin বন্ধ করলেও lock শেষ না হওয়া পর্যন্ত আবার চালু করতে বলা হবে।"
-            tlm.isLocked() ->
-                "🔒 Commitment Lock সক্রিয়! Unlock request না দেওয়া পর্যন্ত " +
-                "Device Admin বন্ধ করলেও আবার চালু করতে বলা হবে।"
-            else ->
-                "⚠️ Guardian Shield বন্ধ করলে সমস্ত সুরক্ষা বন্ধ হয়ে যাবে।"
+        val timeLockManager = TimeLockManager(context)
+        return if (timeLockManager.isLocked()) {
+            "🔒 Commitment Lock সক্রিয়! ${timeLockManager.getRemainingFormatted()} পর্যন্ত " +
+            "Device Admin বন্ধ করা যাবে না। App uninstall করা সম্ভব হবে না।"
+        } else {
+            "⚠️ Guardian Shield বন্ধ করলে সমস্ত সুরক্ষা বন্ধ হয়ে যাবে।"
         }
     }
 }

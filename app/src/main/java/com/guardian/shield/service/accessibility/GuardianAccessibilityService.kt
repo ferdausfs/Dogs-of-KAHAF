@@ -21,6 +21,7 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +45,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var blockingEngine: BlockingEngine
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
+    @Inject lateinit var timeLockManager: TimeLockManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -68,7 +70,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOn = false
                     currentPackage = null
-                    // ✅ Screen off → সব reset
                     isBlockingInProgress = false
                 }
             }
@@ -135,33 +136,46 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
-    // ✅ Fix: currentPackage null + timer reset বন্ধ
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
         if (isBlockingInProgress) {
             Timber.d("Block in progress, skip: $pkg")
             return
         }
         isBlockingInProgress = true
-        // ✅ তুরন্ত clear — periodic scanner stale pkg দেখবে না
         currentPackage = null
         performGlobalAction(GLOBAL_ACTION_HOME)
         mainHandler.postDelayed({
             blockingEngine.block(pkg, reason, detail)
         }, 120)
-        // ✅ Timer reset নেই — home screen detect হলে reset হবে
     }
 
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
 
-        // ✅ Safe/home package → সব reset
+        // Safe/home package → reset
         if (isSafePackage(pkg)) {
             currentPackage = null
             isBlockingInProgress = false
             return
         }
 
-        // ✅ Whitelist → track করো কিন্তু block করো না
+        // ✅ Commitment lock এ Installer detect → uninstall block
+        if (timeLockManager.isLocked()) {
+            if (AppClassifier.isInstallerPackage(pkg)) {
+                Timber.w("Uninstall attempt during commitment! Blocking.")
+                goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "commitment_uninstall")
+                return
+            }
+
+            // ✅ Settings detect → content change এ monitor করবো
+            if (AppClassifier.isSettingsPackage(pkg)) {
+                currentPackage = pkg
+                isBlockingInProgress = false
+                return
+            }
+        }
+
+        // Whitelist check
         if (!rulesEngine.canBlock(pkg)) {
             currentPackage = pkg
             isBlockingInProgress = false
@@ -170,22 +184,24 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         currentPackage = pkg
 
-        // Temp block check
+        // Temp block
         val tempBlock = blockingEngine.isTempBlocked(pkg)
         if (tempBlock != null) {
-            goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "temp_block:${tempBlock.remainingMinutes}min")
+            goHomeAndBlock(
+                pkg, BlockReason.APP_BLOCKED,
+                "temp_block:${tempBlock.remainingMinutes}min"
+            )
             return
         }
 
-        // Rules check
+        // Rules/schedule check
         val result = rulesEngine.evaluatePackage(pkg)
         if (result is DetectionResult.Block) {
             goHomeAndBlock(pkg, result.reason, result.detail)
             return
         }
 
-        // ✅ Block যোগ্য কিন্তু block হয়নি → flag reset করো
-        // এতে পরের AI scan এ block করতে পারবে
+        // ✅ Block যোগ্য কিন্তু block হয়নি → flag reset
         isBlockingInProgress = false
 
         if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
@@ -195,8 +211,44 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun handleContentChange(pkg: String) {
         if (pkg.isBlank() || isSafePackage(pkg)) return
-        if (!rulesEngine.canBlock(pkg)) return
         if (isBlockingInProgress) return
+
+        // ✅ Commitment এ Settings app info page detect
+        if (timeLockManager.isLocked() && AppClassifier.isSettingsPackage(pkg)) {
+            val now = System.currentTimeMillis()
+            if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
+            lastTextScan = now
+
+            serviceScope.launch {
+                try {
+                    val text = withContext(Dispatchers.Default) { collectVisibleText() }
+                    if (!text.isNullOrBlank()) {
+                        val isOurAppPage =
+                            text.contains("Guardian Shield", ignoreCase = true) ||
+                            text.contains("com.guardian.shield", ignoreCase = true)
+                        val hasUninstallOption =
+                            text.contains("Uninstall", ignoreCase = true) ||
+                            text.contains("আনইন্সটল", ignoreCase = true) ||
+                            text.contains("Force stop", ignoreCase = true) ||
+                            text.contains("Disable", ignoreCase = true)
+
+                        if (isOurAppPage && hasUninstallOption) {
+                            Timber.w("App info page detected during commitment! Blocking.")
+                            withContext(Dispatchers.Main) {
+                                goHomeAndBlock(
+                                    pkg,
+                                    BlockReason.APP_BLOCKED,
+                                    "commitment_settings"
+                                )
+                            }
+                        }
+                    }
+                } catch (t: Throwable) { Timber.e(t) }
+            }
+            return
+        }
+
+        if (!rulesEngine.canBlock(pkg)) return
         val now = System.currentTimeMillis()
         if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
         lastTextScan = now
@@ -207,7 +259,9 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (!text.isNullOrBlank()) {
                     val r = rulesEngine.evaluateText(text)
                     if (r is DetectionResult.Block) {
-                        withContext(Dispatchers.Main) { goHomeAndBlock(pkg, r.reason, r.detail) }
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(pkg, r.reason, r.detail)
+                        }
                     }
                 }
             } catch (t: Throwable) { Timber.e(t) }
@@ -225,7 +279,8 @@ class GuardianAccessibilityService : AccessibilityService() {
             val node = queue.poll() ?: continue
             if (!visited.add(node)) continue
             count++
-            node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+            node.text?.toString()
+                ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
             node.contentDescription?.toString()
                 ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
@@ -251,7 +306,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String) {
         try {
-            takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                mainExecutor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
                         var bmp: Bitmap? = null
@@ -275,7 +332,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 ) {
                                     if (aiDetector.isOppositeGenderNsfw(b, gender)) {
                                         withContext(Dispatchers.Main) {
-                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                            goHomeAndBlock(
+                                                pkg,
+                                                BlockReason.AI_DETECTION,
+                                                "gender-nsfw"
+                                            )
                                         }
                                         blocked = true
                                     }
@@ -283,18 +344,26 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 if (!blocked && aiDetector.isLegacyAvailable()) {
                                     if (aiDetector.isUnsafe(b)) {
                                         withContext(Dispatchers.Main) {
-                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                            goHomeAndBlock(
+                                                pkg,
+                                                BlockReason.AI_DETECTION,
+                                                "legacy"
+                                            )
                                         }
                                     }
                                 }
-                            } catch (t: Throwable) { Timber.e(t, "AI check failed") }
-                            finally { try { bmp?.recycle() } catch (_: Throwable) {} }
+                            } catch (t: Throwable) {
+                                Timber.e(t, "AI check failed")
+                            } finally {
+                                try { bmp?.recycle() } catch (_: Throwable) {}
+                            }
                         }
                     }
                     override fun onFailure(errorCode: Int) {
                         Timber.w("Screenshot fail: $errorCode")
                     }
-                })
+                }
+            )
         } catch (t: Throwable) { Timber.e(t) }
     }
 
@@ -307,13 +376,22 @@ class GuardianAccessibilityService : AccessibilityService() {
                         if (!isScreenOn) GuardianConstants.SCREEN_OFF_PERIODIC_MS
                         else GuardianConstants.AI_PERIODIC_MS
                     )
-
                     if (!isScreenOn || !protectionEnabled || isDeviceLocked()) continue
-                    // ✅ Block চলাকালীন skip
                     if (isBlockingInProgress) continue
 
                     val pkg = currentPackage ?: continue
                     if (isSafePackage(pkg)) continue
+
+                    // ✅ Commitment এ installer/settings periodic check
+                    if (timeLockManager.isLocked()) {
+                        if (AppClassifier.isInstallerPackage(pkg)) {
+                            withContext(Dispatchers.Main) {
+                                goHomeAndBlock(pkg, BlockReason.APP_BLOCKED, "commitment_uninstall")
+                            }
+                            continue
+                        }
+                    }
+
                     if (!rulesEngine.canBlock(pkg)) continue
 
                     val tempBlock = blockingEngine.isTempBlocked(pkg)
