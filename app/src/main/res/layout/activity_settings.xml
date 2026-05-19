@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="@color/bg_main">
 
-    <!-- Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -33,13 +32,13 @@
         android:gravity="center_vertical"
         android:visibility="gone">
         <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
             android:id="@+id/txtLockRemaining"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:textColor="@color/primary"
             android:textSize="13sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            android:gravity="center"/>
     </LinearLayout>
 
     <ScrollView
@@ -54,9 +53,13 @@
             android:paddingTop="16dp"
             android:paddingBottom="40dp">
 
-            <!-- ═══ PROTECTION ═══ -->
-            <include layout="@layout/include_section_header"
-                android:id="@+id/headerProtection"/>
+            <!-- PROTECTION -->
+            <TextView
+                style="@style/TextAppearance.GuardianShield.SectionHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PROTECTION"
+                android:layout_marginBottom="10dp"/>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -74,7 +77,7 @@
                     android:orientation="vertical"
                     android:padding="4dp">
 
-                    <!-- Keyword Filter row -->
+                    <!-- Keyword Filter -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
@@ -102,15 +105,13 @@
                         <com.google.android.material.materialswitch.MaterialSwitch
                             android:id="@+id/switchKeyword"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:thumbTint="@color/switch_thumb_selector"
-                            app:trackTint="@color/switch_track_selector"/>
+                            android:layout_height="wrap_content"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
 
-                    <!-- AI Detection row -->
+                    <!-- AI Detection -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
@@ -142,9 +143,9 @@
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
 
-                    <!-- Unlock delay -->
+                    <!-- Unlock Delay -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -187,7 +188,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ AI SENSITIVITY ═══ -->
+            <!-- AI SENSITIVITY -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -213,8 +214,8 @@
 
                     <!-- Guardian threshold -->
                     <LinearLayout android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
+                        android:layout_height="wrap_content" android:orientation="horizontal"
+                        android:gravity="center_vertical">
                         <TextView android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:text="Guardian Model"
                             android:textColor="@color/on_surface" android:textSize="13sp"/>
@@ -229,12 +230,12 @@
                         android:valueFrom="0.3" android:valueTo="0.95" android:stepSize="0.05"
                         android:value="0.65" app:thumbColor="@color/primary"
                         app:trackColorActive="@color/primary" app:trackColorInactive="@color/border"
-                        android:layout_marginBottom="8dp"/>
+                        android:layout_marginBottom="12dp"/>
 
-                    <!-- NSFW gate threshold -->
+                    <!-- NSFW gate -->
                     <LinearLayout android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
+                        android:layout_height="wrap_content" android:orientation="horizontal"
+                        android:gravity="center_vertical">
                         <TextView android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:text="NSFW Gate"
                             android:textColor="@color/on_surface" android:textSize="13sp"/>
@@ -249,12 +250,12 @@
                         android:valueFrom="0.3" android:valueTo="0.95" android:stepSize="0.05"
                         android:value="0.60" app:thumbColor="@color/info"
                         app:trackColorActive="@color/info" app:trackColorInactive="@color/border"
-                        android:layout_marginBottom="8dp"/>
+                        android:layout_marginBottom="12dp"/>
 
                     <!-- Gender threshold -->
                     <LinearLayout android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
+                        android:layout_height="wrap_content" android:orientation="horizontal"
+                        android:gravity="center_vertical">
                         <TextView android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:text="Gender Confidence"
                             android:textColor="@color/on_surface" android:textSize="13sp"/>
@@ -271,7 +272,7 @@
                         app:trackColorActive="@color/secondary" app:trackColorInactive="@color/border"
                         android:layout_marginBottom="12dp"/>
 
-                    <!-- Grid vote -->
+                    <!-- Grid Vote -->
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="REGIONS TO TRIGGER BLOCK"
                         android:textColor="@color/on_surface_muted" android:textSize="10sp"
@@ -313,7 +314,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ GENDER FILTER ═══ -->
+            <!-- GENDER FILTER -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -372,7 +373,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ TEMP BLOCK ═══ -->
+            <!-- TEMP BLOCK -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -430,7 +431,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ BLOCKING RULES ═══ -->
+            <!-- BLOCKING RULES -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -452,7 +453,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="4dp">
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnApps"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -462,10 +462,8 @@
                         android:textColor="@color/on_surface"
                         android:gravity="start|center_vertical"
                         android:paddingStart="16dp"/>
-
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
-
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnKeywords"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -475,10 +473,8 @@
                         android:textColor="@color/on_surface"
                         android:gravity="start|center_vertical"
                         android:paddingStart="16dp"/>
-
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
-
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSchedule"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -491,7 +487,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ AI MODELS ═══ -->
+            <!-- AI MODELS -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -514,7 +510,7 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Legacy Model -->
+                    <!-- Legacy -->
                     <LinearLayout android:layout_width="match_parent"
                         android:layout_height="wrap_content" android:orientation="horizontal"
                         android:gravity="center_vertical" android:layout_marginBottom="12dp">
@@ -525,8 +521,7 @@
                                 android:textColor="@color/on_surface" android:textSize="13sp"
                                 android:textStyle="bold"/>
                             <TextView android:id="@+id/txtLegacyStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/model_missing"
                                 android:textColor="@color/on_surface_muted" android:textSize="11sp"/>
                         </LinearLayout>
@@ -541,14 +536,14 @@
                             android:id="@+id/btnRemoveLegacy"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content" android:layout_height="36dp"
-                            android:text="Remove" android:textSize="12sp"
+                            android:text="Del" android:textSize="12sp"
                             android:textColor="@color/primary" app:cornerRadius="8dp"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
                         android:background="@color/border" android:layout_marginBottom="12dp"/>
 
-                    <!-- NSFW Model -->
+                    <!-- NSFW -->
                     <LinearLayout android:layout_width="match_parent"
                         android:layout_height="wrap_content" android:orientation="horizontal"
                         android:gravity="center_vertical" android:layout_marginBottom="12dp">
@@ -559,8 +554,7 @@
                                 android:textColor="@color/on_surface" android:textSize="13sp"
                                 android:textStyle="bold"/>
                             <TextView android:id="@+id/txtNsfwStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/model_missing"
                                 android:textColor="@color/on_surface_muted" android:textSize="11sp"/>
                         </LinearLayout>
@@ -575,14 +569,14 @@
                             android:id="@+id/btnRemoveNsfw"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content" android:layout_height="36dp"
-                            android:text="Remove" android:textSize="12sp"
+                            android:text="Del" android:textSize="12sp"
                             android:textColor="@color/primary" app:cornerRadius="8dp"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
                         android:background="@color/border" android:layout_marginBottom="12dp"/>
 
-                    <!-- Gender Model -->
+                    <!-- Gender -->
                     <LinearLayout android:layout_width="match_parent"
                         android:layout_height="wrap_content" android:orientation="horizontal"
                         android:gravity="center_vertical">
@@ -593,8 +587,7 @@
                                 android:textColor="@color/on_surface" android:textSize="13sp"
                                 android:textStyle="bold"/>
                             <TextView android:id="@+id/txtGenderModelStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/model_missing"
                                 android:textColor="@color/on_surface_muted" android:textSize="11sp"/>
                         </LinearLayout>
@@ -609,13 +602,13 @@
                             android:id="@+id/btnRemoveGender"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content" android:layout_height="36dp"
-                            android:text="Remove" android:textSize="12sp"
+                            android:text="Del" android:textSize="12sp"
                             android:textColor="@color/primary" app:cornerRadius="8dp"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ SECURITY ═══ -->
+            <!-- SECURITY -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
@@ -636,7 +629,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="4dp">
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnChangePin"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -646,10 +638,8 @@
                         android:textColor="@color/on_surface"
                         android:gravity="start|center_vertical"
                         android:paddingStart="16dp"/>
-
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
-
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnPermissions"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -659,10 +649,8 @@
                         android:textColor="@color/on_surface"
                         android:gravity="start|center_vertical"
                         android:paddingStart="16dp"/>
-
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/border" android:marginHorizontal="16dp"/>
-
+                        android:background="@color/border" android:layout_marginHorizontal="16dp"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCommitmentLock"
                         style="@style/Widget.Material3.Button.TextButton"
