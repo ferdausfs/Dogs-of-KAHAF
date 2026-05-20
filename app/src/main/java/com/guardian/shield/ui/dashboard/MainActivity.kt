@@ -141,13 +141,8 @@ class MainActivity : AppCompatActivity() {
                     R.string.status_active_sub_fmt, state.todayCount
                 )
                 binding.imgShield.setImageResource(R.drawable.ic_shield_on)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_active)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
-                binding.txtStatusDot.text = "Active"
-                binding.txtStatusDot.setTextColor(getColor(R.color.success))
+                binding.statusCard.strokeColor = getColor(R.color.success)
                 binding.fabToggle.text = "Pause"
                 binding.fabToggle.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
@@ -186,12 +181,8 @@ class MainActivity : AppCompatActivity() {
             duration = 1800
             repeatCount = ObjectAnimator.INFINITE
         }
-        val glowAlpha = ObjectAnimator.ofFloat(binding.shieldGlow, "alpha", 0.4f, 0.9f, 0.4f).apply {
-            duration = 1800
-            repeatCount = ObjectAnimator.INFINITE
-        }
         shieldPulseSet = AnimatorSet().apply {
-            playTogether(scaleX, scaleY, glowAlpha)
+            playTogether(scaleX, scaleY)
             start()
         }
     }
@@ -201,7 +192,6 @@ class MainActivity : AppCompatActivity() {
         shieldPulseSet = null
         binding.imgShield.scaleX = 1f
         binding.imgShield.scaleY = 1f
-        binding.shieldGlow.alpha = 0.3f
     }
 
     // ── Stat number animation ─────────────────────────────────────
