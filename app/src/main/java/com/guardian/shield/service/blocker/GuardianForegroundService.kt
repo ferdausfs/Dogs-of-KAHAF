@@ -129,7 +129,7 @@ class GuardianForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, GuardianApp.CHANNEL_GUARDIAN)
-            .setSmallIcon(R.drawable.ic_notif_shield)
+            .setSmallIcon(R.drawable.ic_shield_on)
             .setContentTitle(getString(R.string.notif_title))
             .setContentText(getString(R.string.notif_text))
             .setOngoing(true)

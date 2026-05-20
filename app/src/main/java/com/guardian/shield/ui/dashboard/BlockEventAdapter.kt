@@ -42,7 +42,7 @@ class BlockEventAdapter(
 
     inner class VH(private val b: ItemBlockEventBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(e: BlockEvent) {
-            b.txtAppName.text = e.packageName.substringAfterLast('.')
+            b.txtPackage.text = e.packageName.substringAfterLast('.')
                 .replaceFirstChar { it.uppercase() }
                 .ifBlank { e.packageName }
 
@@ -54,7 +54,7 @@ class BlockEventAdapter(
                 BlockReason.AI_DETECTION    -> Triple(ctx.getString(R.string.reason_ai),    R.color.primary,       "🤖")
                 BlockReason.KEYWORD_MATCH   -> Triple(ctx.getString(R.string.reason_kw),    R.color.secondary,     "🔑")
                 BlockReason.APP_BLOCKED     -> Triple(ctx.getString(R.string.reason_app),   R.color.error,         "🚫")
-                BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.info,          "🕐")
+                BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.purple,        "🕐")
                 BlockReason.MANUAL          -> Triple(ctx.getString(R.string.reason_manual),R.color.on_surface_dim,"✋")
             }
 
@@ -62,7 +62,7 @@ class BlockEventAdapter(
             b.txtTime.text   = time
 
             val color = ctx.getColor(colorRes)
-            b.viewDot.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+            b.badge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color))
 
             // App icon
             try {

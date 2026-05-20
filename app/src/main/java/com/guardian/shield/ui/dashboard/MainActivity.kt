@@ -118,8 +118,13 @@ class MainActivity : AppCompatActivity() {
                 binding.txtStatusTitle.text = getString(R.string.status_service_off)
                 binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.statusCard.strokeColor = getColor(R.color.on_surface_dim)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+                binding.txtStatusDot.text = "Service Off"
+                binding.txtStatusDot.setTextColor(getColor(R.color.on_surface_dim))
                 binding.fabToggle.text = "Enable"
                 binding.fabToggle.setBackgroundColor(getColor(R.color.on_surface_dim))
                 stopShieldPulse()
@@ -128,8 +133,13 @@ class MainActivity : AppCompatActivity() {
                 binding.txtStatusTitle.text = getString(R.string.status_paused)
                 binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.statusCard.strokeColor = getColor(R.color.secondary)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+                binding.txtStatusDot.text = "Paused"
+                binding.txtStatusDot.setTextColor(getColor(R.color.secondary))
                 binding.fabToggle.text = "Resume"
                 binding.fabToggle.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(getColor(R.color.success))
@@ -141,8 +151,13 @@ class MainActivity : AppCompatActivity() {
                     R.string.status_active_sub_fmt, state.todayCount
                 )
                 binding.imgShield.setImageResource(R.drawable.ic_shield_on)
+                binding.shieldGlow.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_active)
-                binding.statusCard.strokeColor = getColor(R.color.success)
+                binding.statusDot.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
+                binding.txtStatusDot.text = "Active"
+                binding.txtStatusDot.setTextColor(getColor(R.color.success))
                 binding.fabToggle.text = "Pause"
                 binding.fabToggle.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
@@ -181,8 +196,12 @@ class MainActivity : AppCompatActivity() {
             duration = 1800
             repeatCount = ObjectAnimator.INFINITE
         }
+        val glowAlpha = ObjectAnimator.ofFloat(binding.shieldGlow, "alpha", 0.4f, 0.9f, 0.4f).apply {
+            duration = 1800
+            repeatCount = ObjectAnimator.INFINITE
+        }
         shieldPulseSet = AnimatorSet().apply {
-            playTogether(scaleX, scaleY)
+            playTogether(scaleX, scaleY, glowAlpha)
             start()
         }
     }
@@ -192,6 +211,7 @@ class MainActivity : AppCompatActivity() {
         shieldPulseSet = null
         binding.imgShield.scaleX = 1f
         binding.imgShield.scaleY = 1f
+        binding.shieldGlow.alpha = 0.3f
     }
 
     // ── Stat number animation ─────────────────────────────────────

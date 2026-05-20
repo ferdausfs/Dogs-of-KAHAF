@@ -33,9 +33,9 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_shield_on"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_shield_on"
         android:supportsRtl="true"
         android:theme="@style/Theme.GuardianShield"
         android:enableOnBackInvokedCallback="true"
@@ -106,16 +106,6 @@
 
         <activity
             android:name=".ui.guard.AccessibilityPromptActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
-            android:taskAffinity=""
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"/>
-
-        <!-- ✅ নতুন: DA re-enable mandatory screen -->
-        <activity
-            android:name=".ui.guard.DeviceAdminRequiredActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"

@@ -3,116 +3,69 @@ name: Build Release APK
 on:
   push:
     branches: [main, master]
-    tags:
-      - 'v*'
   workflow_dispatch:
-    inputs:
-      version_tag:
-        description: 'Version tag (e.g. v2.2.0)'
-        required: false
-        default: 'v-manual'
 
 permissions:
   contents: write
 
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      -
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Download Gradle wrapper jar
         run: |
           mkdir -p gradle/wrapper
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "⬇️ Fetching gradle-wrapper.jar (v8.4)"
-            curl -fsSL --retry 3 --retry-delay 5 -o gradle/wrapper/gradle-wrapper.jar \
-              https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
-          fi
-          # Verify it is a valid JAR (zip) — protects against silently-corrupted CDNs
-          if ! unzip -tq gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
-            echo "❌ gradle-wrapper.jar is corrupted, re-downloading"
-            rm -f gradle/wrapper/gradle-wrapper.jar
-            curl -fsSL --retry 3 -o gradle/wrapper/gradle-wrapper.jar \
-              https://services.gradle.org/distributions/gradle-8.4-wrapper.jar || true
-            curl -fsSL --retry 3 -o gradle/wrapper/gradle-wrapper.jar \
-              https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
-          fi
-          echo "✅ gradle-wrapper.jar ($(stat -c%s gradle/wrapper/gradle-wrapper.jar) bytes)"
+          curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-read-only: false
-          dependency-graph: disabled
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Decode keystore (if secret provided)
-        id: keystore
+      - name: Decode keystore
         run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/guardian-shield.jks
-            if [ -s app/guardian-shield.jks ]; then
-              echo "available=true" >> "$GITHUB_OUTPUT"
-              echo "✅ Keystore decoded ($(stat -c%s app/guardian-shield.jks) bytes)"
-            else
-              echo "available=false" >> "$GITHUB_OUTPUT"
-              echo "⚠️ Keystore decode produced empty file — building unsigned"
-              rm -f app/guardian-shield.jks
-            fi
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ KEYSTORE_BASE64 secret not set — building unsigned"
-          fi
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/guardian-shield.jks
+          echo "Keystore decoded successfully"
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon --stacktrace --build-cache
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
         env:
-          KEYSTORE_PATH: ${{ steps.keystore.outputs.available == 'true' && 'guardian-shield.jks' || '' }}
+          KEYSTORE_PATH: guardian-shield.jks
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
 
-      - name: Locate APK
-        id: apk
+      - name: Verify APK signed
         run: |
           APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -z "$APK" ]; then
-            echo "❌ No APK produced!" && exit 1
-          fi
-          echo "path=$APK" >> "$GITHUB_OUTPUT"
-          echo "✅ APK: $APK ($(ls -lh "$APK" | awk '{print $5}'))"
+          echo "APK: $APK"
+          ls -lh "$APK"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: guardian-shield-release-${{ github.ref_name }}
+          name: guardian-shield-release-v2.1.0.100
           path: app/build/outputs/apk/release/*.apk
           retention-days: 90
-          if-no-files-found: error
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Guardian Shield ${{ github.ref_name }}
+          tag_name: v2.1.0.100
+          name: Guardian Shield v2.1.0.100
           body: |
             ### What's New
             - 🔒 Commitment Lock: indefinite lock + cooldown unlock system

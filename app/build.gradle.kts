@@ -17,25 +17,16 @@ android {
         versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
-        // Limit resources to languages we actually ship to shrink the APK
-        resourceConfigurations += listOf("en", "bn")
     }
 
-    // ─── Signing ────────────────────────────────────────────────
-    // Only register a release signing config when KEYSTORE_PATH is provided
-    // AND the file actually exists. Otherwise CI falls back to the debug
-    // signing key so the build still succeeds.
-    val keystorePath: String? = System.getenv("KEYSTORE_PATH")
-    val keystoreFile: java.io.File? = keystorePath?.let { rootProject.file("app/$it") }
-        ?.takeIf { it.exists() && it.length() > 0 }
-
     signingConfigs {
-        if (keystoreFile != null) {
-            create("release") {
-                storeFile = keystoreFile
-                storePassword = System.getenv("STORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        create("release") {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("STORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
             }
         }
     }
@@ -48,10 +39,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use the release keystore when available; otherwise fall back
-            // to the debug keystore so CI never fails for missing secrets.
-            signingConfig = signingConfigs.findByName("release")
-                ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -75,21 +63,10 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
-            excludes += "/META-INF/LICENSE*"
-            excludes += "/META-INF/NOTICE*"
-            excludes += "/META-INF/*.kotlin_module"
-            excludes += "kotlin/**"
-            excludes += "**/*.txt"
-            excludes += "**/*.proto"
         }
     }
 
     androidResources { noCompress += "tflite" }
-
-    lint {
-        abortOnError = false
-        checkReleaseBuilds = false
-    }
 }
 
 ksp {
