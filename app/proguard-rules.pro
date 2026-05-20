@@ -69,3 +69,17 @@
 # ── Misc ─────────────────────────────────────────────────────
 -dontwarn org.jetbrains.annotations.**
 -keep class timber.log.** { *; }
+
+# ── Kotlin data / sealed classes (used for IPC / state) ──────
+-keepclassmembers class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
+-dontwarn kotlin.reflect.**
+-keep class kotlin.coroutines.** { *; }
+
+# ── Material Components (Snackbar / Dialog reflection paths) ──
+-dontwarn com.google.android.material.**
+-keep class com.google.android.material.** { *; }
+
+# ── Misc extras ──────────────────────────────────────────────
+-dontwarn javax.lang.model.**
+-dontwarn org.checkerframework.**

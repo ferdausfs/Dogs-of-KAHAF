@@ -45,4 +45,8 @@
     <color name="stat_bg_blue">#00091A</color>
     <color name="stat_bg_amber">#1A0E00</color>
     <color name="stat_bg_purple">#0D001A</color>
+
+    <!-- Accent colours used from code (e.g. BlockEventAdapter) -->
+    <color name="purple">#B388FF</color>
+    <color name="purple_dim">#1A0033</color>
 </resources>
