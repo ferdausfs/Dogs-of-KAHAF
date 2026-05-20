@@ -118,13 +118,8 @@ class MainActivity : AppCompatActivity() {
                 binding.txtStatusTitle.text = getString(R.string.status_service_off)
                 binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+                binding.statusCard.strokeColor = getColor(R.color.on_surface_dim)
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
-                binding.txtStatusDot.text = "Service Off"
-                binding.txtStatusDot.setTextColor(getColor(R.color.on_surface_dim))
                 binding.fabToggle.text = "Enable"
                 binding.fabToggle.setBackgroundColor(getColor(R.color.on_surface_dim))
                 stopShieldPulse()
@@ -133,13 +128,8 @@ class MainActivity : AppCompatActivity() {
                 binding.txtStatusTitle.text = getString(R.string.status_paused)
                 binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+                binding.statusCard.strokeColor = getColor(R.color.secondary)
                 binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
-                binding.txtStatusDot.text = "Paused"
-                binding.txtStatusDot.setTextColor(getColor(R.color.secondary))
                 binding.fabToggle.text = "Resume"
                 binding.fabToggle.backgroundTintList =
                     android.content.res.ColorStateList.valueOf(getColor(R.color.success))
@@ -183,41 +173,7 @@ class MainActivity : AppCompatActivity() {
         binding.txtEmpty.visibility =
             if (state.recent.isEmpty()) View.VISIBLE else View.GONE
     }
-    private fun render(state: DashboardUiState) {
-    when {
-        !state.protectionActive -> {
-            binding.txtStatusTitle.text = "SERVICE OFFLINE"
-            binding.txtStatusTitle.setTextColor(getColor(R.color.error))
-            binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
-            binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-            binding.statusCard.strokeColor = getColor(R.color.error)
-        }
-        !state.protectionEnabled -> {
-            binding.txtStatusTitle.text = "PROTECTION PAUSED"
-            binding.txtStatusTitle.setTextColor(getColor(R.color.on_surface_dim))
-            binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
-            binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-            binding.statusCard.strokeColor = getColor(R.color.on_surface_muted)
-        }
-        else -> {
-            binding.txtStatusTitle.text = "BLOCKING ACTIVE"
-            binding.txtStatusTitle.setTextColor(getColor(R.color.safe))
-            binding.txtStatusSubtitle.text = "${state.todayCount} blocks today"
-            binding.imgShield.setImageResource(R.drawable.ic_shield_on)
-            binding.statusCard.strokeColor = getColor(R.color.safe)
-        }
-    }
 
-    binding.txtStatTotal.text = state.stats.totalBlocks.toString()
-    binding.txtStatAi.text = state.stats.aiBlocks.toString()
-    binding.txtStatKeyword.text = state.stats.keywordBlocks.toString()
-    binding.txtStatTopApp.text =
-        state.stats.topApp?.substringAfterLast('.')?.take(6) ?: "—"
-
-    adapter.submit(state.recent)
-    binding.txtEmpty.visibility =
-        if (state.recent.isEmpty()) View.VISIBLE else View.GONE
-    }
     // ── Shield pulse animation ────────────────────────────────────
 
     private fun startShieldPulse() {
