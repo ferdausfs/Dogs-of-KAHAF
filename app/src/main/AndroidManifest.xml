@@ -57,6 +57,16 @@
             android:parentActivityName=".ui.dashboard.MainActivity"/>
 
         <activity
+            android:name=".ui.settings.ActivityLogActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity"/>
+
+        <activity
+            android:name=".ui.profile.ParentProfileActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity"/>
+
+        <activity
             android:name=".ui.settings.AppListActivity"
             android:exported="false"
             android:parentActivityName=".ui.settings.SettingsActivity"/>

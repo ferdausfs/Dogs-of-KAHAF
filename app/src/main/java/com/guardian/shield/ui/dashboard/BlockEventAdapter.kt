@@ -22,16 +22,17 @@ class BlockEventAdapter(
 
     private var lastAnimatedPosition = -1
 
-    fun submit(list: List<BlockEvent>) { submitList(list) }
+    fun submit(list: List<BlockEvent>) {
+        submitList(list)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val b = ItemBlockEventBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return VH(b)
+        val binding = ItemBlockEventBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(binding)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         holder.bind(getItem(position))
-        // Slide-in animation for new items
         if (position > lastAnimatedPosition) {
             val anim = AnimationUtils.loadAnimation(holder.itemView.context, R.anim.item_slide_in)
             anim.startOffset = (position * 40L).coerceAtMost(200L)
@@ -40,41 +41,46 @@ class BlockEventAdapter(
         }
     }
 
-    inner class VH(private val b: ItemBlockEventBinding) : RecyclerView.ViewHolder(b.root) {
-        fun bind(e: BlockEvent) {
-            b.txtPackage.text = e.packageName.substringAfterLast('.')
+    inner class VH(private val binding: ItemBlockEventBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(event: BlockEvent) {
+            val ctx = binding.root.context
+            binding.txtPackage.text = event.packageName.substringAfterLast('.')
                 .replaceFirstChar { it.uppercase() }
-                .ifBlank { e.packageName }
+                .ifBlank { event.packageName }
 
             val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val time = fmt.format(Date(e.timestamp))
-            val ctx = b.root.context
+            binding.txtTime.text = fmt.format(Date(event.timestamp))
 
-            val (reasonText, colorRes, emoji) = when (e.reason) {
-                BlockReason.AI_DETECTION    -> Triple(ctx.getString(R.string.reason_ai),    R.color.primary,       "🤖")
-                BlockReason.KEYWORD_MATCH   -> Triple(ctx.getString(R.string.reason_kw),    R.color.secondary,     "🔑")
-                BlockReason.APP_BLOCKED     -> Triple(ctx.getString(R.string.reason_app),   R.color.error,         "🚫")
-                BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.purple,        "🕐")
-                BlockReason.MANUAL          -> Triple(ctx.getString(R.string.reason_manual),R.color.on_surface_dim,"✋")
+            val (reasonText, colorRes, emoji) = when (event.reason) {
+                BlockReason.AI_DETECTION -> Triple(ctx.getString(R.string.reason_ai), R.color.primary, "🤖")
+                BlockReason.KEYWORD_MATCH -> Triple(ctx.getString(R.string.reason_kw), R.color.secondary, "🔑")
+                BlockReason.APP_BLOCKED -> Triple(ctx.getString(R.string.reason_app), R.color.error, "🚫")
+                BlockReason.SCHEDULE_BLOCKED -> Triple(ctx.getString(R.string.reason_sched), R.color.purple, "🕐")
+                BlockReason.MANUAL -> Triple(ctx.getString(R.string.reason_manual), R.color.on_surface_dim, "✋")
             }
 
-            b.txtReason.text = "$emoji $reasonText"
-            b.txtTime.text   = time
+            binding.txtReason.text = "$emoji $reasonText"
+            binding.txtDetails.text = event.matchedTerm?.takeIf { it.isNotBlank() }
+                ?.let { ctx.getString(R.string.block_detail_term_fmt, it) }
+                ?: ctx.getString(R.string.block_detail_package_fmt, event.packageName)
 
             val color = ctx.getColor(colorRes)
-            b.badge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color))
+            binding.badge.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
 
-            // App icon
             try {
-                val icon = pm.getApplicationIcon(e.packageName)
-                b.imgAppIcon.setImageDrawable(icon)
+                binding.imgAppIcon.setImageDrawable(pm.getApplicationIcon(event.packageName))
             } catch (_: Throwable) {
-                b.imgAppIcon.setImageResource(R.drawable.ic_app_placeholder)
+                binding.imgAppIcon.setImageResource(R.drawable.ic_app_placeholder)
             }
 
-            b.root.setOnLongClickListener {
-                b.root.animate().alpha(0f).scaleX(0.8f).scaleY(0.8f)
-                    .setDuration(200).withEndAction { onDelete(e) }.start()
+            binding.root.setOnLongClickListener {
+                binding.root.animate()
+                    .alpha(0f)
+                    .scaleX(0.8f)
+                    .scaleY(0.8f)
+                    .setDuration(200)
+                    .withEndAction { onDelete(event) }
+                    .start()
                 true
             }
         }
@@ -82,8 +88,8 @@ class BlockEventAdapter(
 
     companion object {
         val DIFF = object : DiffUtil.ItemCallback<BlockEvent>() {
-            override fun areItemsTheSame(o: BlockEvent, n: BlockEvent) = o.id == n.id
-            override fun areContentsTheSame(o: BlockEvent, n: BlockEvent) = o == n
+            override fun areItemsTheSame(oldItem: BlockEvent, newItem: BlockEvent) = oldItem.id == newItem.id
+            override fun areContentsTheSame(oldItem: BlockEvent, newItem: BlockEvent) = oldItem == newItem
         }
     }
 }

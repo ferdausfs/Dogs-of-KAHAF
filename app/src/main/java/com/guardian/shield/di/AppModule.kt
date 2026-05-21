@@ -25,7 +25,10 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): GuardianDatabase =
         Room.databaseBuilder(ctx, GuardianDatabase::class.java, GuardianDatabase.DB_NAME)
-            .addMigrations(GuardianDatabase.MIGRATION_1_2)
+            .addMigrations(
+                GuardianDatabase.MIGRATION_1_2,
+                GuardianDatabase.MIGRATION_2_3
+            )
             .fallbackToDestructiveMigration()
             .build()
 

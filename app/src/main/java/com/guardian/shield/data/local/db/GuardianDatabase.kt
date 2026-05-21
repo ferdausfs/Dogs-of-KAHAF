@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BlockEventEntity::class,
         ScheduleRuleEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -41,6 +41,13 @@ abstract class GuardianDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_block_events_timestamp` ON `block_events` (`timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_block_events_packageName` ON `block_events` (`packageName`)")
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.guardian.shield.data.local.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "app_rules")
@@ -21,7 +22,13 @@ data class KeywordRuleEntity(
     val enabled: Boolean
 )
 
-@Entity(tableName = "block_events")
+@Entity(
+    tableName = "block_events",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["packageName"])
+    ]
+)
 data class BlockEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val packageName: String,
