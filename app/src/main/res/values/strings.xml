@@ -2,194 +2,51 @@
 <resources>
     <string name="app_name">Guardian Shield</string>
     <string name="accessibility_service_label">Guardian Shield Protection</string>
-    <string name="accessibility_service_description">Monitors active apps and screen content to block harmful material.</string>
+    <string name="device_admin_label">Guardian Shield Admin</string>
 
-    <string name="notif_title">Guardian Shield Active</string>
-    <string name="notif_text">Monitoring for harmful content</string>
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_activity">Activity</string>
+    <string name="tab_apps">Apps</string>
+    <string name="tab_settings">Settings</string>
+    <string name="tab_profile">Profile</string>
 
-    <string name="status_active">PROTECTION ACTIVE</string>
-    <string name="status_active_sub_fmt">%1$d blocks today</string>
-    <string name="status_paused">PROTECTION PAUSED</string>
-    <string name="status_paused_sub">Tap shield to resume</string>
-    <string name="status_service_off">ACCESSIBILITY SERVICE OFF</string>
-    <string name="status_service_off_sub">Tap permissions to enable</string>
-    <string name="status_active_short">Active</string>
-    <string name="status_paused_short">Paused</string>
-    <string name="status_service_off_short">Service off</string>
+    <string name="notif_protection_title">Guardian Shield Active</string>
+    <string name="notif_protection_text">Parental protection is running</string>
 
-    <string name="recent_blocks">RECENT BLOCKS</string>
-    <string name="stat_total">Total</string>
-    <string name="stat_ai">AI</string>
-    <string name="stat_keyword">KW</string>
-    <string name="stat_top">Top</string>
-    <string name="empty_no_blocks">No blocks yet — stay safe!</string>
-    <string name="open_settings">Settings</string>
-    <string name="open_permissions">Permissions</string>
-    <string name="view_all">View all</string>
+    <string name="dashboard_protection_active">🛡️ Protection Active</string>
+    <string name="dashboard_ai_active">✓ AI Detection Active</string>
+    <string name="dashboard_apps">Apps</string>
+    <string name="dashboard_reels">Reels</string>
+    <string name="dashboard_sites">AI Blocks</string>
+    <string name="dashboard_todays_ayah">📖 Today\'s Quran Reminder</string>
+    <string name="dashboard_recent">Recent Activity</string>
 
-    <string name="nav_home">Home</string>
-    <string name="nav_activity">Activity</string>
-    <string name="nav_settings">Settings</string>
-    <string name="nav_profile">Profile</string>
+    <string name="apps_info_banner">ℹ️ Allowed apps cannot be directly blocked. Remove from Allow first.</string>
+    <string name="snack_remove_from_allow_first">First remove this app from Allowlist, then it can be blocked.</string>
 
-    <string name="action_export">Export Log</string>
-    <string name="action_clear">Clear All Logs</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_enable">Enable</string>
-    <string name="action_pause">Pause</string>
-    <string name="action_resume">Resume</string>
-    <string name="clear_logs">Clear Logs</string>
-    <string name="clear_logs_msg">Are you sure? This cannot be undone.</string>
-    <string name="confirm">Confirm</string>
-    <string name="cancel">Cancel</string>
-    <string name="save">Save</string>
-    <string name="csv_saved">CSV saved: %1$s</string>
-    <string name="export_failed">Export failed</string>
+    <string name="dialog_remove_whitelist_title">Remove from Allowlist?</string>
+    <string name="dialog_remove_whitelist_msg">After removing, this app can be blocked again.</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_cancel">Cancel</string>
 
-    <string name="reason_ai">AI Detection</string>
-    <string name="reason_kw">Keyword</string>
-    <string name="reason_app">App Blocked</string>
-    <string name="reason_sched">Scheduled</string>
-    <string name="reason_manual">Manual</string>
-    <string name="block_detail_package_fmt">Package · %1$s</string>
-    <string name="block_detail_term_fmt">Match · %1$s</string>
-
-    <string name="settings_title">Settings</string>
-    <string name="section_protection">PROTECTION</string>
-    <string name="section_gender">GENDER FILTER</string>
-    <string name="section_temp_block">TEMP BLOCK DURATION</string>
-    <string name="section_rules">BLOCKING RULES</string>
-    <string name="section_models">AI MODELS</string>
-    <string name="section_security">SECURITY</string>
-    <string name="keyword_filter">Keyword Filter</string>
-    <string name="ai_detection">AI Content Detection</string>
-    <string name="ai_sensitivity">AI Sensitivity</string>
-    <string name="unlock_delay">Unlock Delay</string>
-    <string name="temp_block_info">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (২বার detection = temp block)</string>
-    <string name="male">Male</string>
-    <string name="female">Female</string>
-    <string name="disabled">Disabled</string>
-    <string name="gender_status_male">Blocking female-presenting NSFW content</string>
-    <string name="gender_status_female">Blocking male-presenting NSFW content</string>
-    <string name="gender_status_none">Gender filter disabled</string>
-    <string name="btn_apps">📱 App List</string>
-    <string name="btn_keywords">🔤 Keywords</string>
-    <string name="btn_schedule">⏰ Schedule</string>
-    <string name="btn_change_pin">🔐 Change PIN</string>
-    <string name="btn_permissions">🔧 Permission Health</string>
-    <string name="legacy_model">Legacy Model</string>
-    <string name="nsfw_model">NSFW Model</string>
-    <string name="gender_model">Gender Model</string>
-    <string name="import_">Import</string>
-    <string name="remove">Remove</string>
-    <string name="model_missing">✗ Missing</string>
-    <string name="import_success">Imported: %1$s</string>
-    <string name="import_failed">Import failed: %1$s</string>
-    <string name="model_deleted">Removed: %1$s</string>
-    <string name="commitment_lock_active_fmt">Commitment lock active · %1$s remaining</string>
-
-    <string name="app_list_title">App List</string>
     <string name="filter_all">All</string>
     <string name="filter_blocked">Blocked</string>
-    <string name="filter_whitelisted">Whitelisted</string>
-    <string name="search_hint">Search apps…</string>
-    <string name="block">Block</string>
-    <string name="whitelist">Whitelist</string>
-
-    <string name="keywords_title">Keywords</string>
-    <string name="add_keyword">Add Keyword</string>
-    <string name="keyword_hint">Enter keyword</string>
-    <string name="regex">Regex</string>
-    <string name="no_keywords">No keywords yet. Tap + to add.</string>
-
-    <string name="schedule_title">Schedule Rules</string>
-    <string name="add_schedule">Add Schedule</string>
-    <string name="edit_schedule">Edit Schedule</string>
-    <string name="package_hint">Package name (e.g. com.instagram.android)</string>
-    <string name="start_time">Start</string>
-    <string name="end_time">End</string>
-    <string name="days">Days</string>
-    <string name="no_schedules">No schedules yet. Tap + to add.</string>
-
-    <string name="permissions_title">Permission Health</string>
-    <string name="perm_accessibility">Accessibility Service</string>
-    <string name="perm_usage_stats">Usage Stats Access</string>
-    <string name="perm_overlay">Display Over Other Apps</string>
-    <string name="perm_notification">Notification Permission</string>
-    <string name="perm_battery">Battery Optimization</string>
-    <string name="permission_granted">GRANTED</string>
-    <string name="permission_fix">FIX</string>
-    <string name="fix_all">Fix All Critical</string>
-
-    <string name="pin_setup_title">Set Your Security PIN</string>
-    <string name="pin_verify_title">Enter PIN</string>
-    <string name="pin_enter">Enter 4–6 digit PIN</string>
-    <string name="pin_confirm">Re-enter to confirm</string>
-    <string name="pin_min_length">PIN must be 4–6 digits</string>
-    <string name="pin_mismatch">PINs do not match</string>
-    <string name="pin_invalid">Invalid PIN</string>
-    <string name="pin_saved">PIN saved</string>
-    <string name="pin_wrong_attempts">Wrong PIN — %1$d attempts left</string>
-    <string name="pin_locked">Too many attempts. Try again in %1$d seconds.</string>
-    <string name="pin_not_set">No PIN set yet</string>
-    <string name="delete">Delete</string>
-
-    <string name="overlay_access_blocked">ACCESS BLOCKED</string>
-    <string name="overlay_go_home">GO HOME</string>
-    <string name="overlay_request_unlock">Request Unlock</string>
-    <string name="overlay_motivation">STAY STRONG 💪</string>
-    <string name="overlay_reason_ai">AI detected unsafe content</string>
-    <string name="overlay_reason_kw">Keyword matched: %1$s</string>
-    <string name="overlay_reason_app">App is blocked</string>
-    <string name="overlay_reason_sched">Outside allowed schedule</string>
-    <string name="overlay_reason_manual">Blocked manually</string>
-
-    <string name="delay_title">Unlock Pending</string>
-    <string name="delay_text">Access will be granted in:</string>
-    <string name="seconds">seconds</string>
-
-    <string name="chip_male">Male</string>
-    <string name="chip_female">Female</string>
-    <string name="chip_none">Disabled</string>
-
-    <string name="device_admin_title">Turn on device admin</string>
-    <string name="device_admin_body">Device admin helps Guardian Shield resist casual removal and keeps protection active after restarts.</string>
-    <string name="device_admin_enable">Enable admin</string>
-    <string name="device_admin_later">Later</string>
-    <string name="device_admin_explainer">Guardian Shield uses device admin only for protective controls you choose inside the app.</string>
-
-    <string name="activity_log_title">Activity log</string>
-    <string name="activity_log_subtitle">Review recent blocks, search terms, and identify repeat triggers.</string>
-    <string name="activity_log_search_hint">Search package, keyword, or reason</string>
-    <string name="activity_log_summary_fmt">Showing %1$d of %2$d events</string>
-    <string name="activity_log_empty_title">Nothing to show yet</string>
-    <string name="activity_log_empty_body">When Guardian Shield blocks content or apps, events will appear here for quick review.</string>
-    <string name="filter_all_events">All events</string>
     <string name="filter_ai">AI</string>
-    <string name="filter_keyword">Keyword</string>
-    <string name="filter_apps">Apps</string>
-    <string name="filter_schedules">Schedules</string>
+    <string name="filter_scroll">Scroll</string>
+    <string name="filter_keyword">Keywords</string>
+    <string name="filter_schedule">Schedule</string>
 
-    <string name="profile_title">Parent profile</string>
-    <string name="profile_hero_title">Guardian controls</string>
-    <string name="profile_hero_subtitle">Manage the security layer, permissions, and fast access to important controls.</string>
-    <string name="profile_section_security">Security</string>
-    <string name="profile_section_shortcuts">Quick shortcuts</string>
-    <string name="profile_pin_title">Protection PIN</string>
-    <string name="profile_pin_set">PIN is configured</string>
-    <string name="profile_pin_not_set">PIN is not configured yet</string>
-    <string name="profile_admin_title">Device admin</string>
-    <string name="profile_admin_enabled">Device admin is enabled</string>
-    <string name="profile_admin_disabled">Device admin is disabled</string>
-    <string name="profile_admin_explainer">Enabling device admin makes it harder to casually disable protection and helps recover after reboot.</string>
-    <string name="profile_permissions_title">Permission health</string>
-    <string name="profile_permissions_body">Check accessibility, overlay, notifications, and battery optimization status.</string>
-    <string name="profile_settings_title">Protection settings</string>
-    <string name="profile_settings_body">Open rules, schedules, AI model controls, and unlock delay preferences.</string>
+    <string name="block_title">🚫 App Blocked</string>
+    <string name="block_24h_title">🚫 Blocked for 24 hours</string>
+    <string name="scroll_title">একটু বিরতি নিন</string>
+    <string name="scroll_info">আপনি অনেকক্ষণ Reels দেখছেন</string>
+    <string name="scroll_open_quran">📖 Quran App খুলুন</string>
+    <string name="btn_go_home">হোম-এ যান</string>
 
-    <!-- Accessibility Prompt -->
-    <string name="prompt_accessibility_title">⚠️ সুরক্ষা বন্ধ হয়ে গেছে!</string>
-    <string name="prompt_accessibility_body">Guardian Shield এর Accessibility Service বন্ধ করা হয়েছে। harmful content থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>
-    <string name="prompt_accessibility_btn">Accessibility Service চালু করুন</string>
-    <string name="prompt_accessibility_note">Settings → Accessibility → Guardian Shield → Enable</string>
+    <string name="tamper_title">🛡️ TAMPER DETECTED</string>
+    <string name="tamper_desc">Someone tried to disable Guardian Shield protection.</string>
+    <string name="action_dismiss">Acknowledged</string>
+
+    <string name="profile_title">Parent Profile</string>
+    <string name="profile_change_pin">Change PIN</string>
 </resources>

@@ -1,58 +1,10 @@
--keepclasseswithmembernames class * { @dagger.* <fields>; }
--keep class dagger.hilt.** { *; }
--keep @dagger.hilt.android.HiltAndroidApp class * { *; }
--keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
--keep @dagger.hilt.InstallIn class * { *; }
--dontwarn dagger.hilt.**
--dontwarn javax.annotation.**
-
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class * { *; }
--keep @androidx.room.Dao class * { *; }
--keep @androidx.room.Database class * { *; }
--dontwarn androidx.room.**
-
--keep class org.tensorflow.** { *; }
--dontwarn org.tensorflow.**
-
--keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
--dontwarn kotlinx.coroutines.**
-
--keep class androidx.datastore.** { *; }
--keep class androidx.security.crypto.** { *; }
--keep class androidx.work.** { *; }
--dontwarn androidx.work.**
-
--keep class com.guardian.shield.domain.** { *; }
--keep class com.guardian.shield.data.local.db.** { *; }
--keep class com.guardian.shield.data.local.datastore.** { *; }
--keep class com.guardian.shield.service.** { *; }
--keep class com.guardian.shield.admin.** { *; }
--keep class com.guardian.shield.receiver.** { *; }
--keep class com.guardian.shield.ui.** { *; }
--keep class com.guardian.shield.viewmodel.** { *; }
--keep class com.guardian.shield.util.** { *; }
--keep class com.guardian.shield.GuardianApp { *; }
--keep class com.guardian.shield.ServiceWatchdogWorker { *; }
--keep class com.guardian.shield.BuildConfig { *; }
-
--keep class * extends android.app.Service
--keep class * extends android.content.BroadcastReceiver
--keep class * extends android.accessibilityservice.AccessibilityService
--keep class * extends android.app.admin.DeviceAdminReceiver
--keep class * extends androidx.work.Worker
-
--keep class * implements androidx.viewbinding.ViewBinding {
-    public static *** inflate(android.view.LayoutInflater);
-    public static *** inflate(android.view.LayoutInflater, android.view.ViewGroup, boolean);
-    public static *** bind(android.view.View);
-}
-
--keepclassmembers enum * {
-    public static **[] values();
-    public static ** valueOf(java.lang.String);
-}
-
--dontwarn org.jetbrains.annotations.**
--keep class timber.log.** { *; }
+# Keep Room entities
+-keep class com.guardianshield.app.data.model.** { *; }
+-keep class com.guardianshield.app.data.db.** { *; }
+# Keep service / receiver entry points
+-keep class com.guardianshield.app.service.** { *; }
+-keep class com.guardianshield.app.receiver.** { *; }
+# Material
+-keep class com.google.android.material.** { *; }
+# Coroutines
+-keepclassmembernames class kotlinx.** { volatile <fields>; }

@@ -1,79 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:background="@color/scroll_bg"
     android:gravity="center"
-    android:padding="32dp"
-    android:background="@color/bg_main">
-
-    <ImageView
-        android:layout_width="140dp"
-        android:layout_height="140dp"
-        android:src="@drawable/ic_shield_large"
-        android:contentDescription="@string/app_name"/>
+    android:orientation="vertical"
+    android:padding="32dp">
 
     <TextView
+        android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/overlay_access_blocked"
-        android:textColor="@color/white"
+        android:textColor="@color/block_24h_red"
         android:textSize="28sp"
         android:textStyle="bold"
-        android:letterSpacing="0.05"
-        android:layout_marginTop="24dp"/>
+        android:gravity="center"
+        android:text="🚫 Blocked" />
+
+    <TextView
+        android:id="@+id/txtSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:text="" />
 
     <TextView
         android:id="@+id/txtPackage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="com.example"
-        android:textColor="@color/on_surface_dim"
-        android:textSize="14sp"
-        android:layout_marginTop="12dp"/>
+        android:layout_marginTop="8dp"
+        android:textColor="@color/grey_300"
+        android:textSize="13sp"
+        android:text="" />
 
     <TextView
-        android:id="@+id/txtReason"
-        android:layout_width="match_parent"
+        android:id="@+id/txtCountdown"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="@string/overlay_reason_manual"
-        android:textColor="@color/secondary"
-        android:textSize="15sp"
-        android:layout_marginTop="20dp"/>
+        android:layout_marginTop="24dp"
+        android:textColor="@color/islamic_gold"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:text="" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnHome"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/overlay_go_home"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginTop="32dp"
-        app:cornerRadius="14dp"
-        app:backgroundTint="@color/primary"
-        android:textColor="@color/black"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp"/>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnUnlock"
-        style="@style/Widget.Material3.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/overlay_request_unlock"
-        android:layout_marginTop="12dp"
-        app:cornerRadius="14dp"
-        app:strokeColor="@color/on_surface_dim"
-        android:textColor="@color/on_surface"/>
-
-    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/overlay_motivation"
-        android:textColor="@color/on_surface_dim"
-        android:textSize="12sp"
-        android:layout_marginTop="32dp"/>
-
+        android:layout_marginTop="32dp"
+        android:text="@string/btn_go_home" />
 </LinearLayout>
