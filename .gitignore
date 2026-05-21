@@ -2,7 +2,6 @@
 .gradle
 /local.properties
 /.idea
-.DS_Store
 /build
 /app/build
 /captures
@@ -11,4 +10,4 @@
 local.properties
 *.apk
 *.aab
-*.hprof
+*.keystore
