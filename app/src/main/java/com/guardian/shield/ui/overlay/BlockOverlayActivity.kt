@@ -1,5 +1,7 @@
 package com.guardian.shield.ui.overlay
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -19,6 +21,7 @@ import com.guardian.shield.ui.unlock.DelayUnlockActivity
 class BlockOverlayActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBlockOverlayBinding
+    private var pulseSet: AnimatorSet? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,8 +41,18 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         // Temp block কিনা check করো
         if (detail.startsWith("temp_block:")) {
-            val mins = detail.removePrefix("temp_block:").removeSuffix("min").trim()
-            binding.txtReason.text = "🚫 $mins মিনিটের জন্য ব্লক করা হয়েছে"
+            // ===== TASK 3: support 24h+ display format =====
+            val mins = detail.removePrefix("temp_block:")
+                .removeSuffix("min").trim().toLongOrNull() ?: 0L
+            val displayText = when {
+                mins >= 60 -> {
+                    val hours = mins / 60
+                    val remaining = mins % 60
+                    if (remaining > 0) "$hours ঘন্টা $remaining মিনিট" else "$hours ঘন্টা"
+                }
+                else -> "$mins মিনিট"
+            }
+            binding.txtReason.text = "🚫 $displayText এর জন্য ব্লক করা হয়েছে"
             binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
             // Unlock button temp block এ hide
             binding.btnUnlock.visibility = View.GONE
@@ -58,10 +71,37 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.btnHome.setOnClickListener { goHome() }
         vibrate()
+        startShieldPulse()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { goHome() }
         })
+    }
+
+    private fun startShieldPulse() {
+        if (pulseSet?.isRunning == true) return
+        val scaleX = ObjectAnimator.ofFloat(binding.imgShield, "scaleX", 1f, 1.08f, 1f).apply {
+            duration = 1600
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val scaleY = ObjectAnimator.ofFloat(binding.imgShield, "scaleY", 1f, 1.08f, 1f).apply {
+            duration = 1600
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val glowAlpha = ObjectAnimator.ofFloat(binding.shieldGlow, "alpha", 0.3f, 0.8f, 0.3f).apply {
+            duration = 1600
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        pulseSet = AnimatorSet().apply {
+            playTogether(scaleX, scaleY, glowAlpha)
+            start()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        pulseSet?.cancel()
+        pulseSet = null
     }
 
     private fun goHome() {

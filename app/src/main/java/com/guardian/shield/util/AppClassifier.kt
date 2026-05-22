@@ -35,7 +35,24 @@ object AppClassifier {
         "com.android.incallui",
         "com.android.keyguard",
         "com.android.packageinstaller",
-        "com.google.android.packageinstaller"
+        "com.google.android.packageinstaller",
+        // ===== TASK 4: Extended default allowlist =====
+        // Messaging apps — always allowed
+        "com.imo.android.imoim",          // IMO Video Call
+        "com.imo.android.imoimbeta",      // IMO Beta
+        "com.imo.android.imoimhd",        // IMO HD
+        "com.imo.android.imoimlite",      // IMO Lite (newer)
+        "org.thoughtcrime.securesms",     // Signal
+        "com.facebook.orca",              // Facebook Messenger
+        "com.facebook.mlite",             // Messenger Lite
+        "com.whatsapp",                   // WhatsApp
+        "com.whatsapp.w4b",               // WhatsApp Business
+        // Additional popular keyboards
+        "com.touchtype.swiftkey",         // SwiftKey
+        "com.ridmik.keyboard",            // Ridmik Keyboard
+        "net.mayabi.keyboard",            // Mayabi Keyboard
+        "sutonnyMJ.BijoyBanglaSoft",      // Bijoy Bangla
+        "com.menny.android.anysoftkeyboard" // AnySoftKeyboard
     )
 
     @Volatile private var cachedHomePkg: String? = null

@@ -20,7 +20,9 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
+import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.ui.overlay.ReelReminderActivity
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +46,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var blockingEngine: BlockingEngine
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
+
+    // ===== TASK 2: Reel/Short scroll addiction detector =====
+    @Inject lateinit var reelScrollDetector: ReelScrollDetector
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -117,6 +122,28 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (!protectionEnabled || isDeviceLocked()) return
         try {
             val pkg = ev.packageName?.toString().orEmpty()
+
+            // ===== TASK 2: Reel / Short scroll addiction check =====
+            // Run on every scroll event, independent of the block pipeline.
+            // The host app is NOT blocked — we only surface an Islamic
+            // reminder overlay after sustained reel-style scrolling.
+            if (ev.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
+                && pkg.isNotBlank()
+                && reelScrollDetector.REEL_PACKAGES.contains(pkg)
+            ) {
+                if (reelScrollDetector.recordScroll(pkg)) {
+                    reelScrollDetector.markReminderShown(pkg)
+                    val ctx: Context = this
+                    mainHandler.post {
+                        runCatching {
+                            ctx.startActivity(
+                                ReelReminderActivity.createIntent(ctx, pkg)
+                            )
+                        }
+                    }
+                }
+            }
+
             when (ev.eventType) {
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> handleWindowChange(pkg)
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
@@ -154,10 +181,23 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
 
+        // ===== TASK 2: clear reel session when leaving a reel-host app =====
+        // We compare against the package we were previously on; if it was
+        // a reel host and the new window is something else, reset its state.
+        val previous = currentPackage
+        if (previous != null && previous != pkg
+            && reelScrollDetector.REEL_PACKAGES.contains(previous)
+        ) {
+            reelScrollDetector.resetSession(previous)
+        }
+
         // ✅ Safe/home package → সব reset
         if (isSafePackage(pkg)) {
             currentPackage = null
             isBlockingInProgress = false
+            // Also drop any reel session for the package we just left to
+            // (safe packages are launchers/system UI etc.)
+            reelScrollDetector.resetSession(pkg)
             return
         }
 

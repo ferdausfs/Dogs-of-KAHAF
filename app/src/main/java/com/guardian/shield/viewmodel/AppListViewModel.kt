@@ -103,8 +103,15 @@ class AppListViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val current = repo.getApp(pkg)
+                // ===== TASK 1: One-Way Block Rule =====
+                // GUARD: if currently blocked, whitelisting is forbidden.
+                // Block -> Allow is NOT allowed (hard restriction, no PIN bypass).
+                if (current?.isBlocked == true) return@launch
                 val updated = (current ?: AppRule(pkg, pkg, false, false, System.currentTimeMillis()))
-                    .copy(isWhitelisted = whitelisted, isBlocked = if (whitelisted) false else current?.isBlocked ?: false)
+                    .copy(
+                        isWhitelisted = whitelisted,
+                        isBlocked = if (whitelisted) false else current?.isBlocked ?: false
+                    )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
             } catch (_: Throwable) {}

@@ -18,4 +18,12 @@
     <color name="ripple_primary">#2000E5CC</color>
     <color name="ripple_error">#20FF4444</color>
     <color name="card_stroke">#1AFFFFFF</color>
+
+    <!-- ===== TASK 5: UI improvement palette ===== -->
+    <color name="block_indicator">#FF4444</color>
+    <color name="allow_indicator">#00E5CC</color>
+    <color name="surface_gradient_start">#1E2130</color>
+    <color name="surface_gradient_end">#161820</color>
+    <color name="ai_detection_color">#B388FF</color>
+    <color name="warning_amber">#FFB300</color>
 </resources>

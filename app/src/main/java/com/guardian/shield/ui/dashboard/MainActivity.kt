@@ -188,6 +188,10 @@ class MainActivity : AppCompatActivity() {
             ?.take(10)
             ?: "—"
 
+        // ===== TASK 5: Today's Activity mini-summary chip =====
+        binding.txtTodayActivity.text = "🛡 ${state.stats.totalBlocks} blocked today • " +
+                "${state.stats.aiBlocks} AI detections"
+
         adapter.submit(state.recent)
         binding.txtEmpty.visibility = if (state.recent.isEmpty()) View.VISIBLE else View.GONE
     }

@@ -6,13 +6,28 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="32dp"
-    android:background="@color/bg_main">
+    android:background="#EF000000">
 
-    <ImageView
-        android:layout_width="140dp"
-        android:layout_height="140dp"
-        android:src="@drawable/ic_shield_large"
-        android:contentDescription="@string/app_name"/>
+    <FrameLayout
+        android:layout_width="160dp"
+        android:layout_height="160dp">
+
+        <View
+            android:id="@+id/shieldGlow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.5"
+            android:background="@drawable/bg_shield_glow"
+            android:backgroundTint="@color/error"/>
+
+        <ImageView
+            android:id="@+id/imgShield"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_shield_off"
+            android:contentDescription="@string/app_name"/>
+    </FrameLayout>
 
     <TextView
         android:layout_width="wrap_content"
@@ -39,7 +54,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/overlay_reason_manual"
-        android:textColor="@color/secondary"
+        android:textColor="@color/warning_amber"
         android:textSize="15sp"
         android:layout_marginTop="20dp"/>
 
@@ -52,8 +67,8 @@
         android:textStyle="bold"
         android:layout_marginTop="32dp"
         app:cornerRadius="14dp"
-        app:backgroundTint="@color/primary"
-        android:textColor="@color/black"
+        app:backgroundTint="@color/block_indicator"
+        android:textColor="@color/white"
         android:paddingTop="14dp"
         android:paddingBottom="14dp"/>
 
@@ -65,8 +80,8 @@
         android:text="@string/overlay_request_unlock"
         android:layout_marginTop="12dp"
         app:cornerRadius="14dp"
-        app:strokeColor="@color/on_surface_dim"
-        android:textColor="@color/on_surface"/>
+        app:strokeColor="@color/warning_amber"
+        android:textColor="@color/warning_amber"/>
 
     <TextView
         android:layout_width="wrap_content"

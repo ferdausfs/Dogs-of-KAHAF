@@ -114,6 +114,14 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""/>
 
+        <!-- ===== TASK 2: Reel/Short addiction reminder overlay ===== -->
+        <activity
+            android:name=".ui.overlay.ReelReminderActivity"
+            android:theme="@style/Theme.GuardianShield.Overlay"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"/>
+
         <activity
             android:name=".ui.guard.AccessibilityPromptActivity"
             android:exported="false"

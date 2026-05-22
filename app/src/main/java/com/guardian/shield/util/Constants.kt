@@ -25,7 +25,11 @@ object GuardianConstants {
     const val PIN_MAX_ATTEMPTS = 5
     const val PIN_LOCKOUT_MS = 30_000L
     const val MAX_NODES_BFS = 250
-    const val STRIKE_THRESHOLD = 2
+    // ===== TASK 3: AI detection max 3 strikes -> 24h hard lock =====
+    const val STRIKE_THRESHOLD = 3
     const val STRIKE_RESET_MS = 10 * 60 * 1_000L
+    // After the 3rd AI strike, the app is hard-locked for 24 hours.
+    // 24h is measured from the moment of the 3rd block, NOT until midnight.
+    const val AI_MAX_STRIKE_BLOCK_MS = 24 * 60 * 60 * 1_000L
     const val ACCESSIBILITY_WATCHDOG_MS = 5_000L
 }
