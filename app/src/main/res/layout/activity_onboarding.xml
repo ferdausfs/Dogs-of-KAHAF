@@ -59,8 +59,7 @@
             android:layout_width="12dp"
             android:layout_height="12dp"
             android:layout_margin="4dp"
-            android:background="@drawable/dot_empty"
-            android:selected="true" />
+            android:background="@drawable/dot_filled" />
 
         <View
             android:id="@+id/indicatorTwo"
