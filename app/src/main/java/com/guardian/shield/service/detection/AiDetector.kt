@@ -3,9 +3,11 @@ package com.guardian.shield.service.detection
 import android.content.Context
 import android.graphics.Bitmap
 import com.guardian.shield.data.local.datastore.GuardianPreferences
-import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -51,28 +53,41 @@ class AiDetector @Inject constructor(
 
     fun startPrefsCache(scope: CoroutineScope) {
         scope.launch {
-            try { prefs.aiDetection.collect { cachedAiEnabled = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try { prefs.aiDetection.collect { cachedAiEnabled = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
         }
         scope.launch {
-            try { prefs.userGender.collect { cachedUserGender = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try { prefs.userGender.collect { cachedUserGender = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
         }
         scope.launch {
-            try { prefs.aiThreshold.collect { cachedThreshold = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try { prefs.aiThreshold.collect { cachedThreshold = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
+        }
+        // ✅ নতুন threshold collectors
+        scope.launch {
+            while (isActive) {
+                try { prefs.nsfwGateThreshold.collect { cachedNsfwGateThreshold = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
         }
         scope.launch {
-            try { prefs.nsfwGateThreshold.collect { cachedNsfwGateThreshold = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try { prefs.genderThreshold.collect { cachedGenderThreshold = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
         }
         scope.launch {
-            try { prefs.genderThreshold.collect { cachedGenderThreshold = it } }
-            catch (t: Throwable) { Timber.e(t) }
-        }
-        scope.launch {
-            try { prefs.gridVoteCount.collect { cachedGridVoteCount = it } }
-            catch (t: Throwable) { Timber.e(t) }
+            while (isActive) {
+                try { prefs.gridVoteCount.collect { cachedGridVoteCount = it } }
+                catch (t: Throwable) { Timber.e(t); delay(1_000) }
+            }
         }
     }
 
@@ -205,7 +220,9 @@ class AiDetector @Inject constructor(
 
         return inferenceLock.withLock {
             try {
-                val currentGender = cachedUserGender.ifBlank { userGender }
+                val currentGender = runCatching {
+                    prefs.userGender.first()
+                }.getOrElse { userGender }
                 if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
 
                 val nsfwGate = cachedNsfwGateThreshold
@@ -336,7 +353,7 @@ class AiDetector @Inject constructor(
 
     fun close() {
         runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-            withTimeoutOrNull(GuardianConstants.AI_DETECTOR_CLOSE_TIMEOUT_MS) {
+            withTimeoutOrNull(2_000L) {
                 inferenceLock.withLock { tearDown() }
             } ?: tearDown()
         }
