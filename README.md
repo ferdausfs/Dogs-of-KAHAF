@@ -1,6 +1,6 @@
 # Guardian Shield 🛡️
 
-**Package:** `com.guardian.shield` · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35
+**Package:** `com.guardian.shield` · **Version:** 2.3.0 · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35
 
 An Android parental/self-control app using `AccessibilityService` to block harmful content on-device.
 
@@ -38,6 +38,13 @@ Place these `.tflite` files via the app's **Settings → AI Models → Import** 
 | `gender_model.tflite` | Male/female classification |
 
 Models are imported to `filesDir` and validated by TFL3 header.
+
+## What's improved in v2.3.0
+- First-run onboarding flow that sends users to the permission checklist
+- Smarter scan budget policy to reduce unnecessary heavy scans when battery is low or the UI is idle
+- PIN storage hardened with per-install random salt and transparent migration from legacy hashes
+- TFLite import now validates the `TFL3` file header before accepting a model
+- Added starter JVM unit tests for hashing, model validation, and scan policy
 
 ## License
 Personal use. Use responsibly.

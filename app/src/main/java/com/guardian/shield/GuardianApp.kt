@@ -50,7 +50,11 @@ class GuardianApp : Application() {
         try {
             val request = PeriodicWorkRequestBuilder<ServiceWatchdogWorker>(
                 15, TimeUnit.MINUTES
-            ).setConstraints(Constraints.Builder().build()).build()
+            ).setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            ).build()
 
             WorkManager.getInstance(this).enqueueUniquePeriodicWork(
                 WATCHDOG_WORK_NAME,
@@ -67,7 +71,12 @@ class GuardianApp : Application() {
         try {
             val request = PeriodicWorkRequestBuilder<LogCleanupWorker>(
                 1, TimeUnit.DAYS
-            ).setConstraints(Constraints.Builder().build()).build()
+            ).setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .setRequiresStorageNotLow(true)
+                    .build()
+            ).build()
 
             WorkManager.getInstance(this).enqueueUniquePeriodicWork(
                 CLEANUP_WORK_NAME,

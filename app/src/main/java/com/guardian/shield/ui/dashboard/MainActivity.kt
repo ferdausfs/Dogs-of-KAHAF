@@ -13,6 +13,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.admin.GuardianDeviceAdminReceiver
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.TimeLockManager
@@ -30,11 +32,13 @@ import com.guardian.shield.ui.navigation.AppBottomNav
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.ActivityLogActivity
 import com.guardian.shield.ui.settings.SettingsActivity
+import com.guardian.shield.ui.setup.OnboardingActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardUiState
 import com.guardian.shield.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -52,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: BlockEventAdapter
 
     @Inject lateinit var timeLockManager: TimeLockManager
+    @Inject lateinit var prefs: GuardianPreferences
 
     private var shieldPulseSet: AnimatorSet? = null
     private var lastProtectionEnabled: Boolean? = null
@@ -90,8 +95,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        startForegroundServiceIfNeeded()
-        checkDeviceAdmin()
+        lifecycleScope.launch {
+            if (prefs.firstRun.first()) {
+                startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
+                finish()
+            } else {
+                startForegroundServiceIfNeeded()
+                checkDeviceAdmin()
+            }
+        }
     }
 
     override fun onResume() {
@@ -120,59 +132,9 @@ class MainActivity : AppCompatActivity() {
         lastProtectionEnabled = state.protectionEnabled
 
         when {
-            !state.protectionActive -> {
-                binding.txtStatusTitle.text = getString(R.string.status_service_off)
-                binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
-                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
-                binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
-                binding.txtStatusDot.text = getString(R.string.status_service_off_short)
-                binding.txtStatusDot.setTextColor(getColor(R.color.on_surface_dim))
-                binding.fabToggle.text = getString(R.string.action_enable)
-                binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
-                binding.fabToggle.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
-                stopShieldPulse()
-            }
-            !state.protectionEnabled -> {
-                binding.txtStatusTitle.text = getString(R.string.status_paused)
-                binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
-                binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
-                binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
-                binding.txtStatusDot.text = getString(R.string.status_paused_short)
-                binding.txtStatusDot.setTextColor(getColor(R.color.secondary))
-                binding.fabToggle.text = getString(R.string.action_resume)
-                binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
-                binding.fabToggle.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
-                stopShieldPulse()
-            }
-            else -> {
-                binding.txtStatusTitle.text = getString(R.string.status_active)
-                binding.txtStatusSubtitle.text = getString(
-                    R.string.status_active_sub_fmt, state.todayCount
-                )
-                binding.imgShield.setImageResource(R.drawable.ic_shield_on)
-                binding.shieldGlow.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
-                binding.statusCard.setBackgroundResource(R.drawable.bg_status_active)
-                binding.statusDot.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.success))
-                binding.txtStatusDot.text = getString(R.string.status_active_short)
-                binding.txtStatusDot.setTextColor(getColor(R.color.success))
-                binding.fabToggle.text = getString(R.string.action_pause)
-                binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
-                binding.fabToggle.backgroundTintList =
-                    android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
-                startShieldPulse()
-            }
+            !state.protectionActive -> renderServiceOffState()
+            !state.protectionEnabled -> renderPausedState()
+            else -> renderActiveState(state.todayCount)
         }
 
         if (wasEnabled != null && wasEnabled != state.protectionEnabled) {
@@ -187,13 +149,59 @@ class MainActivity : AppCompatActivity() {
             ?.replaceFirstChar { it.uppercase() }
             ?.take(10)
             ?: "—"
-
-        // ===== TASK 5: Today's Activity mini-summary chip =====
-        binding.txtTodayActivity.text = "🛡 ${state.stats.totalBlocks} blocked today • " +
-                "${state.stats.aiBlocks} AI detections"
+        binding.txtTodayActivity.text = getString(
+            R.string.today_activity_summary_fmt,
+            state.stats.totalBlocks,
+            state.stats.aiBlocks
+        )
 
         adapter.submit(state.recent)
         binding.txtEmpty.visibility = if (state.recent.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private fun renderServiceOffState() {
+        binding.txtStatusTitle.text = getString(R.string.status_service_off)
+        binding.txtStatusSubtitle.text = getString(R.string.status_service_off_sub)
+        binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+        binding.shieldGlow.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+        binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+        binding.statusDot.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+        binding.txtStatusDot.text = getString(R.string.status_service_off_short)
+        binding.txtStatusDot.setTextColor(getColor(R.color.on_surface_dim))
+        binding.fabToggle.text = getString(R.string.action_enable)
+        binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
+        binding.fabToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.on_surface_dim))
+        stopShieldPulse()
+    }
+
+    private fun renderPausedState() {
+        binding.txtStatusTitle.text = getString(R.string.status_paused)
+        binding.txtStatusSubtitle.text = getString(R.string.status_paused_sub)
+        binding.imgShield.setImageResource(R.drawable.ic_shield_off)
+        binding.shieldGlow.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+        binding.statusCard.setBackgroundResource(R.drawable.bg_status_paused)
+        binding.statusDot.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.secondary))
+        binding.txtStatusDot.text = getString(R.string.status_paused_short)
+        binding.txtStatusDot.setTextColor(getColor(R.color.secondary))
+        binding.fabToggle.text = getString(R.string.action_resume)
+        binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
+        binding.fabToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.success))
+        stopShieldPulse()
+    }
+
+    private fun renderActiveState(todayCount: Int) {
+        binding.txtStatusTitle.text = getString(R.string.status_active)
+        binding.txtStatusSubtitle.text = getString(R.string.status_active_sub_fmt, todayCount)
+        binding.imgShield.setImageResource(R.drawable.ic_shield_on)
+        binding.shieldGlow.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
+        binding.statusCard.setBackgroundResource(R.drawable.bg_status_active)
+        binding.statusDot.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.success))
+        binding.txtStatusDot.text = getString(R.string.status_active_short)
+        binding.txtStatusDot.setTextColor(getColor(R.color.success))
+        binding.fabToggle.text = getString(R.string.action_pause)
+        binding.fabToggle.setIconResource(R.drawable.ic_shield_on)
+        binding.fabToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.primary))
+        startShieldPulse()
     }
 
     private fun startShieldPulse() {
@@ -224,14 +232,14 @@ class MainActivity : AppCompatActivity() {
         binding.shieldGlow.alpha = 0.3f
     }
 
-    private fun animateNumber(view: android.widget.TextView, target: Int) {
+    private fun animateNumber(view: TextView, target: Int) {
         val current = view.text.toString().toIntOrNull() ?: 0
         if (current == target) return
-        val animator = ObjectAnimator.ofInt(current, target).apply {
+        ObjectAnimator.ofInt(current, target).apply {
             duration = 600
             addUpdateListener { view.text = it.animatedValue.toString() }
+            start()
         }
-        animator.start()
     }
 
     private fun startForegroundServiceIfNeeded() {
@@ -303,13 +311,13 @@ class MainActivity : AppCompatActivity() {
                 val csv = buildString {
                     append("id,packageName,reason,matchedTerm,timestamp,iso\n")
                     val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                    events.forEach { ev ->
-                        append(ev.id).append(',')
-                        append(ev.packageName).append(',')
-                        append(ev.reason.name).append(',')
-                        append((ev.matchedTerm ?: "").replace(",", " ")).append(',')
-                        append(ev.timestamp).append(',')
-                        append(fmt.format(Date(ev.timestamp))).append('\n')
+                    events.forEach { event ->
+                        append(event.id).append(',')
+                        append(event.packageName).append(',')
+                        append(event.reason.name).append(',')
+                        append((event.matchedTerm ?: "").replace(",", " ")).append(',')
+                        append(event.timestamp).append(',')
+                        append(fmt.format(Date(event.timestamp))).append('\n')
                     }
                 }
                 val name = "guardian_blocks_${System.currentTimeMillis()}.csv"
@@ -321,9 +329,7 @@ class MainActivity : AppCompatActivity() {
                         getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir
                     }
                     if (!dir.exists()) dir.mkdirs()
-                    val f = File(dir, name)
-                    f.writeText(csv)
-                    f
+                    File(dir, name).apply { writeText(csv) }
                 }
                 Snackbar.make(
                     binding.root,

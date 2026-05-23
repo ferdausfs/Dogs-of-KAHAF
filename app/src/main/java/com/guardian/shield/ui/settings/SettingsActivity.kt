@@ -77,7 +77,10 @@ class SettingsActivity : AppCompatActivity() {
         // Lock banner
         if (isLocked) {
             binding.lockBanner.visibility = View.VISIBLE
-            binding.txtLockRemaining.text = "🔒 ${timeLockManager.getRemainingFormatted()}"
+            binding.txtLockRemaining.text = getString(
+                R.string.lock_remaining_short_fmt,
+                timeLockManager.getRemainingFormatted()
+            )
         } else {
             binding.lockBanner.visibility = View.GONE
         }
@@ -277,6 +280,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun formatStatus(slot: com.guardian.shield.viewmodel.ModelSlotUi): String =
-        if (slot.isImported) "✓ ${slot.readableSize ?: ""}"
+        if (slot.isImported) getString(R.string.model_status_present_fmt, slot.readableSize ?: "—")
         else getString(R.string.model_missing)
 }

@@ -234,7 +234,7 @@
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="15 min"
+                            android:text="@string/duration_15_min"
                             android:checked="true" />
 
                         <com.google.android.material.chip.Chip
@@ -242,14 +242,14 @@
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="30 min" />
+                            android:text="@string/duration_30_min" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip60min"
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1 ঘণ্টা" />
+                            android:text="@string/duration_60_min" />
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -295,7 +295,7 @@
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Permissions"
+                android:text="@string/permissions"
                 android:layout_marginBottom="8dp"
                 app:cornerRadius="12dp" />
 

@@ -132,7 +132,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="6dp"
                                     android:letterSpacing="0.05"
-                                    android:text="Active"
+                                    android:text="@string/status_active_short"
                                     android:textColor="@color/success"
                                     android:textSize="11sp"
                                     android:textStyle="bold" />
@@ -159,7 +159,7 @@
                         android:paddingEnd="10dp"
                         android:paddingTop="6dp"
                         android:paddingBottom="6dp"
-                        android:text="🛡 0 blocked today • 0 AI detections"
+                        android:text="@string/today_activity_summary_placeholder"
                         android:textColor="@color/on_surface"
                         android:textSize="12sp" />
                 </LinearLayout>

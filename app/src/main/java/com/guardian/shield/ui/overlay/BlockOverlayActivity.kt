@@ -52,7 +52,7 @@ class BlockOverlayActivity : AppCompatActivity() {
                 }
                 else -> "$mins মিনিট"
             }
-            binding.txtReason.text = "🚫 $displayText এর জন্য ব্লক করা হয়েছে"
+            binding.txtReason.text = getString(R.string.temp_blocked_for_fmt, displayText)
             binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
             // Unlock button temp block এ hide
             binding.btnUnlock.visibility = View.GONE

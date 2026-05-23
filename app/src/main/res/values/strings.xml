@@ -77,6 +77,7 @@
     <string name="btn_schedule">⏰ Schedule</string>
     <string name="btn_change_pin">🔐 Change PIN</string>
     <string name="btn_permissions">🔧 Permission Health</string>
+    <string name="permissions">Permissions</string>
     <string name="legacy_model">Legacy Model</string>
     <string name="nsfw_model">NSFW Model</string>
     <string name="gender_model">Gender Model</string>
@@ -86,7 +87,12 @@
     <string name="import_success">Imported: %1$s</string>
     <string name="import_failed">Import failed: %1$s</string>
     <string name="model_deleted">Removed: %1$s</string>
+    <string name="model_status_present_fmt">✓ %1$s</string>
     <string name="commitment_lock_active_fmt">Commitment lock active · %1$s remaining</string>
+    <string name="lock_remaining_short_fmt">🔒 %1$s</string>
+    <string name="today_activity_summary_fmt">🛡 %1$d blocked today • %2$d AI detections</string>
+    <string name="today_activity_summary_placeholder">🛡 0 blocked today • 0 AI detections</string>
+    <string name="temp_blocked_for_fmt">🚫 Blocked for %1$s</string>
 
     <string name="app_list_title">App List</string>
     <string name="filter_all">All</string>
@@ -151,6 +157,9 @@
     <string name="chip_male">Male</string>
     <string name="chip_female">Female</string>
     <string name="chip_none">Disabled</string>
+    <string name="duration_15_min">15 min</string>
+    <string name="duration_30_min">30 min</string>
+    <string name="duration_60_min">1 hour</string>
 
     <string name="device_admin_title">Turn on device admin</string>
     <string name="device_admin_body">Device admin helps Guardian Shield resist casual removal and keeps protection active after restarts.</string>
@@ -192,4 +201,15 @@
     <string name="prompt_accessibility_body">Guardian Shield এর Accessibility Service বন্ধ করা হয়েছে। harmful content থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>
     <string name="prompt_accessibility_btn">Accessibility Service চালু করুন</string>
     <string name="prompt_accessibility_note">Settings → Accessibility → Guardian Shield → Enable</string>
+
+    <string name="onboarding_step_fmt">Step %1$d of %2$d</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_title_1">Welcome to Guardian Shield</string>
+    <string name="onboarding_body_1">Turn on privacy-first protection for harmful apps, keywords, and unsafe screens without sending sensitive content to the cloud.</string>
+    <string name="onboarding_title_2">Bring your AI models</string>
+    <string name="onboarding_body_2">Import Guardian, NSFW, and gender TFLite models from Settings whenever you are ready. Invalid model headers are now rejected automatically.</string>
+    <string name="onboarding_title_3">Finish setup faster</string>
+    <string name="onboarding_body_3">We will take you to the permission checklist next so Accessibility, overlay, and battery settings are all enabled properly.</string>
 </resources>
