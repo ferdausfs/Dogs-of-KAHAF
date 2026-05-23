@@ -3,22 +3,6 @@ package com.guardian.shield.service.detection
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * ===== TASK 2: Reel / Short scroll-addiction tracker =====
- *
- * Tracks rapid upward scrolling on apps that contain reels / shorts
- * (Instagram, YouTube Shorts, TikTok, Facebook Reels, etc.) and signals
- * the accessibility service to surface an Islamic reminder overlay
- * (`ReelReminderActivity`) when:
- *
- *  - `SWIPE_THRESHOLD` consecutive scroll events are recorded, OR
- *  - The session has been active for longer than `SESSION_DURATION_MS`.
- *
- * After a reminder is shown, the detector enters a `COOLDOWN_MS` window
- * for that package so the user is not nagged repeatedly. The host app
- * (Instagram, YouTube, etc.) is NEVER blocked — only the reel session
- * is interrupted with the reminder.
- */
 data class ReelSession(
     val packageName: String,
     val sessionStartMs: Long = System.currentTimeMillis(),
@@ -27,26 +11,31 @@ data class ReelSession(
     var reminderShownAt: Long = 0L
 )
 
+/**
+ * TASK 2 — Reel/Short scroll addiction detector.
+ *
+ * Tracks consecutive scroll events in known short-form video apps.
+ * When the user crosses [SWIPE_THRESHOLD] swipes OR spends [SESSION_DURATION_MS]
+ * inside the app, [recordScroll] returns true so the Accessibility service can
+ * show an Islamic reminder overlay. After a reminder is shown, [COOLDOWN_MS]
+ * suppresses any further reminder for that package to avoid nagging.
+ */
 @Singleton
 class ReelScrollDetector @Inject constructor() {
 
-    /** Packages that host short-form infinite-scroll content. */
+    // Packages that have reel / shorts content
     val REEL_PACKAGES: Set<String> = setOf(
         "com.instagram.android",        // Instagram Reels
         "com.google.android.youtube",   // YouTube Shorts
         "com.zhiliaoapp.musically",     // TikTok
-        "com.ss.android.ugc.trill",     // TikTok (alt region)
+        "com.ss.android.ugc.trill",     // TikTok alt
         "com.facebook.katana",          // Facebook Reels
         "com.snapchat.android",         // Snapchat Stories
-        "com.twitter.android",          // Twitter / X (legacy)
-        "com.x.android"                 // X (new package id)
+        "com.twitter.android",          // Twitter / X (old)
+        "com.x.android"                 // X (new package)
     )
 
-    /**
-     * Quran / Hadith apps suggested to the user.
-     * Order matters — `ReelReminderActivity` tries them in this order
-     * when the user taps the "Open Quran" button.
-     */
+    // Quran / Hadith app suggestions (package -> display)
     val ISLAMIC_APP_SUGGESTIONS: LinkedHashMap<String, String> = linkedMapOf(
         "com.salamweb.alquran" to "Al-Quran (Bangla)",
         "com.greentech.quran" to "iQuran",
@@ -58,23 +47,15 @@ class ReelScrollDetector @Inject constructor() {
     private val sessions = HashMap<String, ReelSession>()
 
     companion object {
-        /** Swipes before a reminder is triggered. */
-        const val SWIPE_THRESHOLD = 15
-
-        /** Total reel-session duration before a reminder is triggered. */
-        const val SESSION_DURATION_MS = 5 * 60_000L  // 5 minutes
-
-        /** Cooldown window after a reminder is shown, per package. */
-        const val COOLDOWN_MS = 30 * 60_000L         // 30 minutes
-
-        /** Gap between scrolls large enough to reset the session. */
-        const val SWIPE_GAP_RESET_MS = 30_000L       // 30 seconds
+        const val SWIPE_THRESHOLD = 15              // swipes before reminder
+        const val SESSION_DURATION_MS = 5 * 60_000L // 5 minutes
+        const val COOLDOWN_MS = 30 * 60_000L        // 30 min cooldown after reminder
+        const val SWIPE_GAP_RESET_MS = 30_000L      // 30s gap resets session
     }
 
     /**
-     * Record a scroll event for [pkg].
-     *
-     * @return true if the caller should now show the reel reminder overlay.
+     * Record a scroll event for [pkg]. Returns true when the caller should
+     * surface the Islamic reminder overlay.
      */
     @Synchronized
     fun recordScroll(pkg: String): Boolean {
@@ -82,13 +63,16 @@ class ReelScrollDetector @Inject constructor() {
         val now = System.currentTimeMillis()
         val session = sessions.getOrPut(pkg) { ReelSession(pkg) }
 
-        // Big gap between scrolls => start a fresh session.
-        if (now - session.lastSwipeMs > SWIPE_GAP_RESET_MS) {
-            sessions[pkg] = ReelSession(pkg)
+        // Reset session if gap too long
+        if (now - session.lastSwipeMs > SWIPE_GAP_RESET_MS && session.swipeCount > 0) {
+            val fresh = ReelSession(pkg)
+            sessions[pkg] = fresh
+            fresh.swipeCount = 1
+            fresh.lastSwipeMs = now
             return false
         }
 
-        // Within cooldown window => don't nag, but keep counting silently.
+        // Skip if reminder was shown recently (cooldown active)
         if (session.reminderShownAt > 0 && now - session.reminderShownAt < COOLDOWN_MS) {
             session.lastSwipeMs = now
             return false
@@ -102,15 +86,13 @@ class ReelScrollDetector @Inject constructor() {
                 sessionDuration >= SESSION_DURATION_MS
     }
 
-    /** Mark that the reminder has just been shown for [pkg]. */
     @Synchronized
     fun markReminderShown(pkg: String) {
-        val s = sessions[pkg] ?: ReelSession(pkg).also { sessions[pkg] = it }
+        val s = sessions[pkg] ?: return
         s.reminderShownAt = System.currentTimeMillis()
         s.swipeCount = 0
     }
 
-    /** Clear any tracked session for [pkg] (e.g. when the user leaves the app). */
     @Synchronized
     fun resetSession(pkg: String) {
         sessions.remove(pkg)

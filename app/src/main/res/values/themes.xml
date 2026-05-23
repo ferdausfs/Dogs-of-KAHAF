@@ -59,7 +59,7 @@
         <item name="backgroundTint">@color/primary</item>
     </style>
 
-    <!-- ===== TASK 5: small badge chip used in app-list item ===== -->
+    <!-- TASK 5 — Small badge chip style (red/teal status indicators) -->
     <style name="Widget.GuardianShield.BadgeChip" parent="Widget.Material3.Chip.Assist">
         <item name="chipMinHeight">20dp</item>
         <item name="android:textSize">10sp</item>

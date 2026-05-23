@@ -7,35 +7,37 @@
     android:layout_margin="6dp"
     app:cardBackgroundColor="@color/surface"
     app:cardCornerRadius="14dp"
-    app:cardElevation="2dp">
+    app:cardElevation="2dp"
+    app:strokeColor="@color/card_stroke"
+    app:strokeWidth="0.5dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <!-- Left status accent bar — turns red when blocked, teal when whitelisted -->
+        <!-- Left status indicator strip -->
         <View
-            android:id="@+id/leftAccent"
-            android:layout_width="4dp"
+            android:id="@+id/viewLeftIndicator"
+            android:layout_width="3dp"
             android:layout_height="match_parent"
-            android:background="@color/on_surface_dim" />
+            android:background="@android:color/transparent"/>
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="12dp">
 
-            <!-- Rounded-square icon container -->
-            <FrameLayout
-                android:id="@+id/iconContainer"
+            <!-- App icon in rounded container -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="44dp"
                 android:layout_height="44dp"
-                android:background="@drawable/bg_app_icon_container">
-
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/surface_high">
                 <ImageView
                     android:id="@+id/imgIcon"
                     android:layout_width="32dp"
@@ -43,7 +45,7 @@
                     android:layout_gravity="center"
                     android:src="@drawable/ic_app_placeholder"
                     android:contentDescription="@string/app_name"/>
-            </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -67,25 +69,22 @@
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:singleLine="true"
-                        android:ellipsize="end"
-                        android:maxWidth="160dp"/>
+                        android:ellipsize="end"/>
 
-                    <!-- Status badge chip (BLOCKED / ALLOWED) -->
                     <TextView
-                        android:id="@+id/badgeStatus"
+                        android:id="@+id/txtStatusBadge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:text=""
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface_dim"
                         android:paddingStart="6dp"
                         android:paddingEnd="6dp"
                         android:paddingTop="2dp"
                         android:paddingBottom="2dp"
-                        android:background="@drawable/bg_status_badge"
-                        android:text="BLOCKED"
-                        android:textSize="9sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:letterSpacing="0.08"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_badge"
                         android:visibility="gone"/>
                 </LinearLayout>
 
@@ -102,60 +101,26 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/switchContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="end">
 
-                <LinearLayout
-                    android:id="@+id/rowBlock"
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchBlock"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:text="@string/block"
+                    android:textColor="@color/error"
+                    android:textSize="11sp"/>
 
-                    <TextView
-                        android:id="@+id/txtBlockLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/block"
-                        android:textColor="@color/error"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchBlock"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:thumbTint="@color/block_indicator"
-                        app:trackTint="@color/block_indicator"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/rowWhitelist"
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchWhitelist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="2dp">
-
-                    <TextView
-                        android:id="@+id/txtWhitelistLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/whitelist"
-                        android:textColor="@color/success"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchWhitelist"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:thumbTint="@color/allow_indicator"
-                        app:trackTint="@color/allow_indicator"/>
-                </LinearLayout>
+                    android:text="@string/whitelist"
+                    android:textColor="@color/success"
+                    android:textSize="11sp"/>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

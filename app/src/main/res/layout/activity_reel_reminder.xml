@@ -7,7 +7,6 @@
     android:background="@color/bg_main"
     android:padding="24dp">
 
-    <!-- Islamic symbol at top -->
     <TextView
         android:id="@+id/imgIslamic"
         android:layout_width="wrap_content"
@@ -71,7 +70,11 @@
         android:layout_height="wrap_content"
         android:text="📖 কুরআন অ্যাপ খুলুন"
         android:textSize="16sp"
-        style="@style/Widget.GuardianShield.Button"
+        android:textColor="@color/black"
+        app:cornerRadius="14dp"
+        app:backgroundTint="@color/primary"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
         app:layout_constraintBottom_toTopOf="@id/btnContinue"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

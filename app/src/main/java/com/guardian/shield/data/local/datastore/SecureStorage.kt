@@ -52,12 +52,6 @@ class SecureStorage @Inject constructor(
 
     fun getInt(key: String, default: Int = 0): Int = prefs.getInt(key, default)
 
-    fun putBoolean(key: String, value: Boolean) {
-        prefs.edit().putBoolean(key, value).apply()
-    }
-
-    fun getBoolean(key: String, default: Boolean = false): Boolean = prefs.getBoolean(key, default)
-
     fun remove(key: String) {
         prefs.edit().remove(key).apply()
     }
@@ -67,8 +61,6 @@ class SecureStorage @Inject constructor(
     companion object {
         private const val FILE_NAME = "guardian_secure"
         const val KEY_PIN_HASH = "pin_hash"
-        const val KEY_PIN_SALT = "pin_salt"
-        const val KEY_PIN_HASH_VERSION = "pin_hash_version"
         const val KEY_PIN_ATTEMPTS = "pin_attempts"
         const val KEY_PIN_LOCKOUT_UNTIL = "pin_lockout_until"
     }

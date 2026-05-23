@@ -42,11 +42,6 @@
         android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
-            android:name=".ui.setup.OnboardingActivity"
-            android:exported="false"
-            android:theme="@style/Theme.GuardianShield" />
-
-        <activity
             android:name=".ui.dashboard.MainActivity"
             android:exported="true"
             android:launchMode="singleTop">
@@ -58,16 +53,6 @@
 
         <activity
             android:name=".ui.settings.SettingsActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.dashboard.MainActivity"/>
-
-        <activity
-            android:name=".ui.settings.ActivityLogActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.dashboard.MainActivity"/>
-
-        <activity
-            android:name=".ui.profile.ParentProfileActivity"
             android:exported="false"
             android:parentActivityName=".ui.dashboard.MainActivity"/>
 
@@ -119,14 +104,6 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""/>
 
-        <!-- ===== TASK 2: Reel/Short addiction reminder overlay ===== -->
-        <activity
-            android:name=".ui.overlay.ReelReminderActivity"
-            android:theme="@style/Theme.GuardianShield.Overlay"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true"/>
-
         <activity
             android:name=".ui.guard.AccessibilityPromptActivity"
             android:exported="false"
@@ -135,6 +112,14 @@
             android:taskAffinity=""
             android:showOnLockScreen="true"
             android:turnScreenOn="true"/>
+
+        <!-- TASK 2: Islamic reminder overlay for reel/short addiction -->
+        <activity
+            android:name=".ui.overlay.ReelReminderActivity"
+            android:theme="@style/Theme.GuardianShield.Overlay"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"/>
 
         <service
             android:name=".service.accessibility.GuardianAccessibilityService"

@@ -74,9 +74,6 @@ interface BlockEventDao {
     @Query("DELETE FROM block_events WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("DELETE FROM block_events WHERE timestamp < :timestamp")
-    fun deleteOlderThan(timestamp: Long): Int
-
     @Query("DELETE FROM block_events")
     suspend fun clear()
 }

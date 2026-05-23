@@ -2,7 +2,6 @@ package com.guardian.shield.service.detection
 
 import android.content.Context
 import android.net.Uri
-import com.guardian.shield.util.TfliteModelValidator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,13 +64,6 @@ class ModelImportManager @Inject constructor(
             if (tmp.length() < 1024) {
                 tmp.delete()
                 val msg = "File too small — not a valid model"
-                _progress.value = ImportProgress.Error(modelName, msg)
-                return@withContext Result.failure(IllegalStateException(msg))
-            }
-
-            if (!TfliteModelValidator.hasValidHeader(tmp)) {
-                tmp.delete()
-                val msg = "Invalid TFLite file header (expected TFL3)"
                 _progress.value = ImportProgress.Error(modelName, msg)
                 return@withContext Result.failure(IllegalStateException(msg))
             }

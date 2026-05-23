@@ -92,21 +92,29 @@ class AppListViewModel @Inject constructor(
             try {
                 val current = repo.getApp(pkg)
                 val updated = (current ?: AppRule(pkg, pkg, false, false, System.currentTimeMillis()))
-                    .copy(isBlocked = blocked, isWhitelisted = if (blocked) false else current?.isWhitelisted ?: false)
+                    .copy(
+                        isBlocked = blocked,
+                        // Blocking clears the whitelist flag
+                        isWhitelisted = if (blocked) false else current?.isWhitelisted ?: false
+                    )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
             } catch (_: Throwable) {}
         }
     }
 
+    /**
+     * TASK 1 — One-way block rule.
+     * If an app is currently in the BLOCKLIST, it CANNOT be moved back to the
+     * allowlist. Hard restriction — no PIN bypass, no dialog, no exception.
+     */
     fun setWhitelisted(pkg: String, whitelisted: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val current = repo.getApp(pkg)
-                // ===== TASK 1: One-Way Block Rule =====
-                // GUARD: if currently blocked, whitelisting is forbidden.
-                // Block -> Allow is NOT allowed (hard restriction, no PIN bypass).
+                // GUARD: if currently blocked, whitelist toggle is forbidden.
                 if (current?.isBlocked == true) return@launch
+
                 val updated = (current ?: AppRule(pkg, pkg, false, false, System.currentTimeMillis()))
                     .copy(
                         isWhitelisted = whitelisted,

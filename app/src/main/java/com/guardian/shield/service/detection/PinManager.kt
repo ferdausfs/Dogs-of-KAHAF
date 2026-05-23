@@ -2,7 +2,7 @@ package com.guardian.shield.service.detection
 
 import com.guardian.shield.data.local.datastore.SecureStorage
 import com.guardian.shield.util.GuardianConstants
-import com.guardian.shield.util.PinHasher
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,10 +15,7 @@ class PinManager @Inject constructor(
 
     fun setPin(pin: String): Boolean {
         if (pin.length !in 4..6 || !pin.all { it.isDigit() }) return false
-        val salt = PinHasher.newSalt()
-        secure.putString(SecureStorage.KEY_PIN_SALT, salt)
-        secure.putInt(SecureStorage.KEY_PIN_HASH_VERSION, 2)
-        secure.putString(SecureStorage.KEY_PIN_HASH, PinHasher.hash(pin, salt))
+        secure.putString(SecureStorage.KEY_PIN_HASH, hash(pin))
         secure.putInt(SecureStorage.KEY_PIN_ATTEMPTS, 0)
         secure.putLong(SecureStorage.KEY_PIN_LOCKOUT_UNTIL, 0L)
         return true
@@ -30,19 +27,7 @@ class PinManager @Inject constructor(
         if (now < lockedUntil) return VerifyResult.LockedOut(lockedUntil - now)
 
         val stored = secure.getString(SecureStorage.KEY_PIN_HASH) ?: return VerifyResult.NotSet
-        val salt = secure.getString(SecureStorage.KEY_PIN_SALT)
-        val isMatch = when {
-            !salt.isNullOrBlank() -> stored == PinHasher.hash(pin, salt)
-            else -> stored == PinHasher.legacyHash(pin)
-        }
-
-        return if (isMatch) {
-            if (salt.isNullOrBlank()) {
-                val newSalt = PinHasher.newSalt()
-                secure.putString(SecureStorage.KEY_PIN_SALT, newSalt)
-                secure.putInt(SecureStorage.KEY_PIN_HASH_VERSION, 2)
-                secure.putString(SecureStorage.KEY_PIN_HASH, PinHasher.hash(pin, newSalt))
-            }
+        return if (stored == hash(pin)) {
             secure.putInt(SecureStorage.KEY_PIN_ATTEMPTS, 0)
             VerifyResult.Success
         } else {
@@ -60,10 +45,14 @@ class PinManager @Inject constructor(
 
     fun clearPin() {
         secure.remove(SecureStorage.KEY_PIN_HASH)
-        secure.remove(SecureStorage.KEY_PIN_SALT)
-        secure.remove(SecureStorage.KEY_PIN_HASH_VERSION)
         secure.remove(SecureStorage.KEY_PIN_ATTEMPTS)
         secure.remove(SecureStorage.KEY_PIN_LOCKOUT_UNTIL)
+    }
+
+    private fun hash(pin: String): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val bytes = md.digest(pin.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     sealed class VerifyResult {

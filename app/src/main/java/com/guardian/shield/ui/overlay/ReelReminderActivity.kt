@@ -11,11 +11,9 @@ import com.guardian.shield.databinding.ActivityReelReminderBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
- * ===== TASK 2: Islamic reminder shown after reel/short scroll addiction =====
- *
- * Full-screen interstitial that the user must acknowledge. It does NOT
- * block the host app (Instagram, YouTube, etc.) — only interrupts the
- * reel session and suggests opening a Quran / Hadith app instead.
+ * TASK 2 — Islamic reminder overlay shown after extended reel/short scrolling.
+ * Does NOT block the host app; it is a soft full-screen interstitial that the
+ * user must acknowledge before returning.
  */
 @AndroidEntryPoint
 class ReelReminderActivity : AppCompatActivity() {
@@ -31,54 +29,55 @@ class ReelReminderActivity : AppCompatActivity() {
         binding = ActivityReelReminderBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Caller package is currently informational — kept for future
-        // logging / analytics. Read it defensively.
-        @Suppress("UNUSED_VARIABLE")
+        // Caller package (currently informational only)
         val callerPkg = intent.getStringExtra(EXTRA_CALLER_PKG).orEmpty()
 
         binding.btnContinue.setOnClickListener { finish() }
 
         binding.btnOpenQuran.setOnClickListener {
-            // Try each suggested Islamic app in order; open the first installed one.
-            val islamicApps = listOf(
-                "com.quran.labs.androidquran",
-                "com.greentech.quran",
-                "com.salamweb.alquran",
-                "com.islamicapp.hadith",
-                "com.ais.quran.android"
-            )
-            for (pkg in islamicApps) {
-                val launch = packageManager.getLaunchIntentForPackage(pkg)
-                if (launch != null) {
-                    runCatching {
-                        startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }
-                    finish()
-                    return@setOnClickListener
-                }
-            }
-            // None installed — open Play Store search.
-            runCatching {
-                startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=quran+bangla"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            }.onFailure {
-                runCatching {
-                    startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://play.google.com/store/search?q=quran+bangla")
-                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                }
-            }
-            finish()
+            openFirstAvailableIslamicApp()
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { finish() }
         })
+    }
+
+    private fun openFirstAvailableIslamicApp() {
+        val islamicApps = listOf(
+            "com.quran.labs.androidquran",
+            "com.greentech.quran",
+            "com.salamweb.alquran",
+            "com.islamicapp.hadith",
+            "com.ais.quran.android"
+        )
+        for (pkg in islamicApps) {
+            val launch = packageManager.getLaunchIntentForPackage(pkg)
+            if (launch != null) {
+                try {
+                    startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    finish()
+                    return
+                } catch (_: Throwable) { /* try next */ }
+            }
+        }
+        // No Islamic app installed → open Play Store search
+        try {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=quran+bangla"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (_: Throwable) {
+            try {
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://play.google.com/store/search?q=quran+bangla")
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (_: Throwable) { /* ignore */ }
+        }
+        finish()
     }
 
     companion object {

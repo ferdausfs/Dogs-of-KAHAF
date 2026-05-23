@@ -8,14 +8,18 @@ import timber.log.Timber
 object AppClassifier {
 
     private val SYSTEM_ALWAYS_ALLOW = setOf(
+        // --- OS / System UI ---
         "android",
         "com.android.systemui",
+        "com.android.keyguard",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+
+        // --- Launchers (kept broad — additional ones still allowed via homePkg) ---
         "com.android.launcher",
         "com.android.launcher2",
         "com.android.launcher3",
         "com.google.android.apps.nexuslauncher",
-        "com.google.android.inputmethod.latin",
-        "com.samsung.android.honeyboard",
         "com.samsung.android.app.launcher",
         "com.sec.android.app.launcher",
         "com.miui.home",
@@ -27,32 +31,32 @@ object AppClassifier {
         "com.asus.launcher",
         "com.teslacoilsw.launcher",
         "com.actionlauncher.playstore",
+
+        // --- Settings / Dialer / Phone ---
         "com.android.settings",
         "com.android.phone",
         "com.android.dialer",
         "com.google.android.dialer",
         "com.samsung.android.incallui",
         "com.android.incallui",
-        "com.android.keyguard",
-        "com.android.packageinstaller",
-        "com.google.android.packageinstaller",
-        // ===== TASK 4: Extended default allowlist =====
-        // Messaging apps — always allowed
+
+        // --- TASK 4 — Messaging apps always allowed ---
         "com.imo.android.imoim",          // IMO Video Call
-        "com.imo.android.imoimbeta",      // IMO Beta
-        "com.imo.android.imoimhd",        // IMO HD
-        "com.imo.android.imoimlite",      // IMO Lite (newer)
+        "com.imo.android.imoibl",         // IMO Lite
         "org.thoughtcrime.securesms",     // Signal
-        "com.facebook.orca",              // Facebook Messenger
+        "com.facebook.orca",              // Messenger
         "com.facebook.mlite",             // Messenger Lite
         "com.whatsapp",                   // WhatsApp
         "com.whatsapp.w4b",               // WhatsApp Business
-        // Additional popular keyboards
-        "com.touchtype.swiftkey",         // SwiftKey
-        "com.ridmik.keyboard",            // Ridmik Keyboard
-        "net.mayabi.keyboard",            // Mayabi Keyboard
-        "sutonnyMJ.BijoyBanglaSoft",      // Bijoy Bangla
-        "com.menny.android.anysoftkeyboard" // AnySoftKeyboard
+
+        // --- Keyboards (in addition to enabled IMEs detected at runtime) ---
+        "com.google.android.inputmethod.latin",  // Gboard
+        "com.samsung.android.honeyboard",        // Samsung Keyboard
+        "com.touchtype.swiftkey",                // SwiftKey
+        "com.ridmik.keyboard",                   // Ridmik
+        "net.mayabi.keyboard",                   // Mayabi
+        "sutonnyMJ.BijoyBanglaSoft",             // Bijoy Bangla
+        "com.menny.android.anysoftkeyboard"      // AnySoftKeyboard
     )
 
     @Volatile private var cachedHomePkg: String? = null

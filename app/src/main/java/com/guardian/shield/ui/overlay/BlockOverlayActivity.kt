@@ -1,7 +1,5 @@
 package com.guardian.shield.ui.overlay
 
-import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -21,14 +19,13 @@ import com.guardian.shield.ui.unlock.DelayUnlockActivity
 class BlockOverlayActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBlockOverlayBinding
-    private var pulseSet: AnimatorSet? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
         binding = ActivityBlockOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -39,22 +36,14 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.txtPackage.text = pkg
 
-        // Temp block কিনা check করো
+        // Temp-block branch (incl. TASK 3 — 24h hard lock formatting)
         if (detail.startsWith("temp_block:")) {
-            // ===== TASK 3: support 24h+ display format =====
-            val mins = detail.removePrefix("temp_block:")
-                .removeSuffix("min").trim().toLongOrNull() ?: 0L
-            val displayText = when {
-                mins >= 60 -> {
-                    val hours = mins / 60
-                    val remaining = mins % 60
-                    if (remaining > 0) "$hours ঘন্টা $remaining মিনিট" else "$hours ঘন্টা"
-                }
-                else -> "$mins মিনিট"
-            }
-            binding.txtReason.text = getString(R.string.temp_blocked_for_fmt, displayText)
+            val raw = detail.removePrefix("temp_block:").removeSuffix("min").trim()
+            val mins = raw.toLongOrNull() ?: 0L
+            val displayText = formatDuration(mins)
+            binding.txtReason.text = "🚫 $displayText এর জন্য ব্লক করা হয়েছে"
             binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
-            // Unlock button temp block এ hide
+            // Hard lock — no unlock option
             binding.btnUnlock.visibility = View.GONE
         } else {
             binding.txtReason.text = formatReason(reason, detail)
@@ -71,37 +60,36 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.btnHome.setOnClickListener { goHome() }
         vibrate()
-        startShieldPulse()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { goHome() }
         })
     }
 
-    private fun startShieldPulse() {
-        if (pulseSet?.isRunning == true) return
-        val scaleX = ObjectAnimator.ofFloat(binding.imgShield, "scaleX", 1f, 1.08f, 1f).apply {
-            duration = 1600
-            repeatCount = ObjectAnimator.INFINITE
+    /**
+     * Render a duration (in minutes) in Bangla:
+     *   1440 → "২৪ ঘন্টা"
+     *   90   → "১ ঘন্টা ৩০ মিনিট"
+     *   45   → "৪৫ মিনিট"
+     */
+    private fun formatDuration(mins: Long): String {
+        if (mins <= 0) return "কিছুক্ষণ"
+        // 24 hour special-case
+        if (mins >= 24 * 60) {
+            val days = mins / (24 * 60)
+            val rest = mins % (24 * 60)
+            val hours = rest / 60
+            val builder = StringBuilder()
+            if (days > 0) builder.append("${days * 24 + hours} ঘন্টা")
+            else builder.append("${hours} ঘন্টা")
+            return builder.toString().trim()
         }
-        val scaleY = ObjectAnimator.ofFloat(binding.imgShield, "scaleY", 1f, 1.08f, 1f).apply {
-            duration = 1600
-            repeatCount = ObjectAnimator.INFINITE
+        if (mins >= 60) {
+            val hours = mins / 60
+            val remaining = mins % 60
+            return if (remaining > 0) "${hours} ঘন্টা ${remaining} মিনিট" else "${hours} ঘন্টা"
         }
-        val glowAlpha = ObjectAnimator.ofFloat(binding.shieldGlow, "alpha", 0.3f, 0.8f, 0.3f).apply {
-            duration = 1600
-            repeatCount = ObjectAnimator.INFINITE
-        }
-        pulseSet = AnimatorSet().apply {
-            playTogether(scaleX, scaleY, glowAlpha)
-            start()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        pulseSet?.cancel()
-        pulseSet = null
+        return "$mins মিনিট"
     }
 
     private fun goHome() {
