@@ -51,6 +51,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Phase 4: Onboarding flow (shown only on first run) -->
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.GuardianShield"/>
+
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"

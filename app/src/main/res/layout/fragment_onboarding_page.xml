@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="32dp">
+
+    <!-- Big emoji icon hero (kept simple to avoid bundling SVG illustrations
+         that risk theme/version drift) -->
+    <FrameLayout
+        android:id="@+id/iconFrame"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:background="@drawable/bg_shield_glow"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="40dp">
+
+        <TextView
+            android:id="@+id/txtIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🛡️"
+            android:textSize="84sp"
+            android:gravity="center"/>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/txtHighlight"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/primary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/iconFrame"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp"/>
+
+    <TextView
+        android:id="@+id/txtTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/on_surface"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:fontFamily="sans-serif-medium"
+        app:layout_constraintTop_toBottomOf="@id/txtHighlight"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="12dp"/>
+
+    <TextView
+        android:id="@+id/txtBody"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/on_surface_dim"
+        android:textSize="15sp"
+        android:lineSpacingMultiplier="1.5"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/txtTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

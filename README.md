@@ -1,10 +1,41 @@
 # Guardian Shield 🛡️
 
-**Package:** `com.guardian.shield` · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35 · **Version:** 2.2.0
+**Package:** `com.guardian.shield` · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35 · **Version:** 2.3.0-phase4
 
 An Android parental/self-control app using `AccessibilityService` to block harmful content on-device.
 
-## Features
+## v2.3.0-phase4 — Phase 4: Onboarding Flow
+
+**New in this build:**
+- 🎉 4-screen welcome onboarding (Welcome → Features → Permissions intro → PIN setup intro)
+- 📱 ViewPager2-based swipeable pager with dot indicators
+- 🔁 Auto-shown only on first launch (driven by `GuardianPreferences.firstRun` flag)
+- ⏭️ Skip and Back buttons for flexibility
+- 🚏 After completion, smart routing: jumps to Permissions screen if accessibility is off, otherwise directly to Dashboard
+- 🎨 Themed to match Guardian Shield's dark Material 3 palette
+
+**Files added/changed in this phase:**
+| Type | File |
+|------|------|
+| New | `OnboardingActivity.kt` |
+| New | `OnboardingPagerAdapter.kt` |
+| New | `OnboardingPageFragment.kt` |
+| New | `activity_onboarding.xml` |
+| New | `fragment_onboarding_page.xml` |
+| New | `indicator_dot_filled.xml`, `indicator_dot_empty.xml` |
+| New | `bg_indicator_filled.xml`, `bg_indicator_empty.xml` |
+| Modified | `MainActivity.kt` (first-run check + redirect) |
+| Modified | `AndroidManifest.xml` (register OnboardingActivity) |
+| Modified | `app/build.gradle.kts` (add `androidx.viewpager2:1.1.0`) |
+
+### Previous v2.2.0 features (preserved)
+- One-Way Block Rule (blocklist → allowlist forbidden)
+- Reel/Short addiction Islamic reminder
+- 3-strike AI → 24h hard lock
+- Extended default allowlist (IMO, Signal, Messenger, popular keyboards)
+- UI polish (status badges, left indicators, refined item rows)
+
+## Core Features
 - 🔍 Real-time content filtering via `AccessibilityService`
 - 🧠 On-device AI detection (TFLite + GPU delegate)
 - 🚻 Opposite-gender NSFW filtering
@@ -13,19 +44,7 @@ An Android parental/self-control app using `AccessibilityService` to block harmf
 - ⏰ Time-based schedule blocking (with overnight wrap)
 - 🔐 PIN-protected settings (SHA-256, EncryptedSharedPreferences)
 - 📊 Block event logs + CSV export
-- ☪️ **NEW v2.2.0** — Reel/Short addiction Islamic reminder overlay
-- 🚫 **NEW v2.2.0** — One-way block rule (blocklist → allowlist forbidden)
-- ⏳ **NEW v2.2.0** — 3-strike AI rule → 24h hard lock
-- 💬 **NEW v2.2.0** — Extended default allowlist (IMO, Signal, Messenger, popular keyboards)
-
-## v2.2.0 Changes
-| # | Task | Files Changed |
-|---|------|---------------|
-| 1 | One-way block rule | `AppListAdapter.kt`, `AppListViewModel.kt`, `item_app_rule.xml` |
-| 2 | Reel/Short Islamic reminder | `GuardianAccessibilityService.kt`, `AndroidManifest.xml`, **new:** `ReelScrollDetector.kt`, `ReelReminderActivity.kt`, `activity_reel_reminder.xml` |
-| 3 | 3-strike → 24h AI block | `Constants.kt`, `TempBlockManager.kt`, `BlockOverlayActivity.kt` |
-| 4 | Extended allowlist | `AppClassifier.kt` |
-| 5 | UI polish | `item_app_rule.xml`, `colors.xml`, `themes.xml`, `bg_badge.xml` |
+- ☪️ Reel/Short addiction Islamic reminder overlay
 
 ## Architecture
 - **MVVM + Clean Architecture**
@@ -34,6 +53,7 @@ An Android parental/self-control app using `AccessibilityService` to block harmf
 - **DataStore Preferences**
 - **Kotlin Coroutines + Flow**
 - **Material Design 3** (dark theme)
+- **ViewPager2** for onboarding
 
 ## Build
 ```bash
@@ -49,8 +69,6 @@ Place these `.tflite` files via the app's **Settings → AI Models → Import** 
 | `guardian_model.tflite` | Legacy combined NSFW classifier |
 | `nsfw_model.tflite` | Dedicated NSFW gate |
 | `gender_model.tflite` | Male/female classification |
-
-Models are imported to `filesDir` and validated by TFL3 header.
 
 ## License
 Personal use. Use responsibly.

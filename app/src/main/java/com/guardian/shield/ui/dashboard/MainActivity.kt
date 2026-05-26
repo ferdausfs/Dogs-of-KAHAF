@@ -24,15 +24,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.admin.GuardianDeviceAdminReceiver
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.TimeLockManager
+import com.guardian.shield.ui.onboarding.OnboardingActivity
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.SettingsActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -50,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: BlockEventAdapter
 
     @Inject lateinit var timeLockManager: TimeLockManager
+    @Inject lateinit var guardianPrefs: GuardianPreferences
 
     private var shieldPulseSet: AnimatorSet? = null
     private var lastProtectionEnabled: Boolean? = null
@@ -59,6 +63,18 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+
+        // Phase 4 — show onboarding on the very first launch and bail out early.
+        lifecycleScope.launch {
+            try {
+                val isFirstRun = guardianPrefs.firstRun.first()
+                if (isFirstRun) {
+                    startActivity(OnboardingActivity.launchIntent(this@MainActivity))
+                    finish()
+                    return@launch
+                }
+            } catch (t: Throwable) { Timber.e(t, "firstRun check failed") }
+        }
 
         adapter = BlockEventAdapter(
             pm = packageManager,
