@@ -37,7 +37,11 @@ class AiDetector @Inject constructor(
     private var genderInterpreter: Interpreter? = null
     private var gpuDelegate: GpuDelegate? = null
 
-    // ✅ সব threshold cached — DataStore থেকে live update
+    // STABILITY FIX — count inference failures so we can refuse to keep using
+    // a clearly broken delegate.
+    @Volatile private var consecutiveInferenceFails = 0
+    private val INFERENCE_FAIL_THRESHOLD = 3
+
     @Volatile var cachedAiEnabled: Boolean = false
         private set
     @Volatile var cachedUserGender: String = "NONE"
@@ -70,7 +74,6 @@ class AiDetector @Inject constructor(
                 catch (t: Throwable) { Timber.e(t); delay(1_000) }
             }
         }
-        // ✅ নতুন threshold collectors
         scope.launch {
             while (isActive) {
                 try { prefs.nsfwGateThreshold.collect { cachedNsfwGateThreshold = it } }
@@ -104,10 +107,38 @@ class AiDetector @Inject constructor(
         }
     }
 
-    private fun tryLoad(name: String): Interpreter? {
+    /**
+     * STABILITY FIX — if the GPU delegate is producing bad inferences, drop all
+     * interpreters and rebuild them on CPU. Called automatically after a few
+     * consecutive failures.
+     */
+    private fun rebuildAllOnCpu() {
+        try {
+            Timber.w("Rebuilding AI interpreters on CPU after $consecutiveInferenceFails failures")
+            try { legacyInterpreter?.close() } catch (_: Throwable) {}
+            try { nsfwInterpreter?.close() } catch (_: Throwable) {}
+            try { genderInterpreter?.close() } catch (_: Throwable) {}
+            try { gpuDelegate?.close() } catch (_: Throwable) {}
+            legacyInterpreter = null
+            nsfwInterpreter = null
+            genderInterpreter = null
+            gpuDelegate = null
+
+            legacyInterpreter = tryLoad(MODEL_LEGACY, forceCpu = true)
+            nsfwInterpreter = tryLoad(MODEL_NSFW, forceCpu = true)
+            genderInterpreter = tryLoad(MODEL_GENDER, forceCpu = true)
+            consecutiveInferenceFails = 0
+        } catch (t: Throwable) {
+            Timber.e(t, "rebuildAllOnCpu failed")
+        }
+    }
+
+    private fun tryLoad(name: String, forceCpu: Boolean = false): Interpreter? {
         return try {
             val buffer = loadModelBuffer(name) ?: return null
-            buildInterpreter(buffer).also { Timber.i("Loaded: $name") }
+            buildInterpreter(buffer, forceCpu).also {
+                Timber.i("Loaded: $name (cpu=$forceCpu)")
+            }
         } catch (t: Throwable) {
             Timber.w(t, "Failed to load $name")
             null
@@ -138,32 +169,35 @@ class AiDetector @Inject constructor(
         } catch (_: Throwable) { null }
     }
 
-    private fun buildInterpreter(buffer: ByteBuffer): Interpreter {
+    private fun buildInterpreter(buffer: ByteBuffer, forceCpu: Boolean = false): Interpreter {
         val opts = Interpreter.Options()
-        try {
-            val cl = CompatibilityList()
-            if (cl.isDelegateSupportedOnThisDevice) {
-                gpuDelegate = GpuDelegate()
-                opts.addDelegate(gpuDelegate)
-                Timber.i("GPU delegate enabled")
-            } else {
+        if (!forceCpu) {
+            try {
+                val cl = CompatibilityList()
+                if (cl.isDelegateSupportedOnThisDevice) {
+                    gpuDelegate = GpuDelegate()
+                    opts.addDelegate(gpuDelegate)
+                    Timber.i("GPU delegate enabled")
+                } else {
+                    opts.setNumThreads(2)
+                }
+            } catch (t: Throwable) {
+                Timber.w(t, "GPU init failed; CPU fallback")
                 opts.setNumThreads(2)
             }
-        } catch (t: Throwable) {
-            Timber.w(t, "GPU init failed; CPU fallback")
+        } else {
             opts.setNumThreads(2)
         }
         return try {
             Interpreter(buffer, opts)
         } catch (t: Throwable) {
-            Timber.w(t, "GPU failed; CPU retry")
+            Timber.w(t, "Interp build failed; CPU retry")
             try { gpuDelegate?.close() } catch (_: Throwable) {}
             gpuDelegate = null
             Interpreter(buffer, Interpreter.Options().setNumThreads(2))
         }
     }
 
-    // ✅ Guardian model [1,3] — Grid scan with voting
     suspend fun isUnsafe(bitmap: Bitmap): Boolean {
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
@@ -171,26 +205,23 @@ class AiDetector @Inject constructor(
                 val threshold = cachedThreshold
                 val voteNeeded = cachedGridVoteCount
 
-                // Step 1: Full image
-                val fullScore = extractGuardianScore(runInference(interp, bitmap))
+                val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
+                    ?: return@withLock false)
                 Timber.d("Guardian full: $fullScore / $threshold")
 
-                // Clearly safe → skip grid
                 if (fullScore < threshold * 0.3f) return@withLock false
-
-                // Clearly unsafe → block immediately
                 if (fullScore >= threshold) return@withLock true
 
-                // Borderline → Grid scan with voting
                 val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
                 var triggeredCount = 0
 
                 for ((idx, region) in regions.withIndex()) {
                     try {
-                        val score = extractGuardianScore(runInference(interp, region))
+                        val out = runInferenceSafe(interp, region)
+                        if (out == null) continue
+                        val score = extractGuardianScore(out)
                         Timber.d("Grid[$idx]: $score")
                         if (score >= threshold) triggeredCount++
-                        // Early exit — enough votes collected
                         if (triggeredCount >= voteNeeded) {
                             region.recycle()
                             break
@@ -212,7 +243,6 @@ class AiDetector @Inject constructor(
         }
     }
 
-    // ✅ Gender+NSFW — DataStore threshold use করো
     suspend fun isOppositeGenderNsfw(bitmap: Bitmap, userGender: String): Boolean {
         val nsfw = nsfwInterpreter ?: return false
         val gender = genderInterpreter ?: return false
@@ -229,17 +259,18 @@ class AiDetector @Inject constructor(
                 val genderConf = cachedGenderThreshold
                 val voteNeeded = cachedGridVoteCount
 
-                // NSFW gate — full image first
-                var maxNsfwScore = extractNsfwGateScore(runInference(nsfw, bitmap))
+                val initial = runInferenceSafe(nsfw, bitmap) ?: return@withLock false
+                var maxNsfwScore = extractNsfwGateScore(initial)
                 Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
 
-                // Grid scan for NSFW gate if borderline
                 if (maxNsfwScore < nsfwGate) {
                     val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
                     var nsfwVotes = 0
                     for ((idx, region) in regions.withIndex()) {
                         try {
-                            val score = extractNsfwGateScore(runInference(nsfw, region))
+                            val out = runInferenceSafe(nsfw, region)
+                            if (out == null) continue
+                            val score = extractNsfwGateScore(out)
                             Timber.d("NSFW Grid[$idx]: $score")
                             if (score > maxNsfwScore) maxNsfwScore = score
                             if (score >= nsfwGate) nsfwVotes++
@@ -258,8 +289,7 @@ class AiDetector @Inject constructor(
                     }
                 }
 
-                // Gender check
-                val genderScores = runInference(gender, bitmap)
+                val genderScores = runInferenceSafe(gender, bitmap) ?: return@withLock false
                 val half = genderScores.size / 2
                 val firstSum = genderScores.take(half).sum()
                 val secondSum = genderScores.drop(half).sum()
@@ -325,6 +355,30 @@ class AiDetector @Inject constructor(
                 scores.getOrElse(4){0f}
             )
             else -> scores.drop(1).max()
+        }
+    }
+
+    /**
+     * STABILITY FIX — single inference call that:
+     *   1) catches all exceptions
+     *   2) increments a failure counter
+     *   3) rebuilds interpreters on CPU once the counter crosses threshold
+     *
+     * Returns null on failure so callers can skip cleanly instead of crashing
+     * or returning a junk false-positive.
+     */
+    private fun runInferenceSafe(interp: Interpreter, bitmap: Bitmap): FloatArray? {
+        return try {
+            val result = runInference(interp, bitmap)
+            consecutiveInferenceFails = 0
+            result
+        } catch (t: Throwable) {
+            consecutiveInferenceFails++
+            Timber.w(t, "Inference failed (streak=$consecutiveInferenceFails)")
+            if (consecutiveInferenceFails >= INFERENCE_FAIL_THRESHOLD) {
+                rebuildAllOnCpu()
+            }
+            null
         }
     }
 

@@ -15,6 +15,8 @@ import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
+import com.guardian.shield.admin.TamperLogger
+import com.guardian.shield.admin.UninstallProtection
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
@@ -58,8 +60,17 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Volatile private var lastTextScan = 0L
     @Volatile private var isBlockingInProgress = false
 
+    // STABILITY FIX — auto-reset guard so a stuck flag never freezes detection
+    @Volatile private var blockingFlagSetAt = 0L
+    private val BLOCKING_FLAG_MAX_HOLD_MS = 10_000L
+
+    // STABILITY FIX — track consecutive screenshot failures so we can back off
+    @Volatile private var screenshotFailStreak = 0
+    private val SCREENSHOT_FAIL_BACKOFF_THRESHOLD = 5
+
     private val aiScanMap = LinkedHashMap<String, Long>()
     private var periodicJob: Job? = null
+    private var stuckFlagJob: Job? = null
     private var homePkg: String? = null
     private var keyguardManager: KeyguardManager? = null
 
@@ -72,7 +83,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                     isScreenOn = false
                     currentPackage = null
                     // ✅ Screen off → reset everything
-                    isBlockingInProgress = false
+                    clearBlockingFlag("screen-off")
                 }
             }
         }
@@ -113,6 +124,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         aiDetector.startPrefsCache(serviceScope)
         startPeriodicScanner()
+        startStuckFlagWatchdog()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -121,8 +133,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         try {
             val pkg = ev.packageName?.toString().orEmpty()
 
-            // TASK 2 — Reel/Short scroll addiction detection.
-            // Only count true scroll events and only for known reel/short apps.
+            // TASK 2 — Reel/Short scroll addiction detection
             if (ev.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED && pkg.isNotBlank()) {
                 checkReelScroll(pkg)
             }
@@ -138,13 +149,29 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * TASK 2 — Decide whether to surface the Islamic reminder overlay.
-     * Never blocks the host app — only suggests Quran/Hadith time.
+     * STABILITY FIX — central place to clear the in-progress flag so we never
+     * leak it. Also stamps the clear time for the watchdog.
+     */
+    private fun setBlockingFlag() {
+        isBlockingInProgress = true
+        blockingFlagSetAt = System.currentTimeMillis()
+    }
+
+    private fun clearBlockingFlag(reason: String) {
+        if (isBlockingInProgress) {
+            Timber.d("Clearing blocking flag: $reason")
+        }
+        isBlockingInProgress = false
+        blockingFlagSetAt = 0L
+    }
+
+    /**
+     * STABILITY FIX — surfaces and clears the reel reminder regardless of
+     * whether the AI sub-system is busy.
      */
     private fun checkReelScroll(pkg: String) {
         try {
             if (!reelScrollDetector.REEL_PACKAGES.contains(pkg)) return
-            // Safe / whitelisted packages should never trigger a reminder.
             if (isSafePackage(pkg)) return
             val shouldRemind = reelScrollDetector.recordScroll(pkg)
             if (shouldRemind) {
@@ -166,38 +193,55 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
-    // ✅ Fix: clear currentPackage + no timer reset (legacy comment retained)
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
         if (isBlockingInProgress) {
             Timber.d("Block in progress, skip: $pkg")
             return
         }
-        isBlockingInProgress = true
-        // ✅ Immediately clear — periodic scanner shouldn't see a stale pkg
+        setBlockingFlag()
+        // ✅ Immediately clear current package — periodic scanner shouldn't see a stale pkg
         currentPackage = null
         performGlobalAction(GLOBAL_ACTION_HOME)
         mainHandler.postDelayed({
-            blockingEngine.block(pkg, reason, detail)
+            try { blockingEngine.block(pkg, reason, detail) }
+            catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
         }, 120)
     }
 
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
 
-        // ✅ Safe / home package → reset everything (incl. reel session)
+        // PHASE 5 — Uninstall / Force-stop / Disable protection.
+        // If the user opened a package-manager page that targets us, kick them out.
+        if (UninstallProtection.isPackageManager(pkg)) {
+            try {
+                if (UninstallProtection.isManagingOurApp(this)) {
+                    Timber.w("Uninstall attempt blocked from $pkg")
+                    TamperLogger.log(this, "uninstall-attempt")
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    return
+                }
+            } catch (t: Throwable) { Timber.e(t, "Uninstall protection check failed") }
+        }
+
+        // STABILITY FIX — keyboard / system-UI / home are transient. We must
+        // NOT wipe currentPackage when an IME pops over a target app, or the
+        // periodic scanner stops scanning.
         if (isSafePackage(pkg)) {
-            currentPackage = null
-            isBlockingInProgress = false
-            // Reset reel session for the *previous* package, not the home pkg.
-            // (We don't know which app was active before — resetSession is safe
-            // because it just removes the entry if present.)
+            // Only fully reset state when the user reaches the launcher; for
+            // other safe packages (keyboards, system dialogs) we keep the
+            // previous currentPackage so AI scanning continues.
+            if (pkg == homePkg) {
+                currentPackage = null
+                clearBlockingFlag("home")
+            }
             return
         }
 
         // ✅ Whitelisted → track but don't block
         if (!rulesEngine.canBlock(pkg)) {
             currentPackage = pkg
-            isBlockingInProgress = false
+            clearBlockingFlag("whitelist")
             return
         }
 
@@ -218,7 +262,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
 
         // ✅ Block-eligible but not blocked → reset flag so subsequent AI scan can act
-        isBlockingInProgress = false
+        clearBlockingFlag("window-change-evaluated")
 
         if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
@@ -229,6 +273,12 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (pkg.isBlank() || isSafePackage(pkg)) return
         if (!rulesEngine.canBlock(pkg)) return
         if (isBlockingInProgress) return
+
+        // STABILITY FIX — keep currentPackage fresh; if accessibility produces
+        // only CONTENT_CHANGED events (no WINDOW_STATE_CHANGED), the periodic
+        // scanner still has the right package to work with.
+        currentPackage = pkg
+
         val now = System.currentTimeMillis()
         if (now - lastTextScan < GuardianConstants.TEXT_THROTTLE_MS) return
         lastTextScan = now
@@ -267,6 +317,13 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun triggerAiCheckThrottled(pkg: String) {
         if (isBlockingInProgress) return
+
+        // STABILITY FIX — back off briefly after a screenshot failure storm
+        if (screenshotFailStreak >= SCREENSHOT_FAIL_BACKOFF_THRESHOLD) {
+            Timber.w("Screenshot back-off active ($screenshotFailStreak fails)")
+            return
+        }
+
         val now = System.currentTimeMillis()
         synchronized(aiScanMap) {
             val last = aiScanMap[pkg] ?: 0L
@@ -280,20 +337,34 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) triggerAiCheck(pkg)
     }
 
+    /**
+     * STABILITY FIX — on screenshot failure, remove the throttle entry so the
+     * next scan isn't suppressed for AI_THROTTLE_MS.
+     */
+    private fun clearAiThrottleEntry(pkg: String) {
+        synchronized(aiScanMap) { aiScanMap.remove(pkg) }
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String) {
         try {
             takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
+                        screenshotFailStreak = 0
                         var bmp: Bitmap? = null
                         serviceScope.launch {
                             try {
                                 if (isBlockingInProgress) return@launch
                                 val hw = screenshot.hardwareBuffer
                                 val cs = screenshot.colorSpace
-                                bmp = Bitmap.wrapHardwareBuffer(hw, cs)
-                                    ?.copy(Bitmap.Config.ARGB_8888, false)
+                                bmp = try {
+                                    Bitmap.wrapHardwareBuffer(hw, cs)
+                                        ?.copy(Bitmap.Config.ARGB_8888, false)
+                                } catch (t: Throwable) {
+                                    Timber.w(t, "Bitmap.wrapHardwareBuffer failed")
+                                    null
+                                }
                                 try { hw.close() } catch (_: Throwable) {}
                                 val b = bmp ?: return@launch
                                 if (!rulesEngine.canBlock(pkg)) return@launch
@@ -324,10 +395,17 @@ class GuardianAccessibilityService : AccessibilityService() {
                         }
                     }
                     override fun onFailure(errorCode: Int) {
-                        Timber.w("Screenshot fail: $errorCode")
+                        screenshotFailStreak++
+                        Timber.w("Screenshot fail: $errorCode (streak=$screenshotFailStreak)")
+                        // STABILITY FIX — let the next scan retry immediately
+                        clearAiThrottleEntry(pkg)
                     }
                 })
-        } catch (t: Throwable) { Timber.e(t) }
+        } catch (t: Throwable) {
+            screenshotFailStreak++
+            Timber.e(t, "takeScreenshot threw (streak=$screenshotFailStreak)")
+            clearAiThrottleEntry(pkg)
+        }
     }
 
     private fun startPeriodicScanner() {
@@ -341,7 +419,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                     )
 
                     if (!isScreenOn || !protectionEnabled || isDeviceLocked()) continue
-                    // ✅ Skip while a block is being processed
                     if (isBlockingInProgress) continue
 
                     val pkg = currentPackage ?: continue
@@ -374,12 +451,43 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * STABILITY FIX — every few seconds, if [isBlockingInProgress] has been
+     * stuck for longer than [BLOCKING_FLAG_MAX_HOLD_MS], force-clear it. This
+     * is the single biggest cause of "AI detection becomes silent" complaints.
+     */
+    private fun startStuckFlagWatchdog() {
+        stuckFlagJob?.cancel()
+        stuckFlagJob = serviceScope.launch {
+            while (isActive) {
+                try {
+                    delay(3_000L)
+                    if (isBlockingInProgress && blockingFlagSetAt > 0) {
+                        val held = System.currentTimeMillis() - blockingFlagSetAt
+                        if (held > BLOCKING_FLAG_MAX_HOLD_MS) {
+                            Timber.w("isBlockingInProgress stuck for ${held}ms — forcing reset")
+                            clearBlockingFlag("watchdog-timeout")
+                        }
+                    }
+                    // STABILITY FIX — periodic screenshot streak decay so
+                    // back-off doesn't last forever once the device recovers.
+                    if (screenshotFailStreak > 0
+                        && screenshotFailStreak >= SCREENSHOT_FAIL_BACKOFF_THRESHOLD) {
+                        // Try one slow recovery scan
+                        screenshotFailStreak = SCREENSHOT_FAIL_BACKOFF_THRESHOLD - 1
+                    }
+                } catch (t: Throwable) { Timber.e(t, "watchdog tick failed") }
+            }
+        }
+    }
+
     override fun onInterrupt() {}
 
     override fun onDestroy() {
         super.onDestroy()
         runCatching { unregisterReceiver(screenReceiver) }
         periodicJob?.cancel()
+        stuckFlagJob?.cancel()
         serviceScope.cancel()
         ioScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)

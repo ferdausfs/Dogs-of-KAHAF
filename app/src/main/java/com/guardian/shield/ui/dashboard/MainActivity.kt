@@ -28,6 +28,7 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.service.detection.TimeLockManager
+import com.guardian.shield.ui.activitylog.ActivityLogActivity
 import com.guardian.shield.ui.onboarding.OnboardingActivity
 import com.guardian.shield.ui.permissions.PermissionsActivity
 import com.guardian.shield.ui.settings.SettingsActivity
@@ -286,6 +287,9 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_export -> { exportCsv(); true }
             R.id.action_clear  -> { confirmClear(); true }
+            R.id.action_activity_log -> {
+                startActivity(Intent(this, ActivityLogActivity::class.java)); true
+            }
             R.id.action_settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java)); true
             }

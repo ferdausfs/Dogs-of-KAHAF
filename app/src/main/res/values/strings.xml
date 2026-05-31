@@ -136,6 +136,17 @@
     <string name="chip_female">Female</string>
     <string name="chip_none">Disabled</string>
 
+    <!-- Phase 1: Activity Log screen -->
+    <string name="activity_log_title">Activity Log</string>
+    <string name="activity_log_count_fmt">%1$d events</string>
+    <string name="log_filter_all">All</string>
+    <string name="log_filter_ai">AI</string>
+    <string name="log_filter_keyword">Keyword</string>
+    <string name="log_filter_app">App</string>
+    <string name="log_filter_schedule">Schedule</string>
+    <string name="log_empty">No events to show</string>
+    <string name="open_activity_log">Activity Log</string>
+
     <!-- Accessibility Prompt -->
     <string name="prompt_accessibility_title">⚠️ সুরক্ষা বন্ধ হয়ে গেছে!</string>
     <string name="prompt_accessibility_body">Guardian Shield এর Accessibility Service বন্ধ করা হয়েছে। harmful content থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>

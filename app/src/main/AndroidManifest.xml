@@ -58,6 +58,12 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.GuardianShield"/>
 
+        <!-- Phase 1: Activity Log -->
+        <activity
+            android:name=".ui.activitylog.ActivityLogActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity"/>
+
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false"
