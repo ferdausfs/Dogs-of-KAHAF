@@ -274,9 +274,6 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (!rulesEngine.canBlock(pkg)) return
         if (isBlockingInProgress) return
 
-        // STABILITY FIX — keep currentPackage fresh; if accessibility produces
-        // only CONTENT_CHANGED events (no WINDOW_STATE_CHANGED), the periodic
-        // scanner still has the right package to work with.
         currentPackage = pkg
 
         val now = System.currentTimeMillis()
@@ -290,7 +287,15 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val r = rulesEngine.evaluateText(text)
                     if (r is DetectionResult.Block) {
                         withContext(Dispatchers.Main) { goHomeAndBlock(pkg, r.reason, r.detail) }
+                        return@launch
                     }
+                }
+
+                // If text scan didn't block, maybe trigger a faster AI check if it's a major change
+                if (aiDetector.cachedAiEnabled && aiDetector.isLegacyAvailable()
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                ) {
+                    withContext(Dispatchers.Main) { triggerAiCheckThrottled(pkg) }
                 }
             } catch (t: Throwable) { Timber.e(t) }
         }
