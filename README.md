@@ -1,8 +1,20 @@
 # Guardian Shield 🛡️
 
-**Package:** `com.guardian.shield` · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35 · **Version:** 2.3.0
+**Package:** `com.guardian.shield` · **Min SDK:** 26 (Android 8.0) · **Target SDK:** 35 · **Version:** 2.3.1
 
 An Android parental/self-control app using `AccessibilityService` to block harmful content on-device.
+
+---
+
+## v2.3.1 — Performance & Accuracy Optimization (Current)
+
+### 🚀 Speed & Accuracy Overhaul
+- **High-Speed Scanning:** Reduced AI periodic scan delay from 3.5s to 1.8s.
+- **Reactive Triggering:** AI scans now trigger immediately upon significant content changes (text/view updates) instead of just waiting for the timer.
+- **Hybrid Detection:** New logic that catches "Semi-Nudes" and revealing content by combining high Gender confidence with a "Soft" NSFW threshold (0.55).
+- **Body-First Scanning:** Optimized image grid-scanning to prioritize the middle and bottom of the screen where body parts/legs are most likely to appear.
+- **Keyword Accuracy Fix:** Fixed a critical regex bug (`\b` vs `\\b`) that caused inconsistent word-boundary matching.
+- **Improved Sensitivity:** Lowered minimum text length for scanning from 10 to 3 characters.
 
 ---
 

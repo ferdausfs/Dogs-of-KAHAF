@@ -310,13 +310,22 @@ class AiDetector @Inject constructor(
                     else -> false
                 }
 
-                // HYBRID DETECTION: If gender is high confidence AND nsfw is "soft" high, block.
-                // This catches semi-nudes (sexy content) without being too aggressive on random skin/feet.
+                // HYBRID DETECTION:
+                // 1. If it's a full NSFW match (based on genderConf), block.
+                // 2. If it's a "Soft" NSFW match, we allow a lower gender confidence to catch semi-nudes.
         val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
-                if (genderMatch && isSoftNsfw) {
-                    Timber.i("Hybrid block: gender=$genderMatch score=$maxNsfwScore")
-                    return@withLock true
+                if (isSoftNsfw) {
+                    val softGenderConf = genderConf * 0.85f // Lower requirement for semi-nudes
+                    val softGenderMatch = when (currentGender) {
+                        "MALE" -> femaleProb >= softGenderConf
+                        "FEMALE" -> maleProb >= softGenderConf
+                        else -> false
+                    }
+                    if (softGenderMatch) {
+                        Timber.i("Hybrid block: softGenderMatch=$softGenderMatch score=$maxNsfwScore")
+                        return@withLock true
+                    }
                 }
 
                 genderMatch
