@@ -91,8 +91,8 @@ class RulesEngine @Inject constructor(
                 } else {
                     // Use a more efficient check. For keywords, ensure word boundaries
                     // to avoid false positives (e.g., "sex" matching "sextant").
-                    // Using \b for word boundaries.
-                    val pattern = "(?i)\\b${Regex.escape(kw)}\\b"
+                    // Using \b with Unicode support for word boundaries.
+                    val pattern = "(?iu)\\b${Regex.escape(kw)}\\b"
                     val matched = Regex(pattern).containsMatchIn(text)
 
                     if (matched) {
