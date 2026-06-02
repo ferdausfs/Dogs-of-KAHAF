@@ -62,7 +62,7 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     // STABILITY FIX — auto-reset guard so a stuck flag never freezes detection
     @Volatile private var blockingFlagSetAt = 0L
-    private val BLOCKING_FLAG_MAX_HOLD_MS = 10_000L
+    private val BLOCKING_FLAG_MAX_HOLD_MS = 6_000L
 
     // STABILITY FIX — track consecutive screenshot failures so we can back off
     @Volatile private var screenshotFailStreak = 0
