@@ -11,6 +11,9 @@ object GuardianConstants {
     // NSFW gate threshold (max strategy on [1,5] index of NSFW model)
     const val NSFW_GATE_THRESHOLD = 0.65f
 
+    // Threshold for semi-nudes / revealing content
+    const val SOFT_NSFW_THRESHOLD = 0.55f
+
     // Gender threshold (kept the same)
     const val GENDER_CONFIDENCE_THRESHOLD = 0.75f
 

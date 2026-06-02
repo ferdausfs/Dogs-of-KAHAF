@@ -212,9 +212,9 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
-                // Use a smarter grid: check middle first where content usually is
+                // Use a smarter grid: check middle and bottom first where content (body/legs) usually is
                 val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
-                val prioritizedIndices = listOf(2, 3, 0, 1, 4, 5).filter { it < regions.size }
+                val prioritizedIndices = listOf(2, 3, 4, 5, 0, 1).filter { it < regions.size }
                 var triggeredCount = 0
 
                 for (idx in prioritizedIndices) {
@@ -269,7 +269,7 @@ class AiDetector @Inject constructor(
                 if (maxNsfwScore < nsfwGate) {
                     val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
                     var nsfwVotes = 0
-                    val prioritizedIndices = listOf(2, 3, 0, 1, 4, 5).filter { it < regions.size }
+                    val prioritizedIndices = listOf(2, 3, 4, 5, 0, 1).filter { it < regions.size }
                     for (idx in prioritizedIndices) {
                         val region = regions[idx]
                         try {
@@ -304,11 +304,22 @@ class AiDetector @Inject constructor(
 
                 Timber.d("Gender: male=$maleProb female=$femaleProb conf=$genderConf user=$currentGender")
 
-                when (currentGender) {
+                val genderMatch = when (currentGender) {
                     "MALE" -> femaleProb >= genderConf
                     "FEMALE" -> maleProb >= genderConf
                     else -> false
                 }
+
+                // HYBRID DETECTION: If gender is high confidence AND nsfw is "soft" high, block.
+                // This catches semi-nudes (sexy content) without being too aggressive on random skin/feet.
+        val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
+
+                if (genderMatch && isSoftNsfw) {
+                    Timber.i("Hybrid block: gender=$genderMatch score=$maxNsfwScore")
+                    return@withLock true
+                }
+
+                genderMatch
             } catch (t: Throwable) {
                 Timber.e(t, "Gender NSFW failed")
                 false
