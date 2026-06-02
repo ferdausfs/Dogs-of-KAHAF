@@ -374,6 +374,12 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 val b = bmp ?: return@launch
                                 if (!rulesEngine.canBlock(pkg)) return@launch
 
+                                // ✅ Ensure the app we are scanning is STILL the one in the foreground
+                                if (currentPackage != pkg) {
+                                    Timber.d("Package changed during AI scan (from $pkg to $currentPackage). Skipping block.")
+                                    return@launch
+                                }
+
                                 val gender = aiDetector.cachedUserGender
                                 var blocked = false
 
@@ -382,18 +388,29 @@ class GuardianAccessibilityService : AccessibilityService() {
                                     && aiDetector.isNsfwGateAvailable()
                                 ) {
                                     if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                        withContext(Dispatchers.Main) {
-                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                        // ✅ Final sanity check before blocking
+                                        if (currentPackage == pkg) {
+                                            withContext(Dispatchers.Main) {
+                                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                            }
+                                            blocked = true
                                         }
-                                        blocked = true
                                     }
                                 }
                                 if (!blocked && aiDetector.isLegacyAvailable()) {
                                     if (aiDetector.isUnsafe(b)) {
-                                        withContext(Dispatchers.Main) {
-                                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                        // ✅ Final sanity check before blocking
+                                        if (currentPackage == pkg) {
+                                            withContext(Dispatchers.Main) {
+                                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                            }
+                                            blocked = true
                                         }
                                     }
+                                }
+
+                                if (!blocked) {
+                                    clearBlockingFlag("ai-check-safe")
                                 }
                             } catch (t: Throwable) { Timber.e(t, "AI check failed") }
                             finally { try { bmp?.recycle() } catch (_: Throwable) {} }
