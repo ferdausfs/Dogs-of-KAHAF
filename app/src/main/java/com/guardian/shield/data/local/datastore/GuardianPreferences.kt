@@ -49,9 +49,9 @@ class GuardianPreferences @Inject constructor(
     val tempBlockDurationMins: Flow<Int> = ds.data.map { it[Keys.TEMP_BLOCK_DURATION_MINS] ?: 15 }
 
     // ✅ AI Threshold flows — সব adjustable
-    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.70f }
-    val nsfwGateThreshold: Flow<Float> = ds.data.map { it[Keys.NSFW_GATE_THRESHOLD] ?: 0.65f }
-    val genderThreshold: Flow<Float> = ds.data.map { it[Keys.GENDER_THRESHOLD] ?: 0.75f }
+    val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.72f }
+    val nsfwGateThreshold: Flow<Float> = ds.data.map { it[Keys.NSFW_GATE_THRESHOLD] ?: 0.68f }
+    val genderThreshold: Flow<Float> = ds.data.map { it[Keys.GENDER_THRESHOLD] ?: 0.78f }
     val gridVoteCount: Flow<Int> = ds.data.map { it[Keys.GRID_VOTE_COUNT] ?: 2 }
 
     // Setters
