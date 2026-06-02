@@ -424,10 +424,11 @@ class AiDetector @Inject constructor(
         resized.getPixels(pixels, 0, w, 0, 0, w, h)
 
         // Fast buffer filling
+        val inv255 = 1.0f / 255.0f
         for (p in pixels) {
-            input.putFloat(((p shr 16) and 0xFF) / 255f)
-            input.putFloat(((p shr 8) and 0xFF) / 255f)
-            input.putFloat((p and 0xFF) / 255f)
+            input.putFloat(((p shr 16) and 0xFF) * inv255)
+            input.putFloat(((p shr 8) and 0xFF) * inv255)
+            input.putFloat((p and 0xFF) * inv255)
         }
         input.rewind()
 
