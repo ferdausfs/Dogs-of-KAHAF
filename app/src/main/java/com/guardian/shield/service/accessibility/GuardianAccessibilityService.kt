@@ -503,7 +503,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onInterrupt() {}
+    override fun onInterrupt() {
+        Timber.w("Accessibility service interrupted")
+        clearBlockingFlag("interrupted")
+    }
 
     override fun onDestroy() {
         super.onDestroy()

@@ -360,7 +360,7 @@
                         android:layout_height="wrap_content"
                         android:valueFrom="0.3"
                         android:valueTo="0.95"
-                        android:stepSize="0.05"
+                        android:stepSize="0.01"
                         android:value="0.65"
                         android:layout_marginBottom="8dp" />
 
@@ -395,7 +395,7 @@
                         android:layout_height="wrap_content"
                         android:valueFrom="0.3"
                         android:valueTo="0.95"
-                        android:stepSize="0.05"
+                        android:stepSize="0.01"
                         android:value="0.60"
                         android:layout_marginBottom="8dp" />
 
@@ -430,7 +430,7 @@
                         android:layout_height="wrap_content"
                         android:valueFrom="0.5"
                         android:valueTo="0.95"
-                        android:stepSize="0.05"
+                        android:stepSize="0.01"
                         android:value="0.70"
                         android:layout_marginBottom="12dp" />
 
