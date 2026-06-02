@@ -3,7 +3,7 @@ package com.guardian.shield.util
 object GuardianConstants {
     const val TEXT_THROTTLE_MS = 500L
     const val AI_THROTTLE_MS = 1_500L
-    const val AI_PERIODIC_MS = 2_000L
+    const val AI_PERIODIC_MS = 2_200L
     const val AI_FOLLOW_UP_MS = 500L
     const val SCREEN_OFF_PERIODIC_MS = 10_000L
     const val MAX_AI_SCAN_MAP = 50

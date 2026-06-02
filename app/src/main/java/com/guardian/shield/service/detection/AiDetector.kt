@@ -37,6 +37,10 @@ class AiDetector @Inject constructor(
     private var genderInterpreter: Interpreter? = null
     private var gpuDelegate: GpuDelegate? = null
 
+    // REUSABLE BUFFERS to reduce GC pressure
+    private var inputBuffer: ByteBuffer? = null
+    private var pixelsArray: IntArray? = null
+
     // STABILITY FIX — count inference failures so we can refuse to keep using
     // a clearly broken delegate.
     @Volatile private var consecutiveInferenceFails = 0
@@ -412,6 +416,17 @@ class AiDetector @Inject constructor(
         val h = inputShape.getOrNull(1) ?: 224
         val w = inputShape.getOrNull(2) ?: 224
 
+        // Ensure buffers are allocated and large enough
+        val bufferSize = 4 * w * h * 3
+        val currentInput = inputBuffer.takeIf { it?.capacity() == bufferSize }
+            ?: ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder()).also { inputBuffer = it }
+
+        val pixelCount = w * h
+        val currentPixels = pixelsArray.takeIf { it?.size == pixelCount }
+            ?: IntArray(pixelCount).also { pixelsArray = it }
+
+        currentInput.rewind()
+
         // Use a more memory-efficient scaling if needed
         val resized = if (bitmap.width != w || bitmap.height != h) {
             Bitmap.createScaledBitmap(bitmap, w, h, true)
@@ -419,25 +434,23 @@ class AiDetector @Inject constructor(
             bitmap
         }
 
-        val input = ByteBuffer.allocateDirect(4 * w * h * 3).order(ByteOrder.nativeOrder())
-        val pixels = IntArray(w * h)
-        resized.getPixels(pixels, 0, w, 0, 0, w, h)
+        resized.getPixels(currentPixels, 0, w, 0, 0, w, h)
 
-        // Fast buffer filling
+        // Fast buffer filling with zero-allocation loop
         val inv255 = 1.0f / 255.0f
-        for (p in pixels) {
-            input.putFloat(((p shr 16) and 0xFF) * inv255)
-            input.putFloat(((p shr 8) and 0xFF) * inv255)
-            input.putFloat((p and 0xFF) * inv255)
+        for (p in currentPixels) {
+            currentInput.putFloat(((p shr 16) and 0xFF) * inv255)
+            currentInput.putFloat(((p shr 8) and 0xFF) * inv255)
+            currentInput.putFloat((p and 0xFF) * inv255)
         }
-        input.rewind()
+        currentInput.rewind()
 
         if (resized !== bitmap) resized.recycle()
 
         val outShape = interp.getOutputTensor(0).shape()
         val outSize = outShape.last()
         val output = Array(1) { FloatArray(outSize) }
-        interp.run(input, output)
+        interp.run(currentInput, output)
         return output[0]
     }
 
@@ -458,6 +471,8 @@ class AiDetector @Inject constructor(
         nsfwInterpreter = null
         genderInterpreter = null
         gpuDelegate = null
+        inputBuffer = null
+        pixelsArray = null
     }
 
     companion object {

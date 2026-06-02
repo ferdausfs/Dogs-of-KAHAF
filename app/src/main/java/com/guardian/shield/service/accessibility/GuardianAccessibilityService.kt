@@ -58,6 +58,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Volatile private var protectionEnabled = true
     @Volatile private var currentPackage: String? = null
     @Volatile private var lastTextScan = 0L
+    @Volatile private var lastContentHash: Int = 0
     @Volatile private var isBlockingInProgress = false
 
     // STABILITY FIX — auto-reset guard so a stuck flag never freezes detection
@@ -283,6 +284,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         serviceScope.launch {
             try {
                 val text = withContext(Dispatchers.Default) { collectVisibleText() }
+                val contentHash = text?.hashCode() ?: 0
+                if (contentHash == lastContentHash && !isBlockingInProgress) return@launch
+                lastContentHash = contentHash
+
                 if (!text.isNullOrBlank()) {
                     val r = rulesEngine.evaluateText(text)
                     if (r is DetectionResult.Block) {
