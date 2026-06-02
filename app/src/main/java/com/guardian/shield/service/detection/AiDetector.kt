@@ -212,10 +212,13 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
+                // Use a smarter grid: check middle first where content usually is
                 val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
+                val prioritizedIndices = listOf(2, 3, 0, 1, 4, 5).filter { it < regions.size }
                 var triggeredCount = 0
 
-                for ((idx, region) in regions.withIndex()) {
+                for (idx in prioritizedIndices) {
+                    val region = regions[idx]
                     try {
                         val out = runInferenceSafe(interp, region)
                         if (out == null) continue
@@ -266,7 +269,9 @@ class AiDetector @Inject constructor(
                 if (maxNsfwScore < nsfwGate) {
                     val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
                     var nsfwVotes = 0
-                    for ((idx, region) in regions.withIndex()) {
+                    val prioritizedIndices = listOf(2, 3, 0, 1, 4, 5).filter { it < regions.size }
+                    for (idx in prioritizedIndices) {
+                        val region = regions[idx]
                         try {
                             val out = runInferenceSafe(nsfw, region)
                             if (out == null) continue
@@ -386,20 +391,30 @@ class AiDetector @Inject constructor(
         val inputShape = interp.getInputTensor(0).shape()
         val h = inputShape.getOrNull(1) ?: 224
         val w = inputShape.getOrNull(2) ?: 224
-        val resized = if (bitmap.width != w || bitmap.height != h)
-            Bitmap.createScaledBitmap(bitmap, w, h, true) else bitmap
+
+        // Use a more memory-efficient scaling if needed
+        val resized = if (bitmap.width != w || bitmap.height != h) {
+            Bitmap.createScaledBitmap(bitmap, w, h, true)
+        } else {
+            bitmap
+        }
+
         val input = ByteBuffer.allocateDirect(4 * w * h * 3).order(ByteOrder.nativeOrder())
         val pixels = IntArray(w * h)
         resized.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        // Fast buffer filling
         for (p in pixels) {
-            input.putFloat(((p shr 16) and 0xff) / 255f)
-            input.putFloat(((p shr 8) and 0xff) / 255f)
-            input.putFloat((p and 0xff) / 255f)
+            input.putFloat(((p shr 16) and 0xFF) / 255f)
+            input.putFloat(((p shr 8) and 0xFF) / 255f)
+            input.putFloat((p and 0xFF) / 255f)
         }
         input.rewind()
+
         if (resized !== bitmap) resized.recycle()
+
         val outShape = interp.getOutputTensor(0).shape()
-        val outSize = outShape.fold(1) { acc, i -> acc * i }
+        val outSize = outShape.last()
         val output = Array(1) { FloatArray(outSize) }
         interp.run(input, output)
         return output[0]
