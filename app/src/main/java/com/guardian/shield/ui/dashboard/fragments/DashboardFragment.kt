@@ -17,6 +17,7 @@ import com.guardian.shield.databinding.FragmentDashboardBinding
 import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
+import com.guardian.shield.viewmodel.DashboardUiState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -70,7 +71,7 @@ class DashboardFragment : Fragment() {
         viewModel.toggleProtection()
     }
 
-    private fun render(state: com.guardian.shield.viewmodel.DashboardUiState) {
+    private fun render(state: DashboardUiState) {
         when {
             !state.protectionActive -> {
                 binding.txtStatusTitle.text = "Service Off"
