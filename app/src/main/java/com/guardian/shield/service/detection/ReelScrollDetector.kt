@@ -1,5 +1,6 @@
 package com.guardian.shield.service.detection
 
+import com.guardian.shield.util.GuardianConstants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,10 +16,9 @@ data class ReelSession(
  * TASK 2 — Reel/Short scroll addiction detector.
  *
  * Tracks consecutive scroll events in known short-form video apps.
- * When the user crosses [SWIPE_THRESHOLD] swipes OR spends [SESSION_DURATION_MS]
+ * When the user crosses [REEL_SWIPE_THRESHOLD] swipes OR spends [REEL_SESSION_MS]
  * inside the app, [recordScroll] returns true so the Accessibility service can
- * show an Islamic reminder overlay. After a reminder is shown, [COOLDOWN_MS]
- * suppresses any further reminder for that package to avoid nagging.
+ * show an Islamic reminder overlay.
  */
 @Singleton
 class ReelScrollDetector @Inject constructor() {
@@ -35,7 +35,7 @@ class ReelScrollDetector @Inject constructor() {
         "com.x.android"                 // X (new package)
     )
 
-    // Quran / Hadith app suggestions (package -> display)
+    // Quran / Hadith app suggestions
     val ISLAMIC_APP_SUGGESTIONS: LinkedHashMap<String, String> = linkedMapOf(
         "com.salamweb.alquran" to "Al-Quran (Bangla)",
         "com.greentech.quran" to "iQuran",
@@ -46,25 +46,20 @@ class ReelScrollDetector @Inject constructor() {
 
     private val sessions = HashMap<String, ReelSession>()
 
-    companion object {
-        const val SWIPE_THRESHOLD = 15              // swipes before reminder
-        const val SESSION_DURATION_MS = 5 * 60_000L // 5 minutes
-        const val COOLDOWN_MS = 30 * 60_000L        // 30 min cooldown after reminder
-        const val SWIPE_GAP_RESET_MS = 30_000L      // 30s gap resets session
-    }
-
     /**
      * Record a scroll event for [pkg]. Returns true when the caller should
      * surface the Islamic reminder overlay.
+     *
+     * @param isShortForm whether the user is currently in a "Reel/Short" view vs general feed
      */
     @Synchronized
-    fun recordScroll(pkg: String): Boolean {
-        if (!REEL_PACKAGES.contains(pkg)) return false
+    fun recordScroll(pkg: String, isShortForm: Boolean): Boolean {
+        // We track scrolling for all non-safe apps now, but specifically prioritize REEL_PACKAGES
         val now = System.currentTimeMillis()
         val session = sessions.getOrPut(pkg) { ReelSession(pkg) }
 
         // Reset session if gap too long
-        if (now - session.lastSwipeMs > SWIPE_GAP_RESET_MS && session.swipeCount > 0) {
+        if (now - session.lastSwipeMs > GuardianConstants.SCROLL_GAP_RESET_MS && session.swipeCount > 0) {
             val fresh = ReelSession(pkg)
             sessions[pkg] = fresh
             fresh.swipeCount = 1
@@ -73,7 +68,7 @@ class ReelScrollDetector @Inject constructor() {
         }
 
         // Skip if reminder was shown recently (cooldown active)
-        if (session.reminderShownAt > 0 && now - session.reminderShownAt < COOLDOWN_MS) {
+        if (session.reminderShownAt > 0 && now - session.reminderShownAt < GuardianConstants.SCROLL_COOLDOWN_MS) {
             session.lastSwipeMs = now
             return false
         }
@@ -82,8 +77,14 @@ class ReelScrollDetector @Inject constructor() {
         session.lastSwipeMs = now
 
         val sessionDuration = now - session.sessionStartMs
-        return session.swipeCount >= SWIPE_THRESHOLD ||
-                sessionDuration >= SESSION_DURATION_MS
+
+        return if (isShortForm) {
+            session.swipeCount >= GuardianConstants.REEL_SWIPE_THRESHOLD ||
+                    sessionDuration >= GuardianConstants.REEL_SESSION_MS
+        } else {
+            // General scrolling allows more time
+            sessionDuration >= GuardianConstants.GENERAL_SESSION_MS
+        }
     }
 
     @Synchronized

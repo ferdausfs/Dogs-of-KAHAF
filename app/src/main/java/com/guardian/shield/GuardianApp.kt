@@ -1,6 +1,7 @@
 package com.guardian.shield
 
 import android.app.Application
+import androidx.appcompat.app.AppCompatDelegate
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -21,6 +22,7 @@ class GuardianApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         createNotificationChannels()
         scheduleWatchdog()

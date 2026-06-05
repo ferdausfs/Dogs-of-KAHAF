@@ -102,6 +102,7 @@ class MainActivity : AppCompatActivity() {
 
         startForegroundServiceIfNeeded()
         checkDeviceAdmin()
+        checkBatteryOptimization()
     }
 
     override fun onResume() {
@@ -247,6 +248,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun startForegroundServiceIfNeeded() {
         runCatching { GuardianForegroundService.start(this) }
+    }
+
+    private fun checkBatteryOptimization() {
+        if (!PermissionManager.isBatteryOptimizationIgnored(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("🔋 Stability Fix")
+                .setMessage(
+                    "Guardian Shield ব্যাকগ্রাউন্ডে বন্ধ হয়ে যাওয়া রোধ করতে Battery Optimization বন্ধ করুন।\n\n" +
+                    "তা না হলে detection মাঝেমধ্যে কাজ নাও করতে পারে।"
+                )
+                .setCancelable(false)
+                .setPositiveButton("Fix করুন") { _, _ ->
+                    PermissionManager.openBatteryOptimizationSettings(this)
+                }
+                .setNegativeButton("পরে") { _, _ -> }
+                .show()
+        }
     }
 
     private fun checkDeviceAdmin() {

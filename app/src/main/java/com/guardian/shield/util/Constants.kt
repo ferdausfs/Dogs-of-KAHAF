@@ -12,7 +12,8 @@ object GuardianConstants {
     const val NSFW_GATE_THRESHOLD = 0.68f
 
     // Threshold for semi-nudes / revealing content
-    const val SOFT_NSFW_THRESHOLD = 0.45f
+    // Increased from 0.45f to 0.55f to reduce false positives
+    const val SOFT_NSFW_THRESHOLD = 0.55f
 
     // Gender threshold (kept the same)
     const val GENDER_CONFIDENCE_THRESHOLD = 0.78f
@@ -28,10 +29,21 @@ object GuardianConstants {
     const val MAX_NODES_BFS = 250
 
     // TASK 3 — AI detection strike rules
-    // After the 3rd AI strike → 24h hard lock for that app.
+    // After the 3rd AI strike → 15-minute block.
+    // If blocked 3 times within 2 hours → Block for the day.
     const val STRIKE_THRESHOLD = 3
     const val STRIKE_RESET_MS = 10 * 60 * 1_000L           // 10 min idle resets the counter
-    const val AI_MAX_STRIKE_BLOCK_MS = 24 * 60 * 60 * 1_000L // 24 hours hard lock
+    const val DEFAULT_TEMP_BLOCK_MS = 15 * 60 * 1_000L    // 15 minutes
+    const val ESCALATION_WINDOW_MS = 2 * 60 * 60 * 1_000L // 2 hours
+    const val ESCALATION_THRESHOLD = 3                    // 3 blocks in 2 hours
+    const val DAY_BLOCK_MS = 24 * 60 * 60 * 1_000L        // 24 hours (block for the day)
 
     const val ACCESSIBILITY_WATCHDOG_MS = 5_000L
+
+    // Scroll Addiction Constants
+    const val REEL_SWIPE_THRESHOLD = 15
+    const val REEL_SESSION_MS = 5 * 60_000L
+    const val GENERAL_SESSION_MS = 15 * 60_000L
+    const val SCROLL_COOLDOWN_MS = 30 * 60_000L
+    const val SCROLL_GAP_RESET_MS = 30_000L
 }
