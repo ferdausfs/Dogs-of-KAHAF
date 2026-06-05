@@ -19,32 +19,32 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface"
-            app:strokeWidth="1dp"
-            app:strokeColor="#1AFFFFFF">
+            app:cardBackgroundColor="@color/primary_container"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="24dp"
+                android:padding="32dp"
                 android:gravity="center">
 
                 <FrameLayout
-                    android:layout_width="100dp"
-                    android:layout_height="100dp">
+                    android:layout_width="120dp"
+                    android:layout_height="120dp">
                     <View
                         android:id="@+id/shieldGlow"
-                        android:layout_width="100dp"
-                        android:layout_height="100dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
                         android:background="@drawable/bg_shield_glow"
-                        android:alpha="0.4"/>
+                        android:alpha="0.2"/>
                     <ImageView
                         android:id="@+id/imgShield"
                         android:layout_width="80dp"
                         android:layout_height="80dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_shield_on"/>
+                        android:src="@drawable/ic_shield_on"
+                        app:tint="@color/on_primary_container"/>
                 </FrameLayout>
 
                 <TextView
@@ -52,28 +52,31 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/status_active"
-                    android:textColor="@color/on_surface"
-                    android:textSize="22sp"
+                    android:textColor="@color/on_primary_container"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="8dp"/>
 
                 <TextView
                     android:id="@+id/txtStatusSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Protection is active"
-                    android:textColor="@color/on_surface_dim"
-                    android:textSize="14sp"
+                    android:text="সুরক্ষা সক্রিয় আছে"
+                    android:textColor="@color/on_primary_container"
+                    android:alpha="0.8"
+                    android:textSize="16sp"
                     android:layout_marginTop="4dp"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnToggle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="24dp"
                     android:text="Pause"
-                    app:cornerRadius="24dp"
-                    style="@style/Widget.Material3.Button.TonalButton"/>
+                    android:textColor="@color/primary_container"
+                    app:backgroundTint="@color/on_primary_container"
+                    app:cornerRadius="28dp"
+                    style="@style/Widget.Material3.Button.UnelevatedButton"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -83,28 +86,35 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="2"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="-4dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface">
+                app:cardBackgroundColor="@color/surface_high">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+                    android:padding="20dp"
+                    android:gravity="start">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_shield_on"
+                        app:tint="@color/primary"/>
                     <TextView android:id="@+id/txtStatTotal" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
-                        android:textColor="@color/primary" android:textSize="24sp" android:textStyle="bold"/>
+                        android:textColor="@color/on_surface" android:textSize="28sp" android:textStyle="bold"
+                        android:layout_marginTop="12dp"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Total Blocks" android:textColor="@color/on_surface_dim"
-                        android:textSize="12sp" android:layout_marginTop="2dp"/>
+                        android:text="মোট ব্লক" android:textColor="@color/on_surface_variant"
+                        android:textSize="14sp" android:layout_marginTop="2dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -113,21 +123,27 @@
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
                 android:layout_margin="4dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface">
+                app:cardBackgroundColor="@color/surface_high">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+                    android:padding="20dp"
+                    android:gravity="start">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_history"
+                        app:tint="@color/ai_detection_color"/>
                     <TextView android:id="@+id/txtStatAi" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="0"
-                        android:textColor="@color/purple" android:textSize="24sp" android:textStyle="bold"/>
+                        android:textColor="@color/on_surface" android:textSize="28sp" android:textStyle="bold"
+                        android:layout_marginTop="12dp"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="AI Blocks" android:textColor="@color/on_surface_dim"
-                        android:textSize="12sp" android:layout_marginTop="2dp"/>
+                        android:text="AI বিশ্লেষণ" android:textColor="@color/on_surface_variant"
+                        android:textSize="14sp" android:layout_marginTop="2dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

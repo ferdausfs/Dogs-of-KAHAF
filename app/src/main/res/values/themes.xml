@@ -3,20 +3,31 @@
 
     <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">#003258</item>
-        <item name="colorPrimaryContainer">@color/primary_dim</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+
         <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
+
         <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+
         <item name="android:colorBackground">@color/bg_main</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+
         <item name="android:statusBarColor">@color/bg_main</item>
-        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/bg_main</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialAlertDialogTheme">@style/Theme.GuardianShield.Dialog</item>
         <item name="android:windowActivityTransitions">true</item>
         <item name="colorControlHighlight">@color/ripple_primary</item>
-        <item name="rippleColor">@color/ripple_primary</item>
+
         <!-- Material You Large Corners -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.GuardianShield.Small</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Medium</item>
@@ -51,36 +62,37 @@
     </style>
 
     <style name="Widget.GuardianShield.CardGlow" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardBackgroundColor">@color/surface_high</item>
         <item name="cardCornerRadius">28dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="strokeColor">#1AFFFFFF</item>
+        <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.Title" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textColor">@color/on_surface</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.02</item>
+        <item name="android:letterSpacing">0.01</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.SectionHeader" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textColor">@color/primary</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.1</item>
+        <item name="android:letterSpacing">0.05</item>
     </style>
 
     <style name="Widget.GuardianShield.Button" parent="Widget.Material3.Button">
-        <item name="cornerRadius">14dp</item>
+        <item name="cornerRadius">28dp</item>
         <item name="backgroundTint">@color/primary</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
     </style>
 
     <!-- TASK 5 — Small badge chip style (red/teal status indicators) -->
     <style name="Widget.GuardianShield.BadgeChip" parent="Widget.Material3.Chip.Assist">
-        <item name="chipMinHeight">20dp</item>
-        <item name="android:textSize">10sp</item>
-        <item name="chipStartPadding">6dp</item>
-        <item name="chipEndPadding">6dp</item>
-        <item name="chipCornerRadius">10dp</item>
+        <item name="chipMinHeight">24dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="chipStartPadding">8dp</item>
+        <item name="chipEndPadding">8dp</item>
+        <item name="chipCornerRadius">12dp</item>
     </style>
 </resources>
