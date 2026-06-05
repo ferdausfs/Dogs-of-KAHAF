@@ -172,9 +172,12 @@ class GuardianAccessibilityService : AccessibilityService() {
      */
     private fun checkReelScroll(pkg: String) {
         try {
-            if (!reelScrollDetector.REEL_PACKAGES.contains(pkg)) return
             if (isSafePackage(pkg)) return
-            val shouldRemind = reelScrollDetector.recordScroll(pkg)
+
+            // Simple heuristic for Reels/Shorts vs General Feed
+            val isShortForm = isShortFormView(pkg)
+
+            val shouldRemind = reelScrollDetector.recordScroll(pkg, isShortForm)
             if (shouldRemind) {
                 reelScrollDetector.markReminderShown(pkg)
                 mainHandler.post {
@@ -184,6 +187,20 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
             }
         } catch (t: Throwable) { Timber.e(t, "checkReelScroll failed") }
+    }
+
+    private fun isShortFormView(pkg: String): Boolean {
+        if (pkg == "com.zhiliaoapp.musically" || pkg == "com.ss.android.ugc.trill") return true
+
+        val root = runCatching { rootInActiveWindow }.getOrNull() ?: return false
+        val nodes = root.findAccessibilityNodeInfosByText("Reels")
+        if (!nodes.isNullOrEmpty()) return true
+
+        val shortsNodes = root.findAccessibilityNodeInfosByText("Shorts")
+        if (!shortsNodes.isNullOrEmpty()) return true
+
+        // Additional heuristics can be added here for specific resource IDs
+        return false
     }
 
     private fun isDeviceLocked() = try {

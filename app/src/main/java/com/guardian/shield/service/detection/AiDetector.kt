@@ -320,7 +320,8 @@ class AiDetector @Inject constructor(
         val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
                 if (isSoftNsfw) {
-                    val softGenderConf = genderConf * 0.75f // Lower requirement for semi-nudes
+                    // Increased from 0.75f to 0.85f to be less aggressive for semi-nudes
+                    val softGenderConf = genderConf * 0.85f
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf
