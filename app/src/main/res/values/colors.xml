@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_main">#0F1117</color>
-    <color name="surface">#1A1D26</color>
-    <color name="surface_high">#22262F</color>
-    <color name="primary">#00E5CC</color>
-    <color name="primary_dim">#00B3A0</color>
-    <color name="secondary">#FFB300</color>
-    <color name="error">#FF4444</color>
-    <color name="success">#00E676</color>
-    <color name="purple">#B388FF</color>
+    <color name="bg_main">#1A1C1E</color>
+    <color name="surface">#1F2023</color>
+    <color name="surface_high">#2D2F33</color>
+    <color name="primary">#D1E4FF</color>
+    <color name="primary_dim">#AAC7FF</color>
+    <color name="secondary">#D0E4FF</color>
+    <color name="error">#FFB4AB</color>
+    <color name="success">#B0F2CC</color>
+    <color name="purple">#EADDFF</color>
     <color name="on_surface">#E0E0E0</color>
     <color name="on_surface_dim">#9E9E9E</color>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
     <color name="overlay_dim">#CC000000</color>
-    <color name="ripple_primary">#2000E5CC</color>
+    <color name="ripple_primary">#20D1E4FF</color>
     <color name="ripple_error">#20FF4444</color>
     <color name="card_stroke">#1AFFFFFF</color>
 

@@ -206,8 +206,9 @@ class AiDetector @Inject constructor(
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
             try {
-                val threshold = cachedThreshold
-                val voteNeeded = cachedGridVoteCount
+                // Increased local threshold for "Safe First"
+                val threshold = cachedThreshold.coerceAtLeast(0.85f)
+                val voteNeeded = (cachedGridVoteCount + 1).coerceAtMost(4)
 
                 val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
                     ?: return@withLock false)
@@ -320,8 +321,8 @@ class AiDetector @Inject constructor(
         val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
                 if (isSoftNsfw) {
-                    // Increased from 0.75f to 0.85f to be less aggressive for semi-nudes
-                    val softGenderConf = genderConf * 0.85f
+                    // Increased to 0.95f to be very conservative for semi-nudes
+                    val softGenderConf = (genderConf * 0.95f).coerceAtMost(0.99f)
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf

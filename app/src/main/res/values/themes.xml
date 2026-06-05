@@ -3,7 +3,7 @@
 
     <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorOnPrimary">#003258</item>
         <item name="colorPrimaryContainer">@color/primary_dim</item>
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorError">@color/error</item>
@@ -11,12 +11,28 @@
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="android:statusBarColor">@color/bg_main</item>
-        <item name="android:navigationBarColor">@color/bg_main</item>
+        <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialAlertDialogTheme">@style/Theme.GuardianShield.Dialog</item>
         <item name="android:windowActivityTransitions">true</item>
-        <item name="colorControlHighlight">#2000E5CC</item>
+        <item name="colorControlHighlight">@color/ripple_primary</item>
         <item name="rippleColor">@color/ripple_primary</item>
+        <!-- Material You Large Corners -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.GuardianShield.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.GuardianShield.Large</item>
+    </style>
+
+    <style name="ShapeAppearance.GuardianShield.Small" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.GuardianShield.Medium" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <style name="ShapeAppearance.GuardianShield.Large" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSize">28dp</item>
     </style>
 
     <style name="Theme.GuardianShield.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
@@ -36,10 +52,10 @@
 
     <style name="Widget.GuardianShield.CardGlow" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/surface</item>
-        <item name="cardCornerRadius">20dp</item>
+        <item name="cardCornerRadius">28dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">1.5dp</item>
-        <item name="strokeColor">@color/primary</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">#1AFFFFFF</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.Title" parent="TextAppearance.Material3.HeadlineSmall">
