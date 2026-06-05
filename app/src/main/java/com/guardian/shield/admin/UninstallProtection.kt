@@ -30,7 +30,8 @@ object UninstallProtection {
         "com.google.android.packageinstaller",
         "com.oneplus.security",
         "com.oppo.safe",
-        "com.iqoo.secure"
+        "com.iqoo.secure",
+        "com.android.vending" // Play Store for uninstallation
     )
 
     /**
@@ -43,8 +44,18 @@ object UninstallProtection {
         "Disable", "disable",
         "Force stop", "Force Stop", "force stop",
         "Clear data", "Clear storage",
-        "আনইনস্টল", "নিষ্ক্রিয়", "জোর করে বন্ধ",
+        "Manage space", "Clear all data",
+        "আনইনস্টল", "নিষ্ক্রিয়", "জোর করে বন্ধ", "সব ডাটা মুছুন",
         "卸载", "停用"
+    )
+
+    /**
+     * Text fragments related to Device Admin or Accessibility tampering.
+     */
+    private val TAMPER_SYSTEM_TEXTS: List<String> = listOf(
+        "Device admin apps", "Device admin", "অ্যাডমিন অ্যাপ",
+        "Accessibility", "এক্সেসিবিলিটি",
+        "Downloaded apps", "Installed services"
     )
 
     /**
@@ -64,7 +75,7 @@ object UninstallProtection {
      * True if we can confirm that:
      *   1) we're in a package-manager-style screen, AND
      *   2) some node references our app, AND
-     *   3) at least one dangerous action button is visible.
+     *   3) at least one dangerous action button or system setting is visible.
      */
     fun isManagingOurApp(service: AccessibilityService): Boolean {
         val root = try { service.rootInActiveWindow } catch (_: Throwable) { null } ?: return false
@@ -72,7 +83,11 @@ object UninstallProtection {
             val text = collectText(root)
             val mentionsOurs = OUR_LABELS.any { text.contains(it, ignoreCase = true) }
             if (!mentionsOurs) return false
-            DANGEROUS_TEXTS.any { text.contains(it) }
+
+            val isDangerousAction = DANGEROUS_TEXTS.any { text.contains(it) }
+            val isSystemTamper = TAMPER_SYSTEM_TEXTS.any { text.contains(it) }
+
+            isDangerousAction || isSystemTamper
         } catch (t: Throwable) {
             Timber.w(t, "isManagingOurApp failed")
             false

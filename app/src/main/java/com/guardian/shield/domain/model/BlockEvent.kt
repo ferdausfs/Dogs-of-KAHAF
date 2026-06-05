@@ -5,7 +5,8 @@ enum class BlockReason {
     KEYWORD_MATCH,
     AI_DETECTION,
     MANUAL,
-    SCHEDULE_BLOCKED
+    SCHEDULE_BLOCKED,
+    TAMPER_ATTEMPT
 }
 
 data class BlockEvent(

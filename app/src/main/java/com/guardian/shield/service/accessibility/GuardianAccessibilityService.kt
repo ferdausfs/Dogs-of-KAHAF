@@ -24,6 +24,7 @@ import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
+import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.ui.overlay.ReelReminderActivity
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
@@ -49,6 +50,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var aiDetector: AiDetector
     @Inject lateinit var prefs: GuardianPreferences
     @Inject lateinit var reelScrollDetector: ReelScrollDetector
+    @Inject lateinit var timeLockManager: TimeLockManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -234,9 +236,15 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (UninstallProtection.isPackageManager(pkg)) {
             try {
                 if (UninstallProtection.isManagingOurApp(this)) {
-                    Timber.w("Uninstall attempt blocked from $pkg")
+                    Timber.w("Uninstall/Tamper attempt blocked from $pkg")
                     TamperLogger.log(this, "uninstall-attempt")
-                    performGlobalAction(GLOBAL_ACTION_HOME)
+
+                    if (timeLockManager.isLocked() || timeLockManager.isInCooldown()) {
+                        // Committed Lock active -> Strict block
+                        goHomeAndBlock(pkg, BlockReason.TAMPER_ATTEMPT, "committed_lock_active")
+                    } else {
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                    }
                     return
                 }
             } catch (t: Throwable) { Timber.e(t, "Uninstall protection check failed") }

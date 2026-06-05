@@ -108,6 +108,7 @@ class BlockOverlayActivity : AppCompatActivity() {
         "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
         "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
         "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
+        "TAMPER_ATTEMPT" -> "⚠️ ট্যাম্পারিং চেষ্টা সনাক্ত করা হয়েছে! কমিটেড লক থাকা অবস্থায় সেটিংস পরিবর্তন করা নিষেধ।"
         else -> getString(R.string.overlay_reason_manual)
     }
 
