@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -196,7 +197,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         // Check all windows for "Reels" or "Shorts" text to handle PIP/Split-screen
         val nodes = findNodesByTextAcrossWindows(listOf("Reels", "Shorts"))
-        return nodes.isNotEmpty()
+        val found = nodes.isNotEmpty()
+        nodes.forEach { it.recycle() }
+        return found
     }
 
     private fun findNodesByTextAcrossWindows(texts: List<String>): List<AccessibilityNodeInfo> {
@@ -206,8 +209,11 @@ class GuardianAccessibilityService : AccessibilityService() {
             val root = window.root ?: continue
             for (text in texts) {
                 val nodes = root.findAccessibilityNodeInfosByText(text)
-                if (!nodes.isNullOrEmpty()) result.addAll(nodes)
+                if (!nodes.isNullOrEmpty()) {
+                    result.addAll(nodes)
+                }
             }
+            root.recycle()
         }
         return result
     }
@@ -350,7 +356,10 @@ class GuardianAccessibilityService : AccessibilityService() {
             var count = 0
             while (queue.isNotEmpty() && count < GuardianConstants.MAX_NODES_BFS) {
                 val node = queue.poll() ?: continue
-                if (!visited.add(node)) continue
+                if (!visited.add(node)) {
+                    node.recycle()
+                    continue
+                }
                 count++
                 node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
                 node.contentDescription?.toString()
@@ -359,6 +368,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val child = node.getChild(i)
                     if (child != null) queue.add(child)
                 }
+            }
+            // Cleanup: recycle both visited and queued nodes to prevent leaks
+            visited.forEach { it.recycle() }
+            while (queue.isNotEmpty()) {
+                queue.poll()?.recycle()
             }
         }
         return builder.toString().trim().ifEmpty { null }
@@ -408,11 +422,10 @@ class GuardianAccessibilityService : AccessibilityService() {
             val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
             queue.add(root)
             var count = 0
-            while (queue.isNotEmpty() && count < 150) { // Slightly more nodes for multi-window
+            while (queue.isNotEmpty() && count < 150) {
                 val node = queue.poll() ?: continue
                 count++
 
-                // Common image view class names and heuristics
                 val className = node.className?.toString() ?: ""
                 val isImage = className.contains("ImageView") || className.contains("Image") ||
                         node.viewIdResourceName?.contains("image", ignoreCase = true) == true ||
@@ -422,7 +435,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (isImage) {
                     val rect = android.graphics.Rect()
                     node.getBoundsInScreen(rect)
-                    // Only track significant images
                     if (rect.width() > 80 && rect.height() > 80) {
                         regions.add(rect)
                     }
@@ -431,9 +443,13 @@ class GuardianAccessibilityService : AccessibilityService() {
                 for (i in 0 until node.childCount) {
                     node.getChild(i)?.let { queue.add(it) }
                 }
+                node.recycle()
+            }
+            // Cleanup: recycle any nodes remaining in the queue if we hit the limit
+            while (queue.isNotEmpty()) {
+                queue.poll()?.recycle()
             }
         }
-        // Prioritize larger images and limit to top 8 to prevent lag
         return regions.distinct().sortedByDescending { it.width() * it.height() }.take(8)
     }
 

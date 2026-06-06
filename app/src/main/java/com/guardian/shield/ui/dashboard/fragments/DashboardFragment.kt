@@ -15,6 +15,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.databinding.FragmentDashboardBinding
 import com.guardian.shield.service.detection.TimeLockManager
+import com.guardian.shield.ui.dashboard.BlockEventAdapter
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import com.guardian.shield.viewmodel.DashboardUiState
@@ -28,6 +29,7 @@ class DashboardFragment : Fragment() {
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
     private val viewModel: DashboardViewModel by viewModels()
+    private lateinit var adapter: BlockEventAdapter
 
     @Inject lateinit var timeLockManager: TimeLockManager
 
@@ -43,6 +45,11 @@ class DashboardFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        adapter = BlockEventAdapter(requireContext().packageManager) { event ->
+            viewModel.deleteEvent(event.id)
+        }
+        binding.recyclerRecent.adapter = adapter
 
         binding.btnToggle.setOnClickListener { handleToggle() }
 
@@ -98,6 +105,8 @@ class DashboardFragment : Fragment() {
 
         binding.txtStatTotal.text = state.stats.totalBlocks.toString()
         binding.txtStatAi.text = state.stats.aiBlocks.toString()
+
+        adapter.submitList(state.recent)
     }
 
     private fun startShieldPulse() {

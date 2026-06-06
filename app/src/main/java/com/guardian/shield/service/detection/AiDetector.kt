@@ -217,29 +217,23 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
-                // Use a dense overlapping grid to catch small images (1x1 inch)
-                // Overlap ensures that images on boundaries are fully captured in at least one cell
-                val regions = splitIntoOverlappingGrid(bitmap, cols = 3, rows = 4, overlapPercent = 0.25f)
-                // Prioritize middle and top-middle where feed content usually resides
-                val prioritizedIndices = listOf(3, 4, 5, 6, 7, 8, 0, 1, 2, 9, 10, 11).filter { it < regions.size }
+                // ULTIMATE LEVEL: Use a high-density overlapping grid (4x5) to catch even tiny social media feed images.
+                // 30% overlap ensures maximum coverage of content boundaries.
+                val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.30f)
+                // Scan the entire grid for absolute coverage in "Ultimate Level" analysis
                 var triggeredCount = 0
 
-                for (idx in prioritizedIndices) {
-                    val region = regions[idx]
+                for ((idx, region) in regions.withIndex()) {
                     try {
-                        val out = runInferenceSafe(interp, region)
-                        if (out == null) continue
+                        val out = runInferenceSafe(interp, region) ?: continue
                         val score = extractGuardianScore(out)
                         Timber.d("Grid[$idx]: $score")
 
-                        // For small images in a dense grid, we slightly lower the threshold
-                        // as the subject might not fill the entire 224x224 input perfectly.
-                        val effectiveThreshold = threshold * 0.95f
+                        // Ultimate Level: Lower threshold for grid cells to catch partial exposure
+                        val effectiveThreshold = threshold * 0.90f
 
                         if (score >= effectiveThreshold) triggeredCount++
-                        if (triggeredCount >= voteNeeded) {
-                            break
-                        }
+                        if (triggeredCount >= voteNeeded) break
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
                     } finally {
@@ -278,24 +272,19 @@ class AiDetector @Inject constructor(
                 Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
 
                 if (maxNsfwScore < nsfwGate) {
-                    val regions = splitIntoOverlappingGrid(bitmap, cols = 3, rows = 4, overlapPercent = 0.25f)
+                    val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.30f)
                     var nsfwVotes = 0
-                    val prioritizedIndices = listOf(3, 4, 5, 6, 7, 8, 0, 1, 2, 9, 10, 11).filter { it < regions.size }
-                    for (idx in prioritizedIndices) {
-                        val region = regions[idx]
+                    for ((idx, region) in regions.withIndex()) {
                         try {
-                            val out = runInferenceSafe(nsfw, region)
-                            if (out == null) continue
+                            val out = runInferenceSafe(nsfw, region) ?: continue
                             val score = extractNsfwGateScore(out)
                             Timber.d("NSFW Grid[$idx]: $score")
                             if (score > maxNsfwScore) maxNsfwScore = score
 
-                            // Higher sensitivity for small image fragments
-                            if (score >= nsfwGate * 0.9f) nsfwVotes++
+                            // Ultimate Level: Higher sensitivity for small image fragments in grid
+                            if (score >= nsfwGate * 0.85f) nsfwVotes++
 
-                            if (nsfwVotes >= voteNeeded) {
-                                break
-                            }
+                            if (nsfwVotes >= voteNeeded) break
                         } catch (t: Throwable) {
                             Timber.e(t, "NSFW Grid[$idx] error")
                         } finally {
@@ -323,21 +312,21 @@ class AiDetector @Inject constructor(
                     else -> false
                 }
 
-                // HYBRID DETECTION:
-                // 1. If it's a full NSFW match (based on genderConf), block.
-                // 2. If it's a "Soft" NSFW match, we allow a lower gender confidence to catch semi-nudes.
-        val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
+                // HYBRID ULTIMATE DETECTION:
+                // If it's a "Soft" NSFW match (e.g. lingerie shown in screenshot),
+                // we significantly lower the gender confidence requirement to catch semi-nudes.
+                val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
                 if (isSoftNsfw) {
-                    // Increased to 0.95f to be very conservative for semi-nudes
-                    val softGenderConf = (genderConf * 0.95f).coerceAtMost(0.99f)
+                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 25% for soft-NSFW hits
+                    val softGenderConf = (genderConf * 0.75f).coerceAtLeast(0.51f)
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf
                         else -> false
                     }
                     if (softGenderMatch) {
-                        Timber.i("Hybrid block: softGenderMatch=$softGenderMatch score=$maxNsfwScore")
+                        Timber.i("Hybrid block (Ultimate): softGenderMatch=$softGenderMatch score=$maxNsfwScore")
                         return@withLock true
                     }
                 }
