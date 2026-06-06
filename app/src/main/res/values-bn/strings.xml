@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">গার্ডিয়ান শিল্ড</string>
+    <string name="accessibility_service_label">গার্ডিয়ান শিল্ড সুরক্ষা</string>
+    <string name="accessibility_service_description">ক্ষতিকারক কন্টেন্ট ব্লক করার জন্য সক্রিয় অ্যাপ এবং স্ক্রিন কন্টেন্ট মনিটর করে।</string>
+
+    <string name="notif_title">গার্ডিয়ান শিল্ড সক্রিয়</string>
+    <string name="notif_text">ক্ষতিকারক কন্টেন্টের জন্য মনিটর করা হচ্ছে</string>
+
+    <string name="status_active">সুরক্ষা সক্রিয়</string>
+    <string name="status_active_sub_fmt">আজ %1$d টি ব্লক করা হয়েছে</string>
+    <string name="status_paused">সুরক্ষা বন্ধ</string>
+    <string name="status_paused_sub">চালু করতে শিল্ডে ট্যাপ করুন</string>
+    <string name="status_service_off">এক্সেসিবিলিটি সার্ভিস বন্ধ</string>
+    <string name="status_service_off_sub">চালু করতে পারমিশনে ট্যাপ করুন</string>
+
+    <string name="recent_blocks">সাম্প্রতিক ব্লক</string>
+    <string name="stat_total">মোট</string>
+    <string name="stat_ai">AI</string>
+    <string name="stat_keyword">কিওয়ার্ড</string>
+    <string name="stat_top">সেরা</string>
+    <string name="empty_no_blocks">এখনো কোনো ব্লক নেই — নিরাপদ থাকুন!</string>
+    <string name="open_settings">সেটিংস</string>
+    <string name="open_permissions">পারমিশন</string>
+
+    <string name="action_export">লগ এক্সপোর্ট করুন</string>
+    <string name="action_clear">সব লগ মুছুন</string>
+    <string name="action_settings">সেটিংস</string>
+    <string name="clear_logs">লগ মুছুন</string>
+    <string name="clear_logs_msg">আপনি কি নিশ্চিত? এটি আর ফেরত আনা যাবে না।</string>
+    <string name="confirm">নিশ্চিত করুন</string>
+    <string name="cancel">বাতিল</string>
+    <string name="save">সংরক্ষণ করুন</string>
+    <string name="csv_saved">CSV সংরক্ষিত: %1$s</string>
+
+    <string name="reason_ai">AI ডিটেকশন</string>
+    <string name="reason_kw">কিওয়ার্ড</string>
+    <string name="reason_app">অ্যাপ ব্লক</string>
+    <string name="reason_sched">সময়সূচী অনুযায়ী</string>
+    <string name="reason_manual">ম্যানুয়াল</string>
+
+    <string name="settings_title">সেটিংস</string>
+    <string name="section_protection">সুরক্ষা</string>
+    <string name="section_gender">জেন্ডার ফিল্টার</string>
+    <string name="section_temp_block">সাময়িক ব্লক</string>
+    <string name="section_rules">ব্লকিং রুলস</string>
+    <string name="section_models">AI মডেল</string>
+    <string name="section_security">নিরাপত্তা</string>
+    <string name="keyword_filter">কিওয়ার্ড ফিল্টার</string>
+    <string name="ai_detection">AI কন্টেন্ট ডিটেকশন</string>
+    <string name="ai_sensitivity">AI সেন্সিটিভিটি</string>
+    <string name="unlock_delay">আনলক বিলম্ব</string>
+    <string name="temp_block_info">AI বারবার ডিটেক্ট করলে অ্যাপটি এই সময়ের জন্য ব্লক হবে (২বার ডিটেকশন = সাময়িক ব্লক)</string>
+    <string name="male">পুরুষ</string>
+    <string name="female">মহিলা</string>
+    <string name="disabled">বন্ধ</string>
+    <string name="gender_status_male">মহিলা সম্পর্কিত NSFW কন্টেন্ট ব্লক করা হচ্ছে</string>
+    <string name="gender_status_female">পুরুষ সম্পর্কিত NSFW কন্টেন্ট ব্লক করা হচ্ছে</string>
+    <string name="gender_status_none">জেন্ডার ফিল্টার বন্ধ</string>
+    <string name="btn_apps">📱 অ্যাপ লিস্ট</string>
+    <string name="btn_keywords">🔤 কিওয়ার্ড</string>
+    <string name="btn_schedule">⏰ সময়সূচী</string>
+    <string name="btn_change_pin">🔐 পিন পরিবর্তন</string>
+    <string name="btn_permissions">🔧 পারমিশন হেলথ</string>
+    <string name="legacy_model">লিগ্যাসি মডেল</string>
+    <string name="nsfw_model">NSFW মডেল</string>
+    <string name="gender_model">জেন্ডার মডেল</string>
+    <string name="import_">ইম্পোর্ট</string>
+    <string name="remove">মুছুন</string>
+    <string name="model_missing">✗ নেই</string>
+    <string name="import_success">ইম্পোর্ট সফল: %1$s</string>
+    <string name="import_failed">ইম্পোর্ট ব্যর্থ: %1$s</string>
+    <string name="model_deleted">মুছে ফেলা হয়েছে: %1$s</string>
+
+    <string name="app_list_title">অ্যাপ লিস্ট</string>
+    <string name="filter_all">সব</string>
+    <string name="filter_blocked">ব্লকড</string>
+    <string name="filter_whitelisted">হোয়াইটলিস্টেড</string>
+    <string name="search_hint">অ্যাপ খুঁজুন…</string>
+    <string name="block">ব্লক</string>
+    <string name="whitelist">হোয়াইটলিস্ট</string>
+
+    <string name="keywords_title">কিওয়ার্ড</string>
+    <string name="add_keyword">কিওয়ার্ড যোগ করুন</string>
+    <string name="keyword_hint">কিওয়ার্ড লিখুন</string>
+    <string name="regex">Regex</string>
+    <string name="no_keywords">কোনো কিওয়ার্ড নেই। + ট্যাপ করে যোগ করুন।</string>
+
+    <string name="schedule_title">সময়সূচী রুলস</string>
+    <string name="add_schedule">সময়সূচী যোগ করুন</string>
+    <string name="edit_schedule">সময়সূচী পরিবর্তন করুন</string>
+    <string name="package_hint">প্যাকেজ নাম (যেমন com.instagram.android)</string>
+    <string name="start_time">শুরু</string>
+    <string name="end_time">শেষ</string>
+    <string name="days">দিন</string>
+    <string name="no_schedules">কোনো সময়সূচী নেই। + ট্যাপ করে যোগ করুন।</string>
+
+    <string name="permissions_title">পারমিশন হেলথ</string>
+    <string name="perm_accessibility">এক্সেসিবিলিটি সার্ভিস</string>
+    <string name="perm_usage_stats">ইউসেজ স্ট্যাটস এক্সেস</string>
+    <string name="perm_overlay">অন্য অ্যাপের ওপর প্রদর্শন</string>
+    <string name="perm_notification">নোটিফিকেশন পারমিশন</string>
+    <string name="perm_battery">ব্যাটারি অপ্টিমাইজেশন</string>
+    <string name="permission_granted">অনুমোদিত</string>
+    <string name="permission_fix">ঠিক করুন</string>
+    <string name="fix_all">সব ক্রিটিক্যাল ঠিক করুন</string>
+
+    <string name="pin_setup_title">সিকিউরিটি পিন সেট করুন</string>
+    <string name="pin_verify_title">পিন দিন</string>
+    <string name="pin_enter">৪-৬ ডিজিটের পিন দিন</string>
+    <string name="pin_confirm">নিশ্চিত করতে আবার দিন</string>
+    <string name="pin_min_length">পিন ৪-৬ ডিজিটের হতে হবে</string>
+    <string name="pin_mismatch">পিন মেলেনি</string>
+    <string name="pin_invalid">ভুল পিন</string>
+    <string name="pin_saved">পিন সংরক্ষিত হয়েছে</string>
+    <string name="pin_wrong_attempts">ভুল পিন — আর %1$d বার চেষ্টা করা যাবে</string>
+    <string name="pin_locked">অনেকবার ভুল পিন দিয়েছেন। %1$d সেকেন্ড পর চেষ্টা করুন।</string>
+    <string name="pin_not_set">কোনো পিন সেট করা নেই</string>
+    <string name="delete">মুছুন</string>
+
+    <string name="overlay_access_blocked">এক্সেস ব্লকড</string>
+    <string name="overlay_go_home">হোমে যান</string>
+    <string name="overlay_request_unlock">আনলক রিকোয়েস্ট</string>
+    <string name="overlay_motivation">দৃঢ় থাকুন 💪</string>
+    <string name="overlay_reason_ai">AI ক্ষতিকারক কন্টেন্ট খুঁজে পেয়েছে</string>
+    <string name="overlay_reason_kw">কিওয়ার্ড মিলেছে: %1$s</string>
+    <string name="overlay_reason_app">অ্যাপটি ব্লক করা হয়েছে</string>
+    <string name="overlay_reason_sched">নির্ধারিত সময়ের বাইরে</string>
+    <string name="overlay_reason_manual">ম্যানুয়ালি ব্লক করা হয়েছে</string>
+
+    <string name="delay_title">আনলক পেন্ডিং</string>
+    <string name="delay_text">এক্সেস দেওয়া হবে:</string>
+    <string name="seconds">সেকেন্ড পর</string>
+
+    <string name="chip_male">পুরুষ</string>
+    <string name="chip_female">মহিলা</string>
+    <string name="chip_none">বন্ধ</string>
+
+    <string name="activity_log_title">অ্যাক্টিভিটি লগ</string>
+    <string name="activity_log_count_fmt">%1$d টি ইভেন্ট</string>
+    <string name="log_filter_all">সব</string>
+    <string name="log_filter_ai">AI</string>
+    <string name="log_filter_keyword">কিওয়ার্ড</string>
+    <string name="log_filter_app">অ্যাপ</string>
+    <string name="log_filter_schedule">সময়সূচী</string>
+    <string name="log_empty">দেখানোর মতো কিছু নেই</string>
+    <string name="open_activity_log">অ্যাক্টিভিটি লগ</string>
+
+    <string name="prompt_accessibility_title">⚠️ সুরক্ষা বন্ধ হয়ে গেছে!</string>
+    <string name="prompt_accessibility_body">গার্ডিয়ান শিল্ড এর এক্সেসিবিলিটি সার্ভিস বন্ধ করা হয়েছে। ক্ষতিকারক কন্টেন্ট থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>
+    <string name="prompt_accessibility_btn">এক্সেসিবিলিটি সার্ভিস চালু করুন</string>
+    <string name="prompt_accessibility_note">Settings → Accessibility → Guardian Shield → Enable</string>
+</resources>

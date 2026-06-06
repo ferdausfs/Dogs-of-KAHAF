@@ -217,9 +217,11 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
-                // Use a smarter grid: check middle and bottom first where content (body/legs) usually is
-                val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
-                val prioritizedIndices = listOf(2, 3, 4, 5, 0, 1).filter { it < regions.size }
+                // Use a dense overlapping grid to catch small images (1x1 inch)
+                // Overlap ensures that images on boundaries are fully captured in at least one cell
+                val regions = splitIntoOverlappingGrid(bitmap, cols = 3, rows = 4, overlapPercent = 0.25f)
+                // Prioritize middle and top-middle where feed content usually resides
+                val prioritizedIndices = listOf(3, 4, 5, 6, 7, 8, 0, 1, 2, 9, 10, 11).filter { it < regions.size }
                 var triggeredCount = 0
 
                 for (idx in prioritizedIndices) {
@@ -229,15 +231,19 @@ class AiDetector @Inject constructor(
                         if (out == null) continue
                         val score = extractGuardianScore(out)
                         Timber.d("Grid[$idx]: $score")
-                        if (score >= threshold) triggeredCount++
+
+                        // For small images in a dense grid, we slightly lower the threshold
+                        // as the subject might not fill the entire 224x224 input perfectly.
+                        val effectiveThreshold = threshold * 0.95f
+
+                        if (score >= effectiveThreshold) triggeredCount++
                         if (triggeredCount >= voteNeeded) {
-                            region.recycle()
                             break
                         }
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
                     } finally {
-                        if (!region.isRecycled) region.recycle()
+                        region.recycle()
                     }
                 }
 
@@ -272,9 +278,9 @@ class AiDetector @Inject constructor(
                 Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
 
                 if (maxNsfwScore < nsfwGate) {
-                    val regions = splitIntoGrid(bitmap, cols = 2, rows = 3)
+                    val regions = splitIntoOverlappingGrid(bitmap, cols = 3, rows = 4, overlapPercent = 0.25f)
                     var nsfwVotes = 0
-                    val prioritizedIndices = listOf(2, 3, 4, 5, 0, 1).filter { it < regions.size }
+                    val prioritizedIndices = listOf(3, 4, 5, 6, 7, 8, 0, 1, 2, 9, 10, 11).filter { it < regions.size }
                     for (idx in prioritizedIndices) {
                         val region = regions[idx]
                         try {
@@ -283,15 +289,17 @@ class AiDetector @Inject constructor(
                             val score = extractNsfwGateScore(out)
                             Timber.d("NSFW Grid[$idx]: $score")
                             if (score > maxNsfwScore) maxNsfwScore = score
-                            if (score >= nsfwGate) nsfwVotes++
+
+                            // Higher sensitivity for small image fragments
+                            if (score >= nsfwGate * 0.9f) nsfwVotes++
+
                             if (nsfwVotes >= voteNeeded) {
-                                region.recycle()
                                 break
                             }
                         } catch (t: Throwable) {
                             Timber.e(t, "NSFW Grid[$idx] error")
                         } finally {
-                            if (!region.isRecycled) region.recycle()
+                            region.recycle()
                         }
                     }
                     if (maxNsfwScore < nsfwGate && nsfwVotes < voteNeeded) {
@@ -342,22 +350,46 @@ class AiDetector @Inject constructor(
         }
     }
 
-    private fun splitIntoGrid(bitmap: Bitmap, cols: Int, rows: Int): List<Bitmap> {
+    private fun splitIntoOverlappingGrid(
+        bitmap: Bitmap,
+        cols: Int,
+        rows: Int,
+        overlapPercent: Float = 0f
+    ): List<Bitmap> {
         val regions = mutableListOf<Bitmap>()
-        val cellW = bitmap.width / cols
-        val cellH = bitmap.height / rows
-        for (row in 0 until rows) {
-            for (col in 0 until cols) {
-                val x = col * cellW
-                val y = row * cellH
-                val w = if (col == cols - 1) bitmap.width - x else cellW
-                val h = if (row == rows - 1) bitmap.height - y else cellH
-                if (w > 32 && h > 32) {
-                    runCatching {
-                        regions.add(Bitmap.createBitmap(bitmap, x, y, w, h))
-                    }.onFailure { Timber.e(it, "Grid crop [$row,$col]") }
-                }
+        val w = bitmap.width
+        val h = bitmap.height
+
+        // Calculate cell sizes
+        val cellW = w / cols
+        val cellH = h / rows
+
+        // Calculate step sizes (smaller than cell size if overlap > 0)
+        val stepX = (cellW * (1f - overlapPercent)).toInt().coerceAtLeast(cellW / 2)
+        val stepY = (cellH * (1f - overlapPercent)).toInt().coerceAtLeast(cellH / 2)
+
+        var y = 0
+        while (y + cellH <= h || (y < h && y + cellH > h)) {
+            val currentH = if (y + cellH > h) h - y else cellH
+            if (currentH < 64) break
+
+            var x = 0
+            while (x + cellW <= w || (x < w && x + cellW > w)) {
+                val currentW = if (x + cellW > w) w - x else cellW
+                if (currentW < 64) break
+
+                runCatching {
+                    regions.add(Bitmap.createBitmap(bitmap, x, y, currentW, currentH))
+                }.onFailure { Timber.e(it, "Grid crop at $x,$y") }
+
+                if (x + cellW >= w) break
+                x += stepX
+                if (x + cellW > w) x = w - cellW
             }
+
+            if (y + cellH >= h) break
+            y += stepY
+            if (y + cellH > h) y = h - cellH
         }
         return regions
     }

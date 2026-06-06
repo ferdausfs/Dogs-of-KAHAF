@@ -98,4 +98,13 @@ class ReelScrollDetector @Inject constructor() {
     fun resetSession(pkg: String) {
         sessions.remove(pkg)
     }
+
+    /**
+     * Checks if the user has been scrolling recently (within the last 2 seconds).
+     */
+    @Synchronized
+    fun isCurrentlyScrolling(): Boolean {
+        val now = System.currentTimeMillis()
+        return sessions.values.any { now - it.lastSwipeMs < 2000L }
+    }
 }

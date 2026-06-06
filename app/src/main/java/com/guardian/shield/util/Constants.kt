@@ -13,8 +13,8 @@ object GuardianConstants {
     const val NSFW_GATE_THRESHOLD = 0.85f
 
     // Threshold for semi-nudes / revealing content
-    // Increased to 0.75f to significantly reduce false positives
-    const val SOFT_NSFW_THRESHOLD = 0.75f
+    // Lowered to 0.68f to catch more "misses" in social media feeds while relying on gender gate
+    const val SOFT_NSFW_THRESHOLD = 0.68f
 
     // Gender threshold (Increased for "Safe First")
     const val GENDER_CONFIDENCE_THRESHOLD = 0.88f
