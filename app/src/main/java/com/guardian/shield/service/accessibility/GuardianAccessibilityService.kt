@@ -206,8 +206,11 @@ class GuardianAccessibilityService : AccessibilityService() {
             val root = window.root ?: continue
             for (text in texts) {
                 val nodes = root.findAccessibilityNodeInfosByText(text)
-                if (!nodes.isNullOrEmpty()) result.addAll(nodes)
+                if (!nodes.isNullOrEmpty()) {
+                    result.addAll(nodes)
+                }
             }
+            root.recycle()
         }
         return result
     }
@@ -350,7 +353,10 @@ class GuardianAccessibilityService : AccessibilityService() {
             var count = 0
             while (queue.isNotEmpty() && count < GuardianConstants.MAX_NODES_BFS) {
                 val node = queue.poll() ?: continue
-                if (!visited.add(node)) continue
+                if (!visited.add(node)) {
+                    node.recycle()
+                    continue
+                }
                 count++
                 node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
                 node.contentDescription?.toString()
@@ -359,7 +365,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val child = node.getChild(i)
                     if (child != null) queue.add(child)
                 }
+                // Note: nodes in 'visited' are recycled in bulk after the loop if needed,
+                // but usually we recycle them as we finish processing.
+                // However, since they are in the 'visited' set, we'll recycle them at the end.
             }
+            visited.forEach { it.recycle() }
         }
         return builder.toString().trim().ifEmpty { null }
     }
@@ -408,11 +418,10 @@ class GuardianAccessibilityService : AccessibilityService() {
             val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
             queue.add(root)
             var count = 0
-            while (queue.isNotEmpty() && count < 150) { // Slightly more nodes for multi-window
+            while (queue.isNotEmpty() && count < 150) {
                 val node = queue.poll() ?: continue
                 count++
 
-                // Common image view class names and heuristics
                 val className = node.className?.toString() ?: ""
                 val isImage = className.contains("ImageView") || className.contains("Image") ||
                         node.viewIdResourceName?.contains("image", ignoreCase = true) == true ||
@@ -422,7 +431,6 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (isImage) {
                     val rect = android.graphics.Rect()
                     node.getBoundsInScreen(rect)
-                    // Only track significant images
                     if (rect.width() > 80 && rect.height() > 80) {
                         regions.add(rect)
                     }
@@ -431,9 +439,9 @@ class GuardianAccessibilityService : AccessibilityService() {
                 for (i in 0 until node.childCount) {
                     node.getChild(i)?.let { queue.add(it) }
                 }
+                node.recycle()
             }
         }
-        // Prioritize larger images and limit to top 8 to prevent lag
         return regions.distinct().sortedByDescending { it.width() * it.height() }.take(8)
     }
 

@@ -9,15 +9,15 @@ object GuardianConstants {
     const val MAX_AI_SCAN_MAP = 50
 
     // NSFW gate threshold (max strategy on [1,5] index of NSFW model)
-    // Increased to 0.85f for "Safe First" approach
-    const val NSFW_GATE_THRESHOLD = 0.85f
+    // ULTIMATE LEVEL: Lowered to 0.75f to catch more social media content
+    const val NSFW_GATE_THRESHOLD = 0.75f
 
     // Threshold for semi-nudes / revealing content
-    // Lowered to 0.68f to catch more "misses" in social media feeds while relying on gender gate
-    const val SOFT_NSFW_THRESHOLD = 0.68f
+    // ULTIMATE LEVEL: Lowered to 0.55f for aggressive detection of revealing clothing
+    const val SOFT_NSFW_THRESHOLD = 0.55f
 
-    // Gender threshold (Increased for "Safe First")
-    const val GENDER_CONFIDENCE_THRESHOLD = 0.88f
+    // Gender threshold (Increased for "Safe First", but dynamic in detector)
+    const val GENDER_CONFIDENCE_THRESHOLD = 0.82f
 
     // Early-exit ratio (legacy fast-path, retained)
     const val EARLY_EXIT_RATIO = 0.20f
