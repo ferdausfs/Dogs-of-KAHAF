@@ -194,15 +194,22 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun isShortFormView(pkg: String): Boolean {
         if (pkg == "com.zhiliaoapp.musically" || pkg == "com.ss.android.ugc.trill") return true
 
-        val root = runCatching { rootInActiveWindow }.getOrNull() ?: return false
-        val nodes = root.findAccessibilityNodeInfosByText("Reels")
-        if (!nodes.isNullOrEmpty()) return true
+        // Check all windows for "Reels" or "Shorts" text to handle PIP/Split-screen
+        val nodes = findNodesByTextAcrossWindows(listOf("Reels", "Shorts"))
+        return nodes.isNotEmpty()
+    }
 
-        val shortsNodes = root.findAccessibilityNodeInfosByText("Shorts")
-        if (!shortsNodes.isNullOrEmpty()) return true
-
-        // Additional heuristics can be added here for specific resource IDs
-        return false
+    private fun findNodesByTextAcrossWindows(texts: List<String>): List<AccessibilityNodeInfo> {
+        val result = mutableListOf<AccessibilityNodeInfo>()
+        val currentWindows = windows ?: return emptyList()
+        for (window in currentWindows) {
+            val root = window.root ?: continue
+            for (text in texts) {
+                val nodes = root.findAccessibilityNodeInfosByText(text)
+                if (!nodes.isNullOrEmpty()) result.addAll(nodes)
+            }
+        }
+        return result
     }
 
     private fun isDeviceLocked() = try {
@@ -332,20 +339,27 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     private fun collectVisibleText(): String? {
-        val root = runCatching { rootInActiveWindow }.getOrNull() ?: return null
         val builder = StringBuilder()
-        val visited = HashSet<AccessibilityNodeInfo>()
-        val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
-        queue.add(root)
-        var count = 0
-        while (queue.isNotEmpty() && count < GuardianConstants.MAX_NODES_BFS) {
-            val node = queue.poll() ?: continue
-            if (!visited.add(node)) continue
-            count++
-            node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
-            node.contentDescription?.toString()
-                ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
+        val currentWindows = windows ?: return null
+
+        for (window in currentWindows) {
+            val root = window.root ?: continue
+            val visited = HashSet<AccessibilityNodeInfo>()
+            val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
+            queue.add(root)
+            var count = 0
+            while (queue.isNotEmpty() && count < GuardianConstants.MAX_NODES_BFS) {
+                val node = queue.poll() ?: continue
+                if (!visited.add(node)) continue
+                count++
+                node.text?.toString()?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+                node.contentDescription?.toString()
+                    ?.let { if (it.isNotBlank()) builder.append(it).append(' ') }
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child != null) queue.add(child)
+                }
+            }
         }
         return builder.toString().trim().ifEmpty { null }
     }
@@ -360,9 +374,17 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
 
         val now = System.currentTimeMillis()
+
+        // Use a more aggressive throttle if the user is scrolling to catch fleeting images
+        val throttleMs = if (isScrollingActive()) {
+            GuardianConstants.AI_THROTTLE_MS / 2
+        } else {
+            GuardianConstants.AI_THROTTLE_MS
+        }
+
         synchronized(aiScanMap) {
             val last = aiScanMap[pkg] ?: 0L
-            if (now - last < GuardianConstants.AI_THROTTLE_MS) return
+            if (now - last < throttleMs) return
             aiScanMap[pkg] = now
             if (aiScanMap.size > GuardianConstants.MAX_AI_SCAN_MAP) {
                 val it = aiScanMap.entries.iterator()
@@ -370,6 +392,99 @@ class GuardianAccessibilityService : AccessibilityService() {
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) triggerAiCheck(pkg)
+    }
+
+    private fun isScrollingActive(): Boolean {
+        // ReelScrollDetector tracks scroll events
+        return reelScrollDetector.isCurrentlyScrolling()
+    }
+
+    private fun collectImageRegions(): List<android.graphics.Rect> {
+        val regions = mutableListOf<android.graphics.Rect>()
+        val currentWindows = try { windows } catch (t: Throwable) { null } ?: return emptyList()
+
+        for (window in currentWindows) {
+            val root = try { window.root } catch (t: Throwable) { null } ?: continue
+            val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
+            queue.add(root)
+            var count = 0
+            while (queue.isNotEmpty() && count < 150) { // Slightly more nodes for multi-window
+                val node = queue.poll() ?: continue
+                count++
+
+                // Common image view class names and heuristics
+                val className = node.className?.toString() ?: ""
+                val isImage = className.contains("ImageView") || className.contains("Image") ||
+                        node.viewIdResourceName?.contains("image", ignoreCase = true) == true ||
+                        node.viewIdResourceName?.contains("photo", ignoreCase = true) == true ||
+                        node.viewIdResourceName?.contains("video", ignoreCase = true) == true
+
+                if (isImage) {
+                    val rect = android.graphics.Rect()
+                    node.getBoundsInScreen(rect)
+                    // Only track significant images
+                    if (rect.width() > 80 && rect.height() > 80) {
+                        regions.add(rect)
+                    }
+                }
+
+                for (i in 0 until node.childCount) {
+                    node.getChild(i)?.let { queue.add(it) }
+                }
+            }
+        }
+        // Prioritize larger images and limit to top 8 to prevent lag
+        return regions.distinct().sortedByDescending { it.width() * it.height() }.take(8)
+    }
+
+    private suspend fun runContentAwareScan(
+        fullBitmap: Bitmap,
+        regions: List<android.graphics.Rect>,
+        pkg: String
+    ): Boolean {
+        // High density scanning for detected image regions
+        for (rect in regions) {
+            if (isBlockingInProgress) return true
+
+            // Validate rect within bitmap bounds
+            val left = rect.left.coerceAtLeast(0)
+            val top = rect.top.coerceAtLeast(0)
+            val width = rect.width().coerceAtMost(fullBitmap.width - left)
+            val height = rect.height().coerceAtMost(fullBitmap.height - top)
+
+            if (width < 64 || height < 64) continue
+
+            var regionBmp: Bitmap? = null
+            try {
+                regionBmp = Bitmap.createBitmap(fullBitmap, left, top, width, height)
+                val gender = aiDetector.cachedUserGender
+
+                if (gender != "NONE" && aiDetector.isGenderModelAvailable() && aiDetector.isNsfwGateAvailable()) {
+                    if (aiDetector.isOppositeGenderNsfw(regionBmp, gender)) {
+                        if (currentPackage == pkg) {
+                            withContext(Dispatchers.Main) {
+                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-gender")
+                            }
+                            return true
+                        }
+                    }
+                }
+
+                if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
+                    if (currentPackage == pkg) {
+                        withContext(Dispatchers.Main) {
+                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-legacy")
+                        }
+                        return true
+                    }
+                }
+            } catch (t: Throwable) {
+                Timber.e(t, "Region scan failed")
+            } finally {
+                regionBmp?.recycle()
+            }
+        }
+        return false
     }
 
     /**
@@ -383,6 +498,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun triggerAiCheck(pkg: String) {
         try {
+            // Optimization: If scrolling, prioritize content-aware scanning of ImageViews
+            val targetRegions = if (isScrollingActive()) collectImageRegions() else emptyList()
+
             takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
@@ -410,31 +528,38 @@ class GuardianAccessibilityService : AccessibilityService() {
                                     return@launch
                                 }
 
-                                val gender = aiDetector.cachedUserGender
+                                // Content-Aware Pre-scan: Check detected image regions first
                                 var blocked = false
+                                if (targetRegions.isNotEmpty()) {
+                                    blocked = runContentAwareScan(b, targetRegions, pkg)
+                                }
 
-                                if (gender != "NONE"
-                                    && aiDetector.isGenderModelAvailable()
-                                    && aiDetector.isNsfwGateAvailable()
-                                ) {
-                                    if (aiDetector.isOppositeGenderNsfw(b, gender)) {
-                                        // ✅ Final sanity check before blocking
-                                        if (currentPackage == pkg) {
-                                            withContext(Dispatchers.Main) {
-                                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                if (!blocked) {
+                                    val gender = aiDetector.cachedUserGender
+
+                                    if (gender != "NONE"
+                                        && aiDetector.isGenderModelAvailable()
+                                        && aiDetector.isNsfwGateAvailable()
+                                    ) {
+                                        if (aiDetector.isOppositeGenderNsfw(b, gender)) {
+                                            // ✅ Final sanity check before blocking
+                                            if (currentPackage == pkg) {
+                                                withContext(Dispatchers.Main) {
+                                                    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
+                                                }
+                                                blocked = true
                                             }
-                                            blocked = true
                                         }
                                     }
-                                }
-                                if (!blocked && aiDetector.isLegacyAvailable()) {
-                                    if (aiDetector.isUnsafe(b)) {
-                                        // ✅ Final sanity check before blocking
-                                        if (currentPackage == pkg) {
-                                            withContext(Dispatchers.Main) {
-                                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                    if (!blocked && aiDetector.isLegacyAvailable()) {
+                                        if (aiDetector.isUnsafe(b)) {
+                                            // ✅ Final sanity check before blocking
+                                            if (currentPackage == pkg) {
+                                                withContext(Dispatchers.Main) {
+                                                    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                                }
+                                                blocked = true
                                             }
-                                            blocked = true
                                         }
                                     }
                                 }

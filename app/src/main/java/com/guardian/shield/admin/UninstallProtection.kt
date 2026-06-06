@@ -31,7 +31,9 @@ object UninstallProtection {
         "com.oneplus.security",
         "com.oppo.safe",
         "com.iqoo.secure",
-        "com.android.vending" // Play Store for uninstallation
+        "com.android.vending", // Play Store for uninstallation
+        "com.google.android.settings.intelligence",
+        "com.android.systemui"
     )
 
     /**
@@ -46,7 +48,7 @@ object UninstallProtection {
         "Clear data", "Clear storage",
         "Manage space", "Clear all data",
         "আনইনস্টল", "নিষ্ক্রিয়", "জোর করে বন্ধ", "সব ডাটা মুছুন",
-        "卸载", "停用"
+        "卸载", "停用", "Desinstalar", "Forzar detención"
     )
 
     /**
@@ -55,7 +57,8 @@ object UninstallProtection {
     private val TAMPER_SYSTEM_TEXTS: List<String> = listOf(
         "Device admin apps", "Device admin", "অ্যাডমিন অ্যাপ",
         "Accessibility", "এক্সেসিবিলিটি",
-        "Downloaded apps", "Installed services"
+        "Downloaded apps", "Installed services", "Accessibility services",
+        "Manage accessibility", "সংযুক্ত পরিষেবা"
     )
 
     /**
