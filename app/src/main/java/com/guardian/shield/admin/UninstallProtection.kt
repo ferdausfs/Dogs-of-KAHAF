@@ -94,6 +94,8 @@ object UninstallProtection {
         } catch (t: Throwable) {
             Timber.w(t, "isManagingOurApp failed")
             false
+        } finally {
+            try { root.recycle() } catch (_: Throwable) {}
         }
     }
 

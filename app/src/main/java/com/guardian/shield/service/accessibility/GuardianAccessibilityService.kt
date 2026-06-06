@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -196,7 +197,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         // Check all windows for "Reels" or "Shorts" text to handle PIP/Split-screen
         val nodes = findNodesByTextAcrossWindows(listOf("Reels", "Shorts"))
-        return nodes.isNotEmpty()
+        val found = nodes.isNotEmpty()
+        nodes.forEach { it.recycle() }
+        return found
     }
 
     private fun findNodesByTextAcrossWindows(texts: List<String>): List<AccessibilityNodeInfo> {
@@ -365,11 +368,12 @@ class GuardianAccessibilityService : AccessibilityService() {
                     val child = node.getChild(i)
                     if (child != null) queue.add(child)
                 }
-                // Note: nodes in 'visited' are recycled in bulk after the loop if needed,
-                // but usually we recycle them as we finish processing.
-                // However, since they are in the 'visited' set, we'll recycle them at the end.
             }
+            // Cleanup: recycle both visited and queued nodes to prevent leaks
             visited.forEach { it.recycle() }
+            while (queue.isNotEmpty()) {
+                queue.poll()?.recycle()
+            }
         }
         return builder.toString().trim().ifEmpty { null }
     }
@@ -440,6 +444,10 @@ class GuardianAccessibilityService : AccessibilityService() {
                     node.getChild(i)?.let { queue.add(it) }
                 }
                 node.recycle()
+            }
+            // Cleanup: recycle any nodes remaining in the queue if we hit the limit
+            while (queue.isNotEmpty()) {
+                queue.poll()?.recycle()
             }
         }
         return regions.distinct().sortedByDescending { it.width() * it.height() }.take(8)
