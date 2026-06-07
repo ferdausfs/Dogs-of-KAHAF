@@ -44,6 +44,13 @@ class TempBlockManager @Inject constructor() {
     fun recordAiDetection(pkg: String, defaultDurationMs: Long): Boolean {
         val now = System.currentTimeMillis()
         val lastStrike = strikeTime[pkg] ?: 0L
+
+        // Prevent multiple strikes within 1 second for the same package
+        if (now - lastStrike < 1000L) {
+            Timber.d("Ignoring duplicate AI strike for $pkg (too soon)")
+            return false
+        }
+
         val currentStrikes = strikes[pkg] ?: 0
 
         // Reset the counter only if we're still below threshold AND idle too long.

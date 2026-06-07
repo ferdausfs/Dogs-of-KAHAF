@@ -208,7 +208,8 @@ class AiDetector @Inject constructor(
             try {
                 // Increased local threshold for "Safe First"
                 val threshold = cachedThreshold.coerceAtLeast(0.85f)
-                val voteNeeded = (cachedGridVoteCount + 1).coerceAtMost(4)
+                // Ultimate Level: Require more grid votes to reduce false positives
+                val voteNeeded = (cachedGridVoteCount + 2).coerceAtMost(5)
 
                 val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
                     ?: return@withLock false)
@@ -318,8 +319,8 @@ class AiDetector @Inject constructor(
                 val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
                 if (isSoftNsfw) {
-                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 25% for soft-NSFW hits
-                    val softGenderConf = (genderConf * 0.75f).coerceAtLeast(0.51f)
+                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 15% for soft-NSFW hits (Reduced aggressive offset)
+                    val softGenderConf = (genderConf * 0.85f).coerceAtLeast(0.65f)
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf
