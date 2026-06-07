@@ -209,9 +209,9 @@ class AiDetector @Inject constructor(
                 if (!isImageComplex(bitmap)) return@withLock false
 
                 // Increased local threshold for "Safe First"
-                val threshold = cachedThreshold.coerceAtLeast(0.85f)
-                // Ultimate Level: Require more grid votes to reduce false positives
-                val voteNeeded = (cachedGridVoteCount + 3).coerceAtMost(6)
+                val threshold = cachedThreshold.coerceAtLeast(0.80f)
+                // Ultimate Level: Require sufficient votes but sensitive to small fragments
+                val voteNeeded = (cachedGridVoteCount + 1).coerceAtMost(4)
 
                 val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
                     ?: return@withLock false)
@@ -220,9 +220,9 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
-                // ULTIMATE LEVEL: Use a high-density overlapping grid (4x5) to catch even tiny social media feed images.
-                // 30% overlap ensures maximum coverage of content boundaries.
-                val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.30f)
+                // ULTIMATE LEVEL: Use a ultra-high-density overlapping grid (5x6) to catch even tiny social media feed images.
+                // 35% overlap ensures maximum coverage of content boundaries.
+                val regions = splitIntoOverlappingGrid(bitmap, cols = 5, rows = 6, overlapPercent = 0.35f)
                 // Scan the entire grid for absolute coverage in "Ultimate Level" analysis
                 var triggeredCount = 0
 
@@ -277,7 +277,7 @@ class AiDetector @Inject constructor(
                 Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
 
                 if (maxNsfwScore < nsfwGate) {
-                    val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.30f)
+                    val regions = splitIntoOverlappingGrid(bitmap, cols = 5, rows = 6, overlapPercent = 0.35f)
                     var nsfwVotes = 0
                     for ((idx, region) in regions.withIndex()) {
                         try {
@@ -323,8 +323,8 @@ class AiDetector @Inject constructor(
                 val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
 
                 if (isSoftNsfw) {
-                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 15% for soft-NSFW hits (Reduced aggressive offset)
-                    val softGenderConf = (genderConf * 0.85f).coerceAtLeast(0.68f)
+                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 20% for soft-NSFW hits (Increased sensitivity)
+                    val softGenderConf = (genderConf * 0.80f).coerceAtLeast(0.62f)
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf

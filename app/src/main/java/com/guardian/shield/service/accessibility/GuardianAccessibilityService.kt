@@ -449,12 +449,14 @@ class GuardianAccessibilityService : AccessibilityService() {
                 val isImage = className.contains("ImageView") || className.contains("Image") ||
                         node.viewIdResourceName?.contains("image", ignoreCase = true) == true ||
                         node.viewIdResourceName?.contains("photo", ignoreCase = true) == true ||
-                        node.viewIdResourceName?.contains("video", ignoreCase = true) == true
+                        node.viewIdResourceName?.contains("video", ignoreCase = true) == true ||
+                        node.viewIdResourceName?.contains("avatar", ignoreCase = true) == true
 
                 if (isImage) {
                     val rect = android.graphics.Rect()
                     node.getBoundsInScreen(rect)
-                    if (rect.width() > 80 && rect.height() > 80) {
+                    // ULTIMATE LEVEL: Catch even smaller images (60dp+) that might contain NSFW content in feeds
+                    if (rect.width() > 60 && rect.height() > 60) {
                         regions.add(rect)
                     }
                 }
@@ -469,7 +471,17 @@ class GuardianAccessibilityService : AccessibilityService() {
                 queue.poll()?.recycle()
             }
         }
-        return regions.distinct().sortedByDescending { it.width() * it.height() }.take(8)
+        // ULTIMATE LEVEL: Prioritize images in the center and bottom of the screen where scrolling content appears
+        val displayHeight = resources.displayMetrics.heightPixels
+        return regions.distinct()
+            .sortedByDescending { rect ->
+                val area = rect.width() * rect.height()
+                val centerY = rect.centerY()
+                // Weight images lower on screen slightly higher as they are often what just scrolled in
+                val positionWeight = if (centerY > displayHeight / 3) 1.2f else 1.0f
+                area * positionWeight
+            }
+            .take(12) // Increased from 8 to 12 for better coverage
     }
 
     private suspend fun runContentAwareScan(
