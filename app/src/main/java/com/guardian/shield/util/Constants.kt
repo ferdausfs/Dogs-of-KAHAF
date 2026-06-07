@@ -13,8 +13,8 @@ object GuardianConstants {
     const val NSFW_GATE_THRESHOLD = 0.75f
 
     // Threshold for semi-nudes / revealing content
-    // ULTIMATE LEVEL: Lowered to 0.55f for aggressive detection of revealing clothing
-    const val SOFT_NSFW_THRESHOLD = 0.55f
+    // ULTIMATE LEVEL: Increased to 0.62f to reduce false positives in regular feeds
+    const val SOFT_NSFW_THRESHOLD = 0.62f
 
     // Gender threshold (Increased for "Safe First", but dynamic in detector)
     const val GENDER_CONFIDENCE_THRESHOLD = 0.82f

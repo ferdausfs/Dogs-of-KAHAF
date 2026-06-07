@@ -156,17 +156,23 @@ class GuardianAccessibilityService : AccessibilityService() {
      * STABILITY FIX — central place to clear the in-progress flag so we never
      * leak it. Also stamps the clear time for the watchdog.
      */
-    private fun setBlockingFlag() {
-        isBlockingInProgress = true
-        blockingFlagSetAt = System.currentTimeMillis()
+    private fun setBlockingFlag(): Boolean {
+        synchronized(this) {
+            if (isBlockingInProgress) return false
+            isBlockingInProgress = true
+            blockingFlagSetAt = System.currentTimeMillis()
+            return true
+        }
     }
 
     private fun clearBlockingFlag(reason: String) {
-        if (isBlockingInProgress) {
-            Timber.d("Clearing blocking flag: $reason")
+        synchronized(this) {
+            if (isBlockingInProgress) {
+                Timber.d("Clearing blocking flag: $reason")
+            }
+            isBlockingInProgress = false
+            blockingFlagSetAt = 0L
         }
-        isBlockingInProgress = false
-        blockingFlagSetAt = 0L
     }
 
     /**
@@ -227,11 +233,10 @@ class GuardianAccessibilityService : AccessibilityService() {
     )
 
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
-        if (isBlockingInProgress) {
+        if (!setBlockingFlag()) {
             Timber.d("Block in progress, skip: $pkg")
             return
         }
-        setBlockingFlag()
         // ✅ Immediately clear current package — periodic scanner shouldn't see a stale pkg
         currentPackage = null
         performGlobalAction(GLOBAL_ACTION_HOME)
