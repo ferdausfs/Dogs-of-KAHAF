@@ -1,20 +1,20 @@
 package com.guardian.shield.util
 
 object GuardianConstants {
-    const val TEXT_THROTTLE_MS = 500L
-    const val AI_THROTTLE_MS = 1_500L
-    const val AI_PERIODIC_MS = 2_200L
-    const val AI_FOLLOW_UP_MS = 500L
+    const val TEXT_THROTTLE_MS = 400L
+    const val AI_THROTTLE_MS = 800L
+    const val AI_PERIODIC_MS = 1_500L
+    const val AI_FOLLOW_UP_MS = 400L
     const val SCREEN_OFF_PERIODIC_MS = 10_000L
     const val MAX_AI_SCAN_MAP = 50
 
     // NSFW gate threshold (max strategy on [1,5] index of NSFW model)
-    // ULTIMATE LEVEL: Lowered to 0.75f to catch more social media content
-    const val NSFW_GATE_THRESHOLD = 0.75f
+    // ULTIMATE LEVEL: Lowered to 0.68f to catch more social media content
+    const val NSFW_GATE_THRESHOLD = 0.68f
 
     // Threshold for semi-nudes / revealing content
-    // ULTIMATE LEVEL: Increased to 0.65f to further reduce false positives in regular feeds
-    const val SOFT_NSFW_THRESHOLD = 0.65f
+    // ULTIMATE LEVEL: Lowered to 0.58f to catch more social media content
+    const val SOFT_NSFW_THRESHOLD = 0.58f
 
     // Gender threshold (Increased for "Safe First", but dynamic in detector)
     const val GENDER_CONFIDENCE_THRESHOLD = 0.82f

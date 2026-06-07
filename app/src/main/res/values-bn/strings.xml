@@ -48,9 +48,9 @@
     <string name="section_security">নিরাপত্তা</string>
     <string name="keyword_filter">কিওয়ার্ড ফিল্টার</string>
     <string name="ai_detection">AI কন্টেন্ট ডিটেকশন</string>
-    <string name="ai_sensitivity">AI সেন্সিটিভিটি</string>
+    <string name="ai_sensitivity">AI সংবেদনশীলতা (Ultimate)</string>
     <string name="unlock_delay">আনলক বিলম্ব</string>
-    <string name="temp_block_info">AI বারবার ডিটেক্ট করলে অ্যাপটি এই সময়ের জন্য ব্লক হবে (২বার ডিটেকশন = সাময়িক ব্লক)</string>
+    <string name="temp_block_info">AI বারবার ডিটেক্ট করলে অ্যাপটি এই সময়ের জন্য ব্লক হবে (৩টি স্ট্রাইক = ১৫ মিনিট ব্লক)</string>
     <string name="male">পুরুষ</string>
     <string name="female">মহিলা</string>
     <string name="disabled">বন্ধ</string>
@@ -122,7 +122,7 @@
     <string name="overlay_go_home">হোমে যান</string>
     <string name="overlay_request_unlock">আনলক রিকোয়েস্ট</string>
     <string name="overlay_motivation">দৃঢ় থাকুন 💪</string>
-    <string name="overlay_reason_ai">AI ক্ষতিকারক কন্টেন্ট খুঁজে পেয়েছে</string>
+    <string name="overlay_reason_ai">AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে</string>
     <string name="overlay_reason_kw">কিওয়ার্ড মিলেছে: %1$s</string>
     <string name="overlay_reason_app">অ্যাপটি ব্লক করা হয়েছে</string>
     <string name="overlay_reason_sched">নির্ধারিত সময়ের বাইরে</string>
