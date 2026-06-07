@@ -40,7 +40,8 @@ class BlockingEngine @Inject constructor(
         val throttleMs = when (reason) {
             BlockReason.APP_BLOCKED,
             BlockReason.SCHEDULE_BLOCKED -> 500L
-            else -> GuardianConstants.BLOCK_THROTTLE_MS
+            // Increased throttle for AI to prevent double-logging during the overlay transition
+            else -> GuardianConstants.BLOCK_THROTTLE_MS.coerceAtLeast(4000L)
         }
         synchronized(blockThrottleMap) {
             val last = blockThrottleMap[pkg] ?: 0L

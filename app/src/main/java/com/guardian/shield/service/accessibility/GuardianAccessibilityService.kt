@@ -202,8 +202,18 @@ class GuardianAccessibilityService : AccessibilityService() {
         if (pkg == "com.zhiliaoapp.musically" || pkg == "com.ss.android.ugc.trill") return true
 
         // Check all windows for "Reels" or "Shorts" text to handle PIP/Split-screen
-        val nodes = findNodesByTextAcrossWindows(listOf("Reels", "Shorts"))
-        val found = nodes.isNotEmpty()
+        // Optimization: For Facebook/Instagram/YouTube, explicitly look for Short-form indicators
+        val indicators = when {
+            pkg.contains("facebook") || pkg.contains("instagram") -> listOf("Reels")
+            pkg.contains("youtube") -> listOf("Shorts")
+            else -> listOf("Reels", "Shorts")
+        }
+
+        val nodes = findNodesByTextAcrossWindows(indicators)
+        // Verify node is actually a visible tab or header, not just random text in a post
+        val found = nodes.any { node ->
+            node.isVisibleToUser && (node.isClickable || node.isFocused || node.parent?.isClickable == true)
+        }
         nodes.forEach { it.recycle() }
         return found
     }
@@ -285,7 +295,11 @@ class GuardianAccessibilityService : AccessibilityService() {
         // ✅ Whitelisted → track but don't block
         if (!rulesEngine.canBlock(pkg)) {
             currentPackage = pkg
-            clearBlockingFlag("whitelist")
+            // Optimization: if blocking is in progress (e.g. overlay is launching),
+            // don't clear it yet to prevent AI from re-triggering during transition.
+            if (!isBlockingInProgress) {
+                clearBlockingFlag("whitelist")
+            }
             return
         }
 

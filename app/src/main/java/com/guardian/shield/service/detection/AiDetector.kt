@@ -206,10 +206,12 @@ class AiDetector @Inject constructor(
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
             try {
+                if (!isImageComplex(bitmap)) return@withLock false
+
                 // Increased local threshold for "Safe First"
                 val threshold = cachedThreshold.coerceAtLeast(0.85f)
                 // Ultimate Level: Require more grid votes to reduce false positives
-                val voteNeeded = (cachedGridVoteCount + 2).coerceAtMost(5)
+                val voteNeeded = (cachedGridVoteCount + 3).coerceAtMost(6)
 
                 val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
                     ?: return@withLock false)
@@ -259,6 +261,8 @@ class AiDetector @Inject constructor(
 
         return inferenceLock.withLock {
             try {
+                if (!isImageComplex(bitmap)) return@withLock false
+
                 val currentGender = runCatching {
                     prefs.userGender.first()
                 }.getOrElse { userGender }
@@ -320,7 +324,7 @@ class AiDetector @Inject constructor(
 
                 if (isSoftNsfw) {
                     // ULTIMATE LEVEL: Reduce gender confidence requirement by 15% for soft-NSFW hits (Reduced aggressive offset)
-                    val softGenderConf = (genderConf * 0.85f).coerceAtLeast(0.65f)
+                    val softGenderConf = (genderConf * 0.85f).coerceAtLeast(0.68f)
                     val softGenderMatch = when (currentGender) {
                         "MALE" -> femaleProb >= softGenderConf
                         "FEMALE" -> maleProb >= softGenderConf
@@ -409,6 +413,26 @@ class AiDetector @Inject constructor(
             )
             else -> scores.drop(1).max()
         }
+    }
+
+    /**
+     * Complexity check to ignore simple/blank images that often cause AI false positives.
+     */
+    private fun isImageComplex(bitmap: Bitmap): Boolean {
+        val w = bitmap.width
+        val h = bitmap.height
+        if (w < 50 || h < 50) return false
+
+        // Sample a few pixels to check for variance
+        val samples = intArrayOf(
+            bitmap.getPixel(w / 4, h / 4),
+            bitmap.getPixel(3 * w / 4, h / 4),
+            bitmap.getPixel(w / 4, 3 * h / 4),
+            bitmap.getPixel(3 * w / 4, 3 * h / 4),
+            bitmap.getPixel(w / 2, h / 2)
+        )
+        val first = samples[0]
+        return samples.any { it != first }
     }
 
     /**
