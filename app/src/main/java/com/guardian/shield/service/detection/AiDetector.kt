@@ -220,22 +220,27 @@ class AiDetector @Inject constructor(
                 if (fullScore < threshold * 0.3f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
-                // ULTIMATE LEVEL: Use a ultra-high-density overlapping grid (5x6) to catch even tiny social media feed images.
-                // 35% overlap ensures maximum coverage of content boundaries.
-                val regions = splitIntoOverlappingGrid(bitmap, cols = 5, rows = 6, overlapPercent = 0.35f)
-                // Scan the entire grid for absolute coverage in "Ultimate Level" analysis
+                // NO FALSE DETECTION: For small bitmaps (already cropped regions), skip grid to prevent noise
+                if (bitmap.width < 500 || bitmap.height < 500) {
+                    return@withLock fullScore >= threshold
+                }
+
+                // ULTIMATE LEVEL: Use a high-density overlapping grid (4x5)
+                // 25% overlap for coverage without excessive "Inference Storm"
+                val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.25f)
                 var triggeredCount = 0
 
                 for ((idx, region) in regions.withIndex()) {
+                    if (!isImageComplex(region)) {
+                        region.recycle()
+                        continue
+                    }
                     try {
                         val out = runInferenceSafe(interp, region) ?: continue
                         val score = extractGuardianScore(out)
                         Timber.d("Grid[$idx]: $score")
 
-                        // Ultimate Level: Lower threshold for grid cells to catch partial exposure
-                        val effectiveThreshold = threshold * 0.90f
-
-                        if (score >= effectiveThreshold) triggeredCount++
+                        if (score >= threshold) triggeredCount++
                         if (triggeredCount >= voteNeeded) break
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
@@ -277,26 +282,33 @@ class AiDetector @Inject constructor(
                 Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
 
                 if (maxNsfwScore < nsfwGate) {
-                    val regions = splitIntoOverlappingGrid(bitmap, cols = 5, rows = 6, overlapPercent = 0.35f)
-                    var nsfwVotes = 0
-                    for ((idx, region) in regions.withIndex()) {
-                        try {
-                            val out = runInferenceSafe(nsfw, region) ?: continue
-                            val score = extractNsfwGateScore(out)
-                            Timber.d("NSFW Grid[$idx]: $score")
-                            if (score > maxNsfwScore) maxNsfwScore = score
+                    // NO FALSE DETECTION: Only grid-scan large bitmaps
+                    if (bitmap.width >= 500 && bitmap.height >= 500) {
+                        val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.25f)
+                        var nsfwVotes = 0
+                        for ((idx, region) in regions.withIndex()) {
+                            if (!isImageComplex(region)) {
+                                region.recycle()
+                                continue
+                            }
+                            try {
+                                val out = runInferenceSafe(nsfw, region) ?: continue
+                                val score = extractNsfwGateScore(out)
+                                Timber.d("NSFW Grid[$idx]: $score")
+                                if (score > maxNsfwScore) maxNsfwScore = score
 
-                            // Ultimate Level: Higher sensitivity for small image fragments in grid
-                            if (score >= nsfwGate * 0.85f) nsfwVotes++
-
-                            if (nsfwVotes >= voteNeeded) break
-                        } catch (t: Throwable) {
-                            Timber.e(t, "NSFW Grid[$idx] error")
-                        } finally {
-                            region.recycle()
+                                if (score >= nsfwGate) nsfwVotes++
+                                if (nsfwVotes >= voteNeeded) break
+                            } catch (t: Throwable) {
+                                Timber.e(t, "NSFW Grid[$idx] error")
+                            } finally {
+                                region.recycle()
+                            }
                         }
-                    }
-                    if (maxNsfwScore < nsfwGate && nsfwVotes < voteNeeded) {
+                        if (maxNsfwScore < nsfwGate && nsfwVotes < voteNeeded) {
+                            return@withLock false
+                        }
+                    } else {
                         return@withLock false
                     }
                 }
@@ -417,22 +429,41 @@ class AiDetector @Inject constructor(
 
     /**
      * Complexity check to ignore simple/blank images that often cause AI false positives.
+     * Uses color variance and sampling to ensure we only scan photographic content.
      */
     private fun isImageComplex(bitmap: Bitmap): Boolean {
         val w = bitmap.width
         val h = bitmap.height
-        if (w < 50 || h < 50) return false
+        if (w < 64 || h < 64) return false
 
-        // Sample a few pixels to check for variance
-        val samples = intArrayOf(
-            bitmap.getPixel(w / 4, h / 4),
-            bitmap.getPixel(3 * w / 4, h / 4),
-            bitmap.getPixel(w / 4, 3 * h / 4),
-            bitmap.getPixel(3 * w / 4, 3 * h / 4),
-            bitmap.getPixel(w / 2, h / 2)
-        )
-        val first = samples[0]
-        return samples.any { it != first }
+        val stepX = (w / 8).coerceAtLeast(1)
+        val stepY = (h / 8).coerceAtLeast(1)
+        var count = 0
+        var sumL = 0.0
+        var sumL2 = 0.0
+
+        for (y in stepY until h step stepY) {
+            for (x in stepX until w step stepX) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = (pixel shr 16) and 0xff
+                val g = (pixel shr 8) and 0xff
+                val b = pixel and 0xff
+                // Rec. 601 luma
+                val luma = 0.299 * r + 0.587 * g + 0.114 * b
+                sumL += luma
+                sumL2 += luma * luma
+                count++
+            }
+        }
+
+        if (count == 0) return false
+        val avgL = sumL / count
+        val variance = (sumL2 / count) - (avgL * avgL)
+
+        // Variance threshold: flat UI elements/text usually have very low (<150)
+        // or extreme contrast (e.g. black text on white).
+        // Natural images usually sit in the 250-6000 range.
+        return variance in 200.0..8500.0
     }
 
     /**

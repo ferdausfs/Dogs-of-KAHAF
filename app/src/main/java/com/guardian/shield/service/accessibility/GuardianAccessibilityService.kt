@@ -212,7 +212,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         val nodes = findNodesByTextAcrossWindows(indicators)
         // Verify node is actually a visible tab or header, not just random text in a post
         val found = nodes.any { node ->
-            node.isVisibleToUser && (node.isClickable || node.isFocused || node.parent?.isClickable == true)
+            val parent = node.parent
+            val parentClickable = parent?.isClickable == true
+            parent?.recycle()
+            node.isVisibleToUser && (node.isClickable || node.isFocused || parentClickable)
         }
         nodes.forEach { it.recycle() }
         return found
@@ -436,6 +439,9 @@ class GuardianAccessibilityService : AccessibilityService() {
         val regions = mutableListOf<android.graphics.Rect>()
         val currentWindows = try { windows } catch (t: Throwable) { null } ?: return emptyList()
 
+        val displayWidth = resources.displayMetrics.widthPixels
+        val displayHeight = resources.displayMetrics.heightPixels
+
         for (window in currentWindows) {
             val root = try { window.root } catch (t: Throwable) { null } ?: continue
             val queue: ArrayDeque<AccessibilityNodeInfo> = ArrayDeque()
@@ -455,9 +461,16 @@ class GuardianAccessibilityService : AccessibilityService() {
                 if (isImage) {
                     val rect = android.graphics.Rect()
                     node.getBoundsInScreen(rect)
-                    // ULTIMATE LEVEL: Catch even smaller images (60dp+) that might contain NSFW content in feeds
-                    if (rect.width() > 60 && rect.height() > 60) {
-                        regions.add(rect)
+                    // SMALL SCREEN OPTIMIZATION: Ignore tiny icons/buttons, but catch all content images
+                    if (rect.width() > 80 && rect.height() > 80) {
+                        // Ensure rect is within screen bounds to avoid bad crops
+                        rect.left = rect.left.coerceIn(0, displayWidth)
+                        rect.top = rect.top.coerceIn(0, displayHeight)
+                        rect.right = rect.right.coerceIn(0, displayWidth)
+                        rect.bottom = rect.bottom.coerceIn(0, displayHeight)
+                        if (rect.width() > 64 && rect.height() > 64) {
+                            regions.add(rect)
+                        }
                     }
                 }
 
@@ -466,22 +479,25 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
                 node.recycle()
             }
-            // Cleanup: recycle any nodes remaining in the queue if we hit the limit
-            while (queue.isNotEmpty()) {
-                queue.poll()?.recycle()
-            }
+            while (queue.isNotEmpty()) { queue.poll()?.recycle() }
         }
-        // ULTIMATE LEVEL: Prioritize images in the center and bottom of the screen where scrolling content appears
-        val displayHeight = resources.displayMetrics.heightPixels
+
+        // Prioritize: Center-Bottom > Center > Size
         return regions.distinct()
             .sortedByDescending { rect ->
                 val area = rect.width() * rect.height()
                 val centerY = rect.centerY()
-                // Weight images lower on screen slightly higher as they are often what just scrolled in
-                val positionWeight = if (centerY > displayHeight / 3) 1.2f else 1.0f
-                area * positionWeight
+                val centerX = rect.centerX()
+
+                var weight = 1.0f
+                // Center-weighted
+                if (centerX > displayWidth / 4 && centerX < 3 * displayWidth / 4) weight += 0.2f
+                // Bottom-weighted (scrolling content)
+                if (centerY > displayHeight / 3) weight += 0.3f
+
+                area * weight
             }
-            .take(12) // Increased from 8 to 12 for better coverage
+            .take(10)
     }
 
     private suspend fun runContentAwareScan(
