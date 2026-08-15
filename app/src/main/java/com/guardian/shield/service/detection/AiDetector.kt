@@ -259,7 +259,11 @@ class AiDetector @Inject constructor(
         }
     }
 
-    suspend fun isOppositeGenderNsfw(bitmap: Bitmap, userGender: String): Boolean {
+    suspend fun isOppositeGenderNsfw(
+        bitmap: Bitmap,
+        userGender: String,
+        requireStrongNsfw: Boolean = false
+    ): Boolean {
         val nsfw = nsfwInterpreter ?: return false
         val gender = genderInterpreter ?: return false
         if (userGender != "MALE" && userGender != "FEMALE") return false
@@ -273,7 +277,16 @@ class AiDetector @Inject constructor(
                 }.getOrElse { userGender }
                 if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
 
-                val nsfwGate = cachedNsfwGateThreshold
+                // FALSE-BLOCK FIX: whole-screen screenshots are noisy (UI chrome,
+                // text, many small images). Callers that scan a FULL screenshot
+                // pass requireStrongNsfw=true so the NSFW gate is raised to 0.80
+                // before the gender model is consulted. Content regions keep the
+                // normal gate.
+                val nsfwGate = if (requireStrongNsfw) {
+                    maxOf(cachedNsfwGateThreshold, 0.80f)
+                } else {
+                    cachedNsfwGateThreshold
+                }
                 val genderConf = cachedGenderThreshold
                 val voteNeeded = cachedGridVoteCount
 
@@ -323,32 +336,17 @@ class AiDetector @Inject constructor(
 
                 Timber.d("Gender: male=$maleProb female=$femaleProb conf=$genderConf user=$currentGender")
 
-                val genderMatch = when (currentGender) {
+                // FALSE-BLOCK FIX (2026-08-15): the old "hybrid soft" path lowered the
+                // gender confidence bar to 0.62 for any image with a weak 0.58 NSFW
+                // score, which blocked fully-clothed people in avatars, thumbnails and
+                // feed content. The opposite-gender block now requires the FULL gender
+                // confidence. The NSFW gate (>= nsfwGate) already ran above, so real
+                // NSFW with a clearly opposite-gender subject still blocks.
+                when (currentGender) {
                     "MALE" -> femaleProb >= genderConf
                     "FEMALE" -> maleProb >= genderConf
                     else -> false
                 }
-
-                // HYBRID ULTIMATE DETECTION:
-                // If it's a "Soft" NSFW match (e.g. lingerie shown in screenshot),
-                // we significantly lower the gender confidence requirement to catch semi-nudes.
-                val isSoftNsfw = maxNsfwScore >= com.guardian.shield.util.GuardianConstants.SOFT_NSFW_THRESHOLD
-
-                if (isSoftNsfw) {
-                    // ULTIMATE LEVEL: Reduce gender confidence requirement by 20% for soft-NSFW hits (Increased sensitivity)
-                    val softGenderConf = (genderConf * 0.80f).coerceAtLeast(0.62f)
-                    val softGenderMatch = when (currentGender) {
-                        "MALE" -> femaleProb >= softGenderConf
-                        "FEMALE" -> maleProb >= softGenderConf
-                        else -> false
-                    }
-                    if (softGenderMatch) {
-                        Timber.i("Hybrid block (Ultimate): softGenderMatch=$softGenderMatch score=$maxNsfwScore")
-                        return@withLock true
-                    }
-                }
-
-                genderMatch
             } catch (t: Throwable) {
                 Timber.e(t, "Gender NSFW failed")
                 false
