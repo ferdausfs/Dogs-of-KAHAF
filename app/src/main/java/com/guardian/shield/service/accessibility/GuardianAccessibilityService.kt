@@ -604,7 +604,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                                         && aiDetector.isGenderModelAvailable()
                                         && aiDetector.isNsfwGateAvailable()
                                     ) {
-                                        if (aiDetector.isOppositeGenderNsfw(b, gender)) {
+                                        if (aiDetector.isOppositeGenderNsfw(b, gender, requireStrongNsfw = true)) {
                                             // ✅ Final sanity check before blocking
                                             if (currentPackage == pkg) {
                                                 withContext(Dispatchers.Main) {

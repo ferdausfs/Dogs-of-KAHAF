@@ -84,7 +84,15 @@ class RulesEngine @Inject constructor(
         for ((kw, isRegex) in s.keywords) {
             try {
                 if (isRegex) {
-                    val r = Regex(kw, RegexOption.IGNORE_CASE)
+                    // FALSE-BLOCK FIX: wrap user regexes in word boundaries unless the
+                    // user already anchors their own match, so a bare keyword like
+                    // "sex" can't match inside "Essex"/"sextant". Regexes that already
+                    // anchor with ^ $ or word-boundary \b keep their exact semantics.
+                    val raw = kw.trim()
+                    val alreadyAnchored = raw.contains('^') || raw.contains('$') ||
+                        raw.startsWith("\\b") || raw.startsWith("\\B")
+                    val pattern = if (alreadyAnchored) raw else "(?iu)\\b(?:$raw)\\b"
+                    val r = Regex(pattern, RegexOption.IGNORE_CASE)
                     if (r.containsMatchIn(text)) {
                         return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
                     }
