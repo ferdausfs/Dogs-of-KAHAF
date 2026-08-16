@@ -6,7 +6,6 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -224,30 +223,36 @@ class AiDetector @Inject constructor(
                 // a false block.
                 val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.25f)
                 var triggeredCount = 0
+                try {
+                    for ((idx, region) in regions.withIndex()) {
+                        if (!isImageComplex(region)) continue
+                        try {
+                            // If GPU fallback rebuilt the interpreter mid-scan,
+                            // [interp] is closed — abort rather than infer on a corpse.
+                            val live = legacyInterpreter
+                            if (live == null || live !== interp) return@withLock false
+                            val out = runInferenceSafe(live, region) ?: continue
+                            val score = extractGuardianScore(out)
+                            Timber.d("Grid[$idx]: $score")
 
-                for ((idx, region) in regions.withIndex()) {
-                    if (!isImageComplex(region)) {
-                        region.recycle()
-                        continue
+                            // PRECISION-FIRST: a grid cell must be overwhelmingly
+                            // unsafe to count as a vote (danger mass >> safe mass).
+                            if (score >= gridCellFloor) triggeredCount++
+                            if (triggeredCount >= voteNeeded) break
+                        } catch (t: Throwable) {
+                            Timber.e(t, "Grid[$idx] error")
+                        }
                     }
-                    try {
-                        val out = runInferenceSafe(interp, region) ?: continue
-                        val score = extractGuardianScore(out)
-                        Timber.d("Grid[$idx]: $score")
 
-                        // PRECISION-FIRST: a grid cell must be overwhelmingly
-                        // unsafe to count as a vote (danger mass >> safe mass).
-                        if (score >= gridCellFloor) triggeredCount++
-                        if (triggeredCount >= voteNeeded) break
-                    } catch (t: Throwable) {
-                        Timber.e(t, "Grid[$idx] error")
-                    } finally {
-                        region.recycle()
+                    Timber.d("Grid vote: $triggeredCount/$voteNeeded needed")
+                    triggeredCount >= voteNeeded
+                } finally {
+                    for (region in regions) {
+                        if (!region.isRecycled) {
+                            try { region.recycle() } catch (_: Throwable) {}
+                        }
                     }
                 }
-
-                Timber.d("Grid vote: $triggeredCount/$voteNeeded needed")
-                triggeredCount >= voteNeeded
 
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
@@ -344,7 +349,7 @@ class AiDetector @Inject constructor(
                 //   0.50 = tie,  0.65 = unsafe ahead by 0.30,  ...
                 ((danger + 1.0f) / 2.0f).coerceIn(0f, 1f)
             }
-            else -> scores.drop(1).max()
+            else -> scores.drop(1).maxOrNull() ?: 0f
         }
     }
 

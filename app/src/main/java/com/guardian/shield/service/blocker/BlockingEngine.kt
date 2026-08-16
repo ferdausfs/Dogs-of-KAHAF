@@ -35,6 +35,20 @@ class BlockingEngine @Inject constructor(
         }
     }
 
+    /**
+     * Count an AI strike without launching the overlay.
+     * @return temp-block detail when the threshold is reached, otherwise null
+     *         (silent strike or grace period — caller must NOT kick the user home).
+     */
+    fun evaluateAiStrike(pkg: String): String? {
+        val durationMs = cachedTempBlockMins * 60 * 1_000L
+        return when (val result = tempBlockManager.recordAiDetection(pkg, durationMs)) {
+            is AiStrikeResult.Blocked -> result.detail
+            AiStrikeResult.NoBlock,
+            AiStrikeResult.GracePeriod -> null
+        }
+    }
+
     fun block(pkg: String, reason: BlockReason, detail: String) {
         val now = System.currentTimeMillis()
         val throttleMs = when (reason) {
@@ -53,17 +67,12 @@ class BlockingEngine @Inject constructor(
             }
         }
 
-        val finalDetail = if (reason == BlockReason.AI_DETECTION) {
-            val durationMs = cachedTempBlockMins * 60 * 1_000L
-            when (val result = tempBlockManager.recordAiDetection(pkg, durationMs)) {
-                is AiStrikeResult.Blocked -> result.detail
-                AiStrikeResult.NoBlock,
-                AiStrikeResult.GracePeriod -> {
-                    // Strike below threshold, or a recent block just expired
-                    // (grace period). Don't show an overlay or log a block.
-                    return
-                }
-            }
+        // If the accessibility service already consumed the strike (detail is
+        // already a temp_block payload), do not count it a second time.
+        val finalDetail = if (reason == BlockReason.AI_DETECTION &&
+            !detail.startsWith("temp_block:")
+        ) {
+            evaluateAiStrike(pkg) ?: return
         } else detail
 
         launchOverlay(pkg, reason, finalDetail)

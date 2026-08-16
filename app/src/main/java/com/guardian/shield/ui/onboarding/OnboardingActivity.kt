@@ -11,7 +11,6 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityOnboardingBinding
 import com.guardian.shield.ui.dashboard.MainActivity
 import com.guardian.shield.ui.permissions.PermissionsActivity
-import com.guardian.shield.ui.setup.PinSetupActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject

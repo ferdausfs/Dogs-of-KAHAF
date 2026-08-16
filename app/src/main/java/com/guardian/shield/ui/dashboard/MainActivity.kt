@@ -2,7 +2,6 @@ package com.guardian.shield.ui.dashboard
 
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
@@ -34,20 +33,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Wait for firstRun before inflating the dashboard. Previously the
+        // admin/battery dialogs and DashboardFragment flashed on first launch
+        // while the DataStore read was still in flight.
+        lifecycleScope.launch {
+            val isFirstRun = try {
+                guardianPrefs.firstRun.first()
+            } catch (t: Throwable) {
+                Timber.e(t, "firstRun check failed")
+                false
+            }
+            if (isFirstRun) {
+                startActivity(OnboardingActivity.launchIntent(this@MainActivity))
+                finish()
+                return@launch
+            }
+            bindMainUi(savedInstanceState)
+        }
+    }
+
+    private fun bindMainUi(savedInstanceState: Bundle?) {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-
-        lifecycleScope.launch {
-            try {
-                val isFirstRun = guardianPrefs.firstRun.first()
-                if (isFirstRun) {
-                    startActivity(OnboardingActivity.launchIntent(this@MainActivity))
-                    finish()
-                    return@launch
-                }
-            } catch (t: Throwable) { Timber.e(t, "firstRun check failed") }
-        }
 
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {

@@ -262,6 +262,17 @@ class GuardianAccessibilityService : AccessibilityService() {
             clearBlockingFlag("ai-grace")
             return
         }
+
+        // Count AI strikes BEFORE kicking the user home. Strikes 1..(N-1) are
+        // silent — previously we always went HOME and then block() returned
+        // without an overlay, so every near-miss felt like a random eject.
+        val overlayDetail = if (reason == BlockReason.AI_DETECTION) {
+            blockingEngine.evaluateAiStrike(pkg) ?: run {
+                Timber.d("AI strike below threshold for $pkg — staying in app")
+                return
+            }
+        } else detail
+
         if (!setBlockingFlag()) {
             Timber.d("Block in progress, skip: $pkg")
             return
@@ -270,7 +281,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         currentPackage = null
         performGlobalAction(GLOBAL_ACTION_HOME)
         mainHandler.postDelayed({
-            try { blockingEngine.block(pkg, reason, detail) }
+            try { blockingEngine.block(pkg, reason, overlayDetail) }
             catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
         }, 120)
     }
