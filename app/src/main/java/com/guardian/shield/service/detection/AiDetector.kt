@@ -178,16 +178,15 @@ class AiDetector @Inject constructor(
                 val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
 
                 val fullOut = runInferenceSafe(interp, bitmap) ?: return@withLock false
-                if (fullOut.size == 5) {
-                    Timber.d(
-                        "Guardian classes D=%.2f H=%.2f N=%.2f P=%.2f S=%.2f",
-                        fullOut[0], fullOut[1], fullOut[2], fullOut[3], fullOut[4]
-                    )
-                }
+                // Diagnostic: always log the raw model output so any false block
+                // can be traced to the exact class scores (send us one line).
+                Timber.d("Guardian out[${fullOut.size}] = ${fullOut.joinToString(" ")}")
                 val fullScore = extractGuardianScore(fullOut)
                 Timber.d("Guardian full: $fullScore / $threshold")
 
-                if (fullScore < threshold * 0.3f) return@withLock false
+                // PRECISION-FIRST: weak evidence -> safe, and skip the grid scan.
+                // Grid scanning of noisy "Sexy" cells is what blocked cats/cartoons.
+                if (fullScore < 0.55f) return@withLock false
                 if (fullScore >= threshold) return@withLock true
 
                 // NO FALSE DETECTION: For small bitmaps (already cropped regions), skip grid to prevent noise
@@ -210,7 +209,9 @@ class AiDetector @Inject constructor(
                         val score = extractGuardianScore(out)
                         Timber.d("Grid[$idx]: $score")
 
-                        if (score >= threshold) triggeredCount++
+                        // PRECISION-FIRST: a grid cell must be overwhelmingly
+                        // unsafe to count as a vote (danger mass >> safe mass).
+                        if (score >= 0.80f) triggeredCount++
                         if (triggeredCount >= voteNeeded) break
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
@@ -284,17 +285,20 @@ class AiDetector @Inject constructor(
                 //   [2]=Neutral                            [3]=Porn   [4]=Sexy
                 val drawing = scores.getOrElse(0) { 0f }
                 val hentai  = scores.getOrElse(1) { 0f }
+                val neutral = scores.getOrElse(2) { 0f }
                 val porn    = scores.getOrElse(3) { 0f }
                 val sexy    = scores.getOrElse(4) { 0f }
 
-                // Photo NSFW blocks directly.
-                val photoNsfw = maxOf(porn, sexy)
-                // Drawn NSFW only blocks when the model is MORE confident the
-                // frame is adult anime than safe art (Drawing). This is what
-                // stops cartoons / anime / Oggy / Mr Bean from false-blocking.
-                val drawnNsfw = if (hentai > drawing) hentai else 0f
+                // The model only "knows" two sides: safe mass (Neutral +
+                // Drawing) vs unsafe mass (Porn + Sexy + Hentai). Block only
+                // when unsafe CLEARLY dominates safe. This kills the classic
+                // NSFWJS false positives — cats/fur/cartoons/food where "Sexy"
+                // gets a weak 0.3-0.6 score but Neutral/Drawing are ahead.
+                val danger = (porn + sexy + hentai) - (neutral + drawing) // [-1, 1]
 
-                maxOf(photoNsfw, drawnNsfw)
+                // Map to [0,1] so the existing threshold slider keeps working:
+                //   0.50 = tie,  0.65 = unsafe ahead by 0.30,  ...
+                ((danger + 1.0f) / 2.0f).coerceIn(0f, 1f)
             }
             else -> scores.drop(1).max()
         }
