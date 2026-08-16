@@ -91,7 +91,7 @@ class RulesEngine @Inject constructor(
                     val raw = kw.trim()
                     val alreadyAnchored = raw.contains('^') || raw.contains('$') ||
                         raw.startsWith("\\b") || raw.startsWith("\\B")
-                    val pattern = if (alreadyAnchored) raw else "(?iu)\\b(?:$raw)\\b"
+                    val pattern = if (alreadyAnchored) raw else "(?iu)$BEFORE_WORD(?:$raw)$AFTER_WORD"
                     val r = Regex(pattern, RegexOption.IGNORE_CASE)
                     if (r.containsMatchIn(text)) {
                         return DetectionResult.Block(BlockReason.KEYWORD_MATCH, kw)
@@ -99,8 +99,9 @@ class RulesEngine @Inject constructor(
                 } else {
                     // Use a more efficient check. For keywords, ensure word boundaries
                     // to avoid false positives (e.g., "sex" matching "sextant").
-                    // Using \b with Unicode support for word boundaries.
-                    val pattern = "(?iu)\\b${Regex.escape(kw)}\\b"
+                    // ASCII \b is NOT Unicode-aware, so Bengali/other non-Latin
+                    // keywords could never match; use Unicode word-char lookarounds.
+                    val pattern = "(?iu)$BEFORE_WORD${Regex.escape(kw)}$AFTER_WORD"
                     val matched = Regex(pattern).containsMatchIn(text)
 
                     if (matched) {
@@ -123,5 +124,13 @@ class RulesEngine @Inject constructor(
         val end = rule.endHour * 60 + rule.endMinute
         return if (start <= end) nowMins in start until end
         else nowMins >= start || nowMins < end
+    }
+
+    private companion object {
+        // Unicode word character (letters, numbers, underscore). Java's \b is
+        // ASCII-only, so word boundaries for Bengali/other scripts must be
+        // expressed as lookarounds.
+        const val BEFORE_WORD = "(?<![\\p{L}\\p{N}_])"
+        const val AFTER_WORD = "(?![\\p{L}\\p{N}_])"
     }
 }
