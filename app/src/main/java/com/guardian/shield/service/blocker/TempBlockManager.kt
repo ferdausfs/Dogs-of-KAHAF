@@ -14,7 +14,10 @@ data class TempBlock(
     val expiresAt get() = blockedAt + durationMs
     val isExpired get() = System.currentTimeMillis() > expiresAt
     val remainingMs get() = (expiresAt - System.currentTimeMillis()).coerceAtLeast(0)
-    val remainingMinutes get() = (remainingMs / 60_000) + 1
+    // Ceil to the next whole minute so a 15 min block shows "15", not "16",
+    // while 1 ms remaining still shows 1 instead of 0.
+    val remainingMinutes get() =
+        if (remainingMs <= 0L) 0L else (remainingMs + 59_999L) / 60_000L
 }
 
 /** Result of recording an AI detection. */

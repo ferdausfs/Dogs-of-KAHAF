@@ -2,6 +2,7 @@ package com.guardian.shield.ui.dashboard.fragments
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +17,7 @@ import com.guardian.shield.R
 import com.guardian.shield.databinding.FragmentDashboardBinding
 import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.ui.dashboard.BlockEventAdapter
+import com.guardian.shield.ui.guard.AccessibilityPromptActivity
 import com.guardian.shield.util.PermissionManager
 import com.guardian.shield.viewmodel.DashboardViewModel
 import com.guardian.shield.viewmodel.DashboardUiState
@@ -73,6 +75,12 @@ class DashboardFragment : Fragment() {
                 "🔒 Commitment Lock active — ${timeLockManager.getRemainingFormatted()}",
                 Snackbar.LENGTH_SHORT
             ).show()
+            return
+        }
+        // Enable is a no-op if Accessibility is off — the service never reads
+        // the DataStore flag. Send the user to the prompt so they can turn it on.
+        if (!PermissionManager.isAccessibilityEnabled(requireContext())) {
+            startActivity(Intent(requireContext(), AccessibilityPromptActivity::class.java))
             return
         }
         viewModel.toggleProtection()

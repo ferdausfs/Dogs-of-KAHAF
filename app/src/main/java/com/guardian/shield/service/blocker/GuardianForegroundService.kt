@@ -148,6 +148,7 @@ class GuardianForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         watchdogJob?.cancel()
+        prefsObserverJob?.cancel()
         serviceScope.cancel()
     }
 

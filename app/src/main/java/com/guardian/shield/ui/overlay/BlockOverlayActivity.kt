@@ -70,7 +70,7 @@ class BlockOverlayActivity : AppCompatActivity() {
         // LEARNING MEMORY — only AI blocks can be "false blocks". When the user
         // says a block was a mistake, remember the offending image's colour
         // pattern so it is never blocked again.
-        if (reason == "AI_DETECTION") {
+        if (reason == "AI_DETECTION" || detail.startsWith("temp_block:")) {
             binding.btnMarkFalse.visibility = View.VISIBLE
             binding.btnMarkFalse.setOnClickListener {
                 val sig = falsePositiveMemory.takePendingCandidate()

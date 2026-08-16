@@ -111,9 +111,24 @@ object UninstallProtection {
         while (queue.isNotEmpty() && visited < 150) {
             val n = queue.removeFirst()
             visited++
-            n.text?.let { sb.append(it).append(' ') }
-            n.contentDescription?.let { sb.append(it).append(' ') }
-            for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+            try {
+                n.text?.let { sb.append(it).append(' ') }
+                n.contentDescription?.let { sb.append(it).append(' ') }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+            } catch (_: Throwable) {
+                // Node may have been recycled by the system mid-walk.
+            } finally {
+                // Caller owns [root]; recycle every child we obtained via getChild.
+                if (n !== root) {
+                    try { n.recycle() } catch (_: Throwable) {}
+                }
+            }
+        }
+        while (queue.isNotEmpty()) {
+            val leftover = queue.removeFirst()
+            if (leftover !== root) {
+                try { leftover.recycle() } catch (_: Throwable) {}
+            }
         }
         return sb.toString()
     }

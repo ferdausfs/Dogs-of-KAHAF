@@ -50,7 +50,7 @@
     <string name="ai_detection">AI Content Detection</string>
     <string name="ai_sensitivity">AI Sensitivity</string>
     <string name="unlock_delay">Unlock Delay</string>
-    <string name="temp_block_info">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (২বার detection = temp block)</string>
+    <string name="temp_block_info">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (৩টি স্ট্রাইক = temp block)</string>
     <string name="male">Male</string>
     <string name="female">Female</string>
     <string name="disabled">Disabled</string>

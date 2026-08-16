@@ -2,7 +2,6 @@ package com.guardian.shield.ui.dashboard
 
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
@@ -34,20 +33,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Content view must exist before onStart so FragmentManager can restore
+        // DashboardFragment after rotation / process death. Defer only the
+        // first-run redirect and the permission dialogs.
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-
-        lifecycleScope.launch {
-            try {
-                val isFirstRun = guardianPrefs.firstRun.first()
-                if (isFirstRun) {
-                    startActivity(OnboardingActivity.launchIntent(this@MainActivity))
-                    finish()
-                    return@launch
-                }
-            } catch (t: Throwable) { Timber.e(t, "firstRun check failed") }
-        }
 
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
@@ -56,7 +47,6 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_logs -> {
-                    // Temporarily keep activity or move to fragment later
                     startActivity(Intent(this, ActivityLogActivity::class.java))
                     false
                 }
@@ -73,8 +63,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         startForegroundServiceIfNeeded()
-        checkDeviceAdmin()
-        checkBatteryOptimization()
+
+        lifecycleScope.launch {
+            val isFirstRun = try {
+                guardianPrefs.firstRun.first()
+            } catch (t: Throwable) {
+                Timber.e(t, "firstRun check failed")
+                false
+            }
+            if (isFinishing || isDestroyed) return@launch
+            if (isFirstRun) {
+                startActivity(OnboardingActivity.launchIntent(this@MainActivity))
+                finish()
+                return@launch
+            }
+            checkDeviceAdmin()
+            checkBatteryOptimization()
+        }
     }
 
     private fun loadFragment(fragment: Fragment) {
@@ -104,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkDeviceAdmin() {
+        if (isFinishing || isDestroyed) return
         val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(this, GuardianDeviceAdminReceiver::class.java)
         if (!dpm.isAdminActive(admin)) {
