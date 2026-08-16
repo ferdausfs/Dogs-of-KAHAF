@@ -33,8 +33,6 @@ class AiDetector @Inject constructor(
 ) {
     private val inferenceLock = Mutex()
     private var legacyInterpreter: Interpreter? = null
-    private var nsfwInterpreter: Interpreter? = null
-    private var genderInterpreter: Interpreter? = null
     private var gpuDelegate: GpuDelegate? = null
 
     // REUSABLE BUFFERS to reduce GC pressure
@@ -48,13 +46,7 @@ class AiDetector @Inject constructor(
 
     @Volatile var cachedAiEnabled: Boolean = false
         private set
-    @Volatile var cachedUserGender: String = "NONE"
-        private set
     @Volatile var cachedThreshold: Float = 0.65f
-        private set
-    @Volatile var cachedNsfwGateThreshold: Float = 0.60f
-        private set
-    @Volatile var cachedGenderThreshold: Float = 0.70f
         private set
     @Volatile var cachedGridVoteCount: Int = 2
         private set
@@ -68,25 +60,7 @@ class AiDetector @Inject constructor(
         }
         scope.launch {
             while (isActive) {
-                try { prefs.userGender.collect { cachedUserGender = it } }
-                catch (t: Throwable) { Timber.e(t); delay(1_000) }
-            }
-        }
-        scope.launch {
-            while (isActive) {
                 try { prefs.aiThreshold.collect { cachedThreshold = it } }
-                catch (t: Throwable) { Timber.e(t); delay(1_000) }
-            }
-        }
-        scope.launch {
-            while (isActive) {
-                try { prefs.nsfwGateThreshold.collect { cachedNsfwGateThreshold = it } }
-                catch (t: Throwable) { Timber.e(t); delay(1_000) }
-            }
-        }
-        scope.launch {
-            while (isActive) {
-                try { prefs.genderThreshold.collect { cachedGenderThreshold = it } }
                 catch (t: Throwable) { Timber.e(t); delay(1_000) }
             }
         }
@@ -99,15 +73,11 @@ class AiDetector @Inject constructor(
     }
 
     fun isLegacyAvailable(): Boolean = legacyInterpreter != null
-    fun isGenderModelAvailable(): Boolean = genderInterpreter != null
-    fun isNsfwGateAvailable(): Boolean = nsfwInterpreter != null
 
     suspend fun ensureLoaded() {
         inferenceLock.withLock {
             if (legacyInterpreter == null) legacyInterpreter = tryLoad(MODEL_LEGACY)
-            if (nsfwInterpreter == null) nsfwInterpreter = tryLoad(MODEL_NSFW)
-            if (genderInterpreter == null) genderInterpreter = tryLoad(MODEL_GENDER)
-            Timber.d("Models: legacy=${legacyInterpreter != null} nsfw=${nsfwInterpreter != null} gender=${genderInterpreter != null}")
+            Timber.d("Models: legacy=${legacyInterpreter != null}")
         }
     }
 
@@ -120,17 +90,11 @@ class AiDetector @Inject constructor(
         try {
             Timber.w("Rebuilding AI interpreters on CPU after $consecutiveInferenceFails failures")
             try { legacyInterpreter?.close() } catch (_: Throwable) {}
-            try { nsfwInterpreter?.close() } catch (_: Throwable) {}
-            try { genderInterpreter?.close() } catch (_: Throwable) {}
             try { gpuDelegate?.close() } catch (_: Throwable) {}
             legacyInterpreter = null
-            nsfwInterpreter = null
-            genderInterpreter = null
             gpuDelegate = null
 
             legacyInterpreter = tryLoad(MODEL_LEGACY, forceCpu = true)
-            nsfwInterpreter = tryLoad(MODEL_NSFW, forceCpu = true)
-            genderInterpreter = tryLoad(MODEL_GENDER, forceCpu = true)
             consecutiveInferenceFails = 0
         } catch (t: Throwable) {
             Timber.e(t, "rebuildAllOnCpu failed")
@@ -209,9 +173,9 @@ class AiDetector @Inject constructor(
                 if (!isImageComplex(bitmap)) return@withLock false
 
                 // Increased local threshold for "Safe First"
-                val threshold = cachedThreshold.coerceAtLeast(0.80f)
+                val threshold = cachedThreshold.coerceIn(0.50f, 0.95f)
                 // Ultimate Level: Require sufficient votes but sensitive to small fragments
-                val voteNeeded = (cachedGridVoteCount + 1).coerceAtMost(4)
+                val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
 
                 val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
                     ?: return@withLock false)
@@ -254,101 +218,6 @@ class AiDetector @Inject constructor(
 
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
-                false
-            }
-        }
-    }
-
-    suspend fun isOppositeGenderNsfw(
-        bitmap: Bitmap,
-        userGender: String,
-        requireStrongNsfw: Boolean = false
-    ): Boolean {
-        val nsfw = nsfwInterpreter ?: return false
-        val gender = genderInterpreter ?: return false
-        if (userGender != "MALE" && userGender != "FEMALE") return false
-
-        return inferenceLock.withLock {
-            try {
-                if (!isImageComplex(bitmap)) return@withLock false
-
-                val currentGender = runCatching {
-                    prefs.userGender.first()
-                }.getOrElse { userGender }
-                if (currentGender != "MALE" && currentGender != "FEMALE") return@withLock false
-
-                // FALSE-BLOCK FIX: whole-screen screenshots are noisy (UI chrome,
-                // text, many small images). Callers that scan a FULL screenshot
-                // pass requireStrongNsfw=true so the NSFW gate is raised to 0.80
-                // before the gender model is consulted. Content regions keep the
-                // normal gate.
-                val nsfwGate = if (requireStrongNsfw) {
-                    maxOf(cachedNsfwGateThreshold, 0.80f)
-                } else {
-                    cachedNsfwGateThreshold
-                }
-                val genderConf = cachedGenderThreshold
-                val voteNeeded = cachedGridVoteCount
-
-                val initial = runInferenceSafe(nsfw, bitmap) ?: return@withLock false
-                var maxNsfwScore = extractNsfwGateScore(initial)
-                Timber.d("NSFW gate full: $maxNsfwScore / $nsfwGate")
-
-                if (maxNsfwScore < nsfwGate) {
-                    // NO FALSE DETECTION: Only grid-scan large bitmaps
-                    if (bitmap.width >= 500 && bitmap.height >= 500) {
-                        val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.25f)
-                        var nsfwVotes = 0
-                        for ((idx, region) in regions.withIndex()) {
-                            if (!isImageComplex(region)) {
-                                region.recycle()
-                                continue
-                            }
-                            try {
-                                val out = runInferenceSafe(nsfw, region) ?: continue
-                                val score = extractNsfwGateScore(out)
-                                Timber.d("NSFW Grid[$idx]: $score")
-                                if (score > maxNsfwScore) maxNsfwScore = score
-
-                                if (score >= nsfwGate) nsfwVotes++
-                                if (nsfwVotes >= voteNeeded) break
-                            } catch (t: Throwable) {
-                                Timber.e(t, "NSFW Grid[$idx] error")
-                            } finally {
-                                region.recycle()
-                            }
-                        }
-                        if (maxNsfwScore < nsfwGate && nsfwVotes < voteNeeded) {
-                            return@withLock false
-                        }
-                    } else {
-                        return@withLock false
-                    }
-                }
-
-                val genderScores = runInferenceSafe(gender, bitmap) ?: return@withLock false
-                val half = genderScores.size / 2
-                val firstSum = genderScores.take(half).sum()
-                val secondSum = genderScores.drop(half).sum()
-                val total = (firstSum + secondSum).coerceAtLeast(0.001f)
-                val femaleProb = firstSum / total
-                val maleProb = secondSum / total
-
-                Timber.d("Gender: male=$maleProb female=$femaleProb conf=$genderConf user=$currentGender")
-
-                // FALSE-BLOCK FIX (2026-08-15): the old "hybrid soft" path lowered the
-                // gender confidence bar to 0.62 for any image with a weak 0.58 NSFW
-                // score, which blocked fully-clothed people in avatars, thumbnails and
-                // feed content. The opposite-gender block now requires the FULL gender
-                // confidence. The NSFW gate (>= nsfwGate) already ran above, so real
-                // NSFW with a clearly opposite-gender subject still blocks.
-                when (currentGender) {
-                    "MALE" -> femaleProb >= genderConf
-                    "FEMALE" -> maleProb >= genderConf
-                    else -> false
-                }
-            } catch (t: Throwable) {
-                Timber.e(t, "Gender NSFW failed")
                 false
             }
         }
@@ -403,19 +272,6 @@ class AiDetector @Inject constructor(
             1 -> scores[0]
             2 -> scores[1]
             3 -> (scores.getOrElse(1){0f} + scores.getOrElse(2){0f}).coerceAtMost(1.0f)
-            5 -> maxOf(
-                scores.getOrElse(1){0f},
-                scores.getOrElse(3){0f},
-                scores.getOrElse(4){0f}
-            )
-            else -> scores.drop(1).max()
-        }
-    }
-
-    private fun extractNsfwGateScore(scores: FloatArray): Float {
-        return when (scores.size) {
-            1 -> scores[0]
-            2 -> scores[1]
             5 -> maxOf(
                 scores.getOrElse(1){0f},
                 scores.getOrElse(3){0f},
@@ -541,12 +397,8 @@ class AiDetector @Inject constructor(
 
     private fun tearDown() {
         try { legacyInterpreter?.close() } catch (_: Throwable) {}
-        try { nsfwInterpreter?.close() } catch (_: Throwable) {}
-        try { genderInterpreter?.close() } catch (_: Throwable) {}
         try { gpuDelegate?.close() } catch (_: Throwable) {}
         legacyInterpreter = null
-        nsfwInterpreter = null
-        genderInterpreter = null
         gpuDelegate = null
         inputBuffer = null
         pixelsArray = null
@@ -554,7 +406,5 @@ class AiDetector @Inject constructor(
 
     companion object {
         const val MODEL_LEGACY = "guardian_model.tflite"
-        const val MODEL_NSFW = "nsfw_model.tflite"
-        const val MODEL_GENDER = "gender_model.tflite"
     }
 }

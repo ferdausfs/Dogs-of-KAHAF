@@ -87,13 +87,11 @@ class SettingsActivity : AppCompatActivity() {
         // ✅ Enable/disable all controls based on lock state
         listOf(
             binding.switchKeyword, binding.switchAi,
-            binding.sliderGuardianThreshold, binding.sliderNsfwThreshold,
-            binding.sliderGenderThreshold, binding.sliderDelay,
-            binding.chipMale, binding.chipFemale, binding.chipNone,
+            binding.sliderGuardianThreshold, binding.sliderDelay,
             binding.chip15min, binding.chip30min, binding.chip60min,
             binding.chipVote1, binding.chipVote2, binding.chipVote3, binding.chipVote4,
-            binding.btnImportLegacy, binding.btnImportNsfw, binding.btnImportGender,
-            binding.btnRemoveLegacy, binding.btnRemoveNsfw, binding.btnRemoveGender,
+            binding.btnImportLegacy,
+            binding.btnRemoveLegacy,
             binding.btnChangePin
         ).forEach { it.isEnabled = editEnabled }
 
@@ -124,36 +122,11 @@ class SettingsActivity : AppCompatActivity() {
                 }
             )
 
-            // ✅ NSFW gate threshold
-            binding.sliderNsfwThreshold.addOnChangeListener(
-                Slider.OnChangeListener { _, value, fromUser ->
-                    if (fromUser) {
-                        viewModel.setNsfwGateThreshold(value)
-                        binding.txtNsfwThresholdValue.text = "%.2f".format(value)
-                    }
-                }
-            )
-
-            // ✅ Gender confidence threshold
-            binding.sliderGenderThreshold.addOnChangeListener(
-                Slider.OnChangeListener { _, value, fromUser ->
-                    if (fromUser) {
-                        viewModel.setGenderThreshold(value)
-                        binding.txtGenderThresholdValue.text = "%.2f".format(value)
-                    }
-                }
-            )
-
             // ✅ Grid vote count chips
             binding.chipVote1.setOnClickListener { viewModel.setGridVoteCount(1) }
             binding.chipVote2.setOnClickListener { viewModel.setGridVoteCount(2) }
             binding.chipVote3.setOnClickListener { viewModel.setGridVoteCount(3) }
             binding.chipVote4.setOnClickListener { viewModel.setGridVoteCount(4) }
-
-            // Gender chips
-            binding.chipMale.setOnClickListener { viewModel.setUserGender("MALE") }
-            binding.chipFemale.setOnClickListener { viewModel.setUserGender("FEMALE") }
-            binding.chipNone.setOnClickListener { viewModel.setUserGender("NONE") }
 
             // Temp block duration chips
             binding.chip15min.setOnClickListener { viewModel.setTempBlockDurationMins(15) }
@@ -165,22 +138,8 @@ class SettingsActivity : AppCompatActivity() {
                 pendingModelName = AiDetector.MODEL_LEGACY
                 pickModel.launch(arrayOf("*/*"))
             }
-            binding.btnImportNsfw.setOnClickListener {
-                pendingModelName = AiDetector.MODEL_NSFW
-                pickModel.launch(arrayOf("*/*"))
-            }
-            binding.btnImportGender.setOnClickListener {
-                pendingModelName = AiDetector.MODEL_GENDER
-                pickModel.launch(arrayOf("*/*"))
-            }
             binding.btnRemoveLegacy.setOnClickListener {
                 viewModel.deleteModel(AiDetector.MODEL_LEGACY)
-            }
-            binding.btnRemoveNsfw.setOnClickListener {
-                viewModel.deleteModel(AiDetector.MODEL_NSFW)
-            }
-            binding.btnRemoveGender.setOnClickListener {
-                viewModel.deleteModel(AiDetector.MODEL_GENDER)
             }
             binding.btnChangePin.setOnClickListener {
                 startActivity(Intent(this, PinSetupActivity::class.java))
@@ -235,13 +194,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.sliderDelay.value = s.delaySeconds.coerceIn(5, 120).toFloat()
         binding.txtDelayValue.text = "${s.delaySeconds}s"
 
-        // ✅ AI Thresholds
+        // AI Threshold
         binding.sliderGuardianThreshold.value = s.aiThreshold.coerceIn(0.3f, 0.95f)
-        binding.sliderNsfwThreshold.value = s.nsfwGateThreshold.coerceIn(0.3f, 0.95f)
-        binding.sliderGenderThreshold.value = s.genderThreshold.coerceIn(0.5f, 0.95f)
         binding.txtGuardianThresholdValue.text = "%.2f".format(s.aiThreshold)
-        binding.txtNsfwThresholdValue.text = "%.2f".format(s.nsfwGateThreshold)
-        binding.txtGenderThresholdValue.text = "%.2f".format(s.genderThreshold)
 
         // ✅ Grid vote chips
         when (s.gridVoteCount) {
@@ -251,18 +206,6 @@ class SettingsActivity : AppCompatActivity() {
             4 -> binding.chipVote4.isChecked = true
         }
 
-        // Gender
-        when (s.userGender) {
-            "MALE" -> binding.chipMale.isChecked = true
-            "FEMALE" -> binding.chipFemale.isChecked = true
-            else -> binding.chipNone.isChecked = true
-        }
-        binding.txtGenderStatus.text = when (s.userGender) {
-            "MALE" -> getString(R.string.gender_status_male)
-            "FEMALE" -> getString(R.string.gender_status_female)
-            else -> getString(R.string.gender_status_none)
-        }
-
         // Temp block duration
         when (s.tempBlockDurationMins) {
             15 -> binding.chip15min.isChecked = true
@@ -270,10 +213,8 @@ class SettingsActivity : AppCompatActivity() {
             60 -> binding.chip60min.isChecked = true
         }
 
-        // Models
+        // Model
         binding.txtLegacyStatus.text = formatStatus(s.legacyModel)
-        binding.txtNsfwStatus.text = formatStatus(s.nsfwModel)
-        binding.txtGenderModelStatus.text = formatStatus(s.genderModel)
     }
 
     private fun formatStatus(slot: com.guardian.shield.viewmodel.ModelSlotUi): String =
