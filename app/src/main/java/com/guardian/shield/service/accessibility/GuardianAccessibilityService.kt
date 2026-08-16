@@ -274,7 +274,16 @@ class GuardianAccessibilityService : AccessibilityService() {
         } else detail
 
         if (!setBlockingFlag()) {
-            Timber.d("Block in progress, skip: $pkg")
+            // 3rd AI strike already applied a temp-block — still show the overlay
+            // even if another block is mid-flight, otherwise the user stays in
+            // the app with a silent 15-minute lock.
+            if (reason == BlockReason.AI_DETECTION) {
+                Timber.d("Block flag busy; delivering AI overlay anyway for $pkg")
+                try { blockingEngine.block(pkg, reason, overlayDetail) }
+                catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
+            } else {
+                Timber.d("Block in progress, skip: $pkg")
+            }
             return
         }
         // ✅ Immediately clear current package — periodic scanner shouldn't see a stale pkg
