@@ -1,5 +1,7 @@
 package com.guardian.shield.ui.settings
 
+import com.guardian.shield.R
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
