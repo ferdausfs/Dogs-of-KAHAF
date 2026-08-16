@@ -144,8 +144,12 @@ class AiDetector @Inject constructor(
             try {
                 val cl = CompatibilityList()
                 if (cl.isDelegateSupportedOnThisDevice) {
-                    gpuDelegate = GpuDelegate()
-                    opts.addDelegate(gpuDelegate)
+                    // Assign to local val first so Kotlin can smart-cast
+                    // (gpuDelegate is a class var, so gpuDelegate!! is needed
+                    // if passed directly — the local avoids the !!).
+                    val newDelegate = GpuDelegate()
+                    gpuDelegate = newDelegate
+                    opts.addDelegate(newDelegate)
                     Timber.i("GPU delegate enabled")
                 } else {
                     opts.setNumThreads(2)
