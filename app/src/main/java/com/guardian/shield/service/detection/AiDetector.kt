@@ -177,8 +177,14 @@ class AiDetector @Inject constructor(
                 // Ultimate Level: Require sufficient votes but sensitive to small fragments
                 val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
 
-                val fullScore = extractGuardianScore(runInferenceSafe(interp, bitmap)
-                    ?: return@withLock false)
+                val fullOut = runInferenceSafe(interp, bitmap) ?: return@withLock false
+                if (fullOut.size == 5) {
+                    Timber.d(
+                        "Guardian classes D=%.2f H=%.2f N=%.2f P=%.2f S=%.2f",
+                        fullOut[0], fullOut[1], fullOut[2], fullOut[3], fullOut[4]
+                    )
+                }
+                val fullScore = extractGuardianScore(fullOut)
                 Timber.d("Guardian full: $fullScore / $threshold")
 
                 if (fullScore < threshold * 0.3f) return@withLock false
@@ -272,11 +278,24 @@ class AiDetector @Inject constructor(
             1 -> scores[0]
             2 -> scores[1]
             3 -> (scores.getOrElse(1){0f} + scores.getOrElse(2){0f}).coerceAtMost(1.0f)
-            5 -> maxOf(
-                scores.getOrElse(1){0f},
-                scores.getOrElse(3){0f},
-                scores.getOrElse(4){0f}
-            )
+            5 -> {
+                // NSFWJS MobileNetV2 class order (softmax, sums to 1):
+                //   [0]=Drawing (safe cartoon/art/anime)  [1]=Hentai (adult drawn)
+                //   [2]=Neutral                            [3]=Porn   [4]=Sexy
+                val drawing = scores.getOrElse(0) { 0f }
+                val hentai  = scores.getOrElse(1) { 0f }
+                val porn    = scores.getOrElse(3) { 0f }
+                val sexy    = scores.getOrElse(4) { 0f }
+
+                // Photo NSFW blocks directly.
+                val photoNsfw = maxOf(porn, sexy)
+                // Drawn NSFW only blocks when the model is MORE confident the
+                // frame is adult anime than safe art (Drawing). This is what
+                // stops cartoons / anime / Oggy / Mr Bean from false-blocking.
+                val drawnNsfw = if (hentai > drawing) hentai else 0f
+
+                maxOf(photoNsfw, drawnNsfw)
+            }
             else -> scores.drop(1).max()
         }
     }
