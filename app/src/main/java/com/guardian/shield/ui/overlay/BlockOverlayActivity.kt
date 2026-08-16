@@ -12,13 +12,20 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
+import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class BlockOverlayActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBlockOverlayBinding
+
+    @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +66,25 @@ class BlockOverlayActivity : AppCompatActivity() {
         }
 
         binding.btnHome.setOnClickListener { goHome() }
+
+        // LEARNING MEMORY — only AI blocks can be "false blocks". When the user
+        // says a block was a mistake, remember the offending image's colour
+        // pattern so it is never blocked again.
+        if (reason == "AI_DETECTION") {
+            binding.btnMarkFalse.visibility = View.VISIBLE
+            binding.btnMarkFalse.setOnClickListener {
+                val sig = falsePositiveMemory.takePendingCandidate()
+                if (sig != null) {
+                    falsePositiveMemory.addSignature(sig)
+                    binding.btnMarkFalse.isEnabled = false
+                    binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
+                    Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+                } else {
+                    Snackbar.make(binding.root, R.string.overlay_mark_false_unavailable, Snackbar.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         vibrate()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

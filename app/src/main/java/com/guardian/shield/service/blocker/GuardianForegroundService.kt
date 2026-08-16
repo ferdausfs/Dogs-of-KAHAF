@@ -35,6 +35,11 @@ class GuardianForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var watchdogJob: Job? = null
+    // STABILITY FIX — the service can be (re)started many times (boot, device
+    // admin, watchdog worker every 15 min, MainActivity). Each start used to
+    // launch a NEW never-ending pref collector without cancelling the old one,
+    // leaking a coroutine per start. Keep a single observer job and replace it.
+    private var prefsObserverJob: Job? = null
 
     @Volatile private var protectionEnabled: Boolean = true
     private var consecutiveFailCount = 0
@@ -69,7 +74,8 @@ class GuardianForegroundService : Service() {
     }
 
     private fun startPrefsObserver() {
-        serviceScope.launch {
+        prefsObserverJob?.cancel()
+        prefsObserverJob = serviceScope.launch {
             try { prefs.protectionEnabled.collect { protectionEnabled = it } }
             catch (t: Throwable) { Timber.e(t) }
         }

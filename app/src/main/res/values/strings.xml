@@ -128,6 +128,11 @@
     <string name="overlay_reason_sched">Outside allowed schedule</string>
     <string name="overlay_reason_manual">Blocked manually</string>
 
+    <!-- Learning memory: mark a false block -->
+    <string name="overlay_mark_false">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</string>
+    <string name="overlay_mark_false_done">ঠিক আছে, এই প্যাটার্নটি আর ব্লক হবে না ✓</string>
+    <string name="overlay_mark_false_unavailable">মনে রাখা যায়নি, আবার চেষ্টা করুন</string>
+
     <string name="delay_title">Unlock Pending</string>
     <string name="delay_text">Access will be granted in:</string>
     <string name="seconds">seconds</string>

@@ -55,13 +55,14 @@ class BlockingEngine @Inject constructor(
 
         val finalDetail = if (reason == BlockReason.AI_DETECTION) {
             val durationMs = cachedTempBlockMins * 60 * 1_000L
-            val tempBlocked = tempBlockManager.recordAiDetection(pkg, durationMs)
-            if (tempBlocked) {
-                val block = tempBlockManager.isTempBlocked(pkg)
-                "temp_block:${block?.remainingMinutes ?: cachedTempBlockMins}min"
-            } else {
-                val strike = tempBlockManager.getStrikeCount(pkg)
-                "$detail (strike $strike/${GuardianConstants.STRIKE_THRESHOLD})"
+            when (val result = tempBlockManager.recordAiDetection(pkg, durationMs)) {
+                is AiStrikeResult.Blocked -> result.detail
+                AiStrikeResult.NoBlock,
+                AiStrikeResult.GracePeriod -> {
+                    // Strike below threshold, or a recent block just expired
+                    // (grace period). Don't show an overlay or log a block.
+                    return
+                }
             }
         } else detail
 
@@ -70,6 +71,9 @@ class BlockingEngine @Inject constructor(
     }
 
     fun isTempBlocked(pkg: String): TempBlock? = tempBlockManager.isTempBlocked(pkg)
+
+    /** True right after a temp block expires, when AI re-blocking is paused. */
+    fun isGracePeriodActive(pkg: String): Boolean = tempBlockManager.isGracePeriodActive(pkg)
 
     private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
         runCatching {

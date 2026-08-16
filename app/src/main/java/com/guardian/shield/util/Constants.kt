@@ -39,6 +39,11 @@ object GuardianConstants {
     const val ESCALATION_THRESHOLD = 3                    // 3 blocks in 2 hours
     const val DAY_BLOCK_MS = 24 * 60 * 60 * 1_000L        // 24 hours (block for the day)
 
+    // POST-BLOCK GRACE — after a temp block expires, the app stays unlocked for
+    // this long so the user can actually use the app instead of being re-blocked
+    // instantly on the next AI scan. During this window AI re-blocking is paused.
+    const val POST_BLOCK_GRACE_MS = 3 * 60 * 1_000L       // 3 minutes
+
     const val ACCESSIBILITY_WATCHDOG_MS = 5_000L
 
     // Scroll Addiction Constants

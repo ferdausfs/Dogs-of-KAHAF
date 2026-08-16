@@ -29,7 +29,8 @@ import javax.inject.Singleton
 @Singleton
 class AiDetector @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val prefs: GuardianPreferences
+    private val prefs: GuardianPreferences,
+    private val falsePositiveMemory: FalsePositiveMemory
 ) {
     private val inferenceLock = Mutex()
     private var legacyInterpreter: Interpreter? = null
@@ -172,7 +173,16 @@ class AiDetector @Inject constructor(
             try {
                 if (!isImageComplex(bitmap)) return@withLock false
 
-                // Increased local threshold for "Safe First"
+                // LEARNING MEMORY — if this exact pattern was already marked as a
+                // false block by the user, never block it again (no inference needed).
+                if (falsePositiveMemory.isKnown(bitmap)) {
+                    Timber.d("Known false-positive pattern — skipping block")
+                    return@withLock false
+                }
+
+                // Increased local threshold for "Safe First". The lower bound is
+                // kept at 0.50 to respect the user slider, but the hard floor
+                // below still guarantees we never block on a near-tie.
                 val threshold = cachedThreshold.coerceIn(0.50f, 0.95f)
                 // Ultimate Level: Require sufficient votes but sensitive to small fragments
                 val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
@@ -184,18 +194,30 @@ class AiDetector @Inject constructor(
                 val fullScore = extractGuardianScore(fullOut)
                 Timber.d("Guardian full: $fullScore / $threshold")
 
-                // PRECISION-FIRST: weak evidence -> safe, and skip the grid scan.
-                // Grid scanning of noisy "Sexy" cells is what blocked cats/cartoons.
-                if (fullScore < 0.55f) return@withLock false
+                // PRECISION-FIRST (v2.4.2): a frame counts as unsafe only when the
+                // unsafe mass clearly beats the safe mass. Anything at/below the
+                // hard floor is treated as safe and never reaches the grid — grid
+                // scanning of noisy "Sexy" cells is what used to block cats,
+                // cartoons and avatars on social feeds.
+                if (fullScore < HARD_BLOCK_FLOOR) return@withLock false
+
+                // Decisive whole-frame block only when the score is at/above the
+                // user threshold (the hard floor is a lower bound on top of it),
+                // so a busy feed can't trip on a single borderline number.
                 if (fullScore >= threshold) return@withLock true
 
-                // NO FALSE DETECTION: For small bitmaps (already cropped regions), skip grid to prevent noise
+                // NO FALSE DETECTION: small cropped regions (avatars, thumbnails,
+                // image tiles) lose their context once cropped, so they must NEVER
+                // be blocked on a borderline score.
                 if (bitmap.width < 500 || bitmap.height < 500) {
-                    return@withLock fullScore >= threshold
+                    return@withLock false
                 }
 
-                // ULTIMATE LEVEL: Use a high-density overlapping grid (4x5)
-                // 25% overlap for coverage without excessive "Inference Storm"
+                // Whole frame is borderline: confirm with a high-density
+                // overlapping grid (4x5, 25% overlap). Each cell must be
+                // overwhelmingly unsafe (danger >> safe) to count as a vote, so
+                // fur/faces that score "sexy" on tiny crops can't accumulate into
+                // a false block.
                 val regions = splitIntoOverlappingGrid(bitmap, cols = 4, rows = 5, overlapPercent = 0.25f)
                 var triggeredCount = 0
 
@@ -211,7 +233,7 @@ class AiDetector @Inject constructor(
 
                         // PRECISION-FIRST: a grid cell must be overwhelmingly
                         // unsafe to count as a vote (danger mass >> safe mass).
-                        if (score >= 0.80f) triggeredCount++
+                        if (score >= GRID_CELL_FLOOR) triggeredCount++
                         if (triggeredCount >= voteNeeded) break
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
@@ -278,7 +300,25 @@ class AiDetector @Inject constructor(
         return when (scores.size) {
             1 -> scores[0]
             2 -> scores[1]
-            3 -> (scores.getOrElse(1){0f} + scores.getOrElse(2){0f}).coerceAtMost(1.0f)
+            3 -> {
+                // 3-class NSFW models are normally laid out as
+                // [safe/neutral, questionable/sexy, explicit/porn], i.e. the
+                // safe class comes first. We apply the SAME "safe-first"
+                // principle as the 5-class branch below: the unsafe mass
+                // (classes 1+2) must clearly beat the safe class (class 0)
+                // before the score rises.
+                //
+                // The old code simply summed classes 1+2 with NO safe
+                // subtraction, so swapping a 5-class model for a 3-class one
+                // never reduced false positives — benign photos (a fully
+                // clothed person, fashion, food) still scored high and fed the
+                // grid scanner. This fix restores the intended behavior.
+                val safe = scores.getOrElse(0) { 0f }
+                val danger = (scores.getOrElse(1) { 0f } + scores.getOrElse(2) { 0f })
+                    .coerceIn(0f, 1f)
+                // danger dominates -> high; safe dominates -> low. Map to [0,1].
+                ((danger - safe + 1.0f) / 2.0f).coerceIn(0f, 1f)
+            }
             5 -> {
                 // NSFWJS MobileNetV2 class order (softmax, sums to 1):
                 //   [0]=Drawing (safe cartoon/art/anime)  [1]=Hentai (adult drawn)
@@ -429,5 +469,10 @@ class AiDetector @Inject constructor(
 
     companion object {
         const val MODEL_LEGACY = "guardian_model.tflite"
+
+        // PRECISION-FIRST (v2.4.2) — safety floors for blocking decisions.
+        // Lowering these increases sensitivity but also raises false positives.
+        const val HARD_BLOCK_FLOOR = 0.65f      // never block below this score
+        const val GRID_CELL_FLOOR = 0.82f       // per-cell score needed to vote
     }
 }
