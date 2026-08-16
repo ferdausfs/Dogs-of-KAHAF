@@ -23,6 +23,7 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
+import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
 import com.guardian.shield.service.detection.TimeLockManager
@@ -52,6 +53,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var prefs: GuardianPreferences
     @Inject lateinit var reelScrollDetector: ReelScrollDetector
     @Inject lateinit var timeLockManager: TimeLockManager
+    @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,6 +65,12 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Volatile private var lastTextScan = 0L
     @Volatile private var lastContentHash: Int = 0
     @Volatile private var isBlockingInProgress = false
+
+    // PRECISION-FIRST (v2.4.2) — only treat a node as scannable *content* when it
+    // is large enough to be real content. Feed thumbnails must still be scanned,
+    // so this only filters out truly tiny icons / buttons / emoji (<=96px). Profile
+    // avatars are handled separately below (excluded from scanning).
+    private val MIN_CONTENT_IMAGE_PX = 96
 
     // STABILITY FIX — auto-reset guard so a stuck flag never freezes detection
     @Volatile private var blockingFlagSetAt = 0L
@@ -246,6 +254,14 @@ class GuardianAccessibilityService : AccessibilityService() {
     )
 
     private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
+        // POST-BLOCK GRACE — right after an AI temp block expires we let the user
+        // back in instead of instantly re-blocking on the next scan. This is what
+        // makes a "15 min block → then unlocked" actually hold in practice.
+        if (reason == BlockReason.AI_DETECTION && blockingEngine.isGracePeriodActive(pkg)) {
+            Timber.d("AI grace period active for $pkg — not re-blocking")
+            clearBlockingFlag("ai-grace")
+            return
+        }
         if (!setBlockingFlag()) {
             Timber.d("Block in progress, skip: $pkg")
             return
@@ -452,17 +468,32 @@ class GuardianAccessibilityService : AccessibilityService() {
                 count++
 
                 val className = node.className?.toString() ?: ""
+                val viewId = node.viewIdResourceName?.toString() ?: ""
                 val isImage = className.contains("ImageView") || className.contains("Image") ||
-                        node.viewIdResourceName?.contains("image", ignoreCase = true) == true ||
-                        node.viewIdResourceName?.contains("photo", ignoreCase = true) == true ||
-                        node.viewIdResourceName?.contains("video", ignoreCase = true) == true ||
-                        node.viewIdResourceName?.contains("avatar", ignoreCase = true) == true
+                        viewId.contains("image", ignoreCase = true) ||
+                        viewId.contains("photo", ignoreCase = true) ||
+                        viewId.contains("video", ignoreCase = true) ||
+                        viewId.contains("story", ignoreCase = true)
 
-                if (isImage) {
+                // PROFILE FIX — profile pictures / avatars are user *identity*, not
+                // content, and their tiny crops are a huge source of false AI blocks
+                // (they contain a person's face/hair and get cropped without any
+                // context). Exclude them explicitly so feed thumbnails still scan.
+                val isProfileImage =
+                    viewId.contains("avatar", ignoreCase = true) ||
+                    viewId.contains("profile", ignoreCase = true) ||
+                    viewId.contains("profile_pic", ignoreCase = true) ||
+                    viewId.contains("profilepic", ignoreCase = true) ||
+                    viewId.contains("user_image", ignoreCase = true) ||
+                    viewId.contains("dp_", ignoreCase = true)
+
+                if (isImage && !isProfileImage) {
                     val rect = android.graphics.Rect()
                     node.getBoundsInScreen(rect)
-                    // SMALL SCREEN OPTIMIZATION: Ignore tiny icons/buttons, but catch all content images
-                    if (rect.width() > 80 && rect.height() > 80) {
+                    // Ignore truly tiny icons/buttons/emoji; scan everything else
+                    // (including feed thumbnails). Small crops are still protected
+                    // by AiDetector so they can't block on a borderline score.
+                    if (rect.width() >= MIN_CONTENT_IMAGE_PX && rect.height() >= MIN_CONTENT_IMAGE_PX) {
                         // Ensure rect is within screen bounds to avoid bad crops
                         rect.left = rect.left.coerceIn(0, displayWidth)
                         rect.top = rect.top.coerceIn(0, displayHeight)
@@ -515,13 +546,21 @@ class GuardianAccessibilityService : AccessibilityService() {
             val width = rect.width().coerceAtMost(fullBitmap.width - left)
             val height = rect.height().coerceAtMost(fullBitmap.height - top)
 
-            if (width < 64 || height < 64) continue
+            // Skip only truly tiny regions (icons/buttons). Thumbnails and avatars
+            // that slipped through are still scanned here, but the small-crop
+            // protection in AiDetector prevents a borderline score from blocking.
+            if (width < MIN_CONTENT_IMAGE_PX || height < MIN_CONTENT_IMAGE_PX) continue
 
             var regionBmp: Bitmap? = null
             try {
                 regionBmp = Bitmap.createBitmap(fullBitmap, left, top, width, height)
                 if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
                     if (currentPackage == pkg) {
+                        // LEARNING MEMORY — keep the offending region so the overlay
+                        // can offer "this was a false block" and never block it again.
+                        falsePositiveMemory.rememberCandidate(
+                            falsePositiveMemory.computeSignature(regionBmp)
+                        )
                         withContext(Dispatchers.Main) {
                             goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-legacy")
                         }
@@ -589,6 +628,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                                         if (aiDetector.isUnsafe(b)) {
                                             // ✅ Final sanity check before blocking
                                             if (currentPackage == pkg) {
+                                                // LEARNING MEMORY — keep the frame so the
+                                                // overlay can offer "this was a false block".
+                                                falsePositiveMemory.rememberCandidate(
+                                                    falsePositiveMemory.computeSignature(b)
+                                                )
                                                 withContext(Dispatchers.Main) {
                                                     goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
                                                 }

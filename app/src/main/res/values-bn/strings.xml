@@ -126,6 +126,11 @@
     <string name="overlay_reason_kw">কিওয়ার্ড মিলেছে: %1$s</string>
     <string name="overlay_reason_app">অ্যাপটি ব্লক করা হয়েছে</string>
     <string name="overlay_reason_sched">নির্ধারিত সময়ের বাইরে</string>
+
+    <!-- Learning memory: mark a false block -->
+    <string name="overlay_mark_false">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</string>
+    <string name="overlay_mark_false_done">ঠিক আছে, এই প্যাটার্নটি আর ব্লক হবে না ✓</string>
+    <string name="overlay_mark_false_unavailable">মনে রাখা যায়নি, আবার চেষ্টা করুন</string>
     <string name="overlay_reason_manual">ম্যানুয়ালি ব্লক করা হয়েছে</string>
 
     <string name="delay_title">আনলক পেন্ডিং</string>

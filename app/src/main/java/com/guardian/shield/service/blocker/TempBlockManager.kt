@@ -17,6 +17,18 @@ data class TempBlock(
     val remainingMinutes get() = (remainingMs / 60_000) + 1
 }
 
+/** Result of recording an AI detection. */
+sealed class AiStrikeResult {
+    /** A strike was counted but the user hasn't hit the block threshold yet. */
+    data object NoBlock : AiStrikeResult()
+
+    /** A recent temp block just expired; the user gets a grace period. */
+    data object GracePeriod : AiStrikeResult()
+
+    /** Block threshold reached — a temp block was applied. */
+    data class Blocked(val detail: String) : AiStrikeResult()
+}
+
 @Singleton
 class TempBlockManager @Inject constructor() {
 
@@ -27,28 +39,43 @@ class TempBlockManager @Inject constructor() {
     // Tracks history of blocks to handle escalation (3 blocks in 2 hours)
     private val blockHistory = LinkedHashMap<String, LinkedList<Long>>()
 
+    // POST-BLOCK GRACE — right after a temp block expires we let the user back
+    // in without instantly re-blocking. Without this, the app would re-block on
+    // the first AI scan after expiry, so a "15 min block" felt like it never
+    // unblocked. During the grace window, AI detection is ignored for the pkg.
+    private val graceUntil = HashMap<String, Long>()
+
     /**
      * TASK 3 — Record an AI-detection event.
      *
-     * Behavior:
-     *  • Strikes 1..(STRIKE_THRESHOLD-1) accumulate.
-     *  • Once the user hits [GuardianConstants.STRIKE_THRESHOLD] (3) strikes,
-     *    apply a 15-minute block.
-     *  • If blocked 3 times within 2 hours, apply a 24-hour lock.
+     * Behavior (now matches the README and the user's setting):
+     *  • Strikes 1..(STRIKE_THRESHOLD-1) accumulate silently (no block shown).
+     *  • On the 3rd strike a temp block is applied for [blockDurationMs] — this
+     *    is the user-configured duration from Settings (default 15 min), which
+     *    was previously ignored.
+     *  • If blocked 3 times within 2 hours, escalate to a 24-hour lock.
+     *  • If a temp block just expired, return [AiStrikeResult.GracePeriod] so the
+     *    app stays unlocked for [GuardianConstants.POST_BLOCK_GRACE_MS].
      *
      * @param pkg the offending package
-     * @param defaultDurationMs the temp-block duration (ignored in favor of new logic)
-     * @return true if a temp block was applied
+     * @param blockDurationMs the user-configured temp-block duration
      */
     @Synchronized
-    fun recordAiDetection(pkg: String, defaultDurationMs: Long): Boolean {
+    fun recordAiDetection(pkg: String, blockDurationMs: Long): AiStrikeResult {
         val now = System.currentTimeMillis()
+
+        // Grace period after a block expiry — don't count strikes or block.
+        if (now < (graceUntil[pkg] ?: 0L)) {
+            Timber.d("Grace period active for $pkg — AI detection ignored")
+            return AiStrikeResult.GracePeriod
+        }
+
         val lastStrike = strikeTime[pkg] ?: 0L
 
         // Prevent multiple strikes within 1 second for the same package
         if (now - lastStrike < 1000L) {
             Timber.d("Ignoring duplicate AI strike for $pkg (too soon)")
-            return false
+            return AiStrikeResult.NoBlock
         }
 
         val currentStrikes = strikes[pkg] ?: 0
@@ -70,12 +97,15 @@ class TempBlockManager @Inject constructor() {
             strikes[pkg] = 0
             strikeTime.remove(pkg)
 
-            handleBlockEscalation(pkg)
-            true
-        } else false
+            val detail = handleBlockEscalation(pkg, blockDurationMs)
+            AiStrikeResult.Blocked(detail)
+        } else {
+            // Below threshold — strike counted, but do NOT show a block overlay.
+            AiStrikeResult.NoBlock
+        }
     }
 
-    private fun handleBlockEscalation(pkg: String) {
+    private fun handleBlockEscalation(pkg: String, blockDurationMs: Long): String {
         val now = System.currentTimeMillis()
         val history = blockHistory.getOrPut(pkg) { LinkedList() }
 
@@ -86,20 +116,25 @@ class TempBlockManager @Inject constructor() {
 
         history.add(now)
 
-        if (history.size >= GuardianConstants.ESCALATION_THRESHOLD) {
+        return if (history.size >= GuardianConstants.ESCALATION_THRESHOLD) {
             // Escalation triggered: Block for the day
             Timber.w("Escalation triggered for $pkg: 3 blocks in 2 hours. Blocking for 24h.")
             applyTempBlock(pkg, GuardianConstants.DAY_BLOCK_MS)
             history.clear() // Reset history after escalation
+            "temp_block:${GuardianConstants.DAY_BLOCK_MS / 60_000}min"
         } else {
-            // Normal 15-minute block
-            applyTempBlock(pkg, GuardianConstants.DEFAULT_TEMP_BLOCK_MS)
+            // Normal block for the user-configured duration (default 15 min)
+            val mins = (blockDurationMs / 60_000).coerceAtLeast(1)
+            applyTempBlock(pkg, blockDurationMs)
+            "temp_block:${mins}min"
         }
     }
 
     @Synchronized
     fun applyTempBlock(pkg: String, durationMs: Long) {
         tempBlocks[pkg] = TempBlock(pkg, System.currentTimeMillis(), durationMs)
+        // End any earlier grace so a fresh block is respected.
+        graceUntil.remove(pkg)
         Timber.w("TempBlock: $pkg for ${durationMs / 60_000} min")
     }
 
@@ -108,11 +143,18 @@ class TempBlockManager @Inject constructor() {
         val block = tempBlocks[pkg] ?: return null
         return if (block.isExpired) {
             tempBlocks.remove(pkg)
-            // Note: we don't necessarily want to remove strikes here if they are in progress
-            Timber.d("TempBlock expired: $pkg")
+            // Grant a grace window so the app genuinely unblocks after the
+            // configured duration instead of being re-blocked immediately.
+            graceUntil[pkg] = System.currentTimeMillis() + GuardianConstants.POST_BLOCK_GRACE_MS
+            Timber.d("TempBlock expired: $pkg — grace period until ${graceUntil[pkg]}")
             null
         } else block
     }
+
+    /** True when a recent temp block just expired and AI re-blocking is paused. */
+    @Synchronized
+    fun isGracePeriodActive(pkg: String): Boolean =
+        System.currentTimeMillis() < (graceUntil[pkg] ?: 0L)
 
     @Synchronized
     fun clearTempBlock(pkg: String) {
@@ -120,6 +162,7 @@ class TempBlockManager @Inject constructor() {
         strikes.remove(pkg)
         strikeTime.remove(pkg)
         blockHistory.remove(pkg)
+        graceUntil.remove(pkg)
     }
 
     @Synchronized
