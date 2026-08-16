@@ -520,19 +520,6 @@ class GuardianAccessibilityService : AccessibilityService() {
             var regionBmp: Bitmap? = null
             try {
                 regionBmp = Bitmap.createBitmap(fullBitmap, left, top, width, height)
-                val gender = aiDetector.cachedUserGender
-
-                if (gender != "NONE" && aiDetector.isGenderModelAvailable() && aiDetector.isNsfwGateAvailable()) {
-                    if (aiDetector.isOppositeGenderNsfw(regionBmp, gender)) {
-                        if (currentPackage == pkg) {
-                            withContext(Dispatchers.Main) {
-                                goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-gender")
-                            }
-                            return true
-                        }
-                    }
-                }
-
                 if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
                     if (currentPackage == pkg) {
                         withContext(Dispatchers.Main) {
@@ -598,23 +585,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 }
 
                                 if (!blocked) {
-                                    val gender = aiDetector.cachedUserGender
-
-                                    if (gender != "NONE"
-                                        && aiDetector.isGenderModelAvailable()
-                                        && aiDetector.isNsfwGateAvailable()
-                                    ) {
-                                        if (aiDetector.isOppositeGenderNsfw(b, gender, requireStrongNsfw = true)) {
-                                            // ✅ Final sanity check before blocking
-                                            if (currentPackage == pkg) {
-                                                withContext(Dispatchers.Main) {
-                                                    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "gender-nsfw")
-                                                }
-                                                blocked = true
-                                            }
-                                        }
-                                    }
-                                    if (!blocked && aiDetector.isLegacyAvailable()) {
+                                    if (aiDetector.isLegacyAvailable()) {
                                         if (aiDetector.isUnsafe(b)) {
                                             // ✅ Final sanity check before blocking
                                             if (currentPackage == pkg) {

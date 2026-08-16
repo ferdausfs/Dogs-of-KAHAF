@@ -28,18 +28,11 @@ data class SettingsUiState(
     val keywordFilter: Boolean = true,
     val aiDetection: Boolean = false,
     val delaySeconds: Int = 30,
-    val userGender: String = "NONE",
     val tempBlockDurationMins: Int = 15,
-    // ✅ সব threshold
     val aiThreshold: Float = 0.65f,
-    val nsfwGateThreshold: Float = 0.60f,
-    val genderThreshold: Float = 0.70f,
     val gridVoteCount: Int = 2,
     val modelLoaded: Boolean = false,
-    val genderModelAvailable: Boolean = false,
-    val legacyModel: ModelSlotUi = ModelSlotUi(),
-    val nsfwModel: ModelSlotUi = ModelSlotUi(),
-    val genderModel: ModelSlotUi = ModelSlotUi()
+    val legacyModel: ModelSlotUi = ModelSlotUi()
 )
 
 sealed class SettingsEvent {
@@ -63,11 +56,8 @@ class SettingsViewModel @Inject constructor(
         prefs.keywordFilter,
         prefs.aiDetection,
         prefs.delaySeconds,
-        prefs.userGender,
         prefs.tempBlockDurationMins,
         prefs.aiThreshold,
-        prefs.nsfwGateThreshold,
-        prefs.genderThreshold,
         prefs.gridVoteCount,
         refreshTick
     ) { values ->
@@ -75,17 +65,11 @@ class SettingsViewModel @Inject constructor(
             keywordFilter = values[0] as Boolean,
             aiDetection = values[1] as Boolean,
             delaySeconds = values[2] as Int,
-            userGender = values[3] as String,
-            tempBlockDurationMins = values[4] as Int,
-            aiThreshold = values[5] as Float,
-            nsfwGateThreshold = values[6] as Float,
-            genderThreshold = values[7] as Float,
-            gridVoteCount = values[8] as Int,
+            tempBlockDurationMins = values[3] as Int,
+            aiThreshold = values[4] as Float,
+            gridVoteCount = values[5] as Int,
             modelLoaded = importer.isModelImported(AiDetector.MODEL_LEGACY),
-            genderModelAvailable = importer.isModelImported(AiDetector.MODEL_GENDER),
-            legacyModel = slot(AiDetector.MODEL_LEGACY),
-            nsfwModel = slot(AiDetector.MODEL_NSFW),
-            genderModel = slot(AiDetector.MODEL_GENDER)
+            legacyModel = slot(AiDetector.MODEL_LEGACY)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
@@ -101,13 +85,10 @@ class SettingsViewModel @Inject constructor(
     fun setKeywordFilter(v: Boolean) { viewModelScope.launch { prefs.setKeywordFilter(v); prefs.bumpRulesVersion() } }
     fun setAiDetection(v: Boolean) { viewModelScope.launch { prefs.setAiDetection(v); prefs.bumpRulesVersion() } }
     fun setDelaySeconds(v: Int) { viewModelScope.launch { prefs.setDelaySeconds(v) } }
-    fun setUserGender(v: String) { viewModelScope.launch { prefs.setUserGender(v); prefs.bumpRulesVersion() } }
     fun setTempBlockDurationMins(v: Int) { viewModelScope.launch { prefs.setTempBlockDurationMins(v) } }
 
     // ✅ নতুন setters
     fun setAiThreshold(v: Float) { viewModelScope.launch { prefs.setAiThreshold(v) } }
-    fun setNsfwGateThreshold(v: Float) { viewModelScope.launch { prefs.setNsfwGateThreshold(v) } }
-    fun setGenderThreshold(v: Float) { viewModelScope.launch { prefs.setGenderThreshold(v) } }
     fun setGridVoteCount(v: Int) { viewModelScope.launch { prefs.setGridVoteCount(v) } }
 
     fun importModel(uri: Uri, modelName: String) {
