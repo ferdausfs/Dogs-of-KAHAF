@@ -73,9 +73,12 @@ class PinManager @Inject constructor(
             val expected = parts[1].fromHex()
             MessageDigest.isEqual(derive(pin, salt, PIN_ITERATIONS, KEY_BITS), expected)
         } else {
+            // Legacy unsalted SHA-256: reproduce the exact legacy encoding and
+            // compare as strings (identical to the pre-existing behaviour).
             val legacy = MessageDigest.getInstance("SHA-256")
                 .digest(pin.toByteArray(Charsets.UTF_8))
-            val matches = MessageDigest.isEqual(stored.fromHex(), legacy)
+                .joinToString("") { "%02x".format(it) }
+            val matches = stored == legacy
             if (matches) migrateToSalted(pin)
             matches
         }
@@ -100,7 +103,9 @@ class PinManager @Inject constructor(
         }
     }
 
-    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+    /** Encode as two hex chars per byte (mask to unsigned to avoid sign-extension). */
+    private fun ByteArray.toHex(): String =
+        joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
     private fun String.fromHex(): ByteArray {
         require(length % 2 == 0) { "Invalid hex string" }
