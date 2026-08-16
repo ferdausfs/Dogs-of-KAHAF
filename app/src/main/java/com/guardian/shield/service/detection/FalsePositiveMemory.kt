@@ -3,6 +3,10 @@ package com.guardian.shield.service.detection
 import android.content.Context
 import android.graphics.Bitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -34,6 +38,7 @@ class FalsePositiveMemory @Inject constructor(
 
     private val lock = Any()
     private val signatures = ArrayList<IntArray>()
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // The most recent AI-block candidate (the image that actually caused the
     // block). The block overlay reads this when the user taps "this was wrong".
@@ -134,13 +139,19 @@ class FalsePositiveMemory @Inject constructor(
     }
 
     private fun save() {
-        runCatching {
-            val f = File(context.filesDir, FILE_NAME)
-            DataOutputStream(FileOutputStream(f)).use { out ->
-                out.writeInt(signatures.size)
-                for (sig in signatures) for (v in sig) out.writeInt(v)
-            }
-        }.onFailure { Timber.e(it, "Failed to save false-positive memory") }
+        // Snapshot under the lock, then write off the caller thread —
+        // addSignature() is invoked from the block overlay's main thread and a
+        // synchronous ~512 KB write there causes jank.
+        val snapshot = synchronized(lock) { ArrayList(signatures) }
+        ioScope.launch {
+            runCatching {
+                val f = File(context.filesDir, FILE_NAME)
+                DataOutputStream(FileOutputStream(f)).use { out ->
+                    out.writeInt(snapshot.size)
+                    for (sig in snapshot) for (v in sig) out.writeInt(v)
+                }
+            }.onFailure { Timber.e(it, "Failed to save false-positive memory") }
+        }
     }
 
     private fun load() {

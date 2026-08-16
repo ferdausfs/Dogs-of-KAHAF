@@ -350,7 +350,12 @@ class AiDetector @Inject constructor(
                 //   0.50 = tie,  0.65 = unsafe ahead by 0.30,  ...
                 ((danger + 1.0f) / 2.0f).coerceIn(0f, 1f)
             }
-            else -> scores.drop(1).maxOrNull() ?: 0f
+            else -> {
+                // Unknown output width — a wrong guess would produce bogus
+                // scores and false blocks. Treat as safe (fail closed).
+                Timber.w("Unexpected model output size ${scores.size} — treating frame as safe")
+                0f
+            }
         }
     }
 
