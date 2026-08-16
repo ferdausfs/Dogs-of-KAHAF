@@ -286,7 +286,7 @@
                             android:id="@+id/txtGuardianThresholdValue"
                             android:layout_width="48dp"
                             android:layout_height="wrap_content"
-                            android:text="0.65"
+                            android:text="0.72"
                             android:textColor="@color/primary"
                             android:textSize="13sp"
                             android:gravity="end" />
@@ -299,7 +299,7 @@
                         android:valueFrom="0.3"
                         android:valueTo="0.95"
                         android:stepSize="0.01"
-                        android:value="0.65"
+                        android:value="0.72"
                         android:layout_marginBottom="8dp" />
 
                     <!-- Grid Vote Count -->

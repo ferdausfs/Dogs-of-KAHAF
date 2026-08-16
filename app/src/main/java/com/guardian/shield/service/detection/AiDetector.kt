@@ -47,7 +47,7 @@ class AiDetector @Inject constructor(
 
     @Volatile var cachedAiEnabled: Boolean = false
         private set
-    @Volatile var cachedThreshold: Float = 0.65f
+    @Volatile var cachedThreshold: Float = 0.72f
         private set
     @Volatile var cachedGridVoteCount: Int = 2
         private set
@@ -184,11 +184,11 @@ class AiDetector @Inject constructor(
                     return@withLock false
                 }
 
-                // Increased local threshold for "Safe First". The lower bound is
-                // kept at 0.50 to respect the user slider, but the hard floor
-                // below still guarantees we never block on a near-tie.
-                val threshold = cachedThreshold.coerceIn(0.50f, 0.95f)
-                // Ultimate Level: Require sufficient votes but sensitive to small fragments
+                // Precision-first: honour the user slider down to 0.30, then
+                // derive a per-cell floor a notch above it so grid votes stay
+                // stricter than the whole-frame decision.
+                val threshold = cachedThreshold.coerceIn(0.30f, 0.95f)
+                val gridCellFloor = (threshold + 0.10f).coerceIn(0.55f, 0.92f)
                 val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
 
                 val fullOut = runInferenceSafe(interp, bitmap) ?: return@withLock false
@@ -237,7 +237,7 @@ class AiDetector @Inject constructor(
 
                         // PRECISION-FIRST: a grid cell must be overwhelmingly
                         // unsafe to count as a vote (danger mass >> safe mass).
-                        if (score >= GRID_CELL_FLOOR) triggeredCount++
+                        if (score >= gridCellFloor) triggeredCount++
                         if (triggeredCount >= voteNeeded) break
                     } catch (t: Throwable) {
                         Timber.e(t, "Grid[$idx] error")
@@ -476,7 +476,6 @@ class AiDetector @Inject constructor(
 
         // PRECISION-FIRST (v2.4.2) — safety floors for blocking decisions.
         // Lowering these increases sensitivity but also raises false positives.
-        const val HARD_BLOCK_FLOOR = 0.65f      // never block below this score
-        const val GRID_CELL_FLOOR = 0.82f       // per-cell score needed to vote
+        const val HARD_BLOCK_FLOOR = 0.50f      // never block below this score
     }
 }

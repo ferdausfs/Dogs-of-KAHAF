@@ -29,7 +29,7 @@ data class SettingsUiState(
     val aiDetection: Boolean = false,
     val delaySeconds: Int = 30,
     val tempBlockDurationMins: Int = 15,
-    val aiThreshold: Float = 0.65f,
+    val aiThreshold: Float = 0.72f,
     val gridVoteCount: Int = 2,
     val modelLoaded: Boolean = false,
     val legacyModel: ModelSlotUi = ModelSlotUi()
