@@ -15,6 +15,7 @@ import com.guardian.shield.R
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.ui.dashboard.MainActivity
 import com.guardian.shield.ui.guard.AccessibilityPromptActivity
+import com.guardian.shield.util.AccessibilityHeartbeat
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -88,9 +89,14 @@ class GuardianForegroundService : Service() {
                 delay(GuardianConstants.ACCESSIBILITY_WATCHDOG_MS)
                 try {
                     if (!protectionEnabled) { consecutiveFailCount = 0; continue }
-                    if (!isAccessibilityEnabled()) {
+                    val enabled = isAccessibilityEnabled()
+                    // Liveness: the settings toggle can stay "on" even after the
+                    // service dies. Treat a stale heartbeat as "down" so the user
+                    // is re-prompted instead of silently unprotected.
+                    val stale = AccessibilityHeartbeat.sinceLastBeatMs() > GuardianConstants.ACCESSIBILITY_STALE_MS
+                    if (!enabled || stale) {
                         consecutiveFailCount++
-                        Timber.w("Accessibility fail $consecutiveFailCount/3")
+                        Timber.w("Accessibility fail $consecutiveFailCount/3 (enabled=$enabled, stale=$stale)")
                         if (consecutiveFailCount >= 3) {
                             launchAccessibilityPrompt()
                             consecutiveFailCount = 0
@@ -113,7 +119,7 @@ class GuardianForegroundService : Service() {
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
             ) ?: return false
             enabled.contains(packageName, ignoreCase = true)
-        } catch (_: Throwable) { true }
+        } catch (_: Throwable) { false }
     }
 
     private fun launchAccessibilityPrompt() {

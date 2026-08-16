@@ -5,10 +5,11 @@ import android.graphics.Bitmap
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -349,7 +350,12 @@ class AiDetector @Inject constructor(
                 //   0.50 = tie,  0.65 = unsafe ahead by 0.30,  ...
                 ((danger + 1.0f) / 2.0f).coerceIn(0f, 1f)
             }
-            else -> scores.drop(1).maxOrNull() ?: 0f
+            else -> {
+                // Unknown output width — a wrong guess would produce bogus
+                // scores and false blocks. Treat as safe (fail closed).
+                Timber.w("Unexpected model output size ${scores.size} — treating frame as safe")
+                0f
+            }
         }
     }
 
@@ -459,8 +465,16 @@ class AiDetector @Inject constructor(
         return output[0]
     }
 
+    // LIFECYCLE FIX — close() is called from AccessibilityService.onDestroy()
+    // (main thread). runBlocking here could ANR for up to 2 s; tear down on a
+    // background scope instead.
+    @Volatile private var closeStarted = false
+    private val closeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     fun close() {
-        runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+        if (closeStarted) return
+        closeStarted = true
+        closeScope.launch {
             withTimeoutOrNull(2_000L) {
                 inferenceLock.withLock { tearDown() }
             } ?: tearDown()

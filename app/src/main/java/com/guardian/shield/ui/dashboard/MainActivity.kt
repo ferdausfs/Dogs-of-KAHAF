@@ -1,11 +1,15 @@
 package com.guardian.shield.ui.dashboard
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.guardian.shield.R
@@ -30,6 +34,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
     @Inject lateinit var guardianPrefs: GuardianPreferences
+
+    private val notifPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* result handled on next resume via the permission health screen */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,6 +71,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         startForegroundServiceIfNeeded()
+        requestNotificationPermissionIfNeeded()
 
         lifecycleScope.launch {
             val isFirstRun = try {
@@ -92,18 +101,31 @@ class MainActivity : AppCompatActivity() {
         runCatching { GuardianForegroundService.start(this) }
     }
 
+    /**
+     * Android 13+ requires an explicit runtime grant for POST_NOTIFICATIONS;
+     * without it every tamper alert and the foreground-service notification is
+     * suppressed. Request it up front (the tamper logger depends on it).
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     private fun checkBatteryOptimization() {
         if (!PermissionManager.isBatteryOptimizationIgnored(this)) {
             AlertDialog.Builder(this)
-                .setTitle("🔋 Stability Fix")
-                .setMessage(
-                    "Guardian Shield ব্যাকগ্রাউন্ডে বন্ধ হয়ে যাওয়া রোধ করতে Battery Optimization বন্ধ করুন।"
-                )
+                .setTitle(R.string.battery_dialog_title)
+                .setMessage(R.string.battery_dialog_message)
                 .setCancelable(false)
-                .setPositiveButton("Fix করুন") { _, _ ->
+                .setPositiveButton(R.string.action_fix) { _, _ ->
                     PermissionManager.openBatteryOptimizationSettings(this)
                 }
-                .setNegativeButton("পরে") { _, _ -> }
+                .setNegativeButton(R.string.action_later) { _, _ -> }
                 .show()
         }
     }
@@ -114,10 +136,10 @@ class MainActivity : AppCompatActivity() {
         val admin = ComponentName(this, GuardianDeviceAdminReceiver::class.java)
         if (!dpm.isAdminActive(admin)) {
             AlertDialog.Builder(this)
-                .setTitle("⚠️ Uninstall Protection")
-                .setMessage("App কে uninstall থেকে রক্ষা করতে Device Admin enable করুন।")
+                .setTitle(R.string.device_admin_dialog_title)
+                .setMessage(R.string.device_admin_dialog_message)
                 .setCancelable(false)
-                .setPositiveButton("Enable করুন") { _, _ ->
+                .setPositiveButton(R.string.action_enable) { _, _ ->
                     runCatching {
                         startActivity(
                             Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
@@ -126,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                 }
-                .setNegativeButton("পরে") { _, _ -> }
+                .setNegativeButton(R.string.action_later) { _, _ -> }
                 .show()
         }
     }

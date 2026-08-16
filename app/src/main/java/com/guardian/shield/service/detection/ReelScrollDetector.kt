@@ -56,6 +56,7 @@ class ReelScrollDetector @Inject constructor() {
     fun recordScroll(pkg: String, isShortForm: Boolean): Boolean {
         // We track scrolling for all non-safe apps now, but specifically prioritize REEL_PACKAGES
         val now = System.currentTimeMillis()
+        pruneStaleSessions(now, pkg)
         val session = sessions.getOrPut(pkg) { ReelSession(pkg) }
 
         // Reset session if gap too long
@@ -106,5 +107,20 @@ class ReelScrollDetector @Inject constructor() {
     fun isCurrentlyScrolling(): Boolean {
         val now = System.currentTimeMillis()
         return sessions.values.any { now - it.lastSwipeMs < 2000L }
+    }
+
+    /** Evict long-idle sessions so the map cannot grow without bound. */
+    private fun pruneStaleSessions(now: Long, currentPkg: String) {
+        if (sessions.size <= MAX_SESSIONS) return
+        val cutoff = now - SESSION_IDLE_MS
+        val stale = sessions.entries
+            .filter { it.key != currentPkg && now - it.value.lastSwipeMs > cutoff }
+            .map { it.key }
+        stale.forEach { sessions.remove(it) }
+    }
+
+    private companion object {
+        const val MAX_SESSIONS = 50
+        const val SESSION_IDLE_MS = 30 * 60_000L
     }
 }

@@ -26,7 +26,9 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext ctx: Context): GuardianDatabase =
         Room.databaseBuilder(ctx, GuardianDatabase::class.java, GuardianDatabase.DB_NAME)
             .addMigrations(GuardianDatabase.MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
+            // Intentionally NO fallbackToDestructiveMigration(): the block-event
+            // log is the parent's evidence trail and must never be silently
+            // wiped. Any future schema change requires an explicit migration.
             .build()
 
     @Provides fun appRuleDao(db: GuardianDatabase): AppRuleDao = db.appRuleDao()

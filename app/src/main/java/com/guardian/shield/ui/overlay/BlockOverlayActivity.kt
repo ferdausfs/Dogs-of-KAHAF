@@ -48,7 +48,7 @@ class BlockOverlayActivity : AppCompatActivity() {
             val raw = detail.removePrefix("temp_block:").removeSuffix("min").trim()
             val mins = raw.toLongOrNull() ?: 0L
             val displayText = formatDuration(mins)
-            binding.txtReason.text = "🚫 $displayText এর জন্য ব্লক করা হয়েছে"
+            binding.txtReason.text = getString(R.string.overlay_temp_block_fmt, displayText)
             binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
             // Hard lock — no unlock option
             binding.btnUnlock.visibility = View.GONE
@@ -99,23 +99,14 @@ class BlockOverlayActivity : AppCompatActivity() {
      *   45   → "৪৫ মিনিট"
      */
     private fun formatDuration(mins: Long): String {
-        if (mins <= 0) return "কিছুক্ষণ"
-        // 24 hour special-case
-        if (mins >= 24 * 60) {
-            val days = mins / (24 * 60)
-            val rest = mins % (24 * 60)
-            val hours = rest / 60
-            val builder = StringBuilder()
-            if (days > 0) builder.append("${days * 24 + hours} ঘন্টা")
-            else builder.append("${hours} ঘন্টা")
-            return builder.toString().trim()
-        }
+        if (mins <= 0) return getString(R.string.overlay_dur_short)
         if (mins >= 60) {
             val hours = mins / 60
             val remaining = mins % 60
-            return if (remaining > 0) "${hours} ঘন্টা ${remaining} মিনিট" else "${hours} ঘন্টা"
+            return if (remaining > 0) getString(R.string.overlay_dur_hours_minutes_fmt, hours, remaining)
+            else getString(R.string.overlay_dur_hours_fmt, hours)
         }
-        return "$mins মিনিট"
+        return getString(R.string.overlay_dur_minutes_fmt, mins)
     }
 
     private fun goHome() {
@@ -134,7 +125,7 @@ class BlockOverlayActivity : AppCompatActivity() {
         "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
         "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
         "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
-        "TAMPER_ATTEMPT" -> "⚠️ ট্যাম্পারিং চেষ্টা সনাক্ত করা হয়েছে! কমিটেড লক থাকা অবস্থায় সেটিংস পরিবর্তন করা নিষেধ।"
+        "TAMPER_ATTEMPT" -> getString(R.string.overlay_reason_tamper)
         else -> getString(R.string.overlay_reason_manual)
     }
 

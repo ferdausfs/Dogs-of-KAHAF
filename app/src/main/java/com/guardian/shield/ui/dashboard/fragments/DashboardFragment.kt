@@ -72,7 +72,7 @@ class DashboardFragment : Fragment() {
         if (timeLockManager.isLocked() || timeLockManager.isInCooldown()) {
             Snackbar.make(
                 binding.root,
-                "🔒 Commitment Lock active — ${timeLockManager.getRemainingFormatted()}",
+                getString(R.string.lock_active_fmt, timeLockManager.getRemainingFormatted()),
                 Snackbar.LENGTH_SHORT
             ).show()
             return
@@ -89,24 +89,24 @@ class DashboardFragment : Fragment() {
     private fun render(state: DashboardUiState) {
         when {
             !state.protectionActive -> {
-                binding.txtStatusTitle.text = "Service Off"
-                binding.txtStatusSubtitle.text = "Accessibility service is not running"
+                binding.txtStatusTitle.text = getString(R.string.status_off_title)
+                binding.txtStatusSubtitle.text = getString(R.string.status_off_subtitle)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.btnToggle.text = "Enable"
+                binding.btnToggle.text = getString(R.string.btn_enable)
                 stopShieldPulse()
             }
             !state.protectionEnabled -> {
-                binding.txtStatusTitle.text = "Paused"
-                binding.txtStatusSubtitle.text = "Protection is currently disabled"
+                binding.txtStatusTitle.text = getString(R.string.status_paused_title)
+                binding.txtStatusSubtitle.text = getString(R.string.status_paused_subtitle)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
-                binding.btnToggle.text = "Resume"
+                binding.btnToggle.text = getString(R.string.btn_resume)
                 stopShieldPulse()
             }
             else -> {
-                binding.txtStatusTitle.text = "Active"
-                binding.txtStatusSubtitle.text = "Monitoring ${state.todayCount} events today"
+                binding.txtStatusTitle.text = getString(R.string.status_on_title)
+                binding.txtStatusSubtitle.text = getString(R.string.status_on_subtitle_fmt, state.todayCount)
                 binding.imgShield.setImageResource(R.drawable.ic_shield_on)
-                binding.btnToggle.text = "Pause"
+                binding.btnToggle.text = getString(R.string.btn_pause)
                 startShieldPulse()
             }
         }

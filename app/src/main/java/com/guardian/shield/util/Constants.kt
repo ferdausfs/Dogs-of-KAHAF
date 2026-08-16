@@ -46,6 +46,12 @@ object GuardianConstants {
 
     const val ACCESSIBILITY_WATCHDOG_MS = 5_000L
 
+    // Liveness heartbeat from the accessibility service (produced) read by the
+    // foreground service watchdog (consumed). If no beat for this long the
+    // service is treated as dead even though the settings toggle is "on".
+    const val ACCESSIBILITY_HEARTBEAT_MS = 2_000L
+    const val ACCESSIBILITY_STALE_MS = 15_000L
+
     // Scroll Addiction Constants
     const val REEL_SWIPE_THRESHOLD = 15
     const val REEL_SESSION_MS = 5 * 60_000L

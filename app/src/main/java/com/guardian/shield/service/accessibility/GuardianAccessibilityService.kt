@@ -28,6 +28,7 @@ import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
 import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.ui.overlay.ReelReminderActivity
+import com.guardian.shield.util.AccessibilityHeartbeat
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -83,8 +84,14 @@ class GuardianAccessibilityService : AccessibilityService() {
     private val aiScanMap = LinkedHashMap<String, Long>()
     private var periodicJob: Job? = null
     private var stuckFlagJob: Job? = null
+    private var heartbeatJob: Job? = null
     private var homePkg: String? = null
     private var keyguardManager: KeyguardManager? = null
+
+    // LIFECYCLE GUARD — onServiceConnected() can be invoked again after a
+    // disconnect/onInterrupt without onDestroy(). Guard the one-time setup so
+    // we never double-register the screen receiver or stack coroutines.
+    @Volatile private var connected = false
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -103,6 +110,11 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        if (connected) {
+            Timber.w("Accessibility re-connected — skipping duplicate init")
+            return
+        }
+        connected = true
         Timber.i("Accessibility connected")
         homePkg = AppClassifier.getHomePkg(this)
         keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
@@ -137,6 +149,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         aiDetector.startPrefsCache(serviceScope)
         startPeriodicScanner()
         startStuckFlagWatchdog()
+        startHeartbeat()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -379,7 +392,10 @@ class GuardianAccessibilityService : AccessibilityService() {
 
         serviceScope.launch {
             try {
-                val text = withContext(Dispatchers.Default) { collectVisibleText() }
+                // AccessibilityNodeInfo trees are NOT thread-safe and can be
+                // recycled by the system mid-walk. Traverse on the main thread
+                // (the BFS is bounded to a few hundred cheap text reads).
+                val text = withContext(Dispatchers.Main) { collectVisibleText() }
                 val contentHash = text?.hashCode() ?: 0
                 if (contentHash == lastContentHash && !isBlockingInProgress) return@launch
                 lastContentHash = contentHash
@@ -683,6 +699,20 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * LIFECYCLE FIX — emit a liveness heartbeat so the foreground-service
+     * watchdog can tell "enabled but dead" from "enabled and alive".
+     */
+    private fun startHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = serviceScope.launch {
+            while (isActive) {
+                AccessibilityHeartbeat.beat()
+                delay(GuardianConstants.ACCESSIBILITY_HEARTBEAT_MS)
+            }
+        }
+    }
+
     private fun startPeriodicScanner() {
         periodicJob?.cancel()
         periodicJob = serviceScope.launch {
@@ -766,6 +796,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         runCatching { unregisterReceiver(screenReceiver) }
         periodicJob?.cancel()
         stuckFlagJob?.cancel()
+        heartbeatJob?.cancel()
         serviceScope.cancel()
         ioScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)

@@ -56,7 +56,7 @@ class BlockEventAdapter(
                 BlockReason.APP_BLOCKED     -> Triple(ctx.getString(R.string.reason_app),   R.color.error,         "🚫")
                 BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.purple,        "🕐")
                 BlockReason.MANUAL          -> Triple(ctx.getString(R.string.reason_manual),R.color.on_surface_dim,"✋")
-                BlockReason.TAMPER_ATTEMPT   -> Triple("Tamper Attempt",                     R.color.error,         "⚠️")
+                BlockReason.TAMPER_ATTEMPT   -> Triple(ctx.getString(R.string.reason_tamper), R.color.error,         "⚠️")
             }
 
             b.txtReason.text = "$emoji $reasonText"

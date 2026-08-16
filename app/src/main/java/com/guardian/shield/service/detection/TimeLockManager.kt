@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.guardian.shield.util.InMemoryPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.text.SimpleDateFormat
@@ -35,8 +36,8 @@ class TimeLockManager @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (t: Throwable) {
-            Timber.e(t, "EncryptedSharedPreferences failed, fallback")
-            context.getSharedPreferences("guardian_timelock_fb", Context.MODE_PRIVATE)
+            Timber.e(t, "EncryptedSharedPreferences failed; lock state will not persist (no plaintext fallback)")
+            InMemoryPreferences()
         }
     }
 

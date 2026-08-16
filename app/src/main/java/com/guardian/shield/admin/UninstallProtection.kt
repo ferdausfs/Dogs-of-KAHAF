@@ -24,16 +24,17 @@ object UninstallProtection {
     private val PACKAGE_MANAGER_PKGS: Set<String> = setOf(
         "com.android.settings",
         "com.miui.securitycenter",
-        "com.samsung.android.lool",
-        "com.samsung.android.app.appsedge",
+        "com.samsung.android.lool", // Samsung Device Care / Smart Manager
         "com.android.packageinstaller",
         "com.google.android.packageinstaller",
         "com.oneplus.security",
         "com.oppo.safe",
         "com.iqoo.secure",
         "com.android.vending", // Play Store for uninstallation
-        "com.google.android.settings.intelligence",
-        "com.android.systemui"
+        "com.google.android.settings.intelligence"
+        // NOTE: com.android.systemui and Samsung "Apps edge" were removed —
+        // they are transient surfaces (quick settings / edge panel), not app
+        // managers, and including them risks spurious home-bounces.
     )
 
     /**

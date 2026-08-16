@@ -157,4 +157,39 @@
     <string name="prompt_accessibility_body">Guardian Shield এর Accessibility Service বন্ধ করা হয়েছে। harmful content থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>
     <string name="prompt_accessibility_btn">Accessibility Service চালু করুন</string>
     <string name="prompt_accessibility_note">Settings → Accessibility → Guardian Shield → Enable</string>
+
+    <!-- Tamper / anti-uninstall -->
+    <string name="reason_tamper">Tamper Attempt</string>
+    <string name="tamper_notif_title">⚠️ Tampering Detected</string>
+    <string name="tamper_notif_text">Attempt: %1$s</string>
+    <string name="overlay_reason_tamper">⚠️ Tampering attempt detected! Changing settings is forbidden while a Commitment Lock is active.</string>
+    <string name="overlay_temp_block_fmt">🚫 Blocked for %1$s</string>
+    <string name="overlay_dur_short">a short while</string>
+    <string name="overlay_dur_minutes_fmt">%1$d minutes</string>
+    <string name="overlay_dur_hours_fmt">%1$d hours</string>
+    <string name="overlay_dur_hours_minutes_fmt">%1$d hours %2$d minutes</string>
+
+    <!-- Dashboard status / actions -->
+    <string name="status_off_title">Service Off</string>
+    <string name="status_off_subtitle">Accessibility service is not running</string>
+    <string name="status_paused_title">Paused</string>
+    <string name="status_paused_subtitle">Protection is currently disabled</string>
+    <string name="status_on_title">Active</string>
+    <string name="status_on_subtitle_fmt">Monitoring %1$d events today</string>
+    <string name="btn_enable">Enable</string>
+    <string name="btn_resume">Resume</string>
+    <string name="btn_pause">Pause</string>
+
+    <!-- Commitment Lock -->
+    <string name="lock_active_fmt">🔒 Commitment Lock active — %1$s</string>
+    <string name="lock_editing_disabled">🔒 Commitment Lock active — editing disabled</string>
+
+    <!-- MainActivity dialogs -->
+    <string name="battery_dialog_title">🔋 Stability Fix</string>
+    <string name="battery_dialog_message">Disable battery optimization to prevent Guardian Shield from being killed in the background.</string>
+    <string name="device_admin_dialog_title">⚠️ Uninstall Protection</string>
+    <string name="device_admin_dialog_message">Enable Device Admin to protect the app from being uninstalled.</string>
+    <string name="action_fix">Fix</string>
+    <string name="action_later">Later</string>
+    <string name="action_enable">Enable</string>
 </resources>
