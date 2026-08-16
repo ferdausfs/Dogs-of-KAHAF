@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.guardian.shield.util.InMemoryPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
@@ -13,6 +14,14 @@ import javax.inject.Singleton
 class SecureStorage @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    /**
+     * True only when the backing store is genuinely encrypted. When false the
+     * store is a non-persistent in-memory map and callers MUST NOT persist
+     * secrets (see [PinManager.setPin]).
+     */
+    @Volatile var isSecure: Boolean = true
+        private set
+
     private val prefs: SharedPreferences by lazy { createPrefs() }
 
     private fun createPrefs(): SharedPreferences {
@@ -28,8 +37,9 @@ class SecureStorage @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (t: Throwable) {
-            Timber.e(t, "EncryptedSharedPreferences init failed; fallback to plain prefs")
-            context.getSharedPreferences(FILE_NAME + "_fallback", Context.MODE_PRIVATE)
+            isSecure = false
+            Timber.e(t, "EncryptedSharedPreferences init failed — secure storage disabled (no plaintext fallback)")
+            InMemoryPreferences()
         }
     }
 

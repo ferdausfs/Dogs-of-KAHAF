@@ -2,7 +2,11 @@ package com.guardian.shield.service.detection
 
 import com.guardian.shield.data.local.datastore.SecureStorage
 import com.guardian.shield.util.GuardianConstants
+import timber.log.Timber
 import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,7 +19,15 @@ class PinManager @Inject constructor(
 
     fun setPin(pin: String): Boolean {
         if (pin.length !in 4..6 || !pin.all { it.isDigit() }) return false
-        secure.putString(SecureStorage.KEY_PIN_HASH, hash(pin))
+        // Fail closed: never persist the PIN unless the backing store is
+        // genuinely encrypted.
+        if (!secure.isSecure) {
+            Timber.e("Secure storage unavailable — refusing to store PIN")
+            return false
+        }
+        val salt = ByteArray(SALT_BYTES).also { SecureRandom().nextBytes(it) }
+        val hash = derive(pin, salt, PIN_ITERATIONS, KEY_BITS)
+        secure.putString(SecureStorage.KEY_PIN_HASH, "${salt.toHex()}$SEPARATOR${hash.toHex()}")
         secure.putInt(SecureStorage.KEY_PIN_ATTEMPTS, 0)
         secure.putLong(SecureStorage.KEY_PIN_LOCKOUT_UNTIL, 0L)
         return true
@@ -27,7 +39,7 @@ class PinManager @Inject constructor(
         if (now < lockedUntil) return VerifyResult.LockedOut(lockedUntil - now)
 
         val stored = secure.getString(SecureStorage.KEY_PIN_HASH) ?: return VerifyResult.NotSet
-        return if (stored == hash(pin)) {
+        return if (verifyStored(stored, pin)) {
             secure.putInt(SecureStorage.KEY_PIN_ATTEMPTS, 0)
             VerifyResult.Success
         } else {
@@ -49,10 +61,52 @@ class PinManager @Inject constructor(
         secure.remove(SecureStorage.KEY_PIN_LOCKOUT_UNTIL)
     }
 
-    private fun hash(pin: String): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val bytes = md.digest(pin.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
+    /**
+     * Verify against either the current salted format ("<saltHex>:<hashHex>")
+     * or the legacy unsalted SHA-256 format. Legacy matches are transparently
+     * migrated to the salted format.
+     */
+    private fun verifyStored(stored: String, pin: String): Boolean = try {
+        val parts = stored.split(SEPARATOR, limit = 2)
+        if (parts.size == 2) {
+            val salt = parts[0].fromHex()
+            val expected = parts[1].fromHex()
+            MessageDigest.isEqual(derive(pin, salt, PIN_ITERATIONS, KEY_BITS), expected)
+        } else {
+            val legacy = MessageDigest.getInstance("SHA-256")
+                .digest(pin.toByteArray(Charsets.UTF_8))
+            val matches = MessageDigest.isEqual(stored.fromHex(), legacy)
+            if (matches) migrateToSalted(pin)
+            matches
+        }
+    } catch (t: Throwable) {
+        Timber.e(t, "PIN verification failed")
+        false
+    }
+
+    private fun migrateToSalted(pin: String) {
+        try { setPin(pin) } catch (t: Throwable) { Timber.e(t, "PIN migration failed") }
+    }
+
+    /** Salted, key-stretched derivation via PBKDF2-HMAC-SHA256. */
+    private fun derive(pin: String, salt: ByteArray, iterations: Int, keyBits: Int): ByteArray {
+        val spec = PBEKeySpec(pin.toCharArray(), salt, iterations, keyBits)
+        return try {
+            SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                .generateSecret(spec)
+                .encoded
+        } finally {
+            spec.clearPassword()
+        }
+    }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+
+    private fun String.fromHex(): ByteArray {
+        require(length % 2 == 0) { "Invalid hex string" }
+        return ByteArray(length / 2) {
+            ((this[it * 2].digitToInt(16) shl 4) or this[it * 2 + 1].digitToInt(16)).toByte()
+        }
     }
 
     sealed class VerifyResult {
@@ -60,5 +114,12 @@ class PinManager @Inject constructor(
         data class Wrong(val remainingAttempts: Int) : VerifyResult()
         data class LockedOut(val msRemaining: Long) : VerifyResult()
         data object NotSet : VerifyResult()
+    }
+
+    private companion object {
+        const val PIN_ITERATIONS = 120_000
+        const val SALT_BYTES = 16
+        const val KEY_BITS = 256
+        const val SEPARATOR = ":"
     }
 }
