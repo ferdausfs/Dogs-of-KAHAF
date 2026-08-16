@@ -81,6 +81,6 @@ class AppListActivity : AppCompatActivity() {
     }
 
     private fun showLockedSnack() {
-        Snackbar.make(binding.root, "🔒 Commitment Lock active — editing disabled", Snackbar.LENGTH_SHORT).show()
+        Snackbar.make(binding.root, R.string.lock_editing_disabled, Snackbar.LENGTH_SHORT).show()
     }
 }

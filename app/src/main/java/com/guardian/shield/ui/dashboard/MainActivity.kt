@@ -119,15 +119,13 @@ class MainActivity : AppCompatActivity() {
     private fun checkBatteryOptimization() {
         if (!PermissionManager.isBatteryOptimizationIgnored(this)) {
             AlertDialog.Builder(this)
-                .setTitle("🔋 Stability Fix")
-                .setMessage(
-                    "Guardian Shield ব্যাকগ্রাউন্ডে বন্ধ হয়ে যাওয়া রোধ করতে Battery Optimization বন্ধ করুন।"
-                )
+                .setTitle(R.string.battery_dialog_title)
+                .setMessage(R.string.battery_dialog_message)
                 .setCancelable(false)
-                .setPositiveButton("Fix করুন") { _, _ ->
+                .setPositiveButton(R.string.action_fix) { _, _ ->
                     PermissionManager.openBatteryOptimizationSettings(this)
                 }
-                .setNegativeButton("পরে") { _, _ -> }
+                .setNegativeButton(R.string.action_later) { _, _ -> }
                 .show()
         }
     }
@@ -138,10 +136,10 @@ class MainActivity : AppCompatActivity() {
         val admin = ComponentName(this, GuardianDeviceAdminReceiver::class.java)
         if (!dpm.isAdminActive(admin)) {
             AlertDialog.Builder(this)
-                .setTitle("⚠️ Uninstall Protection")
-                .setMessage("App কে uninstall থেকে রক্ষা করতে Device Admin enable করুন।")
+                .setTitle(R.string.device_admin_dialog_title)
+                .setMessage(R.string.device_admin_dialog_message)
                 .setCancelable(false)
-                .setPositiveButton("Enable করুন") { _, _ ->
+                .setPositiveButton(R.string.action_enable) { _, _ ->
                     runCatching {
                         startActivity(
                             Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
@@ -150,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                 }
-                .setNegativeButton("পরে") { _, _ -> }
+                .setNegativeButton(R.string.action_later) { _, _ -> }
                 .show()
         }
     }

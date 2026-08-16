@@ -155,4 +155,39 @@
     <string name="prompt_accessibility_body">গার্ডিয়ান শিল্ড এর এক্সেসিবিলিটি সার্ভিস বন্ধ করা হয়েছে। ক্ষতিকারক কন্টেন্ট থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</string>
     <string name="prompt_accessibility_btn">এক্সেসিবিলিটি সার্ভিস চালু করুন</string>
     <string name="prompt_accessibility_note">Settings → Accessibility → Guardian Shield → Enable</string>
+
+    <!-- Tamper / anti-uninstall -->
+    <string name="reason_tamper">ট্যাম্পারিং চেষ্টা</string>
+    <string name="tamper_notif_title">⚠️ ট্যাম্পারিং সনাক্ত হয়েছে</string>
+    <string name="tamper_notif_text">চেষ্টা: %1$s</string>
+    <string name="overlay_reason_tamper">⚠️ ট্যাম্পারিং চেষ্টা সনাক্ত করা হয়েছে! কমিটেড লক থাকা অবস্থায় সেটিংস পরিবর্তন করা নিষেধ।</string>
+    <string name="overlay_temp_block_fmt">🚫 %1$s এর জন্য ব্লক করা হয়েছে</string>
+    <string name="overlay_dur_short">কিছুক্ষণ</string>
+    <string name="overlay_dur_minutes_fmt">%1$d মিনিট</string>
+    <string name="overlay_dur_hours_fmt">%1$d ঘণ্টা</string>
+    <string name="overlay_dur_hours_minutes_fmt">%1$d ঘণ্টা %2$d মিনিট</string>
+
+    <!-- Dashboard status / actions -->
+    <string name="status_off_title">সার্ভিস বন্ধ</string>
+    <string name="status_off_subtitle">এক্সেসিবিলিটি সার্ভিস চালু নেই</string>
+    <string name="status_paused_title">বিরাম</string>
+    <string name="status_paused_subtitle">সুরক্ষা বর্তমানে বন্ধ</string>
+    <string name="status_on_title">সক্রিয়</string>
+    <string name="status_on_subtitle_fmt">আজ %1$d টি ইভেন্ট মনিটর করা হচ্ছে</string>
+    <string name="btn_enable">চালু করুন</string>
+    <string name="btn_resume">চালু করুন</string>
+    <string name="btn_pause">বিরতি</string>
+
+    <!-- Commitment Lock -->
+    <string name="lock_active_fmt">🔒 কমিটেড লক সক্রিয় — %1$s</string>
+    <string name="lock_editing_disabled">🔒 কমিটেড লক সক্রিয় — সম্পাদনা বন্ধ</string>
+
+    <!-- MainActivity dialogs -->
+    <string name="battery_dialog_title">🔋 স্থিতিশীলতা ঠিক করুন</string>
+    <string name="battery_dialog_message">Guardian Shield ব্যাকগ্রাউন্ডে বন্ধ হয়ে যাওয়া রোধ করতে Battery Optimization বন্ধ করুন।</string>
+    <string name="device_admin_dialog_title">⚠️ আনইনস্টল সুরক্ষা</string>
+    <string name="device_admin_dialog_message">App কে uninstall থেকে রক্ষা করতে Device Admin enable করুন।</string>
+    <string name="action_fix">ঠিক করুন</string>
+    <string name="action_later">পরে</string>
+    <string name="action_enable">চালু করুন</string>
 </resources>

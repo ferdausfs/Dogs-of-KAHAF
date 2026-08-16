@@ -31,8 +31,8 @@ object TamperLogger {
                 as? NotificationManager ?: return
             val n = NotificationCompat.Builder(context, GuardianApp.CHANNEL_GUARDIAN)
                 .setSmallIcon(R.drawable.ic_warning)
-                .setContentTitle("⚠️ Tampering Detected")
-                .setContentText("Attempt: $attemptType")
+                .setContentTitle(context.getString(R.string.tamper_notif_title))
+                .setContentText(context.getString(R.string.tamper_notif_text, attemptType))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(true)
