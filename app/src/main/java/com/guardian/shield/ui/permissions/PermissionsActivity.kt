@@ -1,5 +1,6 @@
 package com.guardian.shield.ui.permissions
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,6 +9,7 @@ import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityPermissionsBinding
@@ -18,6 +20,10 @@ import dagger.hilt.android.AndroidEntryPoint
 class PermissionsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPermissionsBinding
+
+    private val notifPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* onResume() re-reads the grant state and refreshes the row */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,9 +72,15 @@ class PermissionsActivity : AppCompatActivity() {
                 btn = binding.btnNotification,
                 granted = PermissionManager.isNotificationGranted(this)
             ) {
-                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                })
+                // Request the runtime permission first; fall back to the app
+                // notification settings if the user previously denied it.
+                if (!PermissionManager.isNotificationGranted(this)) {
+                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    })
+                }
             }
         } else {
             binding.rowNotification.visibility = View.GONE
