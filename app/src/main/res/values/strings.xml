@@ -212,4 +212,16 @@
     <string name="action_fix">Fix</string>
     <string name="action_later">Later</string>
     <string name="action_enable">Enable</string>
+<!-- WATCHTOWER V3 dashboard copy -->
+    <string name="stat_tile_total">Blocked today\nমোট ব্লক</string>
+    <string name="stat_tile_ai">AI detections\nAI বিশ্লেষণ</string>
+    <string name="stat_tile_time">Time protected\nসময় সুরক্ষিত</string>
+    <string name="quick_actions">Quick actions · দ্রুত পদক্ষেপ</string>
+    <string name="todays_activity">Today’s activity · সাম্প্রতিক ব্লক</string>
+    <string name="see_all">See all</string>
+    <string name="quick_apps_title">App Blocking</string>
+    <string name="quick_apps_sub">১২টি ব্লক করা</string>
+    <string name="quick_keywords_title">Keywords</string>
+    <string name="quick_keywords_sub">৮টি কিওয়ার্ড</string>
+    <string name="quick_whitelist_sub">৩টি অ্যাপ</string>
 </resources>

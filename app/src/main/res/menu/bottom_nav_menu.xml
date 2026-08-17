@@ -11,7 +11,7 @@
         android:title="Activity" />
     <item
         android:id="@+id/nav_protection"
-        android:icon="@drawable/ic_shield_on"
+        android:icon="@drawable/ic_shield_check"
         android:title="Protection" />
     <item
         android:id="@+id/nav_settings"

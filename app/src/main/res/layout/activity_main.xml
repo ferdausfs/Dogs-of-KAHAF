@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- WATCHTOWER V3 — shell: toolbar + fragment host + bottom nav -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -20,7 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="Guardian Shield"
+            app:title="@string/app_name"
             app:titleTextColor="@color/on_surface"
             app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
     </com.google.android.material.appbar.AppBarLayout>
@@ -46,7 +47,7 @@
         android:id="@+id/bottom_navigation"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/bg_elevated"
+        style="@style/Widget.GuardianShield.BottomNav"
         app:menu="@menu/bottom_nav_menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -55,7 +56,5 @@
         app:itemRippleColor="@color/ripple_primary"
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
-        app:itemActiveIndicatorStyle="@style/Widget.GuardianShield.BottomNavActive"
         app:elevation="0dp"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

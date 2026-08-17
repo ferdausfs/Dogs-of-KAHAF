@@ -210,4 +210,16 @@
     <string name="action_fix">ঠিক করুন</string>
     <string name="action_later">পরে</string>
     <string name="action_enable">চালু করুন</string>
+<!-- WATCHTOWER V3 dashboard copy -->
+    <string name="stat_tile_total">মোট ব্লক\nBlocked today</string>
+    <string name="stat_tile_ai">AI বিশ্লেষণ\nAI detections</string>
+    <string name="stat_tile_time">সময় সুরক্ষিত\nTime protected</string>
+    <string name="quick_actions">দ্রুত পদক্ষেপ · Quick actions</string>
+    <string name="todays_activity">সাম্প্রতিক ব্লক · Today’s activity</string>
+    <string name="see_all">সব দেখুন</string>
+    <string name="quick_apps_title">অ্যাপ ব্লকিং</string>
+    <string name="quick_apps_sub">১২টি ব্লক করা</string>
+    <string name="quick_keywords_title">কিওয়ার্ড</string>
+    <string name="quick_keywords_sub">৮টি কিওয়ার্ড</string>
+    <string name="quick_whitelist_sub">৩টি অ্যাপ</string>
 </resources>
