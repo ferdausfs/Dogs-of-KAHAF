@@ -29,6 +29,8 @@ import com.guardian.shield.R
 import com.guardian.shield.admin.TamperLogger
 import com.guardian.shield.admin.UninstallProtection
 import com.guardian.shield.data.local.datastore.GuardianPreferences
+import com.guardian.shield.data.local.db.BlockEventDao
+import com.guardian.shield.data.local.db.BlockEventEntity
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.AiStrikeResult
@@ -66,6 +68,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var reelScrollDetector: ReelScrollDetector
     @Inject lateinit var timeLockManager: TimeLockManager
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
+    @Inject lateinit var blockEventDao: BlockEventDao
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -294,7 +297,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             when (val result = blockingEngine.evaluateAiStrike(pkg)) {
                 is AiStrikeResult.Blocked -> result.detail
                 is AiStrikeResult.StrikeCounted -> {
-                    showAiStrikeWarning(result.strikeCount)
+                    showAiStrikeWarning(pkg, result.strikeCount)
                     Timber.d(
                         "AI strike ${result.strikeCount}/${GuardianConstants.STRIKE_THRESHOLD} " +
                             "for $pkg — warning shown, staying in app"
@@ -339,7 +342,7 @@ class GuardianAccessibilityService : AccessibilityService() {
      * Shown for strikes 1 and 2 only; never for strike 3 (that path returns a
      * [AiStrikeResult.Blocked] and gets the full overlay instead).
      */
-    private fun showAiStrikeWarning(strikeCount: Int) {
+    private fun showAiStrikeWarning(pkg: String, strikeCount: Int) {
         // Strikes 1 & 2 only — styled mid-screen overlay card (v2.5.2 redesign of
         // the old plain Toast). Strike counting, the STRIKE_THRESHOLD gate and the
         // strike-3 BlockOverlayActivity path are untouched.
@@ -349,7 +352,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         mainHandler.post {
             try {
                 if (Settings.canDrawOverlays(this)) {
-                    showStrikeWarningOverlay(strikeCount)
+                    showStrikeWarningOverlay(pkg, strikeCount)
                 } else {
                     // Overlay permission not granted yet — keep the pre-2.5.2 Toast
                     // as a graceful fallback so the warning is never silently lost.
@@ -389,7 +392,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     private var strikeWarningView: View? = null
     private val strikeWarningDismissRunnable = Runnable { dismissAiStrikeWarning() }
 
-    private fun showStrikeWarningOverlay(strikeCount: Int) {
+    private fun showStrikeWarningOverlay(pkg: String, strikeCount: Int) {
         dismissAiStrikeWarning()
 
         val card = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_GuardianShield))
@@ -401,6 +404,16 @@ class GuardianAccessibilityService : AccessibilityService() {
             GuardianConstants.STRIKE_THRESHOLD
         )
         // kicker + body are static copy from the approved mockup (no strike number).
+
+        // v2.5.4 — "Not sensitive" audit report. Own click target: does NOT trigger
+        // the card's tap-to-dismiss listener below. Writes one block_events row
+        // (audit-only) then dismisses the card. Deliberately does NOT call
+        // FalsePositiveMemory.addSignature() or otherwise alter AiDetector.
+        val notSensitiveBtn = card.findViewById<TextView>(R.id.btnNotSensitive)
+        notSensitiveBtn.setOnClickListener {
+            reportNotSensitive(pkg, strikeCount)
+            dismissAiStrikeWarning()
+        }
 
         val metrics = resources.displayMetrics
         val marginPx = (20 * metrics.density).toInt() // v2.5.0 screen padding token
@@ -436,6 +449,38 @@ class GuardianAccessibilityService : AccessibilityService() {
         } catch (_: Throwable) {
             // already removed — nothing to do
         }
+    }
+
+    /**
+     * v2.5.4 — lightweight "not sensitive" audit report for a strike-1/2 warning.
+     *
+     * This ONLY writes a [BlockEventEntity] row (reason = [BlockReason.NOT_SENSITIVE],
+     * strike count recorded in `matchedTerm`) into the existing `block_events` table
+     * for later human review. It is deliberately isolated from the detection path:
+     * it never calls [FalsePositiveMemory.addSignature]/[FalsePositiveMemory.isKnown],
+     * never touches [AiDetector], and never affects [com.guardian.shield.service.blocker.TempBlockManager]
+     * strike counting — future scans for this pattern behave exactly as before.
+     *
+     * The DB write runs on [ioScope] (off the main thread); the confirmation Toast
+     * is shown immediately from the click handler's (main) thread.
+     */
+    private fun reportNotSensitive(pkg: String, strikeCount: Int) {
+        val matched = "strike=$strikeCount"
+        ioScope.launch {
+            runCatching {
+                blockEventDao.insert(
+                    BlockEventEntity(
+                        packageName = pkg,
+                        reason = BlockReason.NOT_SENSITIVE.name,
+                        matchedTerm = matched,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            }.onFailure { Timber.e(it, "Failed to log not-sensitive report for $pkg ($matched)") }
+        }
+        runCatching {
+            Toast.makeText(this, R.string.ai_strike_report_confirmed, Toast.LENGTH_SHORT).show()
+        }.onFailure { Timber.w(it, "Not-sensitive report Toast failed") }
     }
 
     private fun handleWindowChange(pkg: String) {
