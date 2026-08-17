@@ -6,8 +6,7 @@
     android:layout_height="match_parent"
     android:padding="32dp">
 
-    <!-- Big emoji icon hero (kept simple to avoid bundling SVG illustrations
-         that risk theme/version drift) -->
+    <!-- Icon hero -->
     <FrameLayout
         android:id="@+id/iconFrame"
         android:layout_width="160dp"
@@ -24,7 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="🛡️"
-            android:textSize="84sp"
+            android:textSize="80sp"
             android:gravity="center"/>
     </FrameLayout>
 
@@ -36,7 +35,8 @@
         android:textColor="@color/primary"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:letterSpacing="0.15"
+        android:letterSpacing="0.14"
+        android:textAllCaps="true"
         android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/iconFrame"
         app:layout_constraintStart_toStartOf="parent"
@@ -49,8 +49,9 @@
         android:layout_height="wrap_content"
         android:text=""
         android:textColor="@color/on_surface"
-        android:textSize="28sp"
+        android:textSize="27sp"
         android:textStyle="bold"
+        android:letterSpacing="-0.02"
         android:gravity="center"
         android:fontFamily="sans-serif-medium"
         app:layout_constraintTop_toBottomOf="@id/txtHighlight"

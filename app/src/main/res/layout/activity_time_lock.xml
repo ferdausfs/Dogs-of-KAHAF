@@ -22,9 +22,7 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- ══════════════════════════════════════════
-                 LOCKED / COOLDOWN STATE
-            ══════════════════════════════════════════ -->
+            <!-- ═════════ LOCKED / COOLDOWN STATE ═════════ -->
             <LinearLayout
                 android:id="@+id/groupLocked"
                 android:layout_width="match_parent"
@@ -34,21 +32,42 @@
                 android:visibility="gone"
                 android:padding="8dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔒"
-                    android:textSize="64sp"
-                    android:layout_marginBottom="12dp"/>
+                <FrameLayout
+                    android:layout_width="88dp"
+                    android:layout_height="88dp">
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_shield_glow"
+                        android:alpha="0.26"/>
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:cardCornerRadius="26dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/warning_container"
+                        app:strokeColor="@color/border_strong"
+                        app:strokeWidth="1dp">
+                        <ImageView
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_lock"
+                            android:importantForAccessibility="no"
+                            app:tint="@color/warning_amber"/>
+                    </com.google.android.material.card.MaterialCardView>
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/txtLockStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#FF4444"
+                    android:textColor="@color/warning_amber"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:gravity="center"/>
+                    android:letterSpacing="-0.01"
+                    android:gravity="center"
+                    android:layout_marginTop="14dp"/>
 
                 <TextView
                     android:id="@+id/txtLockLabel"
@@ -58,12 +77,15 @@
                     android:textSize="13sp"
                     android:layout_marginTop="4dp"/>
 
-                <!-- Countdown card (cooldown চলাকালীন) -->
+                <!-- Countdown card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="16dp"
+                    app:cardBackgroundColor="@color/surface_high"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp"
                     android:layout_marginTop="20dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -76,9 +98,10 @@
                             android:layout_height="wrap_content"
                             android:text="বাকি সময়"
                             android:textColor="@color/on_surface_dim"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
                             android:textAllCaps="true"
-                            android:letterSpacing="0.08"/>
+                            android:letterSpacing="0.13"/>
                         <TextView
                             android:id="@+id/txtRemaining"
                             android:layout_width="wrap_content"
@@ -86,6 +109,7 @@
                             android:textColor="@color/primary"
                             android:textSize="26sp"
                             android:textStyle="bold"
+                            android:letterSpacing="-0.02"
                             android:layout_marginTop="6dp"/>
                         <TextView
                             android:id="@+id/txtLockEnd"
@@ -97,12 +121,15 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Cooldown note (cooldown চলাকালীন দেখাবে) -->
+                <!-- Cooldown note -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="#1A4CAF50"
-                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/success_container"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp"
                     android:layout_marginTop="16dp">
                     <TextView
                         android:id="@+id/txtCooldownNote"
@@ -110,13 +137,13 @@
                         android:layout_height="wrap_content"
                         android:padding="16dp"
                         android:text="⏳ Cooldown চলছে — সময় শেষ হলে স্বয়ংক্রিয়ভাবে unlock হয়ে যাবে। Stay strong! 💪"
-                        android:textColor="#4CAF50"
+                        android:textColor="@color/success"
                         android:textSize="13sp"
                         android:lineSpacingMultiplier="1.4"
                         android:visibility="gone"/>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Unlock request button (LOCKED state এ দেখাবে, COOLDOWN এ নয়) -->
+                <!-- Unlock request button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRequestUnlock"
                     android:layout_width="match_parent"
@@ -125,6 +152,7 @@
                     android:text="🔓 Unlock Request করুন"
                     android:textColor="@color/on_surface"
                     style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:cornerRadius="20dp"
                     android:visibility="gone"/>
 
                 <TextView
@@ -139,22 +167,41 @@
 
             </LinearLayout>
 
-            <!-- ══════════════════════════════════════════
-                 UNLOCKED STATE — duration picker
-            ══════════════════════════════════════════ -->
+            <!-- ═════════ UNLOCKED STATE — duration picker ═════════ -->
             <LinearLayout
                 android:id="@+id/groupUnlocked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_gravity="center_horizontal"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/badge_success_bg"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp">
+                    <ImageView
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_lock"
+                        android:importantForAccessibility="no"
+                        app:tint="@color/primary"/>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🛡️ Commitment Lock"
+                    android:layout_gravity="center_horizontal"
+                    android:text="Commitment Lock"
                     android:textColor="@color/on_surface"
                     android:textSize="20sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:letterSpacing="-0.01"
+                    android:layout_marginTop="12dp"/>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -163,14 +210,18 @@
                     android:textColor="@color/on_surface_dim"
                     android:textSize="14sp"
                     android:lineSpacingMultiplier="1.4"
+                    android:gravity="center"
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="24dp"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="16dp"
+                    app:cardBackgroundColor="@color/surface_high"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp"
                     android:layout_marginBottom="16dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -181,14 +232,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Cooldown Duration"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="12sp"
+                            android:textColor="@color/primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
                             android:textAllCaps="true"
-                            android:letterSpacing="0.08"
+                            android:letterSpacing="0.13"
                             android:layout_marginBottom="12dp"/>
                         <com.google.android.material.chip.ChipGroup
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
+                            android:layout_height="wrap_content"
+                            app:chipSpacingHorizontal="8dp">
                             <com.google.android.material.chip.Chip
                                 android:id="@+id/chip1day"
                                 style="@style/Widget.Material3.Chip.Suggestion"
@@ -226,14 +279,17 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="#1AFF8C00"
-                    app:cardCornerRadius="12dp">
+                    app:cardBackgroundColor="@color/warning_container"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp">
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:padding="16dp"
                         android:text="⚠️ Lock করার পর শুধু Unlock Request দিয়ে cooldown শুরু করা যাবে। Cooldown শেষে lock উঠবে — আগে নয়।"
-                        android:textColor="#FF8C00"
+                        android:textColor="@color/warning_amber"
                         android:textSize="13sp"
                         android:lineSpacingMultiplier="1.4"/>
                 </com.google.android.material.card.MaterialCardView>
