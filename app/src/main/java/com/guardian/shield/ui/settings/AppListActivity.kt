@@ -47,6 +47,22 @@ class AppListActivity : AppCompatActivity() {
         } else {
             binding.lockBanner.visibility = View.GONE
         }
+        // Hero toggle — premium UI, always ON when protection active, reflects locked state
+        try {
+            binding.switchHero.isChecked = true
+            binding.switchHero.setOnCheckedChangeListener { _, isChecked ->
+                if (locked) {
+                    binding.switchHero.isChecked = true
+                    showLockedSnack()
+                } else {
+                    // App Blocking ON is tied to protection — keep ON, show info if user tries OFF
+                    if (!isChecked) {
+                        binding.switchHero.isChecked = true
+                        Snackbar.make(binding.root, "App Blocking stays ON while protection is active • সুরক্ষা সক্রিয় থাকলে অ্যাপ ব্লক সক্রিয় থাকে", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
 
         adapter = AppListAdapter(
             pm = packageManager,

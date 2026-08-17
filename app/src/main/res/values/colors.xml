@@ -1,43 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_main">#111318</color>
-    <color name="surface">#111318</color>
-    <color name="surface_variant">#44474E</color>
-    <color name="surface_high">#1A1C1E</color>
+    <!-- ===== Premium Dark — Guardian Shield Design System (2026-08-17) =====
+     Keep app name Guardian Shield, shield mark only.
+     Primary kept #D0E4FF (existing brand light blue — premium direction). -->
+    <color name="bg_main">#0E1116</color>
+    <color name="bg_elevated">#151A22</color>
+    <color name="surface">#161C26</color>
+    <color name="surface_variant">#242E3B</color>
+    <color name="surface_high">#1C232E</color>
+    <color name="surface_highest">#2A3647</color>
 
     <color name="primary">#D0E4FF</color>
     <color name="on_primary">#003258</color>
-    <color name="primary_container">#004A77</color>
+    <!-- Deeper container for hero / nav active pill — old #004A77 kept as fallback below -->
+    <color name="primary_container">#1A344F</color>
+    <color name="primary_container_start">#1E3A5F</color>
+    <color name="primary_container_end">#10233A</color>
     <color name="on_primary_container">#D0E4FF</color>
     <color name="primary_dim">#AAC7FF</color>
 
-    <color name="secondary">#D1E4FF</color>
+    <color name="secondary">#B9C8DF</color>
     <color name="on_secondary">#003258</color>
-    <color name="secondary_container">#004A77</color>
+    <color name="secondary_container">#1A344F</color>
     <color name="on_secondary_container">#D1E4FF</color>
 
     <color name="error">#FFB4AB</color>
     <color name="on_error">#690005</color>
-    <color name="success">#B0F2CC</color>
+    <color name="error_container">#3A1A1A</color>
+    <color name="success">#6EE7B7</color>
+    <color name="success_container">#132A22</color>
+    <!-- Legacy success light kept for compat -->
+    <color name="success_legacy">#B0F2CC</color>
 
-    <color name="on_surface">#E2E2E6</color>
-    <color name="on_surface_variant">#C4C6D0</color>
-    <color name="on_surface_dim">#9E9E9E</color>
+    <color name="on_surface">#E2E6EB</color>
+    <color name="on_surface_variant">#A3ADBB</color>
+    <color name="on_surface_dim">#6B7585</color>
 
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="overlay_dim">#CC000000</color>
+    <color name="overlay_dim">#CC0B0E14</color>
+    <color name="overlay_dim_solid">#0C0F14</color>
     <color name="ripple_primary">#20D1E4FF</color>
     <color name="ripple_error">#20FF4444</color>
-    <color name="card_stroke">#1AFFFFFF</color>
+    <color name="card_stroke">#14FFFFFF</color>
+    <color name="border_subtle">#14FFFFFF</color>
+    <color name="border_strong">#24FFFFFF</color>
 
-    <!-- TASK 5 — UI improvement palette additions -->
-    <color name="block_indicator">#FFB4AB</color>
-    <color name="allow_indicator">#B0F2CC</color>
-    <color name="surface_gradient_start">#111318</color>
-    <color name="surface_gradient_end">#1A1C1E</color>
-    <color name="ai_detection_color">#D0BCFF</color>
-    <color name="warning_amber">#FFB300</color>
+    <!-- Status indicators -->
+    <color name="block_indicator">#FF8A80</color>
+    <color name="allow_indicator">#6EE7B7</color>
+    <color name="surface_gradient_start">#0E1116</color>
+    <color name="surface_gradient_end">#1C232E</color>
+    <color name="ai_detection_color">#A78BFA</color>
+    <color name="ai_accent">#A78BFA</color>
+    <color name="warning_amber">#FBBF24</color>
+    <color name="warning">#FBBF24</color>
     <color name="purple">#D0BCFF</color>
+
+    <!-- Badge backgrounds (12% alpha) -->
+    <color name="badge_success_bg">#1F6EE7B7</color>
+    <color name="badge_error_bg">#1FFF8A80</color>
+    <color name="badge_ai_bg">#24A78BFA</color>
 </resources>

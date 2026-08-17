@@ -61,6 +61,16 @@ class BlockEventAdapter(
 
             b.txtReason.text = "$emoji $reasonText"
             b.txtTime.text   = time
+            try { b.txtTimeInline.text = time } catch (_: Throwable) {}
+            try {
+                b.txtBadgeBlocked.text = when (e.reason) {
+                    BlockReason.APP_BLOCKED -> "Blocked"
+                    BlockReason.SCHEDULE_BLOCKED -> "Schedule"
+                    BlockReason.AI_DETECTION -> "AI Blocked"
+                    BlockReason.KEYWORD_MATCH -> "Keyword"
+                    else -> "Blocked"
+                }
+            } catch (_: Throwable) {}
 
             val color = ctx.getColor(colorRes)
             b.badge.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color))
@@ -71,6 +81,20 @@ class BlockEventAdapter(
                 b.imgAppIcon.setImageDrawable(icon)
             } catch (_: Throwable) {
                 b.imgAppIcon.setImageResource(R.drawable.ic_app_placeholder)
+            }
+
+            b.root.setOnClickListener {
+                // Optional: open Blocked Content details (flagged for approval, approved in v2 mockup)
+                runCatching {
+                    val ctx = b.root.context
+                    val intent = android.content.Intent(ctx, com.guardian.shield.ui.overlay.BlockedDetailActivity::class.java).apply {
+                        putExtra(com.guardian.shield.ui.overlay.BlockedDetailActivity.EXTRA_PACKAGE, e.packageName)
+                        putExtra(com.guardian.shield.ui.overlay.BlockedDetailActivity.EXTRA_CATEGORY, e.reason.name)
+                        putExtra(com.guardian.shield.ui.overlay.BlockedDetailActivity.EXTRA_SOURCE, e.packageName)
+                        putExtra(com.guardian.shield.ui.overlay.BlockedDetailActivity.EXTRA_TIME, b.txtTime.text.toString())
+                    }
+                    ctx.startActivity(intent)
+                }
             }
 
             b.root.setOnLongClickListener {

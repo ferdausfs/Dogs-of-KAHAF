@@ -4,9 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="6dp"
-    app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="12dp">
+    android:layout_margin="4dp"
+    app:cardBackgroundColor="@color/surface_high"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/border_subtle"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,6 +18,22 @@
         android:gravity="center_vertical"
         android:padding="14dp">
 
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/surface_variant"
+            app:strokeWidth="0dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="🔤"
+                android:textSize="16sp"/>
+        </com.google.android.material.card.MaterialCardView>
+
         <TextView
             android:id="@+id/txtKeyword"
             android:layout_width="0dp"
@@ -22,22 +41,26 @@
             android:layout_height="wrap_content"
             android:text="keyword"
             android:textColor="@color/on_surface"
-            android:textSize="15sp"/>
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"/>
 
         <TextView
             android:id="@+id/badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="PLAIN"
-            android:textColor="@color/secondary"
+            android:textColor="@color/on_surface_variant"
             android:textSize="10sp"
             android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:background="@drawable/bg_badge"
+            android:backgroundTint="@color/surface_variant"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_stat_card"/>
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:layout_marginEnd="8dp"/>
 
         <ImageButton
             android:id="@+id/btnDelete"

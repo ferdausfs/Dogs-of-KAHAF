@@ -17,102 +17,366 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="@string/activity_log_title"
+            app:title="Activity • অ্যাক্টিভিটি লগ"
             app:titleTextColor="@color/on_surface"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:navigationIconTint="@color/on_surface"/>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
+        android:overScrollMode="never"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Filter chips -->
-        <HorizontalScrollView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:scrollbars="none">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <com.google.android.material.chip.ChipGroup
+            <!-- PERIOD SEGMENTED — Day/Week/Month to match reference -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="999dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/surface"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="4dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDay"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="40dp"
+                        android:text="Day"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        app:cornerRadius="999dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWeek"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="40dp"
+                        android:text="Week"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface"
+                        app:backgroundTint="@color/surface_variant"
+                        app:cornerRadius="999dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMonth"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="40dp"
+                        android:text="Month"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        app:cornerRadius="999dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- STATS CARD — Blocked Attempts 78 +24% vs yesterday + bar chart -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/surface_high"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Blocked Attempts\nব্লক করা প্রচেষ্টা"
+                                android:textColor="@color/on_surface_variant"
+                                android:textSize="12sp"
+                                android:lineSpacingMultiplier="0.9"/>
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="6dp">
+
+                                <TextView
+                                    android:id="@+id/txtBlockedAttempts"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="78"
+                                    android:textColor="@color/on_surface"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="↗ 24% vs yesterday"
+                                    android:textColor="@color/success"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginStart="10dp"
+                                    android:background="@drawable/bg_badge"
+                                    android:backgroundTint="#1F6EE7B7"
+                                    android:paddingStart="8dp"
+                                    android:paddingEnd="8dp"
+                                    android:paddingTop="4dp"
+                                    android:paddingBottom="4dp"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_shield_on"
+                            app:tint="@color/ai_detection_color"
+                            android:background="@drawable/bg_badge"
+                            android:padding="8dp"/>
+                    </LinearLayout>
+
+                    <!-- Simple bar chart — 7 bars, Thu highlighted purple like reference -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="92dp"
+                        android:orientation="horizontal"
+                        android:gravity="bottom"
+                        android:layout_marginTop="16dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.36" android:background="@drawable/bg_badge" android:backgroundTint="#2E3A4E"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mon" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.62" android:background="@drawable/bg_badge" android:backgroundTint="#2E3A4E"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tue" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.78" android:background="@drawable/bg_badge" android:backgroundTint="#3C4A6A"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wed" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.88" android:background="@drawable/bg_badge" android:backgroundTint="@color/ai_detection_color"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Thu" android:textSize="9sp" android:textColor="@color/ai_detection_color" android:textStyle="bold" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.54" android:background="@drawable/bg_badge" android:backgroundTint="#2E3A4E"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fri" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal"
+                            android:layout_marginEnd="4dp">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.42" android:background="@drawable/bg_badge" android:backgroundTint="#2E3A4E"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sat" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="bottom|center_horizontal">
+                            <View android:layout_width="12dp" android:layout_height="0dp" android:layout_weight="0.30" android:background="@drawable/bg_badge" android:backgroundTint="#1E2632"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sun" android:textSize="9sp" android:textColor="@color/on_surface_dim" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="14dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="12 AM"
+                            android:textColor="@color/on_surface_dim"
+                            android:textSize="9sp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="12 PM"
+                            android:textColor="@color/on_surface_dim"
+                            android:textSize="9sp"
+                            android:gravity="center"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="11 PM"
+                            android:textColor="@color/on_surface_dim"
+                            android:textSize="9sp"
+                            android:gravity="end"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- FILTER CHIPS — All / AI / Keyword / App / Schedule -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:singleLine="true"
-                app:singleSelection="true"
-                app:selectionRequired="true">
+                android:text="Filter by category • ক্যাটাগরি অনুযায়ী"
+                android:textColor="@color/primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:textAllCaps="true"
+                android:layout_marginBottom="8dp"/>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipAll"
-                    style="@style/Widget.Material3.Chip.Filter"
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:paddingBottom="8dp">
+
+                <com.google.android.material.chip.ChipGroup
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/log_filter_all"
-                    android:checked="true"/>
+                    android:singleLine="true"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipAi"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/log_filter_ai"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipAll"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_filter_all"
+                        android:checked="true"/>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipKeyword"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/log_filter_keyword"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipAi"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_filter_ai"/>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipApp"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/log_filter_app"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipKeyword"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_filter_keyword"/>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipSchedule"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/log_filter_schedule"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipApp"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_filter_app"/>
 
-            </com.google.android.material.chip.ChipGroup>
-        </HorizontalScrollView>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipSchedule"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/log_filter_schedule"/>
 
-        <TextView
-            android:id="@+id/txtCount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="@color/on_surface_dim"
-            android:textSize="12sp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="6dp"/>
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
 
-        <TextView
-            android:id="@+id/txtEmpty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/log_empty"
-            android:textColor="@color/on_surface_dim"
-            android:gravity="center"
-            android:padding="48dp"
-            android:visibility="gone"/>
+            <TextView
+                android:id="@+id/txtCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/on_surface_dim"
+                android:textSize="12sp"
+                android:paddingBottom="6dp"/>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerEvents"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingTop="4dp"
-            android:paddingBottom="16dp"/>
-    </LinearLayout>
+            <TextView
+                android:id="@+id/txtEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/log_empty"
+                android:textColor="@color/on_surface_dim"
+                android:gravity="center"
+                android:padding="48dp"
+                android:visibility="gone"/>
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerEvents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingTop="4dp"
+                android:paddingBottom="16dp"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -120,10 +120,20 @@
     <string name="pin_not_set">কোনো পিন সেট করা নেই</string>
     <string name="delete">মুছুন</string>
 
-    <string name="overlay_access_blocked">এক্সেস ব্লকড</string>
-    <string name="overlay_go_home">হোমে যান</string>
+    <string name="overlay_access_blocked">সংবেদনশীল কন্টেন্ট ব্লক করা হয়েছে</string>
+    <string name="overlay_access_blocked_bn">সংবেদনশীল কন্টেন্ট ব্লক করা হয়েছে</string>
+    <string name="overlay_sensitive_subtitle">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</string>
+    <string name="overlay_go_home">সুরক্ষিত থাকুন</string>
+    <string name="overlay_go_home_bn">সুরক্ষিত থাকুন</string>
     <string name="overlay_request_unlock">আনলক রিকোয়েস্ট</string>
-    <string name="overlay_motivation">দৃঢ় থাকুন 💪</string>
+    <string name="overlay_motivation">দৃঢ় থাকুন 💪 STAY STRONG</string>
+    <string name="overlay_protection">সুরক্ষা</string>
+    <string name="overlay_protection_active">সক্রিয়</string>
+    <string name="overlay_blocked_category">ব্লক করা ক্যাটাগরি</string>
+    <string name="overlay_time">সময়</string>
+    <string name="overlay_report_close">রিপোর্ট ও বন্ধ করুন</string>
+    <string name="overlay_blocked_content">কন্টেন্ট ব্লক করা হয়েছে</string>
+    <string name="overlay_you_are_safe">আপনি নিরাপদ — Guardian Shield আপনাকে সুরক্ষিত রেখেছে</string>
     <string name="overlay_reason_ai">AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে</string>
     <string name="overlay_reason_kw">কিওয়ার্ড মিলেছে: %1$s</string>
     <string name="overlay_reason_app">অ্যাপটি ব্লক করা হয়েছে</string>

@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="@string/app_name"
+            app:title="Guardian Shield"
             app:titleTextColor="@color/on_surface"
             app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
     </com.google.android.material.appbar.AppBarLayout>
@@ -34,11 +34,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="@color/border_subtle"
+        app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/bg_main"
+        android:background="@color/bg_elevated"
         app:menu="@menu/bottom_nav_menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -46,6 +54,8 @@
         app:labelVisibilityMode="labeled"
         app:itemRippleColor="@color/ripple_primary"
         app:itemIconTint="@color/nav_item_color"
-        app:itemTextColor="@color/nav_item_color"/>
+        app:itemTextColor="@color/nav_item_color"
+        app:itemActiveIndicatorStyle="@style/Widget.GuardianShield.BottomNavActive"
+        app:elevation="0dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

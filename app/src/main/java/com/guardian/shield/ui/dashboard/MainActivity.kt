@@ -58,6 +58,10 @@ class MainActivity : AppCompatActivity() {
                     startActivity(Intent(this, ActivityLogActivity::class.java))
                     false
                 }
+                R.id.nav_protection -> {
+                    loadFragment(com.guardian.shield.ui.dashboard.fragments.ProtectionFragment())
+                    true
+                }
                 R.id.nav_settings -> {
                     startActivity(Intent(this, SettingsActivity::class.java))
                     false

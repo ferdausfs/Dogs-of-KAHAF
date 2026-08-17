@@ -126,6 +126,12 @@
             android:showOnLockScreen="true"
             android:turnScreenOn="true"/>
 
+        <!-- Optional: Blocked Content Details (flagged for approval) -->
+        <activity
+            android:name=".ui.overlay.BlockedDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.dashboard.MainActivity"/>
+
         <!-- TASK 2: Islamic reminder overlay for reel/short addiction -->
         <activity
             android:name=".ui.overlay.ReelReminderActivity"

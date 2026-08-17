@@ -16,9 +16,10 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="@string/keywords_title"
+            app:title="Keywords • কিওয়ার্ড ফিল্টার"
             app:titleTextColor="@color/on_surface"
             app:navigationIcon="@drawable/ic_arrow_back"/>
+
         <!-- Lock banner -->
         <LinearLayout
             android:id="@+id/lockBanner"
@@ -30,23 +31,23 @@
             android:paddingEnd="16dp"
             android:paddingTop="10dp"
             android:paddingBottom="10dp"
-            android:background="@color/surface"
+            android:background="#2A2520"
             android:visibility="gone">
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_lock"
-                android:contentDescription="@null" />
+                android:contentDescription="@null"/>
             <TextView
                 android:id="@+id/txtLockRemaining"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:textColor="@color/primary"
+                android:textColor="@color/warning_amber"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:text="" />
+                android:text=""/>
         </LinearLayout>
 
         <TextView
@@ -63,18 +64,23 @@
             android:id="@+id/recycler"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp"
+            android:padding="12dp"
             android:clipToPadding="false"/>
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:src="@drawable/ic_add"
+        android:text="Add Keyword • যোগ করুন"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="@color/on_primary"
+        app:icon="@drawable/ic_add"
+        app:iconTint="@color/on_primary"
         app:backgroundTint="@color/primary"
-        app:tint="@color/black"
+        app:cornerSize="20dp"
         android:contentDescription="@string/add_keyword"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

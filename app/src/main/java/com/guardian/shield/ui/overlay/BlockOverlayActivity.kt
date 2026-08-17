@@ -49,6 +49,17 @@ class BlockOverlayActivity : AppCompatActivity() {
         // reason=APP_BLOCKED but has no AI-frame candidate to learn from).
         val isTempBlock = detail.startsWith("temp_block:")
         val isAiBlock = reason == "AI_DETECTION" || detail.endsWith(";ai")
+        // Premium redesign — additional optional views, safe to ignore if not in binding
+        try {
+            binding.txtCategory.text = when (reason) {
+                "AI_DETECTION" -> "Adult Content • AI Detection"
+                "KEYWORD_MATCH" -> "Keyword • ${detail.take(20)}"
+                "APP_BLOCKED" -> if (isAiBlock) "Adult Content • AI Detection" else "App Blocked"
+                "SCHEDULE_BLOCKED" -> "Schedule • Outside hours"
+                else -> "Blocked Content"
+            }
+        } catch (_: Throwable) {}
+
         if (isTempBlock) {
             val raw = detail.removePrefix("temp_block:")
                 .substringBefore(";")
@@ -58,11 +69,19 @@ class BlockOverlayActivity : AppCompatActivity() {
             val displayText = formatDuration(mins)
             binding.txtReason.text = getString(R.string.overlay_temp_block_fmt, displayText)
             binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
+            // Premium: show temp banner card if present
+            try {
+                binding.cardTempBlock.visibility = View.VISIBLE
+                binding.txtTempBanner.text = getString(R.string.overlay_temp_block_fmt, displayText) + " • ${displayText}"
+            } catch (_: Throwable) {}
             // Hard lock — no unlock option
             binding.btnUnlock.visibility = View.GONE
         } else {
             binding.txtReason.text = formatReason(reason, detail)
             binding.txtReason.setTextColor(Color.parseColor("#FFB300"))
+            try {
+                binding.cardTempBlock.visibility = View.GONE
+            } catch (_: Throwable) {}
             binding.btnUnlock.visibility = View.VISIBLE
             binding.btnUnlock.setOnClickListener {
                 startActivity(Intent(this, DelayUnlockActivity::class.java).apply {

@@ -57,31 +57,52 @@ class AppListAdapter(
                 b.switchWhitelist.visibility = View.VISIBLE
             }
 
-            // TASK 5: Subtle status badge — show ALLOWED / BLOCKED chip if available
+            // Premium badges — show BLOCKED / ALLOWED chip with design system colors
             try {
                 if (rule.isBlocked) {
                     b.txtStatusBadge.visibility = View.VISIBLE
                     b.txtStatusBadge.text = "BLOCKED"
-                    b.txtStatusBadge.setTextColor(Color.parseColor("#FF4444"))
+                    b.txtStatusBadge.setTextColor(b.root.context.getColor(com.guardian.shield.R.color.error))
+                    b.imgLockIcon.visibility = View.VISIBLE
                 } else if (rule.isWhitelisted) {
                     b.txtStatusBadge.visibility = View.VISIBLE
                     b.txtStatusBadge.text = "ALLOWED"
-                    b.txtStatusBadge.setTextColor(Color.parseColor("#00E5CC"))
+                    b.txtStatusBadge.setTextColor(b.root.context.getColor(com.guardian.shield.R.color.success))
+                    b.imgLockIcon.visibility = View.GONE
                 } else {
                     b.txtStatusBadge.visibility = View.GONE
+                    b.imgLockIcon.visibility = View.GONE
+                }
+            } catch (_: Throwable) {}
+
+            // Optional category badge — heuristic from package name
+            try {
+                val pkg = rule.packageName.lowercase()
+                val cat = when {
+                    pkg.contains("chrome") || pkg.contains("firefox") || pkg.contains("browser") || pkg.contains("opera") || pkg.contains("brave") -> "Browser"
+                    pkg.contains("facebook") || pkg.contains("instagram") || pkg.contains("tiktok") || pkg.contains("twitter") || pkg.contains("reddit") -> "Social"
+                    pkg.contains("youtube") || pkg.contains("video") || pkg.contains("tiktok") -> "Video"
+                    pkg.contains("messenger") || pkg.contains("whatsapp") || pkg.contains("telegram") || pkg.contains("imo") -> "Messaging"
+                    else -> ""
+                }
+                if (cat.isNotEmpty()) {
+                    b.txtCategory.visibility = View.VISIBLE
+                    b.txtCategory.text = cat
+                } else {
+                    b.txtCategory.visibility = View.GONE
                 }
             } catch (_: Throwable) {
-                // If layout doesn't expose this view (older build), silently ignore
+                try { b.txtCategory.visibility = View.GONE } catch (_: Throwable) {}
             }
 
-            // Left side indicator strip
+            // Left side indicator strip — premium colors
             try {
                 when {
-                    rule.isBlocked -> b.viewLeftIndicator.setBackgroundColor(Color.parseColor("#FF4444"))
-                    rule.isWhitelisted -> b.viewLeftIndicator.setBackgroundColor(Color.parseColor("#00E5CC"))
+                    rule.isBlocked -> b.viewLeftIndicator.setBackgroundColor(b.root.context.getColor(com.guardian.shield.R.color.error))
+                    rule.isWhitelisted -> b.viewLeftIndicator.setBackgroundColor(b.root.context.getColor(com.guardian.shield.R.color.success))
                     else -> b.viewLeftIndicator.setBackgroundColor(Color.TRANSPARENT)
                 }
-            } catch (_: Throwable) { /* optional */ }
+            } catch (_: Throwable) {}
 
             b.switchBlock.setOnCheckedChangeListener { _, v ->
                 onBlockChanged(rule.packageName, v)

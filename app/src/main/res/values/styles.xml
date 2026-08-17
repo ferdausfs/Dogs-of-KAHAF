@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="PinDigit" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="android:layout_width">72dp</item>
-        <item name="android:layout_height">72dp</item>
-        <item name="android:layout_margin">8dp</item>
+        <item name="android:layout_width">86dp</item>
+        <item name="android:layout_height">86dp</item>
+        <item name="android:layout_margin">7dp</item>
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/on_surface</item>
-        <item name="cornerRadius">36dp</item>
-        <item name="strokeColor">@color/on_surface_dim</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:backgroundTint">@color/surface_high</item>
+        <item name="strokeColor">@color/border_subtle</item>
         <item name="strokeWidth">1dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="PinDigit.PremiumPrimary" parent="Widget.Material3.Button">
+        <item name="android:layout_width">86dp</item>
+        <item name="android:layout_height">86dp</item>
+        <item name="android:layout_margin">7dp</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="backgroundTint">@color/primary</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
     </style>
