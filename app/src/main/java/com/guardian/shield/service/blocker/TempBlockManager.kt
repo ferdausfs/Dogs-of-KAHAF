@@ -22,8 +22,16 @@ data class TempBlock(
 
 /** Result of recording an AI detection. */
 sealed class AiStrikeResult {
-    /** A strike was counted but the user hasn't hit the block threshold yet. */
-    data object NoBlock : AiStrikeResult()
+    /**
+     * A strike was counted but the user hasn't hit the block threshold yet.
+     * [strikeCount] is the 1-based current strike number (1..threshold-1) so the
+     * caller can surface a visible warning ("strike N of 3") BEFORE the block,
+     * instead of leaving strikes 1-2 completely silent.
+     */
+    data class StrikeCounted(val strikeCount: Int) : AiStrikeResult()
+
+    /** Duplicate detection within the 1-second dedup window — no user-visible action. */
+    data object Duplicate : AiStrikeResult()
 
     /** A recent temp block just expired; the user gets a grace period. */
     data object GracePeriod : AiStrikeResult()
@@ -52,13 +60,18 @@ class TempBlockManager @Inject constructor() {
      * TASK 3 — Record an AI-detection event.
      *
      * Behavior (now matches the README and the user's setting):
-     *  • Strikes 1..(STRIKE_THRESHOLD-1) accumulate silently (no block shown).
+     *  • Strikes 1..(STRIKE_THRESHOLD-1) return [AiStrikeResult.StrikeCounted]
+     *    carrying the 1-based strike number (no block shown). The caller uses
+     *    [AiStrikeResult.StrikeCounted.strikeCount] to show a visible warning
+     *    Toast ("strike N of 3") so the eventual block never feels unannounced.
      *  • On the 3rd strike a temp block is applied for [blockDurationMs] — this
      *    is the user-configured duration from Settings (default 15 min), which
      *    was previously ignored.
      *  • If blocked 3 times within 2 hours, escalate to a 24-hour lock.
      *  • If a temp block just expired, return [AiStrikeResult.GracePeriod] so the
      *    app stays unlocked for [GuardianConstants.POST_BLOCK_GRACE_MS].
+     *  • A second detection within 1s of the previous strike returns
+     *    [AiStrikeResult.Duplicate] (dedup — no strike counted, no warning).
      *
      * @param pkg the offending package
      * @param blockDurationMs the user-configured temp-block duration
@@ -78,7 +91,7 @@ class TempBlockManager @Inject constructor() {
         // Prevent multiple strikes within 1 second for the same package
         if (now - lastStrike < 1000L) {
             Timber.d("Ignoring duplicate AI strike for $pkg (too soon)")
-            return AiStrikeResult.NoBlock
+            return AiStrikeResult.Duplicate
         }
 
         val currentStrikes = strikes[pkg] ?: 0
@@ -103,8 +116,9 @@ class TempBlockManager @Inject constructor() {
             val detail = handleBlockEscalation(pkg, blockDurationMs)
             AiStrikeResult.Blocked(detail)
         } else {
-            // Below threshold — strike counted, but do NOT show a block overlay.
-            AiStrikeResult.NoBlock
+            // Below threshold — strike counted (carry the number for a warning),
+            // but do NOT show a block overlay.
+            AiStrikeResult.StrikeCounted(count)
         }
     }
 

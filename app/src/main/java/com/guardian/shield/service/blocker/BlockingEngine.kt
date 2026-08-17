@@ -37,16 +37,17 @@ class BlockingEngine @Inject constructor(
 
     /**
      * Count an AI strike without launching the overlay.
-     * @return temp-block detail when the threshold is reached, otherwise null
-     *         (silent strike or grace period — caller must NOT kick the user home).
+     * @return the full [AiStrikeResult]:
+     *   - [AiStrikeResult.Blocked] when the threshold is reached ([AiStrikeResult.Blocked.detail]
+     *     is the temp-block payload),
+     *   - [AiStrikeResult.StrikeCounted] when a strike was counted below threshold — the caller
+     *     MUST surface a visible warning but must NOT kick the user home,
+     *   - [AiStrikeResult.GracePeriod] / [AiStrikeResult.Duplicate] when nothing user-visible
+     *     should happen.
      */
-    fun evaluateAiStrike(pkg: String): String? {
+    fun evaluateAiStrike(pkg: String): AiStrikeResult {
         val durationMs = cachedTempBlockMins * 60 * 1_000L
-        return when (val result = tempBlockManager.recordAiDetection(pkg, durationMs)) {
-            is AiStrikeResult.Blocked -> result.detail
-            AiStrikeResult.NoBlock,
-            AiStrikeResult.GracePeriod -> null
-        }
+        return tempBlockManager.recordAiDetection(pkg, durationMs)
     }
 
     fun block(pkg: String, reason: BlockReason, detail: String) {
@@ -72,7 +73,10 @@ class BlockingEngine @Inject constructor(
         val finalDetail = if (reason == BlockReason.AI_DETECTION &&
             !detail.startsWith("temp_block:")
         ) {
-            evaluateAiStrike(pkg) ?: return
+            when (val result = evaluateAiStrike(pkg)) {
+                is AiStrikeResult.Blocked -> result.detail
+                else -> return
+            }
         } else detail
 
         launchOverlay(pkg, reason, finalDetail)
