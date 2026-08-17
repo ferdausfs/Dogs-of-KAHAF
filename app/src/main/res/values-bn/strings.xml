@@ -242,4 +242,8 @@
     <string name="module_schedule">সময়সূচী রুলস</string>
     <string name="module_schedule_sub">সময়সূচী · প্রতিদিন</string>
     <string name="module_accessibility_sub">কন্টেন্ট মনিটরিং ইঞ্জিন</string>
+    <!-- WATCHTOWER V3 app blocking copy -->
+    <string name="app_blocking_title">অ্যাপ ব্লকিং</string>
+    <string name="app_blocking_sub">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</string>
+    <string name="status_on_bn">সক্রিয়</string>
 </resources>

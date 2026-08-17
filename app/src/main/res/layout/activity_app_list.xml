@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — App Blocking / App List (approved: mocks/v3/app-blocking.html)
+     Bindings preserved: toolbar lockBanner txtLockRemaining switchHero
+     filterGroup chipBlocked chipAll chipWhitelisted editSearch recycler. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,202 +16,159 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="App Blocking • অ্যাপ ব্লক"
+        app:title="@string/app_list_title"
         app:titleTextColor="@color/on_surface"
-        app:navigationIcon="@drawable/ic_arrow_back"/>
-
-    <!-- Lock banner — Commitment Lock -->
-    <LinearLayout
-        android:id="@+id/lockBanner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
-        android:background="#2A2520"
-        android:visibility="gone">
-
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_lock"
-            android:contentDescription="@null"/>
-
-        <TextView
-            android:id="@+id/txtLockRemaining"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:textColor="@color/warning_amber"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:text=""/>
-    </LinearLayout>
+        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="4dp">
 
-            <!-- HERO TOGGLE CARD — App Blocking ON, reference match -->
+            <!-- Commitment lock banner -->
+            <LinearLayout
+                android:id="@+id/lockBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_lock_banner"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="12dp"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <ImageView
+                    android:layout_width="19dp" android:layout_height="19dp"
+                    android:src="@drawable/ic_time_lock"
+                    app:tint="@color/warning_amber"
+                    android:importantForAccessibility="no"/>
+                <TextView
+                    android:id="@+id/txtLockRemaining"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:textColor="@color/on_warning_container"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Hero master toggle -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface_high"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp">
-
+                style="@style/Widget.GuardianShield.Card.Raised">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="18dp">
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp" android:layout_weight="1"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
+                        android:orientation="vertical">
                         <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical">
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="App Blocking"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/app_blocking_title"
                                 android:textColor="@color/on_surface"
-                                android:textSize="15sp"
-                                android:textStyle="bold"/>
-
+                                android:textSize="15.5sp" android:textStyle="bold"/>
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="ON • সক্রিয়"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/bg_badge"
+                                android:backgroundTint="@color/badge_success_bg"
+                                android:text="@string/status_on_bn"
                                 android:textColor="@color/success"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="2dp"/>
+                                android:textSize="10.5sp" android:textStyle="bold"
+                                android:paddingHorizontal="9dp" android:paddingVertical="3dp"/>
                         </LinearLayout>
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchHero"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"/>
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/app_blocking_sub"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp"/>
                     </LinearLayout>
-
-                    <TextView
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchHero"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Block inappropriate apps from being used.\nঅনুপযুক্ত অ্যাপ ব্যবহার ব্লক করুন।"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="11sp"
-                        android:lineSpacingMultiplier="1.2"
-                        android:layout_marginTop="8dp"/>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/border_subtle"
-                        android:layout_marginTop="12dp"
-                        android:layout_marginBottom="12dp"/>
-
-                    <!-- Tabs inside hero — Blocked Apps / All Apps to match reference -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardCornerRadius="999dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/surface"
-                        app:strokeColor="@color/border_subtle"
-                        app:strokeWidth="1dp">
-
-                        <com.google.android.material.chip.ChipGroup
-                            android:id="@+id/filterGroup"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="4dp"
-                            app:singleSelection="true"
-                            app:selectionRequired="true">
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chipBlocked"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="Blocked Apps • 12"
-                                android:checked="true"/>
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chipAll"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="@string/filter_all"/>
-
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chipWhitelisted"
-                                style="@style/Widget.Material3.Chip.Filter"
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:text="Whitelisted • 3"/>
-                        </com.google.android.material.chip.ChipGroup>
-                    </com.google.android.material.card.MaterialCardView>
+                        android:checked="true"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SEARCH — filled surface_high radius 20 -->
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.FilledBox"
+            <!-- Filter chips -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/filterGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:hint="Search apps… অ্যাপ খুঁজুন"
-                app:boxCornerRadiusTopStart="16dp"
-                app:boxCornerRadiusTopEnd="16dp"
-                app:boxCornerRadiusBottomStart="16dp"
-                app:boxCornerRadiusBottomEnd="16dp"
-                app:boxBackgroundColor="@color/surface_high"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="1dp">
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:chipSpacingHorizontal="8dp"
+                android:layout_marginTop="16dp">
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBlocked"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/filter_blocked"
+                    android:checkable="true"
+                    style="@style/Widget.GuardianShield.Chip.Filter"/>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipAll"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/filter_all"
+                    android:checkable="true"
+                    style="@style/Widget.GuardianShield.Chip.Filter"/>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipWhitelisted"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/filter_whitelisted"
+                    android:checkable="true"
+                    style="@style/Widget.GuardianShield.Chip.Filter"/>
+            </com.google.android.material.chip.ChipGroup>
 
+            <!-- Search -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                style="@style/Widget.GuardianShield.SearchBox"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/on_surface_dim"
+                app:hintEnabled="false">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editSearch"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionDone"
+                    android:layout_height="52dp"
+                    android:hint="@string/search_hint"
+                    android:textColorHint="@color/on_surface_dim"
+                    android:textColor="@color/on_surface"
                     android:inputType="text"
-                    android:textSize="14sp"/>
+                    android:imeOptions="actionSearch"
+                    android:maxLines="1"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycler"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="12dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="16dp"
                 android:nestedScrollingEnabled="false"
-                android:clipToPadding="false"/>
+                android:layout_marginTop="14dp"
+                android:paddingBottom="28dp"
+                android:overScrollMode="never"
+                tools:itemCount="6"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>
