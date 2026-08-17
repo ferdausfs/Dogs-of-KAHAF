@@ -105,3 +105,68 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }
+
+// ---------------------------------------------------------------------------
+// FAIL-FAST RELEASE-TAG GUARD (v2.4.2 & v2.5.0 incidents, COMPILE_REVIEW_REPORT.md)
+//
+// GitHub releases are immutable once published. The `Create GitHub Release` step
+// of .github/workflows/build.yml publishes tag `v<versionName>`; if that tag (or
+// a release for it) already exists on the remote, the step fails with HTTP 422
+// ("tag_name was used by an immutable release") AFTER ~4 minutes of building.
+//
+// This task runs as a dependency of `preReleaseBuild`, i.e. before any Kotlin
+// compilation starts, and fails loudly with a fix instruction when the target
+// tag is already taken. It is the earliest fail-fast point reachable from this
+// file (workflow-file edits are blocked for bot tokens by GitHub policy).
+//
+// Escape hatch for local/offline release builds:
+//     ./gradlew assembleRelease -PskipReleaseTagCheck
+// ---------------------------------------------------------------------------
+val checkReleaseTagAvailable by tasks.registering {
+    group = "verification"
+    description = "Fails the release build if the GitHub tag v<versionName> already exists"
+    doFirst {
+        if (project.hasProperty("skipReleaseTagCheck")) {
+            logger.warn("checkReleaseTagAvailable SKIPPED via -PskipReleaseTagCheck")
+            return@doFirst
+        }
+        val versionName = android.defaultConfig.versionName
+        val tag = "v$versionName"
+        val repo = System.getenv("GITHUB_REPOSITORY") ?: "ferdausfs/Dogs-of-KAHAF"
+        fun httpGet(path: String): Int = try {
+            val conn = java.net.URI("https://api.github.com/repos/$repo/$path")
+                .toURL().openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 10_000
+            conn.responseCode
+        } catch (e: Exception) {
+            logger.error("checkReleaseTagAvailable: could not reach GitHub API (${e.message})")
+            -1
+        }
+        val refCode = httpGet("git/refs/tags/$tag")
+        val relCode = httpGet("releases/tags/$tag")
+        when {
+            refCode == 200 || relCode == 200 -> throw GradleException(
+                "RELEASE TAG COLLISION: $tag already exists on GitHub " +
+                    "(git ref HTTP $refCode, release HTTP $relCode). Published GitHub " +
+                    "releases are immutable; the Create GitHub Release step would fail " +
+                    "with HTTP 422 'tag_name was used by an immutable release'. " +
+                    "Bump versionName in app/build.gradle.kts, commit, and push again. " +
+                    "(Local-only builds may bypass with -PskipReleaseTagCheck.)"
+            )
+            refCode == 404 && relCode == 404 ->
+                logger.lifecycle("Release tag $tag is free (git ref 404, release 404) - proceeding.")
+            else -> throw GradleException(
+                "Could not verify release tag availability for $tag " +
+                    "(git ref HTTP $refCode, release HTTP $relCode). Aborting the release " +
+                    "build rather than risk publishing over an existing immutable release. " +
+                    "Re-run, or bypass local builds with -PskipReleaseTagCheck."
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(checkReleaseTagAvailable)
+}
