@@ -1,91 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — Delay Unlock (approved: mocks/v3/overlays.html frame D)
+     Bindings preserved: txtPackage txtCountdown btnCancel (countdown logic untouched). -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="32dp"
-    android:background="@color/bg_main">
+    android:paddingHorizontal="26dp"
+    android:background="@color/overlay_dim_solid">
 
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="88dp"
-        android:layout_height="88dp"
-        app:cardCornerRadius="26dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/surface_high"
-        app:strokeColor="@color/border_subtle"
-        app:strokeWidth="1dp">
-
+    <FrameLayout
+        android:layout_width="76dp"
+        android:layout_height="76dp"
+        android:background="@drawable/bg_halo_amber">
         <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="30dp" android:layout_height="30dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_history"
-            app:tint="@color/warning_amber"/>
-    </com.google.android.material.card.MaterialCardView>
+            android:src="@drawable/ic_time_lock"
+            app:tint="@color/warning_amber"
+            android:importantForAccessibility="no"/>
+    </FrameLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
         android:text="@string/delay_title"
         android:textColor="@color/on_surface"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginTop="20dp"/>
+        android:textSize="19sp" android:textStyle="bold" android:letterSpacing="-0.01"/>
 
     <TextView
         android:id="@+id/txtPackage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text=""
-        android:textColor="@color/on_surface_dim"
-        android:textSize="11sp"
-        android:fontFamily="monospace"
+        android:layout_marginTop="10dp"
         android:background="@drawable/bg_badge"
-        android:backgroundTint="@color/surface"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:layout_marginTop="8dp"/>
+        android:backgroundTint="@color/badge_neutral_bg"
+        android:fontFamily="monospace"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="11sp"
+        android:paddingHorizontal="12dp" android:paddingVertical="5dp"
+        tools:text="com.instagram.android"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
         android:text="@string/delay_text"
         android:textColor="@color/on_surface_variant"
-        android:textSize="13sp"
-        android:layout_marginTop="28dp"/>
+        android:textSize="12.5sp"/>
 
     <TextView
         android:id="@+id/txtCountdown"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="30"
-        android:textColor="@color/primary"
-        android:textSize="84sp"
-        android:textStyle="bold"
-        android:letterSpacing="-0.03"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="10dp"
+        android:textColor="@color/on_surface"
+        android:textSize="56sp" android:textStyle="bold" android:letterSpacing="-0.03"
+        android:fontFeatureSettings="tnum"
+        tools:text="00:29"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/seconds"
         android:textColor="@color/on_surface_dim"
-        android:textSize="13sp"/>
+        android:textSize="12sp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCancel"
-        style="@style/Widget.Material3.Button.TonalButton"
+        style="@style/Widget.GuardianShield.Button.Tonal"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="@string/cancel"
-        android:layout_marginTop="40dp"
-        app:cornerRadius="28dp"
-        app:backgroundTint="@color/surface_high"
-        android:textColor="@color/error"
-        app:strokeColor="@color/border_subtle"
-        app:strokeWidth="1dp"/>
+        android:layout_height="52dp"
+        android:layout_marginTop="28dp"
+        android:text="@string/cancel"/>
 </LinearLayout>

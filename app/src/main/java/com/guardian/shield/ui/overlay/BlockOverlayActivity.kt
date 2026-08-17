@@ -78,7 +78,7 @@ class BlockOverlayActivity : AppCompatActivity() {
             binding.btnUnlock.visibility = View.GONE
         } else {
             binding.txtReason.text = formatReason(reason, detail)
-            binding.txtReason.setTextColor(Color.parseColor("#FFB300"))
+            binding.txtReason.setTextColor(getColor(R.color.warning_amber))
             try {
                 binding.cardTempBlock.visibility = View.GONE
             } catch (_: Throwable) {}

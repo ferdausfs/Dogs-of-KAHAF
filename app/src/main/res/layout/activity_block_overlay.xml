@@ -1,461 +1,242 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<!-- WATCHTOWER V3 — Strike-3 full block overlay (approved: mocks/v3/overlays.html frame B)
+     Bindings preserved: txtPackage cardTempBlock txtTempBanner txtReason
+     txtCategory btnHome btnUnlock btnMarkFalse.
+     btnHome -> goHome(), btnUnlock -> DelayUnlockActivity, btnMarkFalse ->
+     FalsePositiveMemory — behavior untouched. -->
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/overlay_dim_solid"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:scrollbars="none"
+    android:background="@color/overlay_dim_solid">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:padding="20dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="30dp">
 
-        <!-- ICON WRAPPER — 88dp circle error_container with red glow, shield ! -->
+        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.55"/>
+
+        <!-- Hero halo -->
         <FrameLayout
-            android:layout_width="88dp"
-            android:layout_height="88dp"
-            android:layout_marginTop="12dp">
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_shield_glow"
-                android:alpha="0.35"/>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:cardCornerRadius="26dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/error_container"
-                app:strokeColor="#30FF8A80"
-                app:strokeWidth="1dp">
-
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_warning"
-                    app:tint="@color/error"/>
-            </com.google.android.material.card.MaterialCardView>
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:background="@drawable/bg_halo_red">
+            <ImageView
+                android:layout_width="42dp" android:layout_height="42dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_shield_alert"
+                app:tint="@color/error"
+                android:importantForAccessibility="no"/>
         </FrameLayout>
 
-        <!-- TITLE — Sensitive Content Blocked -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
             android:text="@string/overlay_access_blocked"
             android:textColor="@color/on_surface"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:letterSpacing="-0.02"
-            android:gravity="center"
-            android:lineSpacingMultiplier="1.1"
-            android:layout_marginTop="18dp"/>
+            android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.015"
+            android:gravity="center"/>
 
-        <!-- SUBTITLE — This content has been blocked to protect you -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:maxWidth="300dp"
             android:text="@string/overlay_sensitive_subtitle"
             android:textColor="@color/on_surface_variant"
-            android:textSize="13sp"
-            android:gravity="center"
-            android:lineSpacingMultiplier="1.3"
-            android:layout_marginTop="8dp"
-            android:maxWidth="280dp"/>
+            android:textSize="13.5sp" android:lineSpacingMultiplier="1.45"
+            android:gravity="center"/>
 
-        <!-- PACKAGE PILL -->
+        <!-- package pill -->
         <TextView
             android:id="@+id/txtPackage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="com.example"
-            android:textColor="@color/on_surface_dim"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
+            android:layout_marginTop="16dp"
             android:background="@drawable/bg_badge"
-            android:backgroundTint="@color/surface"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:layout_marginTop="14dp"/>
+            android:backgroundTint="@color/badge_neutral_bg"
+            android:fontFamily="monospace"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="11sp"
+            android:paddingHorizontal="14dp" android:paddingVertical="6dp"
+            tools:text="com.instagram.android"/>
 
-        <!-- TEMP BLOCK BANNER — shown when detail startsWith temp_block: -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- temp-block banner (temp-block case only) -->
+        <LinearLayout
             android:id="@+id/cardTempBlock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="#1A251E0A"
-            app:strokeColor="#30FBBF24"
-            app:strokeWidth="1dp"
-            android:layout_marginTop="14dp"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🚫"
-                    android:textSize="16sp"/>
-
-                <TextView
-                    android:id="@+id/txtTempBanner"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text="১৫ মিনিটের জন্য ব্লক করা হয়েছে"
-                    android:textColor="@color/warning_amber"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:layout_marginStart="10dp"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- REASON — main reason text, also shows temp block fmt -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface_high"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_lock_banner"
+            android:paddingHorizontal="14dp" android:paddingVertical="12dp"
+            android:layout_marginTop="18dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+            <ImageView
+                android:layout_width="18dp" android:layout_height="18dp"
+                android:src="@drawable/ic_time_lock"
+                app:tint="@color/warning_amber"
+                android:importantForAccessibility="no"/>
             <TextView
-                android:id="@+id/txtReason"
-                android:layout_width="match_parent"
+                android:id="@+id/txtTempBanner"
+                android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:text="@string/overlay_reason_manual"
-                android:textColor="@color/warning_amber"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:padding="14dp"/>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- INFO ROWS — Protection / Blocked Category / Time like reference -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="14dp">
-
-            <!-- Protection -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface_high"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="12dp">
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/surface_variant"
-                        app:strokeWidth="0dp">
-
-                        <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_shield_on"
-                            app:tint="@color/on_surface_variant"/>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/overlay_protection"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.07"
-                            android:textAllCaps="true"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/overlay_protection_active"
-                            android:textColor="@color/on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:layout_marginTop="2dp"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Active"
-                        android:textColor="@color/success"
-                        android:background="@drawable/bg_badge"
-                        android:backgroundTint="#1F6EE7B7"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp"
-                        android:paddingTop="5dp"
-                        android:paddingBottom="5dp"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Blocked Category -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface_high"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp"
-                android:layout_marginBottom="8dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="12dp">
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/surface_variant">
-
-                        <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_warning"
-                            app:tint="@color/on_surface_variant"/>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/overlay_blocked_category"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.07"
-                            android:textAllCaps="true"/>
-
-                        <TextView
-                            android:id="@+id/txtCategory"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Adult Content • AI Detection"
-                            android:textColor="@color/on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:layout_marginTop="2dp"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="AI • 0.89"
-                        android:textColor="@color/ai_detection_color"
-                        android:background="@drawable/bg_badge"
-                        android:backgroundTint="#24A78BFA"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp"
-                        android:paddingTop="5dp"
-                        android:paddingBottom="5dp"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Time -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/surface_high"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="12dp">
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/surface_variant">
-
-                        <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_history"
-                            app:tint="@color/on_surface_variant"/>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/overlay_time"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.07"
-                            android:textAllCaps="true"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Today, 9:41 AM • এখনই"
-                            android:textColor="@color/on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:layout_marginTop="2dp"/>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Now"
-                        android:textColor="@color/on_surface_variant"
-                        android:background="@drawable/bg_badge"
-                        android:backgroundTint="@color/surface_variant"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp"
-                        android:paddingTop="5dp"
-                        android:paddingBottom="5dp"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:layout_marginStart="10dp"
+                android:textColor="@color/on_warning_container"
+                android:textSize="12.5sp" android:textStyle="bold"
+                tools:text="🚫 Blocked for 15 minutes"/>
         </LinearLayout>
 
-        <!-- ACTIONS — Stay Protected (goHome) + Request Unlock + Report -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnHome"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="20dp"
-            android:text="@string/overlay_go_home"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:cornerRadius="28dp"
-            app:backgroundTint="#FF3B4F"
-            android:textColor="@color/white"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnUnlock"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="10dp"
-            android:text="@string/overlay_request_unlock"
-            android:textColor="@color/on_surface"
-            app:backgroundTint="@color/surface_high"
-            app:cornerRadius="28dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnMarkFalse"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/overlay_mark_false"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="13sp"
-            android:layout_marginTop="12dp"
-            android:visibility="gone"/>
-
-        <!-- Motivation footer -->
+        <!-- info grid -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="24dp">
-
-            <View
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="1dp"
-                android:background="@color/border_subtle"/>
-
-            <TextView
-                android:layout_width="wrap_content"
+            android:layout_marginTop="12dp">
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:text="STAY STRONG 💪 • Guardian Shield"
-                android:textColor="@color/on_surface_dim"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:textAllCaps="true"
-                android:layout_marginStart="12dp"
-                android:layout_marginEnd="12dp"/>
-
-            <View
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="1dp"
-                android:background="@color/border_subtle"/>
+                android:orientation="vertical"
+                android:background="@drawable/bg_stat_card"
+                android:padding="12dp"
+                android:layout_marginEnd="5dp">
+                <FrameLayout
+                    android:layout_width="34dp" android:layout_height="34dp"
+                    android:background="@drawable/bg_icon_well"
+                    android:backgroundTint="@color/badge_success_bg">
+                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_shield_check"
+                        app:tint="@color/success" android:importantForAccessibility="no"/>
+                </FrameLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:text="@string/overlay_protection"
+                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
+                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:text="@string/overlay_protection_active"
+                    android:textColor="@color/success" android:textSize="13sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_stat_card"
+                android:padding="12dp"
+                android:layout_marginHorizontal="5dp">
+                <FrameLayout
+                    android:layout_width="34dp" android:layout_height="34dp"
+                    android:background="@drawable/bg_icon_well"
+                    android:backgroundTint="@color/badge_ai_bg">
+                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_ai_spark"
+                        app:tint="@color/ai_accent" android:importantForAccessibility="no"/>
+                </FrameLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:text="@string/overlay_blocked_category"
+                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
+                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
+                <TextView
+                    android:id="@+id/txtCategory"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/ai_accent" android:textSize="13sp" android:textStyle="bold"
+                    tools:text="AI Detection"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_stat_card"
+                android:padding="12dp"
+                android:layout_marginStart="5dp">
+                <FrameLayout
+                    android:layout_width="34dp" android:layout_height="34dp"
+                    android:background="@drawable/bg_icon_well"
+                    android:backgroundTint="@color/badge_neutral_bg">
+                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_clock"
+                        app:tint="@color/on_surface_variant" android:importantForAccessibility="no"/>
+                </FrameLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:text="@string/overlay_time"
+                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
+                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:text="@string/overlay_time_now"
+                    android:textColor="@color/on_surface" android:textSize="13sp" android:textStyle="bold"/>
+            </LinearLayout>
         </LinearLayout>
 
+        <!-- reason -->
+        <TextView
+            android:id="@+id/txtReason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_stat_card"
+            android:padding="13dp"
+            android:gravity="center"
+            android:textColor="@color/warning_amber"
+            android:textSize="13sp" android:textStyle="bold"
+            android:lineSpacingMultiplier="1.35"
+            tools:text="AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে"/>
+
+        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.45"/>
+
+        <!-- actions -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHome"
+            style="@style/Widget.GuardianShield.Button.Danger"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="22dp"
+            app:icon="@drawable/ic_home"
+            app:iconTint="@color/on_error"
+            android:text="@string/overlay_go_home"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUnlock"
+            style="@style/Widget.GuardianShield.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/overlay_request_unlock"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnMarkFalse"
+            style="@style/Widget.GuardianShield.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/overlay_mark_false"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="18dp">
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp"
+                android:background="@color/border_subtle"/>
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:text="@string/overlay_motivation"
+                android:textColor="@color/on_surface_dim"
+                android:textSize="9.5sp" android:textStyle="bold" android:letterSpacing="0.16"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp"
+                android:background="@color/border_subtle"/>
+        </LinearLayout>
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</ScrollView>

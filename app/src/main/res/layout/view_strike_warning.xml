@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v2.5.2 — Strike 1/2 warning card (WindowManager TYPE_APPLICATION_OVERLAY).
-     Approved mockup: guardian-redesign/mocks/strike-warning-card.html
-     All tokens from the merged v2.5.0 design system:
-       surface      : @color/surface_high            (#1C232E, lifts off bg_main)
-       border       : 1.5dp @color/warning          (#FBBF24 warning accent)
-       radius       : 20dp (r-md, ShapeAppearance.Medium / CardPremium)
-       icon         : ic_shield_large tinted @color/warning in 44dp surface_variant circle
-       title        : bold, @color/on_surface  (#E2E6EB)
-       kicker/body  : SectionHeader caps / on_surface_variant (#A3ADBB)
-     No dog/mascot icon. Strike-3 BlockOverlayActivity path is untouched. -->
+<!-- WATCHTOWER V3 — Strike 1/2 warning card (WindowManager TYPE_APPLICATION_OVERLAY).
+     Approved mockup: guardian-redesign/mocks/v3/overlays.html frame A
+     RE-SKIN ONLY — behavior contract untouched:
+       • auto-dismiss after STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L (code)
+       • tap card to dismiss; separate click target for btnNotSensitive
+       • "Not sensitive" writes an audit-only DB row (never touches detection)
+     Tokens: surface_highest card, warning stroke, ringed leading icon,
+     kicker/title/body scale per V3 type ramp. -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/cardStrikeWarning"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardBackgroundColor="@color/surface_high"
+    app:cardBackgroundColor="@color/surface_highest"
     app:cardCornerRadius="20dp"
-    app:cardElevation="0dp"
+    app:cardElevation="24dp"
     app:strokeColor="@color/warning"
     app:strokeWidth="1.5dp">
 
@@ -27,27 +25,28 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="14dp">
+        android:paddingVertical="16dp">
 
+        <!-- ringed leading icon (decorative ring echoes the 3.5s dismiss timer) -->
         <FrameLayout
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_strike_warning_icon">
 
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:importantForAccessibility="no"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_shield_large"
+                android:src="@drawable/ic_shield_alert"
                 app:tint="@color/warning"/>
         </FrameLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="14dp"
             android:orientation="vertical">
 
             <TextView
@@ -59,17 +58,17 @@
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:textAllCaps="true"
-                android:letterSpacing="0.06"/>
+                android:letterSpacing="0.14"/>
 
             <TextView
                 android:id="@+id/txtStrikeTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/on_surface"
-                android:textSize="16.5sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:letterSpacing="-0.01"
-                android:layout_marginTop="2dp"/>
+                android:layout_marginTop="4dp"/>
 
             <TextView
                 android:id="@+id/txtStrikeBody"
@@ -78,27 +77,22 @@
                 android:text="@string/ai_strike_warning_body"
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12.5sp"
-                android:lineSpacingMultiplier="1.35"
-                android:layout_marginTop="3dp"/>
+                android:lineSpacingMultiplier="1.4"
+                android:layout_marginTop="5dp"/>
 
-            <!-- v2.5.4 — "Not sensitive" report action. Subtle muted text action
-                 (no background/border) so it never competes with the card. Its own
-                 click target means the card's tap-to-dismiss listener is NOT fired;
-                 the handler writes the audit log entry, shows a confirmation Toast,
-                 then dismisses the card explicitly. This is a lightweight audit-only
-                 report — it does NOT touch FalsePositiveMemory / AiDetector. -->
+            <!-- v2.5.4 "Not sensitive" audit report action — own click target,
+                 handler + Toast + explicit dismiss preserved in code. -->
             <TextView
                 android:id="@+id/btnNotSensitive"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="28dp"
+                android:layout_marginTop="10dp"
+                android:minHeight="30dp"
                 android:gravity="center_vertical"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingVertical="3dp"
                 android:text="@string/ai_strike_warning_not_sensitive"
                 android:textColor="@color/on_surface_variant"
-                android:textSize="11sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02"
                 android:background="@null"

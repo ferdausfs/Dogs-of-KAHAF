@@ -295,4 +295,20 @@
     <string name="perm_battery_sub">keep service alive · সার্ভিস চালু রাখে</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
+    <!-- WATCHTOWER V3 overlays + blocked detail copy -->
+    <string name="overlay_time_now">Now</string>
+    <string name="detail_app">App</string>
+    <string name="detail_source">Content source</string>
+    <string name="detail_what_you_can_do">What you can do</string>
+    <string name="detail_stay_focused">Stay Focused · মনোযোগ ধরে রাখুন</string>
+    <string name="detail_view_activity">View Activity · অ্যাক্টিভিটি দেখুন</string>
+    <string name="detail_whitelist">Add to Whitelist · হোয়াইটলিস্ট</string>
+    <string name="detail_back_to_app">Back to App</string>
+    <string name="reel_title">একটু থামো, ভাই!</string>
+    <string name="reel_hadith">“তোমরা কুরআন পড়ো, কারণ কিয়ামতের দিন এটি তোমাদের জন্য সুপারিশকারী হবে।”
+
+— সহীহ মুসলিম</string>
+    <string name="reel_subtitle">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</string>
+    <string name="reel_open_quran">📖 কুরআন অ্যাপ খুলুন</string>
+    <string name="reel_continue">এখন নয়, ফিরে যাই</string>
 </resources>
