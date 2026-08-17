@@ -72,6 +72,8 @@
     </style>
 
     <!-- ============ Cards (tonal elevation ladder + hairline) ============ -->
+    <!-- Base marker style: guarantees every implicit A.B.C parent chain resolves. -->
+    <style name="Widget.GuardianShield" parent=""/>
     <style name="Widget.GuardianShield.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">16dp</item>
