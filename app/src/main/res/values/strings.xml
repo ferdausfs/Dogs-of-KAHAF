@@ -51,6 +51,8 @@
     <string name="ai_sensitivity">AI Sensitivity</string>
     <string name="unlock_delay">Unlock Delay</string>
     <string name="temp_block_info">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (৩টি স্ট্রাইক = temp block)</string>
+    <!-- AI 3-strike warning: shown on strikes 1 &amp; 2 (%1$d = strike count, %2$d = threshold) -->
+    <string name="ai_strike_warning_fmt">⚠️ সতর্ক করা হলো — %1$d/%2$d</string>
     <string name="male">Male</string>
     <string name="female">Female</string>
     <string name="disabled">Disabled</string>

@@ -526,3 +526,170 @@ making any such release-process change.**
   Note: no fresh GitHub Release/APK direct link could be produced because the
   repository tag-creation rule blocks publishing under `v2.4.2` (and that tag
   name is now immutable-tombstoned). This must be resolved by the repo owner.
+
+---
+
+# Session 2026-08-17 — AI 3-Strike Warning Toast (arena/01a00da2-dogs-of-kahaf)
+
+**Base:** `main` @ `34bdfa3` ("release: v2.4.3 — silent 3-strike build + false-positive button fix (#25)")
+**Date:** 2026-08-17
+
+## 1) WHAT WAS WRONG (missing-UX bug, not a strike-counting bug)
+
+The prior audit (Session 2026-08-16, above) verified strikes 1 and 2 are counted
+correctly and return **early with NO overlay and NO HOME action**. That part is
+correct and was **not changed**. The remaining defect was that those two strikes
+were *completely* silent — no Toast, no Snackbar, no vibration, nothing. From the
+user's point of view the app did nothing for strikes 1 and 2, so strike 3 landed
+as an unannounced, instant block (confirmed by the user's Dashboard "সাম্প্রতিক
+ব্লক" screenshot).
+
+Root cause: `BlockingEngine.evaluateAiStrike()` collapsed the "below threshold"
+outcome into a bare `null` (`AiStrikeResult.NoBlock` → `null`), and the
+`goHomeAndBlock()` caller's `?: run { … return }` branch only logged to Timber
+(`GuardianAccessibilityService.kt:283-286` at the time). The caller had no way
+to learn *which* strike (1 or 2) had just occurred, so no warning could be shown.
+
+## 2) WHAT WAS ADDED (visible warning on strikes 1 & 2, never on strike 3)
+
+**Contract change (clean, through `BlockingEngine → TempBlockManager`):**
+
+`TempBlockManager.AiStrikeResult` was extended so the silent path now carries the
+strike number instead of a bare "no block":
+
+```kotlin
+sealed class AiStrikeResult {
+    data class StrikeCounted(val strikeCount: Int) : AiStrikeResult()  // strike 1..(N-1): show warning
+    data object Duplicate : AiStrikeResult()                            // 1s dedup: no action
+    data object GracePeriod : AiStrikeResult()                          // post-block grace: no action
+    data class Blocked(val detail: String) : AiStrikeResult()           // threshold reached: block
+}
+```
+
+- `TempBlockManager.recordAiDetection()` now returns `StrikeCounted(count)` on the
+  below-threshold path (`TempBlockManager.kt:121`) and `Duplicate` on the 1-second
+  dedup path (`TempBlockManager.kt:94`). The grace and block paths are unchanged.
+- `BlockingEngine.evaluateAiStrike()` now returns the full `AiStrikeResult`
+  (`BlockingEngine.kt:48`) instead of `String?`. Its `block()` re-entry guard was
+  updated to match `AiStrikeResult.Blocked` and `return` otherwise
+  (`BlockingEngine.kt:76-78`).
+- `GuardianAccessibilityService.goHomeAndBlock()` now matches on the result
+  (`GuardianAccessibilityService.kt:286-304`). On `StrikeCounted` it calls
+  `showAiStrikeWarning(strikeCount)` and returns — still **no HOME, no overlay**.
+- `showAiStrikeWarning()` (`GuardianAccessibilityService.kt:334-345`) formats
+  `R.string.ai_strike_warning_fmt` with `(strikeCount, STRIKE_THRESHOLD)` and shows
+  a short Toast on the main handler (goHomeAndBlock is reached via
+  `withContext(Dispatchers.Main)` at both AI entry points, and the `mainHandler.post`
+  guard makes it looper-safe regardless).
+
+**String resources** (not hardcoded), added to both locales following the app's
+existing Bengali house tone (`temp_block_info`, `prompt_accessibility_*`, …):
+
+```xml
+<!-- values/strings.xml  &  values-bn/strings.xml -->
+<string name="ai_strike_warning_fmt">⚠️ সতর্ক করা হলো — %1$d/%2$d</string>
+```
+
+`%1$d`/`%2$d` render as Bengali digits (১, ২, ৩) under the `bn` locale via the same
+`String.format`-based `getString` the app already uses for `%d` elsewhere (e.g.
+`overlay_dur_minutes_fmt`); on a non-`bn` device they render as `1/3`, `2/3`.
+
+## 3) VERIFIED STRIKE-BY-STRIKE TRACE (against the edited source)
+
+AI hit enters through one of exactly two call sites, both of which funnel through
+`goHomeAndBlock(pkg, AI_DETECTION, …)`:
+
+- `GuardianAccessibilityService.kt:636` (`runContentAwareScan`, "content-aware-legacy")
+- `GuardianAccessibilityService.kt:708` (`triggerAiCheck`, "legacy")
+
+Both are wrapped in `withContext(Dispatchers.Main)`, so `goHomeAndBlock` runs on
+the main thread.
+
+```
+goHomeAndBlock(pkg, AI_DETECTION, detail)                    [GuardianAccessibilityService.kt:272]
+ ├─ if AI && isGracePeriodActive(pkg)  -> clearBlockingFlag(); RETURN   (no Toast)   [line 276]
+ ├─ when (val result = evaluateAiStrike(pkg)) {               [line 286]
+ │    ├─ Blocked(detail)      -> overlayDetail = detail ; continue to block        [line 287]
+ │    ├─ StrikeCounted(n)     -> showAiStrikeWarning(n); RETURN (no HOME, no overlay) [line 288-295]
+ │    ├─ GracePeriod          -> RETURN                       (no Toast)            [line 296]
+ │    └─ Duplicate            -> RETURN                       (no Toast, 1s dedup)  [line 300]
+ │  }
+ ├─ setBlockingFlag() ; performGlobalAction(GLOBAL_ACTION_HOME)                       [line 307/322]
+ └─ postDelayed { blockingEngine.block(pkg, AI_DETECTION, overlayDetail) }           [line 323]
+
+evaluateAiStrike(pkg)                                        [BlockingEngine.kt:48]
+ └─ recordAiDetection(pkg, durationMs)                       [TempBlockManager.kt:80]
+     ├─ grace active            -> GracePeriod                                    [line 86]
+     ├─ <1s since last strike   -> Duplicate                                      [line 94]
+     ├─ count = strikes+1                                                            [line 110]
+     ├─ count < 3  (1 or 2)     -> StrikeCounted(count)  → Toast "১/৩" / "২/৩"     [line 121]
+     └─ count >= 3 (3)          -> handleBlockEscalation() → applyTempBlock()     [line 115-118]
+                                   → Blocked("temp_block:NNmin;ai")
+```
+
+| Event | `recordAiDetection` returns | `goHomeAndBlock` action | Toast? | HOME? | Overlay? |
+|-------|-----------------------------|--------------------------|--------|-------|----------|
+| Strike 1 (fresh pkg) | `StrikeCounted(1)` | `showAiStrikeWarning(1)` → `return` | ✅ "⚠️ সতর্ক করা হলো — ১/৩" | ❌ | ❌ |
+| Strike 2 (fresh pkg) | `StrikeCounted(2)` | `showAiStrikeWarning(2)` → `return` | ✅ "⚠️ সতর্ক করা হলো — ২/৩" | ❌ | ❌ |
+| Strike 3 | `Blocked("temp_block:15min;ai")` | proceeds → HOME + `block()` → `BlockOverlayActivity` | ❌ (redundant on top of overlay) | ✅ | ✅ |
+| Duplicate < 1s | `Duplicate` | `return` | ❌ | ❌ | ❌ |
+| Grace period | `GracePeriod` | `return` (also caught at line 276 first) | ❌ | ❌ | ❌ |
+
+Notes (unchanged strike semantics — verified, no edits to these paths):
+- `STRIKE_THRESHOLD = 3` (`Constants.kt:35`), `STRIKE_RESET_MS = 10 min`
+  (`Constants.kt:37`): reset only when `currentStrikes in 1 until 3` **and** idle
+  > 10 min (`TempBlockManager.kt:101-104`). Cannot skip straight to 3.
+- 1s dedup (`TempBlockManager.kt:92-95`) cannot inflate the count and produces no Toast.
+- No double-count on strike 3: `goHomeAndBlock` passes the already-produced
+  `temp_block:` detail to `block()`, whose guard skips `evaluateAiStrike` when
+  `detail.startsWith("temp_block:")` (`BlockingEngine.kt:74-79`).
+- Toast frequency is one-per-strike-event: the 1s dedup + `AI_PERIODIC_MS = 1s`
+  cadence (`Constants.kt:6`) mean a single scan tick can only produce at most one
+  `StrikeCounted`, and any re-scan within 1s returns `Duplicate`.
+
+## 4) CALL-SITE AUDIT (no duplicated Toast logic)
+
+`evaluateAiStrike` is called in exactly two places after this change:
+`BlockingEngine.block()` (re-entry guard, `BlockingEngine.kt:76`) and
+`GuardianAccessibilityService.goHomeAndBlock()` (`GuardianAccessibilityService.kt:286`).
+The Toast is emitted in exactly one place — `showAiStrikeWarning()`, called only
+from the `StrikeCounted` branch inside `goHomeAndBlock`. Both AI entry points
+(`:636` and `:708`) funnel through `goHomeAndBlock`, so both benefit automatically;
+there is no per-call-site duplicate. Non-AI reasons (`APP_BLOCKED`,
+`SCHEDULE_BLOCKED`, `KEYWORD_MATCH`, `TAMPER_ATTEMPT`) take the `else detail` branch
+and never touch the strike gate (unchanged).
+
+## 5) VERSION + RELEASE
+
+- `app/build.gradle.kts`: `versionCode 12 → 13`, `versionName "2.4.3" → "2.4.4"`
+  (fresh version/tag — v2.4.3/12 is already published, and the repo has had
+  immutable-tag issues, so a new tag avoids the `v2.4.2` tombstone problem).
+
+## 6) BUILD VERIFICATION STATUS
+
+Baseline: `main` @ `34bdfa3` is green — Actions run **31987930246**
+(`release: v2.4.3 …`, event `push`, `completed success`, 2026-08-17 02:29 UTC) built
+and published v2.4.3. Run link:
+https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/31987930246
+
+The sandbox has **no JDK/Android SDK and no egress to build tooling** (only
+`github.com`/`api.github.com` reachable — `dl.google.com`, Maven Central, and apt
+mirrors are blocked), so a local `./gradlew assembleRelease` is impossible; the
+GitHub Actions `Build Release APK` workflow is the only build. That workflow runs
+on `push` to `main`/`master` (or manual `workflow_dispatch`), and this bot's token
+cannot create a `workflow_dispatch` (`HTTP 403: Resource not accessible by
+integration`) and is restricted to the `arena/01a00da2-dogs-of-kahaf` branch. The
+edited code therefore compiles-green only after the accompanying PR is merged to
+`main`, at which point the workflow runs `./gradlew assembleRelease --no-daemon
+--stacktrace`, signs, uploads the artifact, and creates the `v2.4.4` GitHub Release.
+
+Expected release once merged (workflow reads `versionName` from
+`app/build.gradle.kts`): tag **`v2.4.4`**, release "Guardian Shield v2.4.4",
+direct APK link:
+`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.4.4/app-release.apk`
+
+This section is a **code trace** (the task permits "green build log **or** a code
+trace"); the strike-by-strike table above is produced by reading the edited source
+line-for-line, not by assumption. The single behavior change is the `StrikeCounted`
+branch adding a Toast before the existing `return`; the `Blocked`, `GracePeriod`,
+and `Duplicate` paths are byte-for-byte identical in behavior to before.

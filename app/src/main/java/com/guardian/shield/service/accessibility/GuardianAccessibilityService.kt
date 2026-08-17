@@ -15,12 +15,15 @@ import android.os.PowerManager
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.guardian.shield.R
 import com.guardian.shield.admin.TamperLogger
 import com.guardian.shield.admin.UninstallProtection
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
+import com.guardian.shield.service.blocker.AiStrikeResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.FalsePositiveMemory
@@ -276,13 +279,28 @@ class GuardianAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Count AI strikes BEFORE kicking the user home. Strikes 1..(N-1) are
-        // silent — previously we always went HOME and then block() returned
-        // without an overlay, so every near-miss felt like a random eject.
+        // Count AI strikes BEFORE kicking the user home. Strikes 1..(N-1) stay in
+        // the app (no HOME, no overlay) but now show a visible warning Toast so the
+        // eventual 3rd-strike block never feels unannounced.
         val overlayDetail = if (reason == BlockReason.AI_DETECTION) {
-            blockingEngine.evaluateAiStrike(pkg) ?: run {
-                Timber.d("AI strike below threshold for $pkg — staying in app")
-                return
+            when (val result = blockingEngine.evaluateAiStrike(pkg)) {
+                is AiStrikeResult.Blocked -> result.detail
+                is AiStrikeResult.StrikeCounted -> {
+                    showAiStrikeWarning(result.strikeCount)
+                    Timber.d(
+                        "AI strike ${result.strikeCount}/${GuardianConstants.STRIKE_THRESHOLD} " +
+                            "for $pkg — warning shown, staying in app"
+                    )
+                    return
+                }
+                AiStrikeResult.GracePeriod -> {
+                    Timber.d("AI grace period active for $pkg — not re-blocking")
+                    return
+                }
+                AiStrikeResult.Duplicate -> {
+                    Timber.d("AI strike duplicate for $pkg (1s dedup) — ignored")
+                    return
+                }
             }
         } else detail
 
@@ -306,6 +324,23 @@ class GuardianAccessibilityService : AccessibilityService() {
             try { blockingEngine.block(pkg, reason, overlayDetail) }
             catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
         }, 120)
+    }
+
+    /**
+     * Visible warning for an AI strike that did NOT reach the block threshold.
+     * Shown for strikes 1 and 2 only; never for strike 3 (that path returns a
+     * [AiStrikeResult.Blocked] and gets the full overlay instead).
+     */
+    private fun showAiStrikeWarning(strikeCount: Int) {
+        val message = getString(
+            R.string.ai_strike_warning_fmt,
+            strikeCount,
+            GuardianConstants.STRIKE_THRESHOLD
+        )
+        // goHomeAndBlock already runs on the main thread, but post through the
+        // main handler so the Toast is guaranteed on the UI looper regardless of
+        // which coroutine context reached us.
+        mainHandler.post { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
     }
 
     private fun handleWindowChange(pkg: String) {

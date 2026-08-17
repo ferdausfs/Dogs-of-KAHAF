@@ -51,6 +51,8 @@
     <string name="ai_sensitivity">AI সংবেদনশীলতা (Ultimate)</string>
     <string name="unlock_delay">আনলক বিলম্ব</string>
     <string name="temp_block_info">AI বারবার ডিটেক্ট করলে অ্যাপটি এই সময়ের জন্য ব্লক হবে (৩টি স্ট্রাইক = ১৫ মিনিট ব্লক)</string>
+    <!-- AI 3-strike warning: shown on strikes 1 &amp; 2 (%1$d = strike count, %2$d = threshold) -->
+    <string name="ai_strike_warning_fmt">⚠️ সতর্ক করা হলো — %1$d/%2$d</string>
     <string name="male">পুরুষ</string>
     <string name="female">মহিলা</string>
     <string name="disabled">বন্ধ</string>
