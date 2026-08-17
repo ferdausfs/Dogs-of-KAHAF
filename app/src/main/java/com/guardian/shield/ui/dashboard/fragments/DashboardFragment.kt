@@ -197,7 +197,7 @@ class DashboardFragment : Fragment() {
                     R.color.on_error_container, R.color.error, R.color.on_error)
         }
         binding.statusCard.setCardBackgroundColor(bg)
-        binding.statusCard.strokeColor = stroke
+        binding.statusCard.setStrokeColor(stroke)
         binding.txtStatusTitle.setTextColor(ctx.getColor(textOn))
         binding.txtStatusSubtitle.setTextColor(ctx.getColor(textOn))
         binding.txtStatusSubtitle.alpha = 0.78f
