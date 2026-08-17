@@ -80,6 +80,29 @@
                 android:textSize="12.5sp"
                 android:lineSpacingMultiplier="1.35"
                 android:layout_marginTop="3dp"/>
+
+            <!-- v2.5.4 — "Not sensitive" report action. Subtle muted text action
+                 (no background/border) so it never competes with the card. Its own
+                 click target means the card's tap-to-dismiss listener is NOT fired;
+                 the handler writes the audit log entry, shows a confirmation Toast,
+                 then dismisses the card explicitly. This is a lightweight audit-only
+                 report — it does NOT touch FalsePositiveMemory / AiDetector. -->
+            <TextView
+                android:id="@+id/btnNotSensitive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="28dp"
+                android:gravity="center_vertical"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/ai_strike_warning_not_sensitive"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02"
+                android:background="@null"
+                android:contentDescription="@string/ai_strike_warning_not_sensitive"/>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

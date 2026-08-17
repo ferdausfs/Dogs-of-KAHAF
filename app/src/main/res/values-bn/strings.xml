@@ -38,6 +38,7 @@
     <string name="reason_app">অ্যাপ ব্লক</string>
     <string name="reason_sched">সময়সূচী অনুযায়ী</string>
     <string name="reason_manual">ম্যানুয়াল</string>
+    <string name="reason_not_sensitive">সংবেদনশীল নয়</string>
 
     <string name="settings_title">সেটিংস</string>
     <string name="section_protection">সুরক্ষা</string>
@@ -57,6 +58,9 @@
     <string name="ai_strike_warning_kicker">STRIKE WARNING</string>
     <string name="ai_strike_warning_title_fmt">সতর্কতা %1$d/%2$d</string>
     <string name="ai_strike_warning_body">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</string>
+    <!-- v2.5.4 — "Not sensitive" audit report action on the strike-1/2 card. -->
+    <string name="ai_strike_warning_not_sensitive">সংবেদনশীল নয়</string>
+    <string name="ai_strike_report_confirmed">রিপোর্ট করা হয়েছে</string>
     <string name="male">পুরুষ</string>
     <string name="female">মহিলা</string>
     <string name="disabled">বন্ধ</string>

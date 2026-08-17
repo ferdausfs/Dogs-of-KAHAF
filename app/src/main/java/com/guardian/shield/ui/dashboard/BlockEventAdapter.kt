@@ -57,6 +57,7 @@ class BlockEventAdapter(
                 BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.purple,        "🕐")
                 BlockReason.MANUAL          -> Triple(ctx.getString(R.string.reason_manual),R.color.on_surface_dim,"✋")
                 BlockReason.TAMPER_ATTEMPT   -> Triple(ctx.getString(R.string.reason_tamper), R.color.error,         "⚠️")
+                BlockReason.NOT_SENSITIVE   -> Triple(ctx.getString(R.string.reason_not_sensitive), R.color.success, "📝")
             }
 
             b.txtReason.text = "$emoji $reasonText"
@@ -68,6 +69,7 @@ class BlockEventAdapter(
                     BlockReason.SCHEDULE_BLOCKED -> "Schedule"
                     BlockReason.AI_DETECTION -> "AI Blocked"
                     BlockReason.KEYWORD_MATCH -> "Keyword"
+                    BlockReason.NOT_SENSITIVE -> "Reported"
                     else -> "Blocked"
                 }
             } catch (_: Throwable) {}
