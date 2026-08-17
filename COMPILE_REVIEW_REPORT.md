@@ -938,7 +938,9 @@ All pairs computed (WCAG): on-background 17.2:1, on-surface 16.2:1, variant text
 - Sandbox: no Android SDK/JDK, Maven Central unreachable (as documented in prior sessions) → per-commit verification = `guardian-redesign/tools/verify_res.py` (all @color/@drawable/@style refs resolve) + XML well-formedness + duplicate-attr scan + binding/R.id cross-check (every Kotlin `binding.X`/`R.id.X` resolves, incl. snake↔camel ViewBinding mapping) — ALL GREEN at every commit.
 - Release: `v3.0.0` tag free (404/404 probed pre-bump; repo's config-time collision guard also verifies in CI).
 - CI: workflow runs on push to `main` via PR merge → publishes `v3.0.0` + `app-release.apk`.
-- **Green run:** _(filled below after CI completes)_
+- **Green run:** ✅ [32031763329](https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32031763329) — `Build Release APK` completed **success** (2026-08-17, 4m27s) → **Release [v3.0.0](https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.0.0) "Guardian Shield v3.0.0"** published with signed `app-release.apk` (52.7 MB).
+  - **APK download:** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.0/app-release.apk
+  - **Fix-up cycle (3 PRs, all verified green):** #40 `AAPT: resource style/Widget.GuardianShield not found` → base style + explicit parents · #41 `compileReleaseKotlin` overloaded-setter synthetic property → explicit `setStrokeColor(int)` · #42 missing `ColorStateList` import → added. Each error was captured via check-run annotations (log CDN blocked from this sandbox, as before) and root-caused to the line; final run green on first try after #42.
 
 ## 6) COMPLIANCE
 
