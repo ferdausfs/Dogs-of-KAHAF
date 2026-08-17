@@ -129,13 +129,14 @@
                             android:padding="8dp"
                             app:tint="@color/success"/>
 
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"/>
+
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:layout_weight="0"
-                            android:layout_marginStart="0dp"
-                            android:layout_gravity="end"
-                            android:layout_marginLeft="auto"
                             android:src="@drawable/ic_check_circle"
                             app:tint="@color/success"/>
                     </LinearLayout>
@@ -181,7 +182,8 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
                         <ImageView
                             android:layout_width="36dp"
@@ -191,11 +193,14 @@
                             android:padding="8dp"
                             app:tint="@color/success"/>
 
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"/>
+
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:layout_gravity="end"
-                            android:layout_marginLeft="auto"
                             android:src="@drawable/ic_check_circle"
                             app:tint="@color/success"/>
                     </LinearLayout>
@@ -241,7 +246,8 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
                         <ImageView
                             android:layout_width="36dp"
@@ -251,11 +257,14 @@
                             android:padding="8dp"
                             app:tint="@color/success"/>
 
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"/>
+
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:layout_gravity="end"
-                            android:layout_marginLeft="auto"
                             android:src="@drawable/ic_check_circle"
                             app:tint="@color/success"/>
                     </LinearLayout>
@@ -301,7 +310,8 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
                         <ImageView
                             android:layout_width="36dp"
@@ -311,11 +321,14 @@
                             android:padding="8dp"
                             app:tint="@color/ai_detection_color"/>
 
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"/>
+
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
-                            android:layout_gravity="end"
-                            android:layout_marginLeft="auto"
                             android:src="@drawable/ic_check_circle"
                             app:tint="@color/success"/>
                     </LinearLayout>
