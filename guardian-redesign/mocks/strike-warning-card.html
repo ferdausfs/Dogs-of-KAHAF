@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield — Strike 1 &amp; 2 Warning Card Mockup (approval gate)</title>
+<style>
+  :root { --bg:#0E1116; --surface:#161C26; --surface_high:#1C232E; --surface_variant:#242E3B; --surface_highest:#2A3647;
+          --primary:#D0E4FF; --on_primary:#003258; --primary_container:#1A344F; --pstart:#1E3A5F; --pend:#10233A;
+          --on_surface:#E2E6EB; --on_variant:#A3ADBB; --on_dim:#6B7585;
+          --warning:#FBBF24; --error:#FFB4AB; --error_container:#3A1A1A; --success:#6EE7B7; --ai:#A78BFA;
+          --border_subtle:rgba(255,255,255,.08); --border_strong:rgba(255,255,255,.14); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--on_surface); font:14px/1.5 -apple-system,'Segoe UI',Roboto,'Noto Sans Bengali',sans-serif; padding:36px; }
+  h1 { font-size:24px; font-weight:800; letter-spacing:-0.02em; }
+  .sub { color:var(--on_variant); font-size:13px; margin:6px 0 30px; max-width:980px; }
+  .row { display:flex; flex-wrap:wrap; gap:36px; align-items:flex-start; }
+  .phone { width:320px; }
+  .plabel { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); margin:0 0 8px; }
+  .screen { position:relative; width:320px; height:600px; border-radius:28px; overflow:hidden; background:var(--bg);
+            border:1px solid var(--border_strong); box-shadow:0 24px 64px rgba(0,0,0,.55); }
+  .statusbar { height:26px; display:flex; align-items:center; justify-content:center; color:var(--on_dim); font-size:10px; }
+  /* fake app content behind the card — dashboard hero + stat tiles, real v2.5.0 tokens */
+  .hero { margin:10px 16px; padding:20px 18px; border-radius:28px; border:1px solid var(--border_strong);
+          background:linear-gradient(135deg,var(--pstart),var(--pend)); }
+  .hero .t1 { font-size:15px; font-weight:800; color:var(--primary); }
+  .hero .t2 { font-size:10.5px; color:var(--on_variant); margin-top:2px; }
+  .hero .t3 { display:inline-block; margin-top:10px; font-size:9.5px; padding:3px 9px; border-radius:999px;
+              background:rgba(110,231,183,.12); color:var(--success); border:1px solid rgba(110,231,183,.3); }
+  .stats { display:flex; gap:8px; padding:0 16px; }
+  .stat { flex:1; background:var(--surface_high); border:1px solid var(--border_subtle); border-radius:20px; padding:12px 10px; }
+  .stat b { display:block; font-size:17px; }
+  .stat span { font-size:8.5px; color:var(--on_variant); }
+  .list { margin:14px 16px; }
+  .lrow { background:var(--surface_high); border:1px solid var(--border_subtle); border-radius:16px; padding:10px 12px; margin-bottom:8px;
+          display:flex; gap:10px; align-items:center; }
+  .licon { width:34px; height:34px; border-radius:10px; background:var(--surface_variant); flex:none; }
+  .lrow b { font-size:12px; display:block; }
+  .lrow span { font-size:9.5px; color:var(--on_dim); }
+  /* ===== THE NEW STRIKE WARNING CARD (spec under approval) ===== */
+  .wcard { position:absolute; left:20px; right:20px; top:132px; z-index:5;
+           background:var(--surface_high); border:1.5px solid var(--warning); border-radius:20px;
+           padding:14px 16px; display:flex; gap:12px; align-items:center;
+           box-shadow:0 12px 32px rgba(0,0,0,.4); animation:pulse 1.6s ease-in-out 2; }
+  .wicon { width:44px; height:44px; flex:none; border-radius:50%; background:var(--surface_variant);
+           display:flex; align-items:center; justify-content:center; }
+  .wicon svg { width:22px; height:22px; }
+  .wbody { flex:1; }
+  .wtitle { font-size:16.5px; font-weight:800; letter-spacing:-0.01em; color:var(--on_surface); }
+  .wtext { font-size:12.5px; line-height:1.35; color:var(--on_variant); margin-top:3px; }
+  .wcount { font-size:10px; font-weight:800; color:var(--warning); letter-spacing:.06em; text-transform:uppercase; }
+  @keyframes pulse { 0%,100% { transform:scale(1);} 50% { transform:scale(1.012);} }
+  .foot { font-size:10.5px; color:var(--on_dim); margin-top:10px; text-align:center; }
+  /* old toast for comparison */
+  .toast { position:absolute; left:50%; bottom:96px; transform:translateX(-50%); background:#3A3A3A; color:#FFFFFF;
+           padding:10px 18px; border-radius:999px; font-size:12px; white-space:nowrap; opacity:.9; z-index:5; }
+  /* spec tables */
+  h2 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); margin:34px 0 10px; }
+  table { border-collapse:collapse; width:100%; max-width:1020px; }
+  td,th { border:1px solid var(--border_subtle); padding:7px 11px; font-size:12.5px; text-align:left; vertical-align:top; }
+  th { background:var(--surface); color:var(--primary); text-transform:uppercase; letter-spacing:.05em; font-size:11px; }
+  td.mono { font-family:ui-monospace,monospace; color:var(--on_variant); font-size:11.5px; }
+  .approve { margin-top:34px; max-width:1020px; border:1.5px solid var(--success); border-radius:16px; padding:16px 18px;
+             background:rgba(110,231,183,.06); }
+  .approve b { color:var(--success); }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:baseline; }
+</style>
+</head>
+<body>
+<h1>Strike 1 &amp; 2 Warning — Card Overlay Mockup</h1>
+<div class="sub">v2.5.0 tokens only — extracted from the merged source (colors.xml / themes.xml / styles.xml / drawables). The original design-tokens.html from the
+redesign session was never committed to any branch, so this mockup is built from the shipped token values (see <b>design-tokens-v250.html</b> in this folder).
+Replaces the plain grey system Toast in <span class="mono">showAiStrikeWarning()</span>. NOT full-screen. NOT a Toast. Strike 3 → BlockOverlayActivity stays untouched.</div>
+
+<div class="row">
+  <div class="phone">
+    <div class="plabel">Strike 1 — new styled card (mid-upper screen)</div>
+    <div class="screen">
+      <div class="statusbar">9:41 &nbsp;&nbsp; Guardian Shield</div>
+      <div class="hero"><div class="t1">সুরক্ষা সক্রিয়</div><div class="t2">Protection is ON — AI + App Blocking</div><div class="t3">Protection Active</div></div>
+      <div class="stats">
+        <div class="stat"><b>78</b><span>Blocked Today</span></div>
+        <div class="stat"><b>32</b><span>Websites</span></div>
+        <div class="stat"><b>8h45m</b><span>Time Protected</span></div>
+      </div>
+      <div class="list">
+        <div class="lrow"><div class="licon"></div><div><b>AI ডিটেকশন</b><span>Facebook — Adult Content · এখন</span></div></div>
+        <div class="lrow"><div class="licon"></div><div><b>কিওয়ার্ড ব্লক</b><span>Chrome — 5 মিনিট আগে</span></div></div>
+        <div class="lrow"><div class="licon"></div><div><b>AI ডিটেকশন</b><span>Instagram — 22 মিনিট আগে</span></div></div>
+      </div>
+      <!-- NEW CARD -->
+      <div class="wcard">
+        <div class="wicon"><svg viewBox="0 0 24 24" fill="#FBBF24"><path d="M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z"/></svg></div>
+        <div class="wbody">
+          <div class="wcount">strike warning</div>
+          <div class="wtitle">সতর্কতা ১/৩</div>
+          <div class="wtext">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</div>
+        </div>
+      </div>
+      <div class="foot">user keeps using the app underneath · card auto-dismisses in ~3.5 s · tap card to dismiss early</div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="plabel">Strike 2 — same card, count ২/৩</div>
+    <div class="screen">
+      <div class="statusbar">9:42 &nbsp;&nbsp; Guardian Shield</div>
+      <div class="hero"><div class="t1">সুরক্ষা সক্রিয়</div><div class="t2">Protection is ON — AI + App Blocking</div><div class="t3">Protection Active</div></div>
+      <div class="stats">
+        <div class="stat"><b>79</b><span>Blocked Today</span></div>
+        <div class="stat"><b>32</b><span>Websites</span></div>
+        <div class="stat"><b>8h46m</b><span>Time Protected</span></div>
+      </div>
+      <div class="list">
+        <div class="lrow"><div class="licon"></div><div><b>AI ডিটেকশন</b><span>Facebook — Adult Content · এখন</span></div></div>
+        <div class="lrow"><div class="licon"></div><div><b>কিওয়ার্ড ব্লক</b><span>Chrome — 6 মিনিট আগে</span></div></div>
+        <div class="lrow"><div class="licon"></div><div><b>AI ডিটেকশন</b><span>Instagram — 23 মিনিট আগে</span></div></div>
+      </div>
+      <div class="wcard">
+        <div class="wicon"><svg viewBox="0 0 24 24" fill="#FBBF24"><path d="M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z"/></svg></div>
+        <div class="wbody">
+          <div class="wcount">strike warning</div>
+          <div class="wtitle">সতর্কতা ২/৩</div>
+          <div class="wtext">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</div>
+        </div>
+      </div>
+      <div class="foot">one more strike → existing full-screen BlockOverlayActivity (unchanged)</div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="plabel">Today (broken) — plain system Toast</div>
+    <div class="screen">
+      <div class="statusbar">9:40 &nbsp;&nbsp; Guardian Shield</div>
+      <div class="hero"><div class="t1">সুরক্ষা সক্রিয়</div><div class="t2">Protection is ON — AI + App Blocking</div><div class="t3">Protection Active</div></div>
+      <div class="stats">
+        <div class="stat"><b>78</b><span>Blocked Today</span></div>
+        <div class="stat"><b>32</b><span>Websites</span></div>
+        <div class="stat"><b>8h45m</b><span>Time Protected</span></div>
+      </div>
+      <div class="list">
+        <div class="lrow"><div class="licon"></div><div><b>AI ডিটেকশন</b><span>Facebook — Adult Content · এখন</span></div></div>
+        <div class="lrow"><div class="licon"></div><div><b>কিওয়ার্ড ব্লক</b><span>Chrome — 5 মিনিট আগে</span></div></div>
+      </div>
+      <div class="toast">⚠️ সতর্ক করা হলো — ১/৩</div>
+      <div class="foot">grey system Toast at the bottom — visually disconnected from the v2.5.0 redesign</div>
+    </div>
+  </div>
+</div>
+
+<h2>Spec — every value maps to a merged v2.5.0 token</h2>
+<table>
+  <tr><th>Element</th><th>Mockup value</th><th>v2.5.0 source token</th></tr>
+  <tr><td>Card surface</td><td class="mono">#1C232E</td><td><span class="sw" style="background:#1C232E"></span> <b>@color/surface_high</b> — lifts off bg_main #0E1116 behind it</td></tr>
+  <tr><td>Card border</td><td class="mono">1.5dp solid #FBBF24</td><td><span class="sw" style="background:#FBBF24"></span> <b>@color/warning</b> (= warning_amber, colors.xml) — within the requested 1–2dp</td></tr>
+  <tr><td>Corner radius</td><td class="mono">20dp</td><td><b>r-md</b> — ShapeAppearance.GuardianShield.Medium + Widget.GuardianShield.CardPremium (20dp)</td></tr>
+  <tr><td>Elevation</td><td class="mono">0dp + shadow 0 12 32 rgba(0,0,0,.4)</td><td>card elevation 0dp + design-system hero shadow token (report: "shadow 0 12 32")</td></tr>
+  <tr><td>Leading icon</td><td class="mono">shield mark, tint #FBBF24</td><td><b>ic_shield_large</b> (the app's shield path) tinted with <b>@color/warning</b> — the redesign's icon set has no shield-exclamation variant, so the standard shield + warning tint per the approved fallback. No dog/mascot.</td></tr>
+  <tr><td>Icon container</td><td class="mono">44dp circle #242E3B</td><td>module leading-icon token — 44dp circle, <b>@color/surface_variant</b> bg (same as Protection module icons)</td></tr>
+  <tr><td>Title</td><td class="mono">সতর্কতা ১/৩ · সতর্কতা ২/৩</td><td>new string <b>ai_strike_warning_title_fmt</b> = "সতর্কতা %1$d/%2$d" (values + values-bn); bold 16.5sp, <b>@color/on_surface</b> #E2E6EB — same %d→Bengali-digits path as ai_strike_warning_fmt</td></tr>
+  <tr><td>Body</td><td class="mono">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</td><td>new string <b>ai_strike_warning_body</b> (values + values-bn) — mirrors temp_block_info tone ("AI বারবার detect করলে app টি… block হবে"); 12.5sp, <b>@color/on_surface_variant</b> #A3ADBB</td></tr>
+  <tr><td>Kicker</td><td class="mono">STRIKE WARNING</td><td>SectionHeader token — 10sp caps, letterSpacing .06, <b>@color/warning</b> (optional, for icon+title+body spec fidelity)</td></tr>
+  <tr><td>Position</td><td class="mono">top ≈132px (~18% of 600px screen), margins 20dp</td><td>mid-upper screen, same 20dp screen padding as v2.5.0 screens</td></tr>
+  <tr><td>Duration</td><td class="mono">3.5 s auto-dismiss</td><td>within the requested ~3–4 s; timer cancels on tap-dismiss and on removal</td></tr>
+</table>
+
+<h2>Behavior spec (implementation boundary — strike logic untouched)</h2>
+<table>
+  <tr><th>Concern</th><th>Behavior</th></tr>
+  <tr><td>Window</td><td class="mono">WindowManager TYPE_APPLICATION_OVERLAY card — same SYSTEM_ALERT_WINDOW permission the app already declares (AndroidManifest.xml:5) and manages (PermissionManager.canDrawOverlays / PermissionsActivity ACTION_MANAGE_OVERLAY_PERMISSION). No new permission.</td></tr>
+  <tr><td>Non-blocking</td><td class="mono">FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCH_MODAL — touches outside the card pass through to the app underneath; only the card area intercepts (tap-to-dismiss)</td></tr>
+  <tr><td>Permission fallback</td><td class="mono">if !canDrawOverlays → keep today's Toast (ai_strike_warning_fmt, unchanged) — warning never disappears silently</td></tr>
+  <tr><td>Caller</td><td class="mono">showAiStrikeWarning(strikeCount) only — called from the StrikeCounted branch of goHomeAndBlock; strike-counting (TempBlockManager/BlockingEngine), STRIKE_THRESHOLD, dedup/grace gating and the strike-3 BlockOverlayActivity path are NOT modified</td></tr>
+  <tr><td>Cleanup</td><td class="mono">auto-remove on timeout/tap + onDestroy of the accessibility service removes any live card (no leak)</td></tr>
+</table>
+
+<div class="approve">
+<b>APPROVAL GATE — awaiting your explicit go-ahead before any Kotlin/XML is written.</b><br>
+Reply <b>approve</b> to proceed with the overlay-card implementation exactly as specced above (version bump 2.5.2 / versionCode 16 will ride along as its own release), or list changes (colors, copy, position, duration, icon…). No Kotlin/XML implementation will start until approved.
+</div>
+</body>
+</html>

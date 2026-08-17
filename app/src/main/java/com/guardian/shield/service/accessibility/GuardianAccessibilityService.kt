@@ -7,14 +7,22 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.provider.Settings
+import android.view.ContextThemeWrapper
 import android.view.Display
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.guardian.shield.R
@@ -280,8 +288,8 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
 
         // Count AI strikes BEFORE kicking the user home. Strikes 1..(N-1) stay in
-        // the app (no HOME, no overlay) but now show a visible warning Toast so the
-        // eventual 3rd-strike block never feels unannounced.
+        // the app (no HOME, no overlay) but show a visible styled warning card
+        // (v2.5.2) so the eventual 3rd-strike block never feels unannounced.
         val overlayDetail = if (reason == BlockReason.AI_DETECTION) {
             when (val result = blockingEngine.evaluateAiStrike(pkg)) {
                 is AiStrikeResult.Blocked -> result.detail
@@ -332,15 +340,102 @@ class GuardianAccessibilityService : AccessibilityService() {
      * [AiStrikeResult.Blocked] and gets the full overlay instead).
      */
     private fun showAiStrikeWarning(strikeCount: Int) {
-        val message = getString(
-            R.string.ai_strike_warning_fmt,
+        // Strikes 1 & 2 only — styled mid-screen overlay card (v2.5.2 redesign of
+        // the old plain Toast). Strike counting, the STRIKE_THRESHOLD gate and the
+        // strike-3 BlockOverlayActivity path are untouched.
+        // goHomeAndBlock already runs on the main thread, but post through the
+        // main handler so the overlay is guaranteed on the UI looper regardless of
+        // which coroutine context reached us.
+        mainHandler.post {
+            try {
+                if (Settings.canDrawOverlays(this)) {
+                    showStrikeWarningOverlay(strikeCount)
+                } else {
+                    // Overlay permission not granted yet — keep the pre-2.5.2 Toast
+                    // as a graceful fallback so the warning is never silently lost.
+                    val message = getString(
+                        R.string.ai_strike_warning_fmt,
+                        strikeCount,
+                        GuardianConstants.STRIKE_THRESHOLD
+                    )
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                }
+            } catch (t: Throwable) {
+                Timber.w(t, "Strike warning overlay failed — falling back to Toast")
+                runCatching {
+                    Toast.makeText(
+                        this,
+                        getString(
+                            R.string.ai_strike_warning_fmt,
+                            strikeCount,
+                            GuardianConstants.STRIKE_THRESHOLD
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    // ---- v2.5.2 strike-warning overlay card (approved mockup:
+    //      guardian-redesign/mocks/strike-warning-card.html) ----
+    // WindowManager TYPE_APPLICATION_OVERLAY card shown mid-upper screen.
+    // Reuses the SYSTEM_ALERT_WINDOW overlay permission the app already declares
+    // (AndroidManifest) and manages (PermissionManager / PermissionsActivity).
+    // FLAG_NOT_FOCUSABLE + FLAG_NOT_TOUCH_MODAL: non-blocking — touches outside
+    // the card pass through to the app underneath; only the card area intercepts
+    // (tap to dismiss). Auto-dismisses after STRIKE_WARNING_AUTO_DISMISS_MS.
+
+    private var strikeWarningView: View? = null
+    private val strikeWarningDismissRunnable = Runnable { dismissAiStrikeWarning() }
+
+    private fun showStrikeWarningOverlay(strikeCount: Int) {
+        dismissAiStrikeWarning()
+
+        val card = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_GuardianShield))
+            .inflate(R.layout.view_strike_warning, null)
+        val titleView = card.findViewById<TextView>(R.id.txtStrikeTitle)
+        titleView.text = getString(
+            R.string.ai_strike_warning_title_fmt,
             strikeCount,
             GuardianConstants.STRIKE_THRESHOLD
         )
-        // goHomeAndBlock already runs on the main thread, but post through the
-        // main handler so the Toast is guaranteed on the UI looper regardless of
-        // which coroutine context reached us.
-        mainHandler.post { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+        // kicker + body are static copy from the approved mockup (no strike number).
+
+        val metrics = resources.displayMetrics
+        val marginPx = (20 * metrics.density).toInt() // v2.5.0 screen padding token
+        val params = WindowManager.LayoutParams(
+            metrics.widthPixels - 2 * marginPx,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        )
+        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        params.y = (metrics.heightPixels * 0.18f).toInt() // mid-upper screen (mockup)
+
+        card.setOnClickListener { dismissAiStrikeWarning() }
+
+        val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        wm.addView(card, params)
+        strikeWarningView = card
+
+        mainHandler.removeCallbacks(strikeWarningDismissRunnable)
+        mainHandler.postDelayed(strikeWarningDismissRunnable, STRIKE_WARNING_AUTO_DISMISS_MS)
+        Timber.d("Strike %d/%d warning card shown", strikeCount, GuardianConstants.STRIKE_THRESHOLD)
+    }
+
+    private fun dismissAiStrikeWarning() {
+        mainHandler.removeCallbacks(strikeWarningDismissRunnable)
+        val view = strikeWarningView ?: return
+        strikeWarningView = null
+        try {
+            (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(view)
+        } catch (_: Throwable) {
+            // already removed — nothing to do
+        }
     }
 
     private fun handleWindowChange(pkg: String) {
@@ -826,8 +921,14 @@ class GuardianAccessibilityService : AccessibilityService() {
         clearBlockingFlag("interrupted")
     }
 
+    companion object {
+        /** Strike-warning card auto-dismiss — 3.5 s (approved 3–4 s range). */
+        private const val STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        dismissAiStrikeWarning()
         runCatching { unregisterReceiver(screenReceiver) }
         periodicJob?.cancel()
         stuckFlagJob?.cancel()
