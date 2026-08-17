@@ -285,4 +285,12 @@
     <string name="pin_unlock">আনলক · Unlock</string>
     <string name="pin_lock_sub">পিন দিন · Guardian Shield locked</string>
     <string name="pin_forgot_note">পিন ভুলে গেছেন? রিসেট করতে রিইনস্টল করতে হবে</string>
+    <!-- WATCHTOWER V3 permissions + onboarding copy -->
+    <string name="perm_accessibility_sub">মূল ইঞ্জিন · Accessibility</string>
+    <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>
+    <string name="perm_overlay_sub">ব্লক ওভারলের জন্য দরকার</string>
+    <string name="perm_notification_sub">নোটিফিকেশন পারমিশন</string>
+    <string name="perm_battery_sub">সার্ভিস চালু রাখে</string>
+    <string name="onboarding_skip">স্কিপ</string>
+    <string name="onboarding_next">পরবর্তী</string>
 </resources>

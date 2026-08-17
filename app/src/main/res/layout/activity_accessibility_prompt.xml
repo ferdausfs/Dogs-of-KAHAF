@@ -1,88 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — urgent accessibility prompt (approved: mocks/v3/permissions-onboarding.html frame B)
+     Binding preserved: btnEnable (copy unchanged incl. the ⚠️ in title string). -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp"
-    android:background="@color/bg_main">
+    android:background="@color/overlay_dim_solid">
 
-    <FrameLayout
-        android:layout_width="120dp"
-        android:layout_height="120dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="28dp">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/bg_shield_glow"
-            android:alpha="0.35"/>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:cardCornerRadius="28dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/error_container"
-            app:strokeColor="#30FF8A80"
-            app:strokeWidth="1dp">
-
+        <FrameLayout
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:background="@drawable/bg_halo_red">
             <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="40dp" android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_shield_off"
-                app:tint="@color/error"/>
-        </com.google.android.material.card.MaterialCardView>
-    </FrameLayout>
+                app:tint="@color/error"
+                android:importantForAccessibility="no"/>
+        </FrameLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/prompt_accessibility_title"
-        android:textColor="@color/error"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginTop="24dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/prompt_accessibility_title"
+            android:textColor="@color/on_surface"
+            android:textSize="21sp" android:textStyle="bold" android:letterSpacing="-0.01"
+            android:gravity="center"/>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/prompt_accessibility_body"
-        android:textColor="@color/on_surface"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:lineSpacingMultiplier="1.4"
-        android:layout_marginTop="16dp"
-        android:maxWidth="320dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:maxWidth="300dp"
+            android:text="@string/prompt_accessibility_body"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="13.5sp" android:lineSpacingMultiplier="1.6"
+            android:gravity="center"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnEnable"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="@string/prompt_accessibility_btn"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginTop="28dp"
-        app:cornerRadius="28dp"
-        app:backgroundTint="#FF3B4F"
-        android:textColor="@color/white"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEnable"
+            style="@style/Widget.GuardianShield.Button.Danger"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="26dp"
+            android:text="@string/prompt_accessibility_btn"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/prompt_accessibility_note"
-        android:textColor="@color/on_surface_dim"
-        android:textSize="11sp"
-        android:gravity="center"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_badge"
-        android:backgroundTint="@color/surface"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"/>
-</LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/prompt_accessibility_note"
+            android:fontFamily="monospace"
+            android:textColor="@color/on_surface_dim"
+            android:textSize="11sp"/>
+    </LinearLayout>
+</FrameLayout>

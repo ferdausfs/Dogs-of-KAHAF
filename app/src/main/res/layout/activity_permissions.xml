@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — Permission Health (approved: mocks/v3/permissions-onboarding.html)
+     Bindings preserved: toolbar rowAccessibility iconAccessibility btnAccessibility
+     rowUsageStats iconUsageStats btnUsageStats rowOverlay iconOverlay btnOverlay
+     rowNotification iconNotification btnNotification rowBattery iconBattery
+     btnBattery btnFixAll (icon/btn classes unchanged — code swaps state icons/colors). -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -13,234 +20,280 @@
         android:background="@color/bg_main"
         app:title="@string/permissions_title"
         app:titleTextColor="@color/on_surface"
-        app:navigationIcon="@drawable/ic_arrow_back"/>
+        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="32dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/surface_high"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp">
-
+                style="@style/Widget.GuardianShield.Card">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="8dp">
+                    android:padding="4dp">
 
-                    <!-- Accessibility row -->
+                    <!-- Accessibility -->
                     <LinearLayout
                         android:id="@+id/rowAccessibility"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="15dp"
                         android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconAccessibility"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_accessibility"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_accessibility"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
+                        <FrameLayout
+                            android:layout_width="42dp" android:layout_height="42dp"
+                            android:background="@drawable/bg_icon_well"
+                            android:backgroundTint="@color/badge_success_bg">
+                            <ImageView
+                                android:id="@+id/iconAccessibility"
+                                android:layout_width="20dp" android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_access"
+                                app:tint="@color/success"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical"
+                            android:layout_marginStart="14dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/perm_accessibility" android:textColor="@color/on_surface"
+                                android:textSize="14.5sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp" android:text="@string/perm_accessibility_sub"
+                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                        </LinearLayout>
                         <TextView
                             android:id="@+id/btnAccessibility"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_badge"
+                            android:backgroundTint="@color/badge_neutral_bg"
+                            android:paddingHorizontal="14dp"
+                            android:textSize="11sp" android:textStyle="bold"
+                            android:letterSpacing="0.04"
+                            tools:text="FIX"/>
                     </LinearLayout>
 
-                    <!-- Usage Stats row -->
+                    <View android:layout_width="match_parent" android:layout_height="1dp"
+                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+
+                    <!-- Usage stats -->
                     <LinearLayout
                         android:id="@+id/rowUsageStats"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="15dp"
                         android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconUsageStats"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_usage_stats"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_usage_stats"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
+                        <FrameLayout
+                            android:layout_width="42dp" android:layout_height="42dp"
+                            android:background="@drawable/bg_icon_well"
+                            android:backgroundTint="@color/badge_success_bg">
+                            <ImageView
+                                android:id="@+id/iconUsageStats"
+                                android:layout_width="20dp" android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_usage"
+                                app:tint="@color/success"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical"
+                            android:layout_marginStart="14dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/perm_usage_stats" android:textColor="@color/on_surface"
+                                android:textSize="14.5sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp" android:text="@string/perm_usage_sub"
+                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                        </LinearLayout>
                         <TextView
                             android:id="@+id/btnUsageStats"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_badge"
+                            android:backgroundTint="@color/badge_neutral_bg"
+                            android:paddingHorizontal="14dp"
+                            android:textSize="11sp" android:textStyle="bold"
+                            android:letterSpacing="0.04"
+                            tools:text="FIX"/>
                     </LinearLayout>
 
-                    <!-- Overlay row -->
+                    <View android:layout_width="match_parent" android:layout_height="1dp"
+                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+
+                    <!-- Overlay -->
                     <LinearLayout
                         android:id="@+id/rowOverlay"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="15dp"
                         android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconOverlay"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_overlay"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_overlay"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
+                        <FrameLayout
+                            android:layout_width="42dp" android:layout_height="42dp"
+                            android:background="@drawable/bg_icon_well"
+                            android:backgroundTint="@color/badge_error_bg">
+                            <ImageView
+                                android:id="@+id/iconOverlay"
+                                android:layout_width="20dp" android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_layers"
+                                app:tint="@color/error"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical"
+                            android:layout_marginStart="14dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/perm_overlay" android:textColor="@color/on_surface"
+                                android:textSize="14.5sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp" android:text="@string/perm_overlay_sub"
+                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                        </LinearLayout>
                         <TextView
                             android:id="@+id/btnOverlay"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_badge"
+                            android:backgroundTint="@color/badge_neutral_bg"
+                            android:paddingHorizontal="14dp"
+                            android:textSize="11sp" android:textStyle="bold"
+                            android:letterSpacing="0.04"
+                            tools:text="FIX"/>
                     </LinearLayout>
 
-                    <!-- Notification row -->
+                    <View android:layout_width="match_parent" android:layout_height="1dp"
+                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+
+                    <!-- Notification -->
                     <LinearLayout
                         android:id="@+id/rowNotification"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="15dp"
                         android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconNotification"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_notification"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_notification"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
+                        <FrameLayout
+                            android:layout_width="42dp" android:layout_height="42dp"
+                            android:background="@drawable/bg_icon_well"
+                            android:backgroundTint="@color/badge_success_bg">
+                            <ImageView
+                                android:id="@+id/iconNotification"
+                                android:layout_width="20dp" android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_bell"
+                                app:tint="@color/success"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical"
+                            android:layout_marginStart="14dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/perm_notification" android:textColor="@color/on_surface"
+                                android:textSize="14.5sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp" android:text="@string/perm_notification_sub"
+                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                        </LinearLayout>
                         <TextView
                             android:id="@+id/btnNotification"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_badge"
+                            android:backgroundTint="@color/badge_neutral_bg"
+                            android:paddingHorizontal="14dp"
+                            android:textSize="11sp" android:textStyle="bold"
+                            android:letterSpacing="0.04"
+                            tools:text="FIX"/>
                     </LinearLayout>
 
-                    <!-- Battery row -->
+                    <View android:layout_width="match_parent" android:layout_height="1dp"
+                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+
+                    <!-- Battery -->
                     <LinearLayout
                         android:id="@+id/rowBattery"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="15dp"
                         android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconBattery"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_battery"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_battery"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
+                        <FrameLayout
+                            android:layout_width="42dp" android:layout_height="42dp"
+                            android:background="@drawable/bg_icon_well"
+                            android:backgroundTint="@color/badge_warn_bg">
+                            <ImageView
+                                android:id="@+id/iconBattery"
+                                android:layout_width="20dp" android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_battery"
+                                app:tint="@color/warning_amber"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical"
+                            android:layout_marginStart="14dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/perm_battery" android:textColor="@color/on_surface"
+                                android:textSize="14.5sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp" android:text="@string/perm_battery_sub"
+                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                        </LinearLayout>
                         <TextView
                             android:id="@+id/btnBattery"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_badge"
+                            android:backgroundTint="@color/badge_neutral_bg"
+                            android:paddingHorizontal="14dp"
+                            android:textSize="11sp" android:textStyle="bold"
+                            android:letterSpacing="0.04"
+                            tools:text="FIX"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFixAll"
+                style="@style/Widget.GuardianShield.Button"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/fix_all"
+                android:layout_height="52dp"
                 android:layout_marginTop="16dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/primary"
-                android:textColor="@color/black"/>
+                app:icon="@drawable/ic_wrench"
+                app:iconTint="@color/on_primary"
+                android:text="@string/fix_all"/>
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

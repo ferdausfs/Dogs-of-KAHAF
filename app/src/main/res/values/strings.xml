@@ -287,4 +287,12 @@
     <string name="pin_unlock">Unlock · আনলক</string>
     <string name="pin_lock_sub">পিন দিন · Guardian Shield is locked</string>
     <string name="pin_forgot_note">Forgot PIN? Reinstall is required to reset</string>
+    <!-- WATCHTOWER V3 permissions + onboarding copy -->
+    <string name="perm_accessibility_sub">core engine · এক্সেসিবিলিটি সার্ভিস</string>
+    <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>
+    <string name="perm_overlay_sub">block overlays need this · ব্লক ওভারলে</string>
+    <string name="perm_notification_sub">নোটিফিকেশন পারমিশন</string>
+    <string name="perm_battery_sub">keep service alive · সার্ভিস চালু রাখে</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
 </resources>
