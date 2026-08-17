@@ -526,3 +526,67 @@ making any such release-process change.**
   Note: no fresh GitHub Release/APK direct link could be produced because the
   repository tag-creation rule blocks publishing under `v2.4.2` (and that tag
   name is now immutable-tombstoned). This must be resolved by the repo owner.
+
+---
+
+## 6) SESSION FOLLOW-UP (2026-08-17) — v2.4.3 release published; false-positive button fix
+
+Per request, the version was bumped so a fresh (non-tombstoned) release tag could
+be created, and one additional real bug found during the code walk was fixed.
+
+### Additional bug fixed (not a strike bug)
+
+**File:** `app/src/main/java/com/guardian/shield/ui/overlay/BlockOverlayActivity.kt`
+(with a matching marker in `TempBlockManager.kt`)
+
+An AI 3rd-strike block reaches the overlay via the *enforcement* path
+(`GuardianAccessibilityService.kt:363/736`) with `reason=APP_BLOCKED` and
+`detail="temp_block:NNmin"` — i.e. the overlay's `reason == "AI_DETECTION"` test
+(line 75) is **never** true for a real AI temp block, so the "this was a false
+block" learning button had no correct reason to show. At the same time the OR
+branch `detail.startsWith("temp_block:")` was too broad: it also showed the
+button for **non-AI** app/schedule temp blocks, where no AI-frame candidate was
+remembered, so tapping it always surfaced the "মনে রাখা যায়নি, আবার চেষ্টা
+করুন" (couldn't remember) snackbar.
+
+Fix:
+- `TempBlockManager.handleBlockEscalation()` now tags AI-originated temp blocks
+  with an `;ai` marker: `"temp_block:NNmin;ai"` (both the normal block and the
+  24h escalation branch). This marker is internal to the `detail` string.
+- `BlockOverlayActivity` parses the duration with `substringBefore(";")` (so the
+  marker never corrupts the minute count / formatting) and gates the
+  false-positive button on `isAiBlock = reason == "AI_DETECTION" ||
+  detail.endsWith(";ai")`. Non-AI temp blocks no longer show the button; real AI
+  temp blocks now correctly show it and `takePendingCandidate()` returns the
+  remembered frame signature.
+- `BlockingEngine.block()` already keys off `detail.startsWith("temp_block:")`
+  (line 72), so the `;ai` suffix does not change double-count protection, and no
+  other parser consumes the suffix. The Room `matchedTerm` log gains a harmless
+  `;ai` suffix for AI blocks.
+
+### Version bump
+
+`app/build.gradle.kts`: `versionCode 11 -> 12`, `versionName "2.4.2" -> "2.4.3"`.
+A new tag was required because `v2.4.2` is permanently immutable-tombstoned by
+GitHub (the old release asset could not be deleted, and after deletion the tag
+name could not be recreated). A throwaway tag push confirmed new-tag creation is
+permitted; only the reused `v2.4.2` name was blocked.
+
+### Green release build (terminal status: SUCCESS)
+
+- PR: https://github.com/ferdausfs/Dogs-of-KAHAF/pull/25 (squash-merged to
+  `main` as commit `34bdfa3`).
+- CI run: https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/31987930246
+  — **completed/success**, all steps ✓ (Build Release APK ✓, Verify APK signed
+  ✓, Upload Artifact ✓, **Create GitHub Release ✓**). Build time 4m 3s.
+- Published GitHub Release (installable APK):
+  **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v2.4.3**
+  - Asset: `app-release.apk`, **52,625,042 bytes** (~50.2 MiB), published
+    2026-08-17 02:29 UTC.
+  - Direct download:
+    https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.4.3/app-release.apk
+
+This APK is built from `main` @ `34bdfa3`, which includes: the R-import fix
+(`0d317fa`), the silent 3-strike fix (`f747072`), and this session's
+false-positive-button fix. Installing this build resolves the user-reported
+"immediate block" symptom (its cause was the stale pre-`f747072` v2.4.2 APK).
