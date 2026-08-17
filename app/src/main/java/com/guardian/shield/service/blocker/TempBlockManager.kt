@@ -119,17 +119,21 @@ class TempBlockManager @Inject constructor() {
 
         history.add(now)
 
+        // AI-originated temp blocks carry an ";ai" marker so the overlay can tell
+        // them apart from a plain app-block enforcement (reason=APP_BLOCKED) and
+        // only offer "this was a false block" when there is actually a remembered
+        // AI-frame candidate to learn from.
         return if (history.size >= GuardianConstants.ESCALATION_THRESHOLD) {
             // Escalation triggered: Block for the day
             Timber.w("Escalation triggered for $pkg: 3 blocks in 2 hours. Blocking for 24h.")
             applyTempBlock(pkg, GuardianConstants.DAY_BLOCK_MS)
             history.clear() // Reset history after escalation
-            "temp_block:${GuardianConstants.DAY_BLOCK_MS / 60_000}min"
+            "temp_block:${GuardianConstants.DAY_BLOCK_MS / 60_000}min;ai"
         } else {
             // Normal block for the user-configured duration (default 15 min)
             val mins = (blockDurationMs / 60_000).coerceAtLeast(1)
             applyTempBlock(pkg, blockDurationMs)
-            "temp_block:${mins}min"
+            "temp_block:${mins}min;ai"
         }
     }
 
