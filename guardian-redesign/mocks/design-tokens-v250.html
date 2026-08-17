@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield v2.5.0 — Design Tokens (extracted from merged source)</title>
+<style>
+  :root { --bg:#0E1116; --card:#1C232E; --surface:#161C26; --variant:#242E3B; --highest:#2A3647;
+          --primary:#D0E4FF; --onprimary:#003258; --pcontainer:#1A344F; --onsurface:#E2E6EB;
+          --onvariant:#A3ADBB; --ondim:#6B7585; --warning:#FBBF24; --error:#FFB4AB;
+          --errorcontainer:#3A1A1A; --success:#6EE7B7; --ai:#A78BFA; --border:#14FFFFFF; --borderstrong:#24FFFFFF; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--onsurface); font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif; padding:32px; }
+  h1 { font-size:22px; font-weight:800; letter-spacing:-0.02em; margin-bottom:4px; }
+  .sub { color:var(--onvariant); font-size:13px; margin-bottom:24px; }
+  h2 { font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); margin:28px 0 10px; }
+  .grid { display:flex; flex-wrap:wrap; gap:10px; }
+  .sw { width:150px; border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden; }
+  .chip { height:44px; }
+  .meta { padding:8px 10px; font-size:11px; }
+  .meta b { display:block; font-size:12px; color:var(--onsurface); font-family:ui-monospace,monospace; }
+  .meta span { color:var(--ondim); font-family:ui-monospace,monospace; }
+  table { border-collapse:collapse; width:100%; max-width:900px; margin-top:8px; }
+  td,th { border:1px solid var(--border); padding:7px 10px; font-size:12.5px; text-align:left; }
+  th { background:var(--card); color:var(--primary); text-transform:uppercase; letter-spacing:.05em; font-size:11px; }
+  td.mono { font-family:ui-monospace,monospace; color:var(--ondim); }
+  .note { margin-top:22px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; font-size:13px; color:var(--onvariant); max-width:900px; }
+</style>
+</head>
+<body>
+<h1>Guardian Shield — v2.5.0 Design Tokens</h1>
+<div class="sub">Extracted from the MERGED v2.5.0 source on main (app/src/main/res/values/colors.xml, themes.xml, styles.xml, drawables).
+The redesign session&rsquo;s original design-tokens.html was never pushed to any branch (verified via git ls-tree across all remote branches),
+so this sheet reproduces the same token set from the shipped implementation — these are the authoritative values.</div>
+
+<h2>Core palette (values/colors.xml @ main)</h2>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:#0E1116"></div><div class="meta"><b>bg_main</b><span>#0E1116</span></div></div>
+  <div class="sw"><div class="chip" style="background:#151A22"></div><div class="meta"><b>bg_elevated</b><span>#151A22</span></div></div>
+  <div class="sw"><div class="chip" style="background:#161C26"></div><div class="meta"><b>surface</b><span>#161C26</span></div></div>
+  <div class="sw"><div class="chip" style="background:#1C232E"></div><div class="meta"><b>surface_high</b><span>#1C232E</span></div></div>
+  <div class="sw"><div class="chip" style="background:#242E3B"></div><div class="meta"><b>surface_variant</b><span>#242E3B</span></div></div>
+  <div class="sw"><div class="chip" style="background:#2A3647"></div><div class="meta"><b>surface_highest</b><span>#2A3647</span></div></div>
+  <div class="sw"><div class="chip" style="background:#D0E4FF"></div><div class="meta"><b>primary</b><span>#D0E4FF</span></div></div>
+  <div class="sw"><div class="chip" style="background:#003258"></div><div class="meta"><b>on_primary</b><span>#003258</span></div></div>
+  <div class="sw"><div class="chip" style="background:#1A344F"></div><div class="meta"><b>primary_container</b><span>#1A344F</span></div></div>
+  <div class="sw"><div class="chip" style="background:#B9C8DF"></div><div class="meta"><b>secondary</b><span>#B9C8DF</span></div></div>
+  <div class="sw"><div class="chip" style="background:#E2E6EB"></div><div class="meta"><b>on_surface</b><span>#E2E6EB</span></div></div>
+  <div class="sw"><div class="chip" style="background:#A3ADBB"></div><div class="meta"><b>on_surface_variant</b><span>#A3ADBB</span></div></div>
+  <div class="sw"><div class="chip" style="background:#6B7585"></div><div class="meta"><b>on_surface_dim</b><span>#6B7585</span></div></div>
+  <div class="sw"><div class="chip" style="background:#FBBF24"></div><div class="meta"><b>warning / warning_amber</b><span>#FBBF24</span></div></div>
+  <div class="sw"><div class="chip" style="background:#FFB4AB"></div><div class="meta"><b>error</b><span>#FFB4AB</span></div></div>
+  <div class="sw"><div class="chip" style="background:#3A1A1A"></div><div class="meta"><b>error_container</b><span>#3A1A1A</span></div></div>
+  <div class="sw"><div class="chip" style="background:#6EE7B7"></div><div class="meta"><b>success</b><span>#6EE7B7</span></div></div>
+  <div class="sw"><div class="chip" style="background:#132A22"></div><div class="meta"><b>success_container</b><span>#132A22</span></div></div>
+  <div class="sw"><div class="chip" style="background:#A78BFA"></div><div class="meta"><b>ai_accent</b><span>#A78BFA</span></div></div>
+  <div class="sw"><div class="chip" style="background:#D0BCFF"></div><div class="meta"><b>purple</b><span>#D0BCFF</span></div></div>
+  <div class="sw"><div class="chip" style="background:linear-gradient(135deg,#1E3A5F,#10233A)"></div><div class="meta"><b>primary_container gradient</b><span>#1E3A5F &rarr; #10233A</span></div></div>
+  <div class="sw"><div class="chip" style="background:#0C0F14"></div><div class="meta"><b>overlay_dim_solid</b><span>#0C0F14</span></div></div>
+</div>
+
+<h2>Borders / stroke (values/colors.xml)</h2>
+<table>
+  <tr><th>token</th><th>value</th><th>usage</th></tr>
+  <tr><td class="mono">border_subtle / card_stroke</td><td class="mono">#14FFFFFF</td><td>default 1dp card border (8% white)</td></tr>
+  <tr><td class="mono">border_strong</td><td class="mono">#24FFFFFF</td><td>hero card border (14% white)</td></tr>
+</table>
+
+<h2>Shape / radius (themes.xml ShapeAppearance + Widget.* cards)</h2>
+<table>
+  <tr><th>token</th><th>value</th><th>usage</th></tr>
+  <tr><td>r-xs (ShapeAppearance.Small)</td><td class="mono">12dp</td><td>badges, search rows</td></tr>
+  <tr><td><b>r-md (ShapeAppearance.Medium / CardPremium)</b></td><td class="mono"><b>20dp</b></td><td><b>standard cards — Widget.GuardianShield.CardPremium</b></td></tr>
+  <tr><td>r-lg (ShapeAppearance.Large / CardGlow / CardHero / buttons)</td><td class="mono">28dp</td><td>hero, stat cards, primary button</td></tr>
+  <tr><td>CardPremium spec</td><td class="mono">surface_high bg &middot; 20dp radius &middot; 0dp elevation &middot; 1dp border_subtle</td><td>card base used across v2.5.0 screens</td></tr>
+</table>
+
+<h2>Typography (styles.xml TextAppearance.*)</h2>
+<table>
+  <tr><th>token</th><th>value</th></tr>
+  <tr><td>Display</td><td class="mono">28sp bold, letterSpacing -0.02, on_surface</td></tr>
+  <tr><td>Title (HeadlineSmall)</td><td class="mono">bold, on_surface, letterSpacing 0.01</td></tr>
+  <tr><td>SectionHeader</td><td class="mono">11sp bold caps, letterSpacing 0.08, primary</td></tr>
+  <tr><td>Body / subtitle</td><td class="mono">13sp, on_surface_variant, lineSpacing 1.3 (per overlay layout)</td></tr>
+</table>
+
+<h2>Iconography (drawable/)</h2>
+<table>
+  <tr><th>asset</th><th>description</th></tr>
+  <tr><td class="mono">ic_shield_large</td><td>the Guardian Shield shield mark — filled shield path M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z (tinted via android:tint)</td></tr>
+  <tr><td class="mono">ic_shield_on</td><td>shield + checkmark (success state), tint primary</td></tr>
+  <tr><td class="mono">ic_warning</td><td>triangle exclamation (used in BlockOverlay), tint error</td></tr>
+  <tr><td class="mono">module icon container</td><td>44dp rounded circle, surface_variant bg, icon tinted primary (redesign component token)</td></tr>
+</table>
+
+<div class="note"><b>Source-of-truth note:</b> every value above was read from the merged v2.5.0 tree at main (commit 0324ad0 lineage) — colors.xml, themes.xml, styles.xml, drawable/ic_shield_large.xml, drawable/ic_warning.xml, layout/activity_block_overlay.xml. Nothing is invented.</div>
+</body>
+</html>
