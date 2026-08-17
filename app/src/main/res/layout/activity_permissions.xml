@@ -56,7 +56,7 @@
                             android:id="@+id/iconAccessibility"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
+                            android:src="@drawable/ic_accessibility"
                             android:contentDescription="@string/perm_accessibility"/>
 
                         <TextView
@@ -66,48 +66,11 @@
                             android:text="@string/perm_accessibility"
                             android:textColor="@color/on_surface"
                             android:textSize="14sp"
+                            android:textStyle="bold"
                             android:layout_marginStart="16dp"/>
 
                         <TextView
                             android:id="@+id/btnAccessibility"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/permission_granted"
-                            android:textColor="@color/success"
-                            android:textSize="11sp"
-                            android:textStyle="bold"/>
-                    </LinearLayout>
-
-                    <!-- Usage Stats row -->
-                    <LinearLayout
-                        android:id="@+id/rowUsageStats"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="12dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?attr/selectableItemBackground">
-
-                        <ImageView
-                            android:id="@+id/iconUsageStats"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/perm_usage_stats"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:text="@string/perm_usage_stats"
-                            android:textColor="@color/on_surface"
-                            android:textSize="14sp"
-                            android:layout_marginStart="16dp"/>
-
-                        <TextView
-                            android:id="@+id/btnUsageStats"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/permission_granted"
@@ -132,7 +95,7 @@
                             android:id="@+id/iconOverlay"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
+                            android:src="@drawable/ic_layers"
                             android:contentDescription="@string/perm_overlay"/>
 
                         <TextView
@@ -142,10 +105,50 @@
                             android:text="@string/perm_overlay"
                             android:textColor="@color/on_surface"
                             android:textSize="14sp"
+                            android:textStyle="bold"
                             android:layout_marginStart="16dp"/>
 
                         <TextView
                             android:id="@+id/btnOverlay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/permission_granted"
+                            android:textColor="@color/success"
+                            android:textSize="11sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                    <!-- Usage stats row -->
+                    <LinearLayout
+                        android:id="@+id/rowUsageStats"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:id="@+id/iconUsageStats"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_usage"
+                            android:contentDescription="@string/perm_usage_stats"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="@string/perm_usage_stats"
+                            android:textColor="@color/on_surface"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:layout_marginStart="16dp"/>
+
+                        <TextView
+                            android:id="@+id/btnUsageStats"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/permission_granted"
@@ -170,7 +173,7 @@
                             android:id="@+id/iconNotification"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
+                            android:src="@drawable/ic_bell"
                             android:contentDescription="@string/perm_notification"/>
 
                         <TextView
@@ -180,6 +183,7 @@
                             android:text="@string/perm_notification"
                             android:textColor="@color/on_surface"
                             android:textSize="14sp"
+                            android:textStyle="bold"
                             android:layout_marginStart="16dp"/>
 
                         <TextView
@@ -208,7 +212,7 @@
                             android:id="@+id/iconBattery"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_check_circle"
+                            android:src="@drawable/ic_battery"
                             android:contentDescription="@string/perm_battery"/>
 
                         <TextView
@@ -218,6 +222,7 @@
                             android:text="@string/perm_battery"
                             android:textColor="@color/on_surface"
                             android:textSize="14sp"
+                            android:textStyle="bold"
                             android:layout_marginStart="16dp"/>
 
                         <TextView
@@ -238,9 +243,10 @@
                 android:layout_height="wrap_content"
                 android:text="@string/fix_all"
                 android:layout_marginTop="16dp"
-                app:cornerRadius="12dp"
+                app:cornerRadius="20dp"
                 app:backgroundTint="@color/primary"
-                android:textColor="@color/black"/>
+                android:textColor="@color/on_primary"
+                android:textStyle="bold"/>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

@@ -16,7 +16,7 @@
         app:titleTextColor="@color/on_surface"
         app:navigationIcon="@drawable/ic_arrow_back"/>
 
-    <!-- Lock banner — Commitment Lock active -->
+    <!-- Lock banner -->
     <LinearLayout
         android:id="@+id/lockBanner"
         android:layout_width="match_parent"
@@ -27,13 +27,15 @@
         android:paddingEnd="16dp"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:background="#2A2520"
+        android:background="@color/warning_container"
         android:visibility="gone">
 
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@drawable/ic_lock"
+            android:importantForAccessibility="no"
+            app:tint="@color/warning_amber"
             android:contentDescription="@null"/>
 
         <TextView
@@ -183,14 +185,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:singleSelection="true"
-                        app:selectionRequired="true">
+                        app:selectionRequired="true"
+                        app:chipSpacingHorizontal="8dp">
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip15min"
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="15 min"
+                            android:text="১৫ মিনিট"
                             android:checked="true"/>
 
                         <com.google.android.material.chip.Chip
@@ -198,14 +201,14 @@
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="30 min"/>
+                            android:text="৩০ মিনিট"/>
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip60min"
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1 ঘণ্টা"/>
+                            android:text="১ ঘণ্টা"/>
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -240,49 +243,64 @@
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📱 App List • অ্যাপ তালিকা"
-                        android:layout_margin="4dp"/>
+                        android:text="App List • অ্যাপ তালিকা"
+                        android:layout_margin="4dp"
+                        app:icon="@drawable/ic_block"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/success"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnKeywords"
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🔤 Keywords • কিওয়ার্ড"
-                        android:layout_margin="4dp"/>
+                        android:text="Keywords • কিওয়ার্ড"
+                        android:layout_margin="4dp"
+                        app:icon="@drawable/ic_key"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/info"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSchedule"
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="⏰ Schedule • সময়সূচী"
-                        android:layout_margin="4dp"/>
+                        android:text="Schedule • সময়সূচী"
+                        android:layout_margin="4dp"
+                        app:icon="@drawable/ic_timer"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/warning_amber"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnPermissions"
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🔧 Permission Health • অনুমতি"
-                        android:layout_margin="4dp"/>
+                        android:text="Permission Health • অনুমতি"
+                        android:layout_margin="4dp"
+                        app:icon="@drawable/ic_accessibility"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/on_surface_variant"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCommitmentLock"
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🔒 Commitment Lock • কমিটেড লক"
-                        android:layout_margin="4dp"/>
+                        android:text="Commitment Lock • কমিটেড লক"
+                        android:layout_margin="4dp"
+                        app:icon="@drawable/ic_lock"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/warning_amber"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- AI DETECTION SENSITIVITY -->
+            <!-- AI SENSITIVITY -->
             <TextView
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="AI DETECTION SENSITIVITY • সংবেদনশীলতা"
+                android:text="AI Sensitivity • সংবেদনশীলতা"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp"/>
 
@@ -322,9 +340,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0.72"
-                            android:textColor="@color/primary"
+                            android:textColor="@color/ai_detection_color"
                             android:background="@drawable/bg_badge"
-                            android:backgroundTint="@color/surface_variant"
+                            android:backgroundTint="@color/badge_ai_bg"
                             android:paddingStart="10dp"
                             android:paddingEnd="10dp"
                             android:paddingTop="6dp"
@@ -357,7 +375,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:singleSelection="true"
-                        app:selectionRequired="true">
+                        app:selectionRequired="true"
+                        app:chipSpacingHorizontal="8dp">
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipVote1"
@@ -405,7 +424,7 @@
                 style="@style/TextAppearance.GuardianShield.SectionHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="AI MODELS • এআই মডেল"
+                android:text="@string/section_models"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp"/>
 
@@ -455,7 +474,9 @@
                             android:layout_weight="1"
                             android:layout_height="wrap_content"
                             android:text="Import • ইমপোর্ট"
-                            android:layout_marginEnd="4dp"/>
+                            android:layout_marginEnd="4dp"
+                            app:icon="@drawable/ic_upload"
+                            app:iconGravity="textStart"/>
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRemoveLegacy"
@@ -464,7 +485,9 @@
                             android:layout_weight="1"
                             android:layout_height="wrap_content"
                             android:text="Remove • মুছুন"
-                            android:layout_marginStart="4dp"/>
+                            android:layout_marginStart="4dp"
+                            app:icon="@drawable/ic_delete"
+                            app:iconGravity="textStart"/>
                     </LinearLayout>
 
                     <View
@@ -479,7 +502,9 @@
                         style="@style/Widget.GuardianShield.ButtonTonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🔐 Change PIN • পিন পরিবর্তন করুন"/>
+                        android:text="Change PIN • পিন পরিবর্তন করুন"
+                        app:icon="@drawable/ic_key"
+                        app:iconGravity="textStart"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
