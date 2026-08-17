@@ -43,9 +43,17 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.txtPackage.text = pkg
 
-        // Temp-block branch (incl. TASK 3 — 24h hard lock formatting)
-        if (detail.startsWith("temp_block:")) {
-            val raw = detail.removePrefix("temp_block:").removeSuffix("min").trim()
+        // Temp-block branch (incl. TASK 3 — 24h hard lock formatting).
+        // AI-originated temp blocks are tagged "temp_block:NNmin;ai" so we can
+        // distinguish them from a plain app-block enforcement (which also uses
+        // reason=APP_BLOCKED but has no AI-frame candidate to learn from).
+        val isTempBlock = detail.startsWith("temp_block:")
+        val isAiBlock = reason == "AI_DETECTION" || detail.endsWith(";ai")
+        if (isTempBlock) {
+            val raw = detail.removePrefix("temp_block:")
+                .substringBefore(";")
+                .removeSuffix("min")
+                .trim()
             val mins = raw.toLongOrNull() ?: 0L
             val displayText = formatDuration(mins)
             binding.txtReason.text = getString(R.string.overlay_temp_block_fmt, displayText)
@@ -67,10 +75,12 @@ class BlockOverlayActivity : AppCompatActivity() {
 
         binding.btnHome.setOnClickListener { goHome() }
 
-        // LEARNING MEMORY — only AI blocks can be "false blocks". When the user
-        // says a block was a mistake, remember the offending image's colour
-        // pattern so it is never blocked again.
-        if (reason == "AI_DETECTION" || detail.startsWith("temp_block:")) {
+        // LEARNING MEMORY — only AI blocks can be "false blocks". AI 3rd-strike
+        // blocks reach here with reason=APP_BLOCKED but detail tagged ";ai", so
+        // gate on isAiBlock rather than the reason string. Non-AI temp blocks
+        // (app/schedule enforcement) have no remembered candidate and must not
+        // show this button.
+        if (isAiBlock) {
             binding.btnMarkFalse.visibility = View.VISIBLE
             binding.btnMarkFalse.setOnClickListener {
                 val sig = falsePositiveMemory.takePendingCandidate()
