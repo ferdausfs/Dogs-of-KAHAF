@@ -2,7 +2,6 @@ package com.guardian.shield.ui.overlay
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -68,7 +67,7 @@ class BlockOverlayActivity : AppCompatActivity() {
             val mins = raw.toLongOrNull() ?: 0L
             val displayText = formatDuration(mins)
             binding.txtReason.text = getString(R.string.overlay_temp_block_fmt, displayText)
-            binding.txtReason.setTextColor(Color.parseColor("#FF4444"))
+            binding.txtReason.setTextColor(getColor(R.color.error))
             // Premium: show temp banner card if present
             try {
                 binding.cardTempBlock.visibility = View.VISIBLE
