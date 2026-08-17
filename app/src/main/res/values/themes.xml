@@ -169,6 +169,16 @@
         <item name="android:insetBottom">0dp</item>
     </style>
 
+    <!-- legacy v2.5 name kept as alias so existing layouts compile -->
+    <style name="Widget.GuardianShield.ButtonTonal">
+        <item name="cornerRadius">16dp</item>
+        <item name="backgroundTint">@color/surface_highest</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
     <style name="Widget.GuardianShield.Button.Text" parent="Widget.Material3.Button.TextButton">
         <item name="android:textColor">@color/primary</item>
         <item name="android:textSize">14sp</item>
