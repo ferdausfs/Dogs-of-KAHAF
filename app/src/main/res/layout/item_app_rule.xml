@@ -16,12 +16,12 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <!-- Left status indicator — red if blocked, green if whitelisted -->
+        <!-- Left status indicator -->
         <View
             android:id="@+id/viewLeftIndicator"
             android:layout_width="3dp"
             android:layout_height="match_parent"
-            android:background="#1C232E"/>
+            android:background="@color/surface_high"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -30,7 +30,6 @@
             android:gravity="center_vertical"
             android:padding="14dp">
 
-            <!-- App icon 44dp rounded 12dp like reference -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="44dp"
                 android:layout_height="44dp"
@@ -78,9 +77,10 @@
                         android:text="Blocked"
                         android:textSize="9sp"
                         android:textStyle="bold"
+                        android:letterSpacing="0.05"
                         android:textColor="@color/error"
                         android:background="@drawable/bg_badge"
-                        android:backgroundTint="#1FFF8A80"
+                        android:backgroundTint="@color/badge_error_bg"
                         android:paddingStart="6dp"
                         android:paddingEnd="6dp"
                         android:paddingTop="2dp"
@@ -101,7 +101,6 @@
                     android:ellipsize="end"
                     android:layout_marginTop="2dp"/>
 
-                <!-- Category badge like Social / Browser -->
                 <TextView
                     android:id="@+id/txtCategory"
                     android:layout_width="wrap_content"
@@ -147,6 +146,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_lock"
+                        android:importantForAccessibility="no"
                         app:tint="@color/error"
                         android:visibility="gone"/>
 

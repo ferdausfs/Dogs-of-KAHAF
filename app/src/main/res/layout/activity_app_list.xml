@@ -15,7 +15,7 @@
         app:titleTextColor="@color/on_surface"
         app:navigationIcon="@drawable/ic_arrow_back"/>
 
-    <!-- Lock banner — Commitment Lock -->
+    <!-- Lock banner -->
     <LinearLayout
         android:id="@+id/lockBanner"
         android:layout_width="match_parent"
@@ -26,13 +26,15 @@
         android:paddingEnd="16dp"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:background="#2A2520"
+        android:background="@color/warning_container"
         android:visibility="gone">
 
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@drawable/ic_lock"
+            android:importantForAccessibility="no"
+            app:tint="@color/warning_amber"
             android:contentDescription="@null"/>
 
         <TextView
@@ -56,7 +58,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- HERO TOGGLE CARD — App Blocking ON, reference match -->
+            <!-- HERO TOGGLE CARD -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -125,7 +127,7 @@
                         android:layout_marginTop="12dp"
                         android:layout_marginBottom="12dp"/>
 
-                    <!-- Tabs inside hero — Blocked Apps / All Apps to match reference -->
+                    <!-- Tabs -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -172,7 +174,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SEARCH — filled surface_high radius 20 -->
+            <!-- SEARCH -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.FilledBox"
                 android:layout_width="match_parent"
@@ -184,9 +186,10 @@
                 app:boxCornerRadiusTopEnd="16dp"
                 app:boxCornerRadiusBottomStart="16dp"
                 app:boxCornerRadiusBottomEnd="16dp"
-                app:boxBackgroundColor="@color/surface_high"
+                app:boxBackgroundColor="@color/surface_variant"
                 app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="1dp">
+                app:boxStrokeWidthFocused="1dp"
+                app:boxStrokeColor="@color/primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editSearch"
