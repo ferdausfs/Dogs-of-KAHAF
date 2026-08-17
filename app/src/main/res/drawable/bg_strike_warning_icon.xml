@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v2.5.2 — leading-icon container for the strike 1/2 warning card.
-     44dp circle in @color/surface_variant, matching the v2.5.0 module
-     leading-icon token (surface_variant circle + tinted glyph). -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/surface_variant" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <stroke android:width="1.5dp" android:color="#33FFC24B"/>
+            <size android:width="44dp" android:height="44dp"/>
+        </shape>
+    </item>
+    <item android:gravity="center">
+        <shape android:shape="oval">
+            <solid android:color="@color/surface_highest"/>
+            <size android:width="36dp" android:height="36dp"/>
+        </shape>
+    </item>
+</layer-list>

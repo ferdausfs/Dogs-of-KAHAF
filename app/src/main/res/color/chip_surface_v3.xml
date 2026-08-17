@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filter chip: surface fill, Beacon-dim fill when checked -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/beacon_dim" android:state_checked="true"/>
+    <item android:color="@color/surface"/>
+</selector>

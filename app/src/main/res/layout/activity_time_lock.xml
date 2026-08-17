@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — Commitment Lock (approved: mocks/v3/rules.html frame D)
+     Bindings preserved: toolbar groupLocked txtLockStatus txtLockLabel
+     txtRemaining txtLockEnd txtCooldownNote btnRequestUnlock groupUnlocked
+     chip1day chip3day chip7day chip15day chip30day. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,234 +17,202 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="Commitment Lock"
+        app:title="@string/btn_commitment_lock"
         app:titleTextColor="@color/on_surface"
-        app:navigationIcon="@drawable/ic_arrow_back"/>
+        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
 
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="36dp">
 
-            <!-- ══════════════════════════════════════════
-                 LOCKED / COOLDOWN STATE
-            ══════════════════════════════════════════ -->
+            <!-- ======== LOCKED STATE ======== -->
             <LinearLayout
                 android:id="@+id/groupLocked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone"
-                android:padding="8dp">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔒"
-                    android:textSize="64sp"
-                    android:layout_marginBottom="12dp"/>
-
-                <TextView
-                    android:id="@+id/txtLockStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="#FF4444"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:gravity="center"/>
-
-                <TextView
-                    android:id="@+id/txtLockLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/on_surface_dim"
-                    android:textSize="13sp"
-                    android:layout_marginTop="4dp"/>
-
-                <!-- Countdown card (cooldown চলাকালীন) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="16dp"
-                    android:layout_marginTop="20dp">
+                    style="@style/Widget.GuardianShield.Card.Amber">
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="20dp"
-                        android:gravity="center">
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:paddingVertical="28dp">
+
+                        <FrameLayout
+                            android:layout_width="96dp" android:layout_height="96dp"
+                            android:background="@drawable/bg_halo_amber">
+                            <ImageView
+                                android:layout_width="38dp" android:layout_height="38dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_time_lock"
+                                app:tint="@color/warning_amber"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="বাকি সময়"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="12sp"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.08"/>
+                            android:id="@+id/txtLockStatus"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:textColor="@color/on_warning_container"
+                            android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.01"
+                            tools:text="Commitment Lock active"/>
+
+                        <TextView
+                            android:id="@+id/txtLockLabel"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:textColor="@color/on_warning_container"
+                            android:alpha="0.75" android:textSize="12.5sp"
+                            tools:text="সেটিংস পরিবর্তন বন্ধ"/>
+
                         <TextView
                             android:id="@+id/txtRemaining"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/primary"
-                            android:textSize="26sp"
-                            android:textStyle="bold"
-                            android:layout_marginTop="6dp"/>
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:textColor="@color/on_warning_container"
+                            android:textSize="44sp" android:textStyle="bold" android:letterSpacing="-0.025"
+                            android:fontFeatureSettings="tnum"
+                            tools:text="2d 14:05"/>
+
                         <TextView
                             android:id="@+id/txtLockEnd"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="13sp"
-                            android:layout_marginTop="8dp"/>
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/on_warning_container"
+                            android:alpha="0.6" android:textSize="11sp"
+                            android:fontFeatureSettings="tnum"
+                            tools:text="ends Fri, Aug 21 · 09:41"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Cooldown note (cooldown চলাকালীন দেখাবে) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="#1A4CAF50"
-                    app:cardCornerRadius="12dp"
-                    android:layout_marginTop="16dp">
-                    <TextView
-                        android:id="@+id/txtCooldownNote"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="16dp"
-                        android:text="⏳ Cooldown চলছে — সময় শেষ হলে স্বয়ংক্রিয়ভাবে unlock হয়ে যাবে। Stay strong! 💪"
-                        android:textColor="#4CAF50"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.4"
-                        android:visibility="gone"/>
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:padding="16dp">
+                        <TextView
+                            android:id="@+id/txtCooldownNote"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12.5sp" android:lineSpacingMultiplier="1.5"
+                            tools:text="Unlock requests are limited — cooldown applies."/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRequestUnlock"
+                            style="@style/Widget.GuardianShield.Button.Tonal"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/overlay_request_unlock"/>
+                    </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
-                <!-- Unlock request button (LOCKED state এ দেখাবে, COOLDOWN এ নয়) -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRequestUnlock"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="🔓 Unlock Request করুন"
-                    android:textColor="@color/on_surface"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:visibility="gone"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Unlock request দিলে cooldown শুরু হবে। Cooldown শেষে lock উঠবে।"
-                    android:textColor="@color/on_surface_dim"
-                    android:textSize="12sp"
-                    android:gravity="center"
-                    android:lineSpacingMultiplier="1.4"
-                    android:layout_marginTop="16dp"/>
-
             </LinearLayout>
 
-            <!-- ══════════════════════════════════════════
-                 UNLOCKED STATE — duration picker
-            ══════════════════════════════════════════ -->
+            <!-- ======== UNLOCKED STATE ======== -->
             <LinearLayout
                 android:id="@+id/groupUnlocked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🛡️ Commitment Lock"
-                    android:textColor="@color/on_surface"
-                    android:textSize="20sp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Cooldown duration বেছে নিন। Lock করার পর কোনো setting বদলানো যাবে না। Unlock করতে চাইলে request দিতে হবে — তারপর এই duration শেষে lock উঠবে।"
-                    android:textColor="@color/on_surface_dim"
-                    android:textSize="14sp"
-                    android:lineSpacingMultiplier="1.4"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="24dp"/>
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="16dp"
-                    android:layout_marginBottom="16dp">
+                    style="@style/Widget.GuardianShield.Card.Beacon">
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:gravity="center"
+                        android:paddingHorizontal="22dp"
+                        android:paddingVertical="28dp">
+
+                        <FrameLayout
+                            android:layout_width="96dp" android:layout_height="96dp"
+                            android:background="@drawable/bg_halo_beacon">
+                            <ImageView
+                                android:layout_width="38dp" android:layout_height="38dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_shield_on"
+                                android:importantForAccessibility="no"/>
+                        </FrameLayout>
+
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Cooldown Duration"
-                            android:textColor="@color/on_surface_dim"
-                            android:textSize="12sp"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.08"
-                            android:layout_marginBottom="12dp"/>
-                        <com.google.android.material.chip.ChipGroup
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content">
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip1day"
-                                style="@style/Widget.Material3.Chip.Suggestion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="১ দিন"/>
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip3day"
-                                style="@style/Widget.Material3.Chip.Suggestion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="৩ দিন"/>
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip7day"
-                                style="@style/Widget.Material3.Chip.Suggestion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="৭ দিন"/>
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip15day"
-                                style="@style/Widget.Material3.Chip.Suggestion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="১৫ দিন"/>
-                            <com.google.android.material.chip.Chip
-                                android:id="@+id/chip30day"
-                                style="@style/Widget.Material3.Chip.Suggestion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="৩০ দিন"/>
-                        </com.google.android.material.chip.ChipGroup>
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="@string/lock_choose_duration"
+                            android:textColor="@color/on_primary_container"
+                            android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.01"/>
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:text="@string/lock_choose_sub"
+                            android:textColor="@color/on_primary_container"
+                            android:alpha="0.75" android:textSize="12.5sp"
+                            android:gravity="center"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp" android:layout_marginBottom="12dp"
+                    android:text="@string/lock_choose_duration"
+                    style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+
+                <com.google.android.material.chip.ChipGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="#1AFF8C00"
-                    app:cardCornerRadius="12dp">
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="16dp"
-                        android:text="⚠️ Lock করার পর শুধু Unlock Request দিয়ে cooldown শুরু করা যাবে। Cooldown শেষে lock উঠবে — আগে নয়।"
-                        android:textColor="#FF8C00"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.4"/>
-                </com.google.android.material.card.MaterialCardView>
+                    app:singleSelection="true" app:selectionRequired="true"
+                    app:chipSpacingHorizontal="8dp">
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip1day" style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/lock_1day" android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip3day" style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/lock_3day" android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip7day" style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/lock_7day" android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip15day" style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/lock_15day" android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip30day" style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/lock_30day" android:checkable="true"/>
+                </com.google.android.material.chip.ChipGroup>
 
+                <TextView
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/lock_tap_hint"
+                    android:textColor="@color/on_surface_dim"
+                    android:textSize="11.5sp" android:lineSpacingMultiplier="1.4"/>
             </LinearLayout>
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

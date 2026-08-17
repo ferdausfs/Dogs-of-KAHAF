@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — App Blocking &amp; Whitelist</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.apptile{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px;min-height:76px;position:relative;overflow:hidden;box-shadow:var(--e1)}
+.apptile .spine{position:absolute;left:0;top:12px;bottom:12px;width:3.5px;border-radius:0 4px 4px 0}
+.appicon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex:0 0 auto}
+.apptile .an{font-size:14.5px;font-weight:700}
+.apptile .ap{font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:2px}
+.apptile .cat{margin-top:5px}
+.cattag{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:rgba(255,255,255,.06);border-radius:999px;padding:2px 8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-shieldchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 7.5 12l7 6.5"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screen 04 · App Blocking (incl. Whitelist tab)</div>
+  <h1>App Blocking — decisive rows</h1>
+  <p>Bindings preserved: <span class="pkg">switchHero · chipBlocked/chipAll/chipWhitelisted · editSearch · recycler</span>; row: <span class="pkg">viewLeftIndicator · imgIcon · txtAppName · txtStatusBadge · txtPackage · txtCategory · switchBlock · imgLockIcon · switchWhitelist</span> + lockBanner/txtLockRemaining when Commitment Lock is active. <b>The whitelist is a filter tab here — a standalone whitelist screen does not exist in the app (gap, not invented).</b> Category tags come from the existing heuristic classifier (social/browser/etc.).</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Loaded · Blocked tab</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div><div class="sub">অ্যাপ লিস্ট</div></div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;margin-top:4px">
+      <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15.5px;font-weight:700">App Blocking</span><span class="badge ok"><span class="dot pulse"></span>সক্রিয়</span></div><div style="font-size:12px;color:var(--t2);margin-top:4px">Block inappropriate apps</div></div>
+      <div class="sw on"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <span class="chip on">Blocked <span class="n">12</span></span><span class="chip">All <span class="n">87</span></span><span class="chip">Whitelisted <span class="n">3</span></span>
+    </div>
+    <div class="search" style="margin-top:12px"><svg><use href="#i-search"/></svg><input placeholder="Search apps… অ্যাপ খুঁজুন"></div>
+    <div class="rows" style="margin-top:14px">
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:#263241;color:#8AB4FF">C</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">Chrome</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.android.chrome</div><div class="cat"><span class="cattag">Browser</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:linear-gradient(135deg,#4F5BD5,#962FBF);color:#fff">I</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">Instagram</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.instagram.android</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:#1F2523;color:#FF7A76">T</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">TikTok</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.zhiliaoapp.musically</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:rgba(255,255,255,.14)"></div>
+        <div class="appicon" style="background:#2B3A2E;color:#7FE7C4">W</div>
+        <div style="flex:1;min-width:0"><span class="an">WhatsApp</span><div class="ap">com.whatsapp</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge neutral">Allowed</span><div class="sw"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Whitelisted tab (3)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div><div class="sub">হোয়াইটলিস্ট</div></div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;margin-top:4px">
+      <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15.5px;font-weight:700">App Blocking</span><span class="badge ok"><span class="dot pulse"></span>সক্রিয়</span></div><div style="font-size:12px;color:var(--t2);margin-top:4px">Whitelisted apps skip all blocking</div></div>
+      <div class="sw on"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <span class="chip">Blocked <span class="n">12</span></span><span class="chip">All <span class="n">87</span></span><span class="chip on">Whitelisted <span class="n">3</span></span>
+    </div>
+    <div class="rows" style="margin-top:14px">
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#253029;color:#7FE7C4">Q</div>
+        <div style="flex:1;min-width:0"><span class="an">Quran</span><div class="ap">com.quran.labs.androidquran</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#2E2A1E;color:#FFC24B">P</div>
+        <div style="flex:1;min-width:0"><span class="an">Play Store</span><div class="ap">com.android.vending</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#1F2A3A;color:#7EC8F0">B</div>
+        <div style="flex:1;min-width:0"><span class="an">Banking</span><div class="ap">com.bank.app</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Loading (package scan)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div class="sk line" style="width:110px;height:18px"></div></div>
+    <div class="sk" style="height:84px;border-radius:24px;margin-top:4px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px"><div class="sk line" style="width:86px;height:32px;border-radius:999px"></div><div class="sk line" style="width:64px;height:32px;border-radius:999px"></div><div class="sk line" style="width:104px;height:32px;border-radius:999px"></div></div>
+    <div class="sk" style="height:76px;margin-top:14px"></div><div class="sk" style="height:76px;margin-top:10px"></div><div class="sk" style="height:76px;margin-top:10px"></div><div class="sk" style="height:76px;margin-top:10px"></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Empty search · locked banner</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div></div></div>
+    <div class="banner" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><div class="btxt">🔒 কমিটেড লক সক্রিয় — সম্পাদনা বন্ধ · 2d 14h remaining</div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;opacity:.6">
+      <div style="flex:1"><span style="font-size:15.5px;font-weight:700">App Blocking</span><div style="font-size:12px;color:var(--t2);margin-top:4px">Block inappropriate apps</div></div>
+      <div class="sw on" disabled></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px"><span class="chip on">Blocked <span class="n">0</span></span><span class="chip">All</span><span class="chip">Whitelisted</span></div>
+    <div class="search" style="margin-top:12px"><svg><use href="#i-search"/></svg><input value="faceb" ></div>
+    <div class="section"><div class="card"><div class="statebox"><div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6M8 10.6h5.2M10.6 8v5.2"/></svg></div><h3>No apps match “faceb”</h3><p>অন্য নাম দিয়ে খুঁজে দেখুন</p></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>switchHero OFF-attempt under active protection → same snackbar + Commitment-Lock respect as today. Row switches write the same rules. Lock banner disables switches identically. Left spine: red = blocked, green = whitelisted, neutral = allowed (replaces v2.5 indicator bar with rounder ends + inset).</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield — Watchtower V3 · Complete Mockup Set</title>
+<style>
+/* ============================================================
+   GUARDIAN SHIELD — "WATCHTOWER" DESIGN LANGUAGE V3 (2026-08-17)
+   Shared mockup stylesheet. One system, every screen.
+   Dark-first · Beacon Mint primary · layered tonal elevation
+   ============================================================ */
+
+:root{
+  /* ---- Color: background & surfaces (tonal elevation ladder) ---- */
+  --bg:#0A0C0B;            /* level 0 — app canvas */
+  --s1:#101413;            /* level 1 — resting cards */
+  --s2:#171C1A;            /* level 2 — raised: nav, hero, banners */
+  --s3:#1F2523;            /* level 3 — sheets, dialogs, menus, keypad */
+  --s-inv:#E9EFEA;         /* inverse surface — snackbars */
+  --on-inv:#131917;
+  --hairline:#232927;      /* structural hairline (near-invisible) */
+  --outline:#323A36;       /* visible outline — inputs, focus */
+  --seam:rgba(255,255,255,.055); /* top light-seam inside raised surfaces */
+  --press:rgba(255,255,255,.05);  /* pressed tonal overlay */
+
+  /* ---- Color: Beacon (brand/interactive) ---- */
+  --beacon:#7FE7C4;
+  --beacon-hover:#8FEBCB;
+  --on-beacon:#052019;
+  --bc:#11322A;            /* beacon container (hero) */
+  --bc2:#164134;           /* beacon container raised edge */
+  --on-bc:#B4F0DA;
+  --beacon-dim:rgba(127,231,196,.14);
+
+  /* ---- Semantic ---- */
+  --red:#FF7A76;    --red-c:#361B1A;   --on-red-c:#FFD3D0;
+  --amber:#FFC24B;  --amber-c:#33290F; --on-amber-c:#FFDB8F;
+  --sky:#7EC8F0;    --sky-c:#12283A;
+  --violet:#B8A1FF; --violet-c:#241F3E;
+  --success:#6FE0A6;
+
+  /* ---- Text ---- */
+  --t1:#ECF1ED;   /* on-background / on-surface  17.2:1 on bg */
+  --t2:#A9B5AD;   /* on-surface variant           8.8:1 on s1  */
+  --t3:#76827B;   /* dim microcopy only (≥11sp)   4.6:1 on s1  */
+
+  /* ---- Type (Roboto Flex + Noto Sans Bengali) ---- */
+  --font:"Roboto Flex","Roboto","Google Sans",system-ui,-apple-system,"Segoe UI","Noto Sans Bengali","Hind Siliguri",sans-serif;
+  --mono:"Roboto Mono","SF Mono",ui-monospace,Menlo,monospace;
+
+  /* ---- Radius ---- */
+  --r-xs:8px; --r-sm:12px; --r-md:16px; --r-lg:24px; --r-xl:28px; --r-pill:999px;
+
+  /* ---- Elevation ---- */
+  --e1:0 1px 2px rgba(0,0,0,.24);
+  --e2:0 6px 16px rgba(0,0,0,.30);
+  --e3:0 12px 32px rgba(0,0,0,.38);
+  --e4:0 24px 64px rgba(0,0,0,.46);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:#070808;color:var(--t1);font-family:var(--font);
+  font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  padding:48px 40px 96px;
+}
+/* Bengali inline runs inherit; numeral feature for stats */
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ============ doc chrome (mock pages, not app UI) ============ */
+.doc-head{max-width:1480px;margin:0 auto 36px}
+.doc-head h1{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.doc-head .crumb{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--beacon);margin-bottom:10px}
+.doc-head p{color:var(--t2);max-width:860px;margin-top:8px;font-size:14px}
+.board{max-width:1480px;margin:0 auto}
+.row-label{display:flex;align-items:baseline;gap:12px;margin:34px 0 16px}
+.row-label h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.row-label .hint{font-size:12px;color:var(--t3)}
+.frames{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start}
+.frame-wrap{display:flex;flex-direction:column;gap:10px}
+.frame-wrap .cap{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.frame-wrap .cap b{color:var(--beacon)}
+.note{max-width:1480px;margin:26px auto;background:var(--s1);border:1px solid var(--hairline);border-radius:var(--r-md);padding:18px 22px;color:var(--t2);font-size:13.5px}
+.note b{color:var(--t1)}
+.note .tag{display:inline-block;background:var(--beacon-dim);color:var(--beacon);border-radius:var(--r-pill);padding:2px 10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-right:8px}
+
+/* ============ phone frame ============ */
+.phone{
+  width:375px;min-height:780px;background:var(--bg);border-radius:34px;overflow:hidden;
+  border:1px solid #2A2F2C;box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 0 0 5px #050606;
+  display:flex;flex-direction:column;position:relative;flex:0 0 auto;
+}
+.phone.overlay-phone{background:transparent;border:none;box-shadow:none;min-height:780px}
+.statusbar{height:44px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13.5px;font-weight:600;color:var(--t1)}
+.statusbar .icons{display:flex;gap:6px;align-items:center}
+.statusbar svg{width:15px;height:15px;fill:var(--t1)}
+.screen{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.scroll{flex:1;overflow:hidden;padding:0 20px 28px}
+
+/* ============ app bar ============ */
+.appbar{display:flex;align-items:center;gap:12px;padding:10px 20px 14px;flex:0 0 auto}
+.appbar .title{font-size:22px;font-weight:700;letter-spacing:-.015em}
+.appbar .sub{font-size:11px;color:var(--t3);font-weight:600;margin-top:1px}
+.appbar .actions{margin-left:auto;display:flex;gap:8px}
+.icon-btn{width:40px;height:40px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;color:var(--t2);background:transparent;flex:0 0 auto}
+.icon-btn svg{width:21px;height:21px}
+.back-btn{width:40px;height:40px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;color:var(--t1);margin-left:-8px}
+.back-btn svg{width:22px;height:22px}
+
+/* ============ buttons ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:52px;padding:0 26px;border-radius:var(--r-pill);border:none;cursor:pointer;
+  font-family:var(--font);font-size:14.5px;font-weight:600;letter-spacing:.01em;
+  transition:transform .15s cubic-bezier(.2,0,0,1),box-shadow .15s;
+}
+.btn svg{width:18px;height:18px}
+.btn.filled{background:var(--beacon);color:var(--on-beacon);box-shadow:0 6px 20px rgba(127,231,196,.18)}
+.btn.filled.pressed{background:var(--beacon-hover);transform:scale(.98);box-shadow:0 2px 8px rgba(127,231,196,.14)}
+.btn.tonal{background:var(--s3);color:var(--t1);box-shadow:var(--e1)}
+.btn.tonal.pressed{background:#262D2A;transform:scale(.98)}
+.btn.danger{background:var(--red);color:#2B0806;box-shadow:0 6px 20px rgba(255,122,118,.22)}
+.btn.danger.pressed{transform:scale(.98)}
+.btn.danger-ghost{background:var(--red-c);color:var(--on-red-c)}
+.btn.text{background:transparent;color:var(--beacon);height:44px;padding:0 14px}
+.btn.text.pressed{background:var(--beacon-dim)}
+.btn[disabled]{background:var(--s3)!important;color:var(--t3)!important;box-shadow:none!important;cursor:not-allowed;transform:none!important}
+.btn.sm{height:40px;padding:0 18px;font-size:13px}
+.btn:focus-visible{outline:2px solid var(--beacon);outline-offset:3px}
+.btn-block{width:100%}
+
+/* ============ cards / surfaces ============ */
+.card{
+  background:var(--s1);border-radius:var(--r-md);border:1px solid var(--hairline);
+  box-shadow:var(--e1);position:relative;overflow:hidden;
+}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:var(--seam)}
+.card.raised{background:var(--s2);border-radius:var(--r-lg);box-shadow:var(--e2)}
+.card.beacon{background:linear-gradient(168deg,var(--bc2) 0%,var(--bc) 55%,#0D2822 100%);border:1px solid rgba(127,231,196,.22);border-radius:var(--r-lg);box-shadow:var(--e2),inset 0 0 64px rgba(127,231,196,.06)}
+.section{margin-top:26px}
+.section>.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.kicker.onBeacon{color:var(--beacon)}
+.kicker .lnk{color:var(--beacon);letter-spacing:.02em;text-transform:none;font-size:12.5px;font-weight:700}
+
+/* ============ chips / segmented ============ */
+.chip{
+  height:36px;padding:0 15px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:600;color:var(--t2);background:var(--s1);border:1px solid var(--hairline);cursor:pointer;
+}
+.chip svg{width:15px;height:15px}
+.chip .n{font-size:11px;font-weight:700;color:var(--t3);background:rgba(255,255,255,.06);border-radius:var(--r-pill);padding:1px 7px}
+.chip.on{background:var(--beacon-dim);border-color:rgba(127,231,196,.4);color:var(--beacon)}
+.chip.on .n{background:rgba(127,231,196,.16);color:var(--beacon)}
+.seg{display:flex;background:var(--s1);border:1px solid var(--hairline);border-radius:var(--r-pill);padding:4px;gap:4px}
+.seg button{flex:1;height:36px;border:none;border-radius:var(--r-pill);background:transparent;color:var(--t2);font:600 13px var(--font);cursor:pointer}
+.seg button.on{background:var(--s3);color:var(--t1);box-shadow:var(--e1)}
+.seg button.on.glow{background:var(--beacon-dim);color:var(--beacon)}
+
+/* ============ switch ============ */
+.sw{width:50px;height:30px;border-radius:var(--r-pill);background:var(--s3);border:1.5px solid var(--outline);position:relative;flex:0 0 auto;cursor:pointer}
+.sw::after{content:"";position:absolute;top:50%;left:4px;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#8B968F;transition:all .2s cubic-bezier(.3,1.4,.4,1)}
+.sw.on{background:var(--beacon-dim);border-color:var(--beacon)}
+.sw.on::after{left:24px;width:22px;height:22px;background:var(--beacon);box-shadow:0 2px 8px rgba(127,231,196,.4)}
+.sw[disabled]{opacity:.4}
+
+/* ============ badges / dots ============ */
+.badge{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:.04em}
+.badge.ok{background:rgba(111,224,166,.13);color:var(--success)}
+.badge.err{background:rgba(255,122,118,.13);color:var(--red)}
+.badge.warn{background:rgba(255,194,75,.13);color:var(--amber)}
+.badge.ai{background:rgba(184,161,255,.14);color:var(--violet)}
+.badge.neutral{background:rgba(255,255,255,.07);color:var(--t2)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.dot.pulse{box-shadow:0 0 0 0 rgba(111,224,166,.5);animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(111,224,166,.45)}70%{box-shadow:0 0 0 8px rgba(111,224,166,0)}100%{box-shadow:0 0 0 0 rgba(111,224,166,0)}}
+
+/* ============ list rows ============ */
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{
+  display:flex;align-items:center;gap:14px;background:var(--s1);border:1px solid var(--hairline);
+  border-radius:var(--r-sm);padding:0 14px;min-height:72px;box-shadow:var(--e1);position:relative;overflow:hidden;
+}
+.row .spine{position:absolute;left:0;top:12px;bottom:12px;width:3.5px;border-radius:0 4px 4px 0}
+.row .spine.red{background:var(--red)} .row .spine.ok{background:var(--success)} .row .spine.ai{background:var(--violet)}
+.row .spine.amber{background:var(--amber)} .row .spine.sky{background:var(--sky)}
+.row .ricon{width:42px;height:42px;border-radius:11px;background:var(--s3);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.row .ricon svg{width:21px;height:21px}
+.row .rmain{flex:1;min-width:0}
+.row .rt{font-size:14.5px;font-weight:600;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .rs{font-size:12px;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .rend{display:flex;align-items:center;gap:10px;flex:0 0 auto;color:var(--t3);font-size:12px}
+.chev{width:18px;height:18px;color:var(--t3)}
+.pkg{font-family:var(--mono);font-size:11px;color:var(--t3);letter-spacing:-.01em}
+
+/* ============ stat tiles ============ */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--s1);border:1px solid var(--hairline);border-radius:var(--r-sm);padding:14px;box-shadow:var(--e1)}
+.stat .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--beacon-dim)}
+.stat .ic svg{width:16px;height:16px}
+.stat .v{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:10px}
+.stat .l{font-size:11px;color:var(--t2);margin-top:3px;line-height:1.3}
+.stat .d{font-size:10.5px;font-weight:700;color:var(--success);margin-top:6px}
+
+/* ============ bottom navigation ============ */
+.nav{flex:0 0 auto;display:flex;background:var(--s2);border-top:1px solid var(--hairline);padding:10px 8px 26px;gap:4px;box-shadow:0 -8px 24px rgba(0,0,0,.35);position:relative}
+.nav .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;color:var(--t3);cursor:pointer}
+.nav .tab .pill{width:58px;height:30px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;transition:background .2s}
+.nav .tab svg{width:21px;height:21px}
+.nav .tab span{font-size:11px;font-weight:600}
+.nav .tab.on{color:var(--beacon)}
+.nav .tab.on .pill{background:var(--beacon-dim)}
+.nav .tab.on svg{color:var(--beacon)}
+
+/* ============ skeleton / empty / error ============ */
+.sk{background:linear-gradient(100deg,var(--s1) 30%,#1B211F 50%,var(--s1) 70%);background-size:200% 100%;animation:shimmer 1.2s infinite linear;border-radius:var(--r-sm);border:1px solid var(--hairline)}
+@keyframes shimmer{from{background-position:120% 0}to{background-position:-80% 0}}
+.sk.line{border:none;border-radius:6px;height:12px;background:linear-gradient(100deg,#18201D 30%,#232C28 50%,#18201D 70%);background-size:200% 100%;animation:shimmer 1.2s infinite linear}
+.statebox{display:flex;flex-direction:column;align-items:center;text-align:center;padding:44px 30px}
+.statebox .art{width:76px;height:76px;border-radius:var(--r-lg);background:var(--s1);border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.statebox .art svg{width:34px;height:34px}
+.statebox h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.statebox p{font-size:13px;color:var(--t2);margin-top:6px;max-width:260px;line-height:1.5}
+.statebox .btn{margin-top:20px}
+
+/* ============ banners ============ */
+.banner{display:flex;align-items:center;gap:12px;background:var(--amber-c);border:1px solid rgba(255,194,75,.3);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:16px}
+.banner svg{width:19px;height:19px;color:var(--amber);flex:0 0 auto}
+.banner .btxt{font-size:12.5px;font-weight:600;color:var(--on-amber-c);line-height:1.4}
+
+/* ============ keypad / PIN ============ */
+.dots{display:flex;gap:14px;justify-content:center}
+.pd{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--outline);background:transparent}
+.pd.fill{background:var(--beacon);border-color:var(--beacon);box-shadow:0 0 12px rgba(127,231,196,.35)}
+.pd.err{background:var(--red);border-color:var(--red)}
+.pad{display:grid;grid-template-columns:repeat(3,84px);gap:16px;justify-content:center}
+.key{height:70px;border-radius:var(--r-sm);background:var(--s1);border:1px solid var(--hairline);box-shadow:var(--e1);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:var(--t1);cursor:pointer}
+.key.pressed{background:var(--s3);transform:scale(.96)}
+.key.ok{background:var(--beacon);color:var(--on-beacon);border:none;box-shadow:0 6px 18px rgba(127,231,196,.2)}
+.key.ghost{background:transparent;border:none;box-shadow:none;color:var(--t2)}
+.key svg{width:22px;height:22px}
+
+/* ============ overlays (block / strike / reminder) ============ */
+.scrim{position:absolute;inset:0;background:rgba(5,7,6,.94);backdrop-filter:blur(14px);display:flex;flex-direction:column}
+.halo{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative}
+.halo svg{width:42px;height:42px;position:relative;z-index:2}
+.halo::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:1px solid currentColor;opacity:.22}
+.halo::after{content:"";position:absolute;inset:-30px;border-radius:50%;border:1px solid currentColor;opacity:.09}
+
+/* ============ misc ============ */
+.divider{height:1px;background:var(--hairline);margin:20px 0}
+.search{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--hairline);border-radius:var(--r-sm);height:48px;padding:0 14px;color:var(--t3)}
+.search svg{width:19px;height:19px;flex:0 0 auto}
+.search input{flex:1;background:none;border:none;outline:none;color:var(--t1);font:400 14px var(--font)}
+.search input::placeholder{color:var(--t3)}
+.fab{position:absolute;right:20px;bottom:30px;height:54px;padding:0 20px;border-radius:20px;background:var(--beacon);color:var(--on-beacon);display:inline-flex;align-items:center;gap:9px;font:700 13.5px var(--font);box-shadow:0 10px 30px rgba(127,231,196,.3);cursor:pointer;z-index:5}
+.fab svg{width:19px;height:19px}
+.snackbar{position:absolute;left:16px;right:16px;bottom:104px;background:var(--s-inv);color:var(--on-inv);border-radius:var(--r-sm);padding:14px 18px;font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:10px;box-shadow:var(--e3);z-index:6}
+.snackbar .act{color:#0E5A43;font-weight:700;margin-left:auto;font-size:12.5px;letter-spacing:.02em}
+
+/* beacon rings hero */
+.beacon-art{width:132px;height:132px;position:relative;margin:0 auto}
+.beacon-art .ring{position:absolute;border-radius:50%;border:1px solid rgba(127,231,196,.35)}
+.beacon-art .r1{inset:0;opacity:.9}
+.beacon-art .r2{inset:16px;opacity:.55}
+.beacon-art .r3{inset:32px;opacity:.3}
+.beacon-art .core{position:absolute;inset:46px;border-radius:50%;background:radial-gradient(circle at 50% 38%,rgba(127,231,196,.32),rgba(127,231,196,.05) 70%);display:flex;align-items:center;justify-content:center}
+.beacon-art .core svg{width:40px;height:40px;color:var(--beacon);filter:drop-shadow(0 0 12px rgba(127,231,196,.55))}
+.beacon-art.warn .ring{border-color:rgba(255,194,75,.4)}
+.beacon-art.warn .core{background:radial-gradient(circle at 50% 38%,rgba(255,194,75,.3),rgba(255,194,75,.04) 70%)}
+.beacon-art.warn .core svg{color:var(--amber);filter:drop-shadow(0 0 12px rgba(255,194,75,.5))}
+.beacon-art.err .ring{border-color:rgba(255,122,118,.4)}
+.beacon-art.err .core{background:radial-gradient(circle at 50% 38%,rgba(255,122,118,.3),rgba(255,122,118,.04) 70%)}
+.beacon-art.err .core svg{color:var(--red);filter:drop-shadow(0 0 14px rgba(255,122,118,.55))}
+
+/* progress ring (strike card 3.5s) */
+.timerring{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:
+  conic-gradient(var(--amber) var(--p,64%),rgba(255,255,255,.08) 0);position:relative}
+.timerring::after{content:"";position:absolute;inset:3.5px;border-radius:50%;background:var(--s3)}
+.timerring svg{width:15px;height:15px;position:relative;z-index:1;color:var(--amber)}
+
+/* slider */
+.slider{display:flex;align-items:center;gap:0;height:36px;position:relative}
+.slider .track{position:absolute;left:0;right:0;height:6px;border-radius:99px;background:var(--s3)}
+.slider .fill{position:absolute;left:0;height:6px;border-radius:99px;background:var(--beacon);width:64%}
+.slider .thumb{position:absolute;left:64%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;background:var(--beacon);box-shadow:0 2px 10px rgba(127,231,196,.45);border:3px solid #0C2A21}
+.tickrow{display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);margin-top:6px}
+
+/* doc tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0 6px}
+.tbl th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:8px 12px;border-bottom:1px solid var(--hairline)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--hairline);color:var(--t2);vertical-align:top}
+.tbl td:first-child{color:var(--t1);font-weight:600}
+.swatch{display:inline-block;width:14px;height:14px;border-radius:5px;vertical-align:-2px;margin-right:9px;border:1px solid rgba(255,255,255,.14)}
+.pass{color:var(--success);font-weight:700}
+
+</style>
+<style>
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:1180px}
+  .token-card{background:var(--s1);border:1px solid var(--hairline);border-radius:16px;padding:22px;box-shadow:var(--e1)}
+  .swrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--hairline)}
+  .swrow:last-child{border-bottom:none}
+  .swbig{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.12);flex:0 0 auto}
+  .swname{font-weight:700;font-size:13.5px}
+  .swhex{font-family:var(--mono);font-size:11px;color:var(--t3)}
+  .swuse{font-size:11.5px;color:var(--t2);margin-top:2px}
+  .typerow{display:flex;align-items:baseline;gap:22px;padding:14px 0;border-bottom:1px solid var(--hairline)}
+  .typerow:last-child{border-bottom:none}
+  .typemeta{width:230px;flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--t3);line-height:1.6}
+  .elevstrip{display:flex;gap:18px;align-items:flex-end;padding:26px 0 10px}
+  .elevdemo{border-radius:16px;padding:18px;width:170px;text-align:center;font-size:12px;color:var(--t2)}
+  .motionrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .motioncard{background:var(--s1);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;flex:1;min-width:240px;box-shadow:var(--e1)}
+  .motioncard h4{font-size:13.5px;margin-bottom:6px}
+  .motioncard p{font-size:12px;color:var(--t2);line-height:1.5}
+  .motioncard .dur{font-family:var(--mono);font-size:11px;color:var(--beacon);margin-top:8px;display:block}
+  .iconstrip{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+  .icell{width:86px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:14px 8px 10px;text-align:center}
+  .icell svg{width:24px;height:24px;color:var(--t1)}
+  .icell .onb svg{color:var(--beacon)}
+  .icell span{display:block;font-size:9.5px;color:var(--t3);margin-top:8px;font-family:var(--mono);letter-spacing:0}.qa{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qa .card{padding:14px 12px;text-align:left}
+.qa .qi{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--s3)}
+.qa .qi svg{width:18px;height:18px}
+.qa .t{font-size:12.5px;font-weight:700;margin-top:10px}
+.qa .s{font-size:10.5px;color:var(--t2);margin-top:3px}.chart{display:flex;align-items:flex-end;gap:9px;height:96px;padding:0 4px}
+.chart .bar{flex:1;border-radius:6px 6px 3px 3px;background:#253029;position:relative}
+.chart .bar.hi{background:linear-gradient(180deg,var(--beacon),#3E9C7C)}
+.chart .bar.ai{background:linear-gradient(180deg,#B8A1FF,#5A4A99)}
+.days{display:flex;gap:9px;padding:0 4px;margin-top:8px}
+.days span{flex:1;text-align:center;font-size:10px;color:var(--t3);font-weight:600}
+.days span.on{color:var(--beacon)}.mod{display:flex;align-items:center;gap:14px;padding:16px}
+.mod .mi{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.mod .mi svg{width:22px;height:22px}
+.mod .mt{font-size:15px;font-weight:700;letter-spacing:-.005em}
+.mod .ms{font-size:12px;color:var(--t2);margin-top:3px;line-height:1.35}
+.mod .mstate{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.mod .count{font-family:var(--mono);font-size:11px;color:var(--t3)}.apptile{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px;min-height:76px;position:relative;overflow:hidden;box-shadow:var(--e1)}
+.apptile .spine{position:absolute;left:0;top:12px;bottom:12px;width:3.5px;border-radius:0 4px 4px 0}
+.appicon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex:0 0 auto}
+.apptile .an{font-size:14.5px;font-weight:700}
+.apptile .ap{font-family:var(--mono);font-size:10.5px;color:var(--t3);margin-top:2px}
+.apptile .cat{margin-top:5px}
+.cattag{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:rgba(255,255,255,.06);border-radius:999px;padding:2px 8px}.set-row{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.set-row .si{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.set-row .si svg{width:19px;height:19px}
+.set-row .st{font-size:14.5px;font-weight:600}
+.set-row .ss{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.35}
+.set-row .end{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ctl-card{padding:16px}
+.vote{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.vote .v{border:1px solid var(--hairline);border-radius:12px;padding:10px 6px;text-align:center;background:var(--s1)}
+.vote .v b{display:block;font-size:11px;font-weight:700;color:var(--t2)}
+.vote .v span{font-size:9.5px;color:var(--t3)}
+.vote .v.on{background:var(--beacon-dim);border-color:rgba(127,231,196,.4)}
+.vote .v.on b{color:var(--beacon)}.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s3);border-radius:24px 24px 0 0;padding:10px 20px 26px;box-shadow:var(--e3);border-top:1px solid var(--seam)}
+.sheet .grab{width:36px;height:4px;border-radius:99px;background:var(--outline);margin:0 auto 16px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.field input,.field .fakeinput{width:100%;height:50px;background:var(--s1);border:1px solid var(--outline);border-radius:12px;padding:0 14px;color:var(--t1);font:400 14px var(--font);outline:none}
+.field input:focus{border-color:var(--beacon);box-shadow:0 0 0 3px rgba(127,231,196,.15)}
+.checkrow{display:flex;align-items:center;gap:12px;margin-top:14px}
+.cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--outline);display:flex;align-items:center;justify-content:center}
+.cb.on{background:var(--beacon);border-color:var(--beacon)}
+.cb.on svg{width:13px;height:13px;color:var(--on-beacon)}
+.daychip{width:38px;height:38px;border-radius:50%;border:1px solid var(--hairline);background:var(--s1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t2)}
+.daychip.on{background:var(--beacon-dim);border-color:rgba(127,231,196,.4);color:var(--beacon)}
+.timefield{flex:1;text-align:center;font-size:15px;font-weight:600}.pinwrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 34px 40px}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}.perm{display:flex;align-items:center;gap:14px;padding:15px 16px}
+.perm + .perm{border-top:1px solid var(--hairline)}
+.perm .pi{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.perm .pi svg{width:20px;height:20px}
+.perm .pt{font-size:14.5px;font-weight:600}
+.perm .ps{font-size:11.5px;color:var(--t2);margin-top:2px}
+.ob-dots{display:flex;gap:8px;justify-content:center}
+.ob-dot{width:8px;height:8px;border-radius:99px;background:var(--outline)}
+.ob-dot.on{width:22px;background:var(--beacon)}.info-row{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px}
+.info-row .ii{width:34px;height:34px;border-radius:10px;background:var(--s3);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.info-row .ii svg{width:17px;height:17px}
+.info-row .il{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.info-row .iv{font-size:13px;font-weight:700;margin-top:2px}
+.ghostapp{position:absolute;inset:0;background:linear-gradient(160deg,#151A22 0%,#0C0F14 60%);overflow:hidden}
+.ghostapp .gbar{height:52px;background:#10151C;display:flex;align-items:center;gap:10px;padding:0 18px}
+.ghostapp .gavatar{width:30px;height:30px;border-radius:50%;background:#232C38}
+.ghostapp .gline{height:8px;border-radius:99px;background:#1B222C}
+.strikecard{position:absolute;left:16px;right:16px;top:14%;background:var(--s3);border:1.5px solid var(--amber);border-radius:20px;box-shadow:var(--e4);padding:16px;display:flex;gap:14px;z-index:4}.iconrow{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
+.iconbox{text-align:center}
+.squircle{width:128px;height:128px;border-radius:34px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.squircle .rings{position:absolute;inset:0}
+.squircle .rings i{position:absolute;border-radius:50%;border:1.5px solid rgba(127,231,196,.16)}
+.circleic{width:128px;height:128px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.lbl{font-size:11px;color:var(--t3);margin-top:12px;font-weight:600}
+.meganav{position:sticky;top:0;z-index:99;background:rgba(7,8,8,.92);backdrop-filter:blur(12px);border-bottom:1px solid #232927;display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px;margin:-48px -40px 30px}
+.meganav a{color:#A9B5AD;text-decoration:none;font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;border:1px solid #232927}
+.meganav a:hover,.meganav a:active{color:#7FE7C4;border-color:rgba(127,231,196,.4)}
+.secdiv{height:2px;background:linear-gradient(90deg,transparent,#232927 15%,#232927 85%,transparent);margin:64px 0 0}
+.sechead{display:flex;align-items:baseline;gap:14px;margin:40px 0 4px}
+.sechead .idx{font-family:var(--mono);font-size:12px;color:#7FE7C4;font-weight:700}
+.sechead h1{font-size:24px;font-weight:700;letter-spacing:-.02em}
+@media print{.meganav{display:none}}
+</style>
+</head>
+<body>
+<nav class="meganav"><a href="#sec-design">Design System</a><a href="#sec-home">01 · Home</a><a href="#sec-activity">02 · Activity</a><a href="#sec-protect">03 · Protection</a><a href="#sec-appblock">04 · App Blocking</a><a href="#sec-settings">05 · Settings</a><a href="#sec-rules">06-07 · Rules & Commitment Lock</a><a href="#sec-pin">08-09 · PIN</a><a href="#sec-perms">10-12 · Permissions & Onboarding</a><a href="#sec-overlays">13-17 · Overlays</a><a href="#sec-icon">18 · Icon & Splash</a></nav>
+<svg width="0" height="0" style="position:absolute"><defs><symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol><symbol id="i-shieldchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></symbol><symbol id="i-shieldoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m9 12h6M9.4 9.2 12 6.6l2.6 2.6M9.4 14.8 12 17.4l2.6-2.6"/></symbol><symbol id="i-hist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></symbol><symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol><symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></symbol><symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></symbol><symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></symbol><symbol id="i-access" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 6.8v5m-5.5 8.4 1.8-3.4h7.4l1.8 3.4M6.5 9.2 4 10.8m13.5-1.6 2.5 1.6"/></symbol><symbol id="i-set" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></symbol><symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></symbol><symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 7 6.5-7 6.5"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></symbol><symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 7.5 12l7 6.5"/></symbol><symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></symbol><symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6"/></symbol><symbol id="i-timelock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v4.8l3 1.8"/></symbol><symbol id="i-lockopen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.35-1.3"/><path d="M12 14.4v2.2"/></symbol><symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.6" rx="7.5" ry="2.8"/><path d="M4.5 5.6v12.8c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V5.6M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/></symbol><symbol id="i-del" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 7.2h14.4M9.2 7.2V5.4c0-.8.6-1.4 1.4-1.4h2.8c.8 0 1.4.6 1.4 1.4v1.8M6.6 7.2l.8 11.4c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.8-11.4"/></symbol><symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5H5.8c-.7 0-1.3.6-1.3 1.3v12.4c0 .7.6 1.3 1.3 1.3h12.4c.7 0 1.3-.6 1.3-1.3V13"/><path d="m17.7 3.9 2.4 2.4L12 14.4l-3.2.8.8-3.2 8.1-8.1z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.6L19 7.5"/></symbol><symbol id="i-backspace" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5h9.7c1.2 0 2.3 1 2.3 2.3v8.4c0 1.2-1 2.3-2.3 2.3H9L3 12l6-6.5z"/><path d="m12.5 9.5 5 5m0-5-5 5"/></symbol><symbol id="i-graph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4"/><path d="M4 20h16"/><path d="m7 15 4-5 3 3 5-7"/></symbol><symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.5 8.5 4.5L12 12.5 3.5 8 12 3.5z"/><path d="m4.5 12 7.5 4 7.5-4M4.5 16l7.5 4 7.5-4"/></symbol><symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9.6a6 6 0 1 0-12 0c0 6-2.4 7.4-2.4 7.4h16.8S18 15.6 18 9.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></symbol><symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="17" height="9" rx="2.2"/><path d="M22 11.5v2M6 11.2v2.6M9.4 11.2v2.6"/></symbol><symbol id="i-fix" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.9 6.2a3.6 3.6 0 0 0 5 5L15 4.9a3.6 3.6 0 0 0 0 1.3z" transform="translate(0,0)"/><path d="m13 8.1-8.3 8.3a2.2 2.2 0 0 0 3.1 3.1L16 11.2"/></symbol><symbol id="i-shieldalert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></symbol><symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.6 4.9 8.6 4.3 4.5 4.3v13.4c4.1 0 6.1.6 7.5 1.9 1.4-1.3 3.4-1.9 7.5-1.9V4.3c-4.1 0-6.1.6-7.5 1.9z"/><path d="M12 6.2v13.4"/></symbol><symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.2 10.4 4c.9-.7 2.3-.7 3.2 0l6.9 5.2v9.3c0 1.2-1 2.2-2.2 2.2H5.7c-1.2 0-2.2-1-2.2-2.2V9.2z"/></symbol></defs></svg>
+
+<div class="secdiv" id="sec-design"></div>
+<div class="sechead"><span class="idx">Design System</span></div>
+<div class="doc-head">
+  <div class="crumb">Guardian Shield · Design System · V3</div>
+  <h1>“Watchtower” — the Guardian Shield design language</h1>
+  <p><b>Direction.</b> A serious consumer-security product used in private moments: late-night browsing, recovery from relapse, family protection. The visual voice is <b>calm vigilance</b> — a deep charcoal night with one luminous signal color, <b>Beacon Mint</b>, that means “your guardian is awake.” Green is the natural security primitive (browser padlocks, antivirus “you are protected”), and it semantically fuses brand with the app’s core state: <i>protected</i>. Chrome stays near-monochrome; <b>color is used only for meaning</b> — mint = protected/interactive, red = blocked, amber = warning, violet = AI. Elevation is real and layered (tonal steps + diffused shadows + hairline + top light-seam), replacing v2.5’s flat bordered cards. Typography is a deliberate Roboto Flex scale with tabular numerals for every stat; Bengali set in Noto Sans Bengali at matched weights.</p>
+  <p><b>Why dark-first (reasoned choice):</b> block overlays and warnings overwhelmingly appear at night or in bed; OLED dark reduces glare in those moments; the strike-3 overlay must dominate any host app (dark scrim); and privacy-screening in public. Light theme is explicitly out of scope for V3 (flagged, not silently skipped).</p>
+  <p><b>What this replaces:</b> v2.5.0’s blue-graphite palette (#0E1116 / periwinkle #D0E4FF), flat 0-elevation bordered cards, emoji row icons, mixed radii. Nothing about detection/blocking logic changes — visual language only.</p>
+</div>
+
+<!-- ============ COLOR ============ -->
+<div class="board">
+<div class="row-label"><h2>1 · Color — surfaces &amp; elevation ladder</h2><span class="hint">tonal steps, not flat</span></div>
+<div class="grid2">
+  <div class="token-card">
+    <div class="swrow"><div class="swbig" style="background:#0A0C0B"></div><div><div class="swname">background · L0</div><div class="swhex">#0A0C0B — warm-neutral charcoal, faint green cast</div><div class="swuse">App canvas, status/nav bars. Slightly deeper than v2.5 for stronger card lift.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#101413"></div><div><div class="swname">surface-1 · L1</div><div class="swhex">#101413</div><div class="swuse">Resting cards, list rows, stat tiles. + hairline #232927 + shadow e1.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#171C1A"></div><div><div class="swname">surface-2 · L2</div><div class="swhex">#171C1A</div><div class="swuse">Raised: hero card base, bottom nav, lock banners. + shadow e2 + top seam.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#1F2523"></div><div><div class="swname">surface-3 · L3</div><div class="swhex">#1F2523</div><div class="swuse">Highest: dialogs, bottom sheets, keypad keys, menus. + shadow e3.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#E9EFEA"></div><div><div class="swname">inverse surface</div><div class="swhex">#E9EFEA / on-inverse #131917</div><div class="swuse">Snackbars (high contrast, standard M3 pattern).</div></div></div>
+  </div>
+  <div class="token-card">
+    <div class="swrow"><div class="swbig" style="background:#7FE7C4"></div><div><div class="swname">Beacon Mint — primary</div><div class="swhex">#7FE7C4 · on-beacon #052019 · hover #8FEBCB</div><div class="swuse">Interactive + “protected” state. Buttons, toggles-on, active nav, links.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:linear-gradient(168deg,#164134,#11322A)"></div><div><div class="swname">beacon container</div><div class="swhex">#11322A → #0D2822 · on-container #B4F0DA (10.9:1)</div><div class="swuse">Hero status card, active module tint. 1px beacon 22% border.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#FF7A76"></div><div><div class="swname">error / blocked</div><div class="swhex">#FF7A76 · container #361B1A · on-container #FFD3D0</div><div class="swuse">Block events, strike-3 overlay, danger actions.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#FFC24B"></div><div><div class="swname">warning</div><div class="swhex">#FFC24B · container #33290F · on-container #FFDB8F</div><div class="swuse">Strike 1/2 card, paused state, commitment-lock banners.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#B8A1FF"></div><div><div class="swname">AI violet — tertiary</div><div class="swhex">#B8A1FF · container #241F3E</div><div class="swuse">AI-detection events, AI sensitivity controls. Kept from product identity.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#7EC8F0"></div><div><div class="swname">info sky</div><div class="swhex">#7EC8F0 · container #12283A</div><div class="swuse">Educational notes, keyword-filter events.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#6FE0A6"></div><div><div class="swname">success</div><div class="swhex">#6FE0A6</div><div class="swuse">Granted permissions, positive deltas, “active” dots. Same family as Beacon by design: protected = success.</div></div></div>
+  </div>
+</div>
+
+<table class="tbl" style="max-width:1180px">
+  <tr><th>Text / icon pair</th><th>Ratio</th><th>WCAG</th><th>Use</th></tr>
+  <tr><td><span class="swatch" style="background:#ECF1ED"></span>on-background #ECF1ED on #0A0C0B</td><td class="pass">17.2:1</td><td>AAA</td><td>Headlines, values</td></tr>
+  <tr><td><span class="swatch" style="background:#ECF1ED"></span>on-surface-1</td><td class="pass">16.2:1</td><td>AAA</td><td>Card titles</td></tr>
+  <tr><td><span class="swatch" style="background:#A9B5AD"></span>on-surface-variant #A9B5AD on surface-1 / surface-3</td><td class="pass">8.8:1 / 7.4:1</td><td>AAA</td><td>Body secondary, subtitles</td></tr>
+  <tr><td><span class="swatch" style="background:#76827B"></span>on-surface-dim #76827B on surface-1</td><td class="pass">4.6:1</td><td>AA</td><td>Microcopy only, ≥11sp (package names, axis labels, kickers)</td></tr>
+  <tr><td><span class="swatch" style="background:#7FE7C4"></span>Beacon on surface-1</td><td class="pass">12.5:1</td><td>AAA</td><td>Interactive text, active icons</td></tr>
+  <tr><td><span class="swatch" style="background:#052019"></span>on-Beacon (button text)</td><td class="pass">11.5:1</td><td>AAA</td><td>Filled button labels</td></tr>
+  <tr><td><span class="swatch" style="background:#B4F0DA"></span>on-beacon-container (hero)</td><td class="pass">10.9:1</td><td>AAA</td><td>Hero title/subtitle</td></tr>
+  <tr><td><span class="swatch" style="background:#FF7A76"></span>error on surface-1</td><td class="pass">7.3:1</td><td>AAA</td><td>Blocked badges, danger labels</td></tr>
+  <tr><td><span class="swatch" style="background:#FFC24B"></span>warning on surface-1</td><td class="pass">11.6:1</td><td>AAA</td><td>Strike card accents</td></tr>
+  <tr><td><span class="swatch" style="background:#B8A1FF"></span>AI violet on surface-1</td><td class="pass">8.5:1</td><td>AAA</td><td>AI event rows</td></tr>
+  <tr><td><span class="swatch" style="background:#FFD3D0"></span>on-error-container #FFD3D0 on #361B1A</td><td class="pass">11.7:1</td><td>AAA</td><td>Overlay icon wrapper</td></tr>
+  <tr><td><span class="swatch" style="background:#131917"></span>on-inverse on inverse surface</td><td class="pass">15.3:1</td><td>AAA</td><td>Snackbar</td></tr>
+</table>
+<p class="note"><span class="tag">Rule</span>Every text/background pair in the system is ≥4.5:1 (AA); all primary pairs are ≥7:1 (AAA). Dim text is reserved for non-essential microcopy. Focus = 2px Beacon outline, 3px offset, on every interactive element. Touch targets ≥44×48dp.</p>
+
+<!-- ============ TYPOGRAPHY ============ -->
+<div class="row-label"><h2>2 · Typography — Roboto Flex + Noto Sans Bengali</h2><span class="hint">variable weights, tabular numerals on all stats</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="typerow"><div class="typemeta">Display XL · 40/46 · w700 · ls −0.025</div><div style="font-size:40px;font-weight:700;letter-spacing:-.025em" class="tnum">00:29</div></div>
+  <div class="typerow"><div class="typemeta">Display · 30/36 · w700 · ls −0.02</div><div style="font-size:30px;font-weight:700;letter-spacing:-.02em">সুরক্ষা সক্রিয়</div></div>
+  <div class="typerow"><div class="typemeta">Headline S · 24/30 · w700 · ls −0.015</div><div style="font-size:24px;font-weight:700;letter-spacing:-.015em">Sensitive Content Blocked</div></div>
+  <div class="typerow"><div class="typemeta">Headline XS · 18/24 · w600 · ls −0.01</div><div style="font-size:18px;font-weight:600;letter-spacing:-.01em">App Blocking</div></div>
+  <div class="typerow"><div class="typemeta">Title L · 16/22 · w600</div><div style="font-size:16px;font-weight:600">Keyword Filter</div></div>
+  <div class="typerow"><div class="typemeta">Body L · 15/22 · w400</div><div style="font-size:15px">This content has been blocked to protect you.</div></div>
+  <div class="typerow"><div class="typemeta">Body S · 13/18 · w400</div><div style="font-size:13px;color:var(--t2)">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</div></div>
+  <div class="typerow"><div class="typemeta">Label M · 14/16 · w600 (buttons, sentence case)</div><div style="font-size:14px;font-weight:600">Request Unlock</div></div>
+  <div class="typerow"><div class="typemeta">Label S · 11/14 · w700 · caps · ls 0.14 (kickers)</div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)">Strike Warning</div></div>
+  <div class="typerow"><div class="typemeta">Mono · 12/16 · package names &amp; countdowns</div><div style="font-family:var(--mono);font-size:12px;color:var(--t3)">com.instagram.android</div></div>
+</div>
+<p class="note"><span class="tag">Rule</span>Sentence-case buttons (no ALL-CAPS buttons), caps reserved for 11sp kickers. Bengali never uppercase, never letterspaced beyond 0.01em. Numerals in stats, countdowns, strikes: tabular figures. Display sizes tighten to −0.02em; Bengali display uses w700 with −0.01em (Bengali glyphs clash at tighter tracking).</p>
+
+<!-- ============ SHAPE / ELEVATION / SPACING ============ -->
+<div class="row-label"><h2>3 · Shape &amp; elevation — layered, not flat</h2><span class="hint">hairline + shadow + top light-seam on every level</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:8px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">xs · 8<br>badges, inputs</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:12px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">sm · 12<br>chips, rows, tiles</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:16px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">md · 16<br>cards, sheets</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:24px;background:var(--s2);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">lg · 24<br>hero, dialogs</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:28px;background:var(--s2);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">xl · 28<br>overlay hero</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:999px;background:var(--beacon)"></div><div class="swhex" style="margin-top:8px">full<br>buttons, badges</div></div>
+  </div>
+  <div class="elevstrip">
+    <div class="elevdemo" style="background:#0A0C0B">L0 · canvas<br><span class="swhex">#0A0C0B</span></div>
+    <div class="elevdemo" style="background:#101413;border:1px solid #232927;box-shadow:0 1px 2px rgba(0,0,0,.24)">L1 · card<br><span class="swhex">e1 · 0 1 2 · 24%</span></div>
+    <div class="elevdemo" style="background:#171C1A;border:1px solid #232927;box-shadow:0 6px 16px rgba(0,0,0,.3)">L2 · raised<br><span class="swhex">e2 · 0 6 16 · 30%</span></div>
+    <div class="elevdemo" style="background:#1F2523;border:1px solid #2A322E;box-shadow:0 12px 32px rgba(0,0,0,.38)">L3 · floating<br><span class="swhex">e3 · 0 12 32 · 38%</span></div>
+    <div class="elevdemo" style="background:linear-gradient(168deg,#164134,#11322A);border:1px solid rgba(127,231,196,.25);box-shadow:0 24px 64px rgba(0,0,0,.46),inset 0 0 64px rgba(127,231,196,.06)">Beacon hero<br><span class="swhex">e4 + inner glow</span></div>
+  </div>
+  <p class="swuse" style="margin-top:10px">Pressed = +5% white tonal overlay + scale 0.98 (150ms, then spring back) — never a color swap. Hover/focus (web parity) = Beacon outline. Disabled = surface-3 fill + dim text, 40% opacity.</p>
+</div>
+
+<div class="row-label"><h2>4 · Spacing &amp; grid — 4pt base</h2><span class="hint">screen gutter 20 · section gap 28 · row height 72</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div style="display:flex;gap:0;align-items:flex-end;height:64px">
+    <div style="width:24px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);height:16px;border-radius:3px"></div><div style="width:32px;height:32px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:3px;margin-left:8px"></div><div style="width:48px;height:48px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:4px;margin-left:8px"></div><div style="width:64px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:5px;margin-left:8px"></div><div style="width:80px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:6px;margin-left:8px"></div><div style="width:96px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:7px;margin-left:8px"></div><div style="width:128px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:8px;margin-left:8px"></div><div style="width:160px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:9px;margin-left:8px"></div>
+  </div>
+  <div class="swhex" style="margin-top:10px">4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 — screen gutter 20dp (roomier than v2.5’s 16), section gap 28, card padding 16–20, hero padding 28, list-row height 72, nav height 80 incl. gesture inset.</div>
+</div>
+
+<!-- ============ ICONOGRAPHY ============ -->
+<div class="row-label"><h2>5 · Iconography — one family, 24dp grid, rounded</h2><span class="hint">Material Symbols Rounded · weight 500 · 2dp stroke feel · no emoji in chrome</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="iconstrip">
+    <div class="icell onb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></svg><span>shield-beacon<br>(brand mark)</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg><span>shield-check</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg><span>shield-alert</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m9 12h6M9.4 9.2 12 6.6l2.6 2.6M9.4 14.8 12 17.4l2.6-2.6"/></svg><span>shield-off</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></svg><span>history</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>apps</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></svg><span>keyword</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></svg><span>schedule</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg><span>ai-spark</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 6.8v5m-5.5 8.4 1.8-3.4h7.4l1.8 3.4M6.5 9.2 4 10.8m13.5-1.6 2.5 1.6"/></svg><span>accessibility</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><span>lock</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.35-1.3"/><path d="M12 14.4v2.2"/></svg><span>lock-open</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.2 10.4 4c.9-.7 2.3-.7 3.2 0l6.9 5.2v9.3c0 1.2-1 2.2-2.2 2.2H5.7c-1.2 0-2.2-1-2.2-2.2V9.2z"/></svg><span>home</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6"/></svg><span>search</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5H5.8c-.7 0-1.3.6-1.3 1.3v12.4c0 .7.6 1.3 1.3 1.3h12.4c.7 0 1.3-.6 1.3-1.3V13"/><path d="m17.7 3.9 2.4 2.4L12 14.4l-3.2.8.8-3.2 8.1-8.1z"/></svg><span>edit</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 7.2h14.4M9.2 7.2V5.4c0-.8.6-1.4 1.4-1.4h2.8c.8 0 1.4.6 1.4 1.4v1.8M6.6 7.2l.8 11.4c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.8-11.4"/></svg><span>delete</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v4.8l3 1.8"/></svg><span>time-lock</span></div>
+  </div>
+  <p class="swuse" style="margin-top:16px"><b>Shield mark evolution:</b> the existing check-shield becomes <b>shield-beacon</b> — same silhouette, the check replaced by a vertical beacon slit + dot (the “watchtower light”). It is the only icon that may carry the glow. Launcher monochrome + strike card + overlay heroes use it. No mascot, name unchanged.</p>
+</div>
+
+<!-- ============ MOTION ============ -->
+<div class="row-label"><h2>6 · Motion — Material 3 patterns only, no gimmicks</h2><span class="hint">emphasized decelerate in, standard out</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="motionrow">
+    <div class="motioncard"><h4>Fade-through · bottom-nav tabs</h4><p>Outgoing fades to 0 (90ms), incoming fades in + slides 8dp up (210ms). Home ⇄ Activity ⇄ Protection ⇄ Settings.</p><span class="dur">300ms · M3 FadeThrough</span></div>
+    <div class="motioncard"><h4>Shared-axis X · pushes</h4><p>Dashboard → App List / Settings / Activity Log and all detail pushes slide along X with parallax dimming.</p><span class="dur">300ms · M3 SharedAxis</span></div>
+    <div class="motioncard"><h4>Container transform · row → detail</h4><p>Activity row expands into Blocked Content Detail (its real destination), corner radius 12→0 morphing.</p><span class="dur">400ms · M3 ContainerTransform</span></div>
+    <div class="motioncard"><h4>Press state</h4><p>scale 0.98 + tonal +5% white overlay; release springs back ( overshoot 1.0 ). Applies to cards, rows, keys, buttons.</p><span class="dur">in 150ms · out 250ms spring</span></div>
+    <div class="motioncard"><h4>List entrance</h4><p>Staggered fade-up 8dp, 12ms/item cap 8 items, 180ms each — perceptible once, never annoying.</p><span class="dur">180ms/item staggered</span></div>
+    <div class="motioncard"><h4>Skeleton → content</h4><p>Shimmer sweep 1200ms loop; on load, skeleton crossfades to content, no spinner anywhere.</p><span class="dur">crossfade 200ms</span></div>
+    <div class="motioncard"><h4>Strike 1/2 card</h4><p>Slides from top with decelerate; a thin amber timer ring drains around the icon — visualizing the <b>unchanged 3.5s auto-dismiss</b>. Exit slides up + fade.</p><span class="dur">enter 260ms · ring 3500ms linear</span></div>
+    <div class="motioncard"><h4>Strike-3 overlay</h4><p>Scrim fade + hero scale 0.92→1 with glow bloom; content staggers 40ms. Exit only via actions.</p><span class="dur">240ms emphasized</span></div>
+    <div class="motioncard"><h4>Sheets &amp; dialogs</h4><p>Bottom sheets slide up with emphasized decelerate + scrim to 60%; dialogs fade + scale 0.9→1. Keypad error = 3-frame horizontal shake (existing anim reused).</p><span class="dur">sheet 320ms · dialog 180ms</span></div>
+    <div class="motioncard"><h4>Beacon pulse</h4><p>Hero status ring breathes (opacity .35→.14, 2.4s ease-in-out, repeat with reverse) while protection is ON. Stops when paused/off.</p><span class="dur">2400ms · infinite alternate</span></div>
+    <div class="motioncard"><h4>Pull-to-refresh</h4><p>M3 Circles indicator in Beacon on Activity Log (the only list with re-queryable data).</p><span class="dur">system timing</span></div>
+  </div>
+  <p class="swuse" style="margin-top:14px"><b>Principles:</b> motion explains hierarchy (what came from where), never decorates. Durations ≤400ms. Easing: emphasized-decelerate for entrances, standard for exits. Nothing loops except beacon pulse &amp; shimmer, both sub-perceptual. Respect OS reduce-animation setting (pulse/shimmer/stagger drop out).</p>
+</div>
+
+<!-- ============ COMPONENTS ============ -->
+<div class="row-label"><h2>7 · Component library — states: default · pressed · disabled · focused</h2><span class="hint">every component, every state — used identically on every screen</span></div>
+<div style="max-width:1180px;display:grid;grid-template-columns:repeat(2,1fr);gap:26px">
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Buttons</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+      <button class="btn filled">Stay Protected</button>
+      <button class="btn filled pressed">Stay Protected</button>
+      <button class="btn tonal">Request Unlock</button>
+      <button class="btn tonal pressed">Request Unlock</button>
+      <button class="btn danger">Report &amp; Close</button>
+      <button class="btn text">Not sensitive</button>
+      <button class="btn filled" disabled>Disabled</button>
+    </div>
+    <div class="swuse" style="margin-top:12px">Filled = Beacon (one affirmative action per screen) · Tonal = secondary (surface-3) · Danger = error red (destructive/exit-intent) · Text = tertiary/low-emphasis. 52dp height, pill, sentence case. Focused: 2px Beacon ring.</div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Switches · chips · segmented</div>
+    <div style="display:flex;gap:18px;align-items:center;margin-bottom:16px">
+      <div class="sw on"></div><div class="sw"></div><div class="sw on" disabled></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <span class="chip on">All <span class="n">42</span></span><span class="chip">AI <span class="n">18</span></span><span class="chip">Keyword</span>
+      <span class="badge ok"><span class="dot pulse"></span>Active</span><span class="badge err">Blocked</span><span class="badge ai">AI 0.89</span><span class="badge neutral">PLAIN</span>
+    </div>
+    <div class="seg"><button class="on glow">Day</button><button>Week</button><button>Month</button></div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Stat tile · module card · list row</div>
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#7FE7C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div><div class="d">+12 vs yesterday</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#B8A1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div><div class="d">+8</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg viewBox="0 0 24 24" fill="none" stroke="#7EC8F0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></svg></div><div class="v tnum">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div>
+    <div class="rows">
+      <div class="row"><div class="spine ai"></div><div class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="#B8A1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs">com.instagram.android</div></div><div class="rend"><span>2m ago</span></div></div>
+      <div class="row"><div class="spine ok"></div><div class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="#6FE0A6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg></div><div class="rmain"><div class="rt">Module row — granted</div><div class="rs">supporting copy</div></div><div class="rend"><div class="sw on"></div></div></div>
+    </div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Empty · loading · error · snackbar</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:200px"><div class="statebox"><div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg></div><h3>No blocks yet</h3><p>এখনো কোনো ব্লক নেই — নিরাপদ থাকুন!</p></div></div>
+      <div class="card" style="flex:1;min-width:200px;padding:16px"><div style="display:flex;gap:12px;align-items:center"><div class="sk" style="width:42px;height:42px"></div><div style="flex:1"><div class="sk line" style="width:70%"></div><div class="sk line" style="width:45%;margin-top:8px;height:10px"></div></div></div><div class="sk line" style="width:100%;height:64px;margin-top:14px;border-radius:12px"></div><div class="sk line" style="width:100%;height:64px;margin-top:10px;border-radius:12px"></div></div>
+      <div class="card" style="flex:1;min-width:200px"><div class="statebox"><div class="art" style="background:var(--red-c);border-color:rgba(255,122,118,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#FF7A76" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.4v6M12 16.6v.2"/><circle cx="12" cy="12" r="8.6"/></svg></div><h3>Couldn’t load activity</h3><p>কিছু একটা ভুল হয়েছে</p><button class="btn tonal sm">Try again</button></div></div>
+    </div>
+    <div class="snackbar" style="position:static;margin-top:16px">PIN saved <span class="act">View</span></div>
+    <p class="swuse" style="margin-top:12px">Empty states: shield art + real app copy + one recovery action. Errors: same skeleton slot, red-tinted art, retry. Snackbars inverse-surface, 14dp radius, optional action.</p>
+  </div>
+</div>
+<p class="note"><span class="tag">i18n</span>All copy ships EN + বাংলা from `values/` + `values-bn/`. Mocks show the mixed EN/বাংলা exactly as the default locale renders today; new strings will be added to both files at implementation time. Bengali line-height +25% (1.5) for Body sizes.</p>
+</div>
+
+<div class="secdiv" id="sec-home"></div>
+<div class="sechead"><span class="idx">01 · Home</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 01 · Home / Dashboard</div>
+  <h1>Home — the Watchtower</h1>
+  <p>The hero becomes a <b>beacon</b>: concentric rings breathe while protection is ON, state-colored when not (amber = paused, red = service off). All existing bindings preserved — <span class="pkg">statusCard · imgShield · txtStatusTitle · txtStatusSubtitle · btnToggle · txtProtectionBadge · txtStatTotal/Ai/Time · cardAppBlocking/Keywords/Whitelist · txtSeeAll · recyclerRecent</span>. Tap targets unchanged (hero card → toggle flow with TimeLock + accessibility check intact).</p>
+</div>
+
+<div class="board">
+<div class="row-label"><h2>State — Protection ON (default)</h2><span class="hint">সুরক্ষা সক্রিয় · beacon pulse 2.4s</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · ON — loaded</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span><div class="icons"><svg viewBox="0 0 24 24"><path d="M2 20V9l5 3.4V9l5 3.4V9l5 3.4V9l5 3.4v7.4z" opacity=".9"/></svg><svg viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="9" rx="2.4"/><rect x="2" y="10.5" width="2.6" height="4.5" rx="1"/><path d="M20.6 12.4v2.2" stroke="#ECF1ED" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div><div class="actions"><div class="icon-btn"><svg><use href="#i-hist"/></svg></div></div></div>
+
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">আজ ১২টি ইভেন্ট মনিটর করা হচ্ছে</div>
+      <div class="btn" style="background:var(--on-bc);color:var(--bc);margin-top:20px;height:46px">বিরতি · Pause</div>
+      <div style="margin-top:16px"><span class="badge ok"><span class="dot pulse"></span>Protection Active · সক্রিয়</span></div>
+    </div>
+
+    <div class="section">
+      <div class="stats">
+        <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div><div class="d tnum">+12</div></div>
+        <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div><div class="d tnum">+8</div></div>
+        <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-h"><div class="kicker onBeacon">Quick actions · দ্রুত পদক্ষেপ</div></div>
+      <div class="qa">
+        <div class="card"><div class="qi"><svg style="color:#7FE7C4"><use href="#i-apps"/></svg></div><div class="t">App Blocking</div><div class="s">১২টি ব্লক</div></div>
+        <div class="card"><div class="qi"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="t">Keywords</div><div class="s">৮টি কিওয়ার্ড</div></div>
+        <div class="card"><div class="qi"><svg style="color:#B8A1FF"><use href="#i-shieldchk"/></svg></div><div class="t">Whitelist</div><div class="s">৩টি অ্যাপ</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-h"><div class="kicker onBeacon">Today’s activity · সাম্প্রতিক ব্লক</div><a class="kicker lnk">See all</a></div>
+      <div class="rows">
+        <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs pkg">com.instagram.android</div></div><div class="rend tnum">2m</div></div>
+        <div class="row"><div class="spine red"></div><div class="ricon"><svg style="color:#FF7A76"><use href="#i-lock"/></svg></div><div class="rmain"><div class="rt">App Blocked</div><div class="rs pkg">com.android.chrome</div></div><div class="rend tnum">14m</div></div>
+        <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">Keyword</div><div class="rs pkg">com.zhiliaoapp.musically</div></div><div class="rend tnum">1h</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Paused (amber beacon)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span><div class="icons"><svg viewBox="0 0 24 24"><path d="M2 20V9l5 3.4V9l5 3.4V9l5 3.4V9l5 3.4v7.4z" opacity=".9"/></svg></div></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card raised" style="padding:30px 24px;text-align:center;background:linear-gradient(168deg,#2A2414,#1E1A0E);border:1px solid rgba(255,194,75,.25)">
+      <div class="beacon-art warn"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldoff"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:#FFDB8F">বিরাম</div>
+      <div style="font-size:13.5px;color:#FFDB8F;opacity:.75;margin-top:6px">সুরক্ষা বর্তমানে বন্ধ · Protection is paused</div>
+      <div class="btn" style="background:var(--amber);color:#2B1E02;margin-top:20px;height:46px">চালু করুন · Resume</div>
+      <div style="margin-top:16px"><span class="badge warn"><span class="dot"></span>Protection paused · বিরতি</span></div>
+    </div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+    <div class="section"><div class="statebox" style="padding:34px 24px"><div class="art"><svg style="color:#76827B"><use href="#i-hist"/></svg></div><h3>আজ আর কোনো ইভেন্ট নেই</h3><p>Protection resumes when you do.</p></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Service OFF (red beacon)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card raised" style="padding:30px 24px;text-align:center;background:linear-gradient(168deg,#311B1A,#20110F);border:1px solid rgba(255,122,118,.28)">
+      <div class="beacon-art err"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldoff"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:#FFD3D0">সার্ভিস বন্ধ</div>
+      <div style="font-size:13.5px;color:#FFD3D0;opacity:.78;margin-top:6px">Accessibility service is not running</div>
+      <div class="btn danger" style="margin-top:20px;height:46px">Enable protection</div>
+      <div style="margin-top:16px"><span class="badge err"><span class="dot"></span>Service off · বন্ধ</span></div>
+    </div>
+    <div class="section"><div class="banner"><svg><use href="#i-shieldoff"/></svg><div class="btxt">Accessibility Service বন্ধ — Settings → Accessibility → Guardian Shield</div></div></div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+</div>
+
+<div class="row-label"><h2>States — loading · empty · error</h2><span class="hint">skeletons, never spinners</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Loading</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0"><div class="sk line" style="width:170px;height:18px"></div></div>
+    <div class="sk" style="height:300px;border-radius:24px"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px">
+      <div class="sk" style="height:120px"></div><div class="sk" style="height:120px"></div><div class="sk" style="height:120px"></div>
+    </div>
+    <div class="sk line" style="width:120px;height:11px;margin:26px 0 12px"></div>
+    <div class="sk" style="height:72px"></div><div class="sk" style="height:72px;margin-top:10px"></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>E</b> · Empty day</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">আজ ০টি ইভেন্ট মনিটর করা হচ্ছে</div>
+      <div class="btn" style="background:var(--on-bc);color:var(--bc);margin-top:20px;height:46px">বিরতি · Pause</div>
+      <div style="margin-top:16px"><span class="badge ok"><span class="dot pulse"></span>Protection Active · সক্রিয়</span></div>
+    </div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">0</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">0</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">0m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Today’s activity</div></div>
+    <div class="card"><div class="statebox"><div class="art"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><h3>No blocks yet</h3><p>এখনো কোনো ব্লক নেই — নিরাপদ থাকুন!</p></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>F</b> · Stats DB error</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div></div></div>
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">Protection is ON — stats unavailable</div>
+    </div>
+    <div class="section"><div class="card"><div class="statebox" style="padding:32px 24px"><div class="art" style="background:var(--red-c);border-color:rgba(255,122,118,.3)"><svg style="color:#FF7A76" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 7.4v6M12 16.6v.2"/><circle cx="12" cy="12" r="8.6"/></svg></div><h3>Couldn’t load stats</h3><p>ব্লক ইভেন্ট ডেটাবেজ পড়া যায়নি</p><button class="btn tonal sm"><svg><use href="#i-refresh"/></svg>Try again</button></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+
+<p class="note"><span class="tag">Wiring kept</span>btnToggle → same TimeLock/accessibility gate flow · cardAppBlocking → AppListActivity · cardKeywords → KeywordActivity · cardWhitelist → AppList whitelist filter · txtSeeAll → ActivityLogActivity · recyclerRecent → same BlockEventAdapter data. New visuals only: beacon hero replaces glow-blob shield, stat tiles gain category-tinted icon wells + tabular numerals, quick actions keep 3-card grid with real counts. Bottom nav: 4 tabs preserved, active = Beacon pill + tinted icon; toolbar gains the Activity shortcut icon (existing menu destination).</p>
+</div>
+
+<div class="secdiv" id="sec-activity"></div>
+<div class="sechead"><span class="idx">02 · Activity</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 02 · Activity Log</div>
+  <h1>Activity — the record</h1>
+  <p>Bindings preserved: <span class="pkg">btnDay/btnWeek/btnMonth · txtBlockedAttempts · chipAll/Ai/Keyword/App/Schedule · txtCount · txtEmpty · recyclerEvents</span> + toolbar menu (Export Log / Clear All Logs). The summary becomes one “attempts” card with a 7-day beacon/AI-split bar chart (static decorative, as today); every event row carries a category spine. Row tap → Blocked Content Detail via container-transform (real existing destination).</p>
+</div>
+
+<div class="board">
+<div class="row-label"><h2>State — loaded (Day)</h2><span class="hint">filter chips + segmented period</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Day · All</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Activity Log</div><div class="sub">অ্যাক্টিভিটি লগ</div></div><div class="actions"><div class="icon-btn"><svg><use href="#i-more"/></svg></div></div></div>
+    <div class="seg"><button class="on glow">Day</button><button>Week</button><button>Month</button></div>
+    <div class="card" style="margin-top:16px;padding:20px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div><div class="kicker">Blocked attempts · ব্লক</div><div class="tnum" style="font-size:34px;font-weight:700;letter-spacing:-.02em;margin-top:6px">78</div><span class="badge ok tnum" style="margin-top:8px">↗ +24% vs yesterday</span></div>
+        <div style="margin-left:auto;text-align:right"><div style="display:flex;gap:14px;justify-content:flex-end;font-size:10.5px;color:var(--t3);font-weight:700"><span><span class="dot" style="color:#7FE7C4;display:inline-block"></span> All</span><span><span class="dot" style="color:#B8A1FF;display:inline-block"></span> AI</span></div></div>
+      </div>
+      <div class="chart" style="margin-top:22px">
+        <div class="bar" style="height:34%"></div><div class="bar" style="height:52%"></div><div class="bar" style="height:41%"></div><div class="bar hi" style="height:88%"></div><div class="bar ai" style="height:63%"></div><div class="bar" style="height:30%"></div><div class="bar" style="height:12%"></div>
+      </div>
+      <div class="days"><span>Mon</span><span>Tue</span><span>Wed</span><span class="on">Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    </div>
+    <div class="section">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <span class="chip on">All <span class="n">42</span></span><span class="chip">AI <span class="n">18</span></span><span class="chip">Keyword <span class="n">9</span></span><span class="chip">App</span><span class="chip">Schedule</span>
+      </div>
+      <div class="kicker" style="margin-bottom:10px">42 events · টি ইভেন্ট</div>
+      <div class="rows">
+        <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs pkg">com.instagram.android</div></div><div class="rend"><span class="badge ai">0.89</span><span class="tnum">2m</span></div></div>
+        <div class="row"><div class="spine red"></div><div class="ricon"><svg style="color:#FF7A76"><use href="#i-lock"/></svg></div><div class="rmain"><div class="rt">App Blocked</div><div class="rs pkg">com.android.chrome</div></div><div class="rend tnum">14m</div></div>
+        <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">Keyword matched</div><div class="rs pkg">com.zhiliaoapp.musically</div></div><div class="rend tnum">1h</div></div>
+        <div class="row"><div class="spine amber"></div><div class="ricon"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div class="rmain"><div class="rt">Scheduled</div><div class="rs pkg">com.reddit.frontpage</div></div><div class="rend tnum">3h</div></div>
+        <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs pkg">com.facebook.katana</div></div><div class="rend"><span class="badge ai">0.91</span><span class="tnum">5h</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · AI filter · empty result</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Activity Log</div><div class="sub">অ্যাক্টিভিটি লগ</div></div><div class="actions"><div class="icon-btn"><svg><use href="#i-more"/></svg></div></div></div>
+    <div class="seg"><button class="on glow">Day</button><button>Week</button><button>Month</button></div>
+    <div class="card" style="margin-top:16px;padding:20px">
+      <div class="kicker">Blocked attempts · ব্লক</div>
+      <div class="tnum" style="font-size:34px;font-weight:700;letter-spacing:-.02em;margin-top:6px">78</div>
+      <span class="badge neutral tnum" style="margin-top:8px">— same as yesterday</span>
+    </div>
+    <div class="section">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <span class="chip">All</span><span class="chip on">AI</span><span class="chip">Keyword</span><span class="chip">App</span><span class="chip">Schedule</span>
+      </div>
+      <div class="card"><div class="statebox"><div class="art"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><h3>No AI events today</h3><p>আজ AI ডিটেকশনে কোনো ব্লক হয়নি</p><button class="btn text sm">Show all events</button></div></div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Loading (skeleton)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div class="sk line" style="width:130px;height:18px"></div></div>
+    <div class="sk" style="height:36px;border-radius:999px"></div>
+    <div class="sk" style="height:150px;border-radius:16px;margin-top:16px"></div>
+    <div style="display:flex;gap:8px;margin-top:20px"><div class="sk line" style="width:64px;height:32px;border-radius:999px"></div><div class="sk line" style="width:52px;height:32px;border-radius:999px"></div><div class="sk line" style="width:80px;height:32px;border-radius:999px"></div></div>
+    <div class="sk" style="height:72px;margin-top:16px"></div><div class="sk" style="height:72px;margin-top:10px"></div><div class="sk" style="height:72px;margin-top:10px"></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · DB error</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Activity Log</div></div></div>
+    <div class="seg"><button class="on glow">Day</button><button>Week</button><button>Month</button></div>
+    <div class="section"><div class="card"><div class="statebox"><div class="art" style="background:var(--red-c);border-color:rgba(255,122,118,.3)"><svg style="color:#FF7A76" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 7.4v6M12 16.6v.2"/><circle cx="12" cy="12" r="8.6"/></svg></div><h3>Couldn’t load activity</h3><p>লগ লোড করা যায়নি — আবার চেষ্টা করুন</p><button class="btn filled sm"><svg><use href="#i-refresh"/></svg>Try again</button></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Motion</span>Pull-to-refresh (M3 Circles, Beacon) on this list only. Filter chip change = 150ms crossfade of list; period segmented = fade-through. Rows stagger-enter 12ms/item. Export/Clear live behind the ⋮ menu → MaterialAlertDialog (clear keeps its “cannot be undone” confirm).</p>
+</div>
+
+<div class="secdiv" id="sec-protect"></div>
+<div class="sechead"><span class="idx">03 · Protection</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 03 · Protection Hub</div>
+  <h1>Protection — five real modules, nothing invented</h1>
+  <p>Bindings preserved: <span class="pkg">imgShield · txtProtectionTitle · txtProtectionSubtitle · txtBadgeActive · cardAppBlocking · cardKeyword · cardSchedule · cardAi · cardAccessibility</span> (each card keeps its real launch destination). <b>Scope note:</b> this app has <b>no DNS / VPN / safe-search / browser modules</b> — none are shown. The hub hero is the beacon with a live module-count summary.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · All shields active</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0"><div><div class="title">Protection</div><div class="sub">সুরক্ষা মডিউল</div></div></div>
+    <div class="card beacon" style="padding:26px 22px;text-align:center">
+      <div class="beacon-art" style="width:110px;height:110px"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core" style="inset:38px"><svg style="width:34px;height:34px"><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-.015em;margin-top:14px;color:var(--on-bc)">All shields active</div>
+      <div style="font-size:13px;color:var(--on-bc);opacity:.78;margin-top:5px">৫টি মডিউল সক্রিয় · on-device · ফোন ছাড়া কিছু যায় না</div>
+    </div>
+    <div class="section"><div class="rows">
+      <div class="card mod"><div class="mi" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="mt">AI Content Detection</div><div class="ms">NSFW detection · 3-strike system · sensitivity 0.72</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span><span class="count tnum">18 today</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="mt">App Blocking</div><div class="ms">১২টি অ্যাপ ব্লক করা · whitelist ৩টি</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="mt">Keyword Filter</div><div class="ms">৮টি কিওয়ার্ড · ২টি regex</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(255,194,75,.13)"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="mt">Schedule Rules</div><div class="ms">রাত ১০টা – সকাল ৬টা · প্রতিদিন</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-access"/></svg></div><div style="flex:1"><div class="mt">Accessibility Service</div><div class="ms">Content monitoring engine · heartbeats healthy</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Partially active</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0"><div><div class="title">Protection</div><div class="sub">সুরক্ষা মডিউল</div></div></div>
+    <div class="card raised" style="padding:26px 22px;text-align:center;background:linear-gradient(168deg,#2A2414,#1E1A0E);border:1px solid rgba(255,194,75,.25)">
+      <div class="beacon-art warn" style="width:110px;height:110px"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core" style="inset:38px"><svg style="width:34px;height:34px"><use href="#i-shieldchk"/></svg></div></div>
+      <div style="font-size:22px;font-weight:700;margin-top:14px;color:#FFDB8F">3 of 5 shields active</div>
+      <div style="font-size:13px;color:#FFDB8F;opacity:.78;margin-top:5px">কিছু মডিউল বন্ধ আছে</div>
+    </div>
+    <div class="section"><div class="rows">
+      <div class="card mod"><div class="mi" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="mt">AI Content Detection</div><div class="ms">NSFW detection · 3-strike system</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod" style="opacity:.82"><div class="mi" style="background:rgba(255,122,118,.12)"><svg style="color:#FF7A76"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="mt">App Blocking</div><div class="ms">মাস্টার টগল বন্ধ আছে</div></div><div class="mstate"><span class="badge err">Off</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="mt">Keyword Filter</div><div class="ms">৮টি কিওয়ার্ড</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod" style="opacity:.82"><div class="mi" style="background:rgba(255,255,255,.07)"><svg style="color:#76827B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="mt">Schedule Rules</div><div class="ms">কোনো রুল যোগ করা হয়নি</div></div><div class="mstate"><span class="badge neutral">Empty</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="card mod"><div class="mi" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-access"/></svg></div><div style="flex:1"><div class="mt">Accessibility Service</div><div class="ms">Content monitoring engine</div></div><div class="mstate"><span class="badge ok"><span class="dot pulse"></span>Active</span></div><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Wiring kept</span>cardAi → Settings (AI section anchor) · cardAppBlocking → AppListActivity · cardKeyword → KeywordActivity · cardSchedule → ScheduleActivity · cardAccessibility → PermissionsActivity — identical destinations to today. Badges reflect real ViewModel state only (module enabled + rule counts). Module icon wells get a fixed category tint — mint=apps, sky=keywords, amber=schedule, violet=AI, neutral=system — reused identically on Home stats, Activity rows and Settings.</p>
+</div>
+
+<div class="secdiv" id="sec-appblock"></div>
+<div class="sechead"><span class="idx">04 · App Blocking</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 04 · App Blocking (incl. Whitelist tab)</div>
+  <h1>App Blocking — decisive rows</h1>
+  <p>Bindings preserved: <span class="pkg">switchHero · chipBlocked/chipAll/chipWhitelisted · editSearch · recycler</span>; row: <span class="pkg">viewLeftIndicator · imgIcon · txtAppName · txtStatusBadge · txtPackage · txtCategory · switchBlock · imgLockIcon · switchWhitelist</span> + lockBanner/txtLockRemaining when Commitment Lock is active. <b>The whitelist is a filter tab here — a standalone whitelist screen does not exist in the app (gap, not invented).</b> Category tags come from the existing heuristic classifier (social/browser/etc.).</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Loaded · Blocked tab</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div><div class="sub">অ্যাপ লিস্ট</div></div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;margin-top:4px">
+      <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15.5px;font-weight:700">App Blocking</span><span class="badge ok"><span class="dot pulse"></span>সক্রিয়</span></div><div style="font-size:12px;color:var(--t2);margin-top:4px">Block inappropriate apps</div></div>
+      <div class="sw on"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <span class="chip on">Blocked <span class="n">12</span></span><span class="chip">All <span class="n">87</span></span><span class="chip">Whitelisted <span class="n">3</span></span>
+    </div>
+    <div class="search" style="margin-top:12px"><svg><use href="#i-search"/></svg><input placeholder="Search apps… অ্যাপ খুঁজুন"></div>
+    <div class="rows" style="margin-top:14px">
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:#263241;color:#8AB4FF">C</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">Chrome</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.android.chrome</div><div class="cat"><span class="cattag">Browser</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:linear-gradient(135deg,#4F5BD5,#962FBF);color:#fff">I</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">Instagram</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.instagram.android</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--red)"></div>
+        <div class="appicon" style="background:#1F2523;color:#FF7A76">T</div>
+        <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span class="an">TikTok</span><svg style="width:13px;height:13px;color:var(--red)"><use href="#i-lock"/></svg></div><div class="ap">com.zhiliaoapp.musically</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge err">Blocked</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:rgba(255,255,255,.14)"></div>
+        <div class="appicon" style="background:#2B3A2E;color:#7FE7C4">W</div>
+        <div style="flex:1;min-width:0"><span class="an">WhatsApp</span><div class="ap">com.whatsapp</div><div class="cat"><span class="cattag">Social</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge neutral">Allowed</span><div class="sw"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Whitelisted tab (3)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div><div class="sub">হোয়াইটলিস্ট</div></div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;margin-top:4px">
+      <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15.5px;font-weight:700">App Blocking</span><span class="badge ok"><span class="dot pulse"></span>সক্রিয়</span></div><div style="font-size:12px;color:var(--t2);margin-top:4px">Whitelisted apps skip all blocking</div></div>
+      <div class="sw on"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <span class="chip">Blocked <span class="n">12</span></span><span class="chip">All <span class="n">87</span></span><span class="chip on">Whitelisted <span class="n">3</span></span>
+    </div>
+    <div class="rows" style="margin-top:14px">
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#253029;color:#7FE7C4">Q</div>
+        <div style="flex:1;min-width:0"><span class="an">Quran</span><div class="ap">com.quran.labs.androidquran</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#2E2A1E;color:#FFC24B">P</div>
+        <div style="flex:1;min-width:0"><span class="an">Play Store</span><div class="ap">com.android.vending</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+      <div class="apptile"><div class="spine" style="background:var(--success)"></div>
+        <div class="appicon" style="background:#1F2A3A;color:#7EC8F0">B</div>
+        <div style="flex:1;min-width:0"><span class="an">Banking</span><div class="ap">com.bank.app</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span class="badge ok">Whitelisted</span><div class="sw on"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Loading (package scan)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div class="sk line" style="width:110px;height:18px"></div></div>
+    <div class="sk" style="height:84px;border-radius:24px;margin-top:4px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px"><div class="sk line" style="width:86px;height:32px;border-radius:999px"></div><div class="sk line" style="width:64px;height:32px;border-radius:999px"></div><div class="sk line" style="width:104px;height:32px;border-radius:999px"></div></div>
+    <div class="sk" style="height:76px;margin-top:14px"></div><div class="sk" style="height:76px;margin-top:10px"></div><div class="sk" style="height:76px;margin-top:10px"></div><div class="sk" style="height:76px;margin-top:10px"></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Empty search · locked banner</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">App List</div></div></div>
+    <div class="banner" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><div class="btxt">🔒 কমিটেড লক সক্রিয় — সম্পাদনা বন্ধ · 2d 14h remaining</div></div>
+    <div class="card raised" style="padding:18px;display:flex;align-items:center;gap:14px;opacity:.6">
+      <div style="flex:1"><span style="font-size:15.5px;font-weight:700">App Blocking</span><div style="font-size:12px;color:var(--t2);margin-top:4px">Block inappropriate apps</div></div>
+      <div class="sw on" disabled></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px"><span class="chip on">Blocked <span class="n">0</span></span><span class="chip">All</span><span class="chip">Whitelisted</span></div>
+    <div class="search" style="margin-top:12px"><svg><use href="#i-search"/></svg><input value="faceb" ></div>
+    <div class="section"><div class="card"><div class="statebox"><div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6M8 10.6h5.2M10.6 8v5.2"/></svg></div><h3>No apps match “faceb”</h3><p>অন্য নাম দিয়ে খুঁজে দেখুন</p></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>switchHero OFF-attempt under active protection → same snackbar + Commitment-Lock respect as today. Row switches write the same rules. Lock banner disables switches identically. Left spine: red = blocked, green = whitelisted, neutral = allowed (replaces v2.5 indicator bar with rounder ends + inset).</p>
+</div>
+
+<div class="secdiv" id="sec-settings"></div>
+<div class="sechead"><span class="idx">05 · Settings</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 05 · Settings</div>
+  <h1>Settings — grouped, correct control per row</h1>
+  <p>Every real binding preserved: <span class="pkg">switchKeyword · switchAi · sliderDelay + txtDelayValue · chip15/30/60min · btnApps/Keywords/Schedule/Permissions/CommitmentLock · sliderGuardianThreshold + txtGuardianThresholdValue · chipVote1–4 · btnImportLegacy/RemoveLegacy + txtLegacyStatus · btnChangePin · lockBanner + txtLockRemaining</span>. Emoji row labels (📱🔤⏰🔧) become icon wells from the single icon family; copy stays identical.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Normal (unlocked)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Settings</div><div class="sub">সেটিংস</div></div></div>
+
+    <div class="section" style="margin-top:10px"><div class="sec-h"><div class="kicker onBeacon">Protection · সুরক্ষা</div></div>
+      <div class="card"><div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keyword Filter</div><div class="ss">কিওয়ার্ড ফিল্টার</div></div><div class="end"><div class="sw on"></div></div></div>
+      <div class="set-row"><div class="si" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="st">AI Content Detection</div><div class="ss">AI কন্টেন্ট ডিটেকশন</div></div><div class="end"><div class="sw on"></div></div></div></div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Blocking · ব্লকিং</div></div>
+      <div class="card ctl-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center"><div style="flex:1"><div class="st" style="font-size:14.5px;font-weight:600">Unlock Delay</div><div class="ss">আনলক বিলম্ব</div></div><span class="badge neutral tnum">30s</span></div>
+        <div class="slider" style="margin-top:14px"><div class="track"></div><div class="fill" style="width:50%"></div><div class="thumb" style="left:50%"></div></div>
+        <div class="tickrow"><span>0s</span><span>30s</span><span>60s</span></div>
+      </div>
+      <div class="card ctl-card">
+        <div class="st" style="font-size:14.5px;font-weight:600">Temp Block Duration · সাময়িক ব্লক</div>
+        <div class="ss" style="margin-top:4px;line-height:1.45">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (৩টি স্ট্রাইক = temp block)</div>
+        <div style="display:flex;gap:8px;margin-top:12px"><span class="chip on">15 min</span><span class="chip">30 min</span><span class="chip">1 ঘণ্টা</span></div>
+      </div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Rules · ব্লকিং রুলস</div></div>
+      <div class="card">
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="st">App List</div><div class="ss">১২টি ব্লক · ৩টি whitelist</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keywords</div><div class="ss">৮টি কিওয়ার্ড</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(255,194,75,.13)"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="st">Schedule</div><div class="ss">১টি রুল</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-access"/></svg></div><div style="flex:1"><div class="st">Permission Health</div><div class="ss">৪/৫ অনুমোদিত</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row"><div class="si" style="background:rgba(255,122,118,.12)"><svg style="color:#FF7A76"><use href="#i-timelock"/></svg></div><div style="flex:1"><div class="st">Commitment Lock</div><div class="ss">সময়-লক — একবার চালু করলে আর খোলা যায় না</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      </div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">AI · AI মডেল</div></div>
+      <div class="card ctl-card">
+        <div style="display:flex;align-items:center"><div style="flex:1"><div class="st" style="font-size:14.5px;font-weight:600">AI Sensitivity</div><div class="ss">AI সংবেদনশীলতা (Ultimate)</div></div><span class="badge ai tnum">0.72</span></div>
+        <div class="slider" style="margin-top:14px"><div class="track"></div><div class="fill" style="width:64%;background:var(--violet)"></div><div class="thumb" style="left:64%;background:var(--violet);border-color:#2A2440;box-shadow:0 2px 10px rgba(184,161,255,.45)"></div></div>
+        <div class="vote" style="margin-top:14px">
+          <div class="v"><b>1</b><span>Sensitive</span></div>
+          <div class="v on"><b>2</b><span>Balanced</span></div>
+          <div class="v"><b>3</b><span>Strict</span></div>
+          <div class="v"><b>4</b><span>Very Strict</span></div>
+        </div>
+        <div class="ss" style="margin-top:10px;line-height:1.45">Lower = fewer false positives · Higher = stricter blocking</div>
+      </div>
+      <div class="card" style="margin-top:10px"><div class="set-row">
+        <div class="si" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-db"/></svg></div>
+        <div style="flex:1"><div class="st">Legacy Model</div><div class="ss">Legacy classifier — optional import</div></div>
+        <div class="end"><button class="btn tonal sm">Import</button></div>
+      </div></div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Security · নিরাপত্তা</div></div>
+      <div class="card"><div class="set-row"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-lockopen"/></svg></div><div style="flex:1"><div class="st">Change PIN</div><div class="ss">পিন পরিবর্তন</div></div><svg class="chev"><use href="#i-chev"/></svg></div></div>
+      <div style="text-align:center;font-size:10.5px;color:var(--t3);margin-top:18px;letter-spacing:.08em;font-weight:700">GUARDIAN SHIELD · V3.0.0 · ON-DEVICE</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Commitment Lock active</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Settings</div></div></div>
+    <div class="banner" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><div class="btxt">🔒 কমিটেড লক সক্রিয় — সম্পাদনা বন্ধ · <span class="tnum">2d 14h 05m</span></div></div>
+    <div class="section" style="margin-top:6px"><div class="card" style="opacity:.55">
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keyword Filter</div></div><div class="end"><div class="sw on" disabled></div></div></div>
+      <div class="set-row"><div class="si"><svg style="color:#76827B"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="st">AI Content Detection</div></div><div class="end"><div class="sw on" disabled></div></div></div>
+    </div></div>
+    <div class="section"><div class="card" style="opacity:.55">
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="st">App List</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keywords</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="set-row"><div class="si"><svg style="color:#76827B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="st">Schedule</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div></div>
+    <div class="section"><div class="card"><div class="set-row"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-lockopen"/></svg></div><div style="flex:1"><div class="st">Change PIN</div><div class="ss">Available while locked</div></div><svg class="chev"><use href="#i-chev"/></svg></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>Lock banner disables the exact same controls as today (TimeLockManager gate untouched). Vote chips stay single-select wired to the same threshold mapping — visual only. AI sensitivity slider tinted violet (its AI identity), all other sliders Beacon.</p>
+</div>
+
+<div class="secdiv" id="sec-rules"></div>
+<div class="sechead"><span class="idx">06-07 · Rules & Commitment Lock</span></div>
+<div class="doc-head">
+  <div class="crumb">Screens 06–07 · Keywords · Schedule · Commitment Lock</div>
+  <h1>Rules screens — one list language, three lists</h1>
+  <p>Bindings preserved — Keywords: <span class="pkg">txtEmpty · recycler · fabAdd</span>, row <span class="pkg">txtKeyword · badge · btnDelete</span>, dialog <span class="pkg">editKeyword · checkRegex</span> · Schedule: <span class="pkg">txtEmpty · recycler · fabAdd</span>, row <span class="pkg">txtPackage · txtSchedule · btnEdit</span>, editor <span class="pkg">editPackage · txtStart · txtEnd · chipSun–Sat</span> · Commitment Lock: <span class="pkg">groupLocked (txtLockStatus · txtLockLabel · txtRemaining · txtLockEnd · txtCooldownNote · btnRequestUnlock) / groupUnlocked (chip 1–30day)</span>. Dialogs restyle as bottom sheets (same fields, same save flow).</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Keywords · loaded</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Keywords</div><div class="sub">কিওয়ার্ড · ৮টি</div></div></div>
+    <div class="rows" style="margin-top:6px">
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">adult</div><div class="rs">matches text content</div></div><div class="rend"><span class="badge neutral">PLAIN</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt" style="font-family:var(--mono);font-size:13px">nsfw|porn|xxx</div><div class="rs">pattern match</div></div><div class="rend"><span class="badge ai">REGEX</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">xxx</div><div class="rs">matches text content</div></div><div class="rend"><span class="badge neutral">PLAIN</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+    </div>
+    <div class="fab"><svg><use href="#i-plus"/></svg>Add Keyword</div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Keywords · empty + add sheet</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px;position:relative">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Keywords</div><div class="sub">কিওয়ার্ড</div></div></div>
+    <div class="card"><div class="statebox"><div class="art"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><h3>No keywords yet</h3><p>কোনো কিওয়ার্ড নেই। + ট্যাপ করে যোগ করুন।</p><button class="btn filled sm"><svg><use href="#i-plus"/></svg>Add Keyword</button></div></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div style="font-size:18px;font-weight:700;letter-spacing:-.01em">Add Keyword <span style="font-size:12px;color:var(--t3);font-weight:600">কিওয়ার্ড যোগ করুন</span></div>
+      <div class="field" style="margin-top:18px"><label>Keyword · কিওয়ার্ড</label><input placeholder="Enter keyword"></div>
+      <div class="checkrow"><div class="cb"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><span style="font-size:13.5px;font-weight:600">Regex</span><span style="font-size:11px;color:var(--t3)">treat as pattern</span></div>
+      <div style="display:flex;gap:10px;margin-top:22px"><button class="btn tonal" style="flex:1">Cancel</button><button class="btn filled" style="flex:1">Save</button></div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Schedule · loaded + editor</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Schedule Rules</div><div class="sub">সময়সূচী রুলস · ১টি</div></div></div>
+    <div class="rows" style="margin-top:6px">
+      <div class="row"><div class="spine amber"></div><div class="ricon"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div class="rmain"><div class="rt pkg" style="font-size:12.5px">com.instagram.android</div><div class="rs tnum">22:00 – 06:00 · প্রতিদিন</div></div><div class="rend"><div class="icon-btn" style="width:38px;height:38px"><svg style="width:17px;height:17px;color:var(--t2)"><use href="#i-edit"/></svg></div></div></div>
+    </div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div style="font-size:18px;font-weight:700">Add Schedule <span style="font-size:12px;color:var(--t3);font-weight:600">সময়সূচী যোগ করুন</span></div>
+      <div class="field" style="margin-top:16px"><label>Package</label><input placeholder="com.instagram.android" style="font-family:var(--mono);font-size:13px"></div>
+      <div style="display:flex;gap:12px;margin-top:14px">
+        <div class="field" style="flex:1"><label>Start · শুরু</label><div class="fakeinput timefield tnum" style="display:flex;align-items:center;justify-content:center">22:00</div></div>
+        <div class="field" style="flex:1"><label>End · শেষ</label><div class="fakeinput timefield tnum" style="display:flex;align-items:center;justify-content:center">06:00</div></div>
+      </div>
+      <div style="margin-top:16px"><label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Days · দিন</label>
+        <div style="display:flex;gap:8px;justify-content:space-between">
+          <div class="daychip on">S</div><div class="daychip on">M</div><div class="daychip on">T</div><div class="daychip on">W</div><div class="daychip on">T</div><div class="daychip on">F</div><div class="daychip on">S</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:22px"><button class="btn tonal" style="flex:1">Cancel</button><button class="btn filled" style="flex:1">Save</button></div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Commitment Lock · both groups</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Commitment Lock</div><div class="sub">কমিটেড লক</div></div></div>
+    <div class="card raised" style="margin-top:6px;padding:28px 22px;text-align:center;background:linear-gradient(168deg,#2A2414,#1E1A0E);border:1px solid rgba(255,194,75,.25)">
+      <div class="halo" style="color:var(--amber);margin:0 auto;background:var(--amber-c)"><svg><use href="#i-timelock"/></svg></div>
+      <div style="font-size:20px;font-weight:700;margin-top:16px;color:#FFDB8F">Commitment Lock active</div>
+      <div style="font-size:12.5px;color:#FFDB8F;opacity:.75;margin-top:5px">সেটিংস পরিবর্তন বন্ধ — লক শেষ হবে</div>
+      <div class="tnum" style="font-size:44px;font-weight:700;letter-spacing:-.025em;margin-top:14px;color:#FFDB8F">2d 14:05</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">ends Fri, Aug 21 · 09:41</div>
+    </div>
+    <div class="section"><div class="card" style="padding:16px"><div style="font-size:12.5px;color:var(--t2);line-height:1.5">Unlock requests are limited — after a request there is a cooldown before the next one.</div><button class="btn tonal btn-block" style="margin-top:14px">Request Unlock · আনলক রিকোয়েস্ট</button></div></div>
+    <div class="divider"></div>
+    <div class="kicker" style="margin-bottom:12px">Not locked — choose a duration · লক করুন</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">1 day</span><span class="chip on">3 days</span><span class="chip">7 days</span><span class="chip">15 days</span><span class="chip">30 days</span></div>
+    <button class="btn danger btn-block" style="margin-top:16px"><svg><use href="#i-lock"/></svg>Lock for 3 days — ফেরানো যাবে না</button>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>Empty states use the app’s real copy (“কোনো কিওয়ার্ড নেই। + ট্যাপ করে যোগ করুন।”). Add-keyword / schedule-editor become M3 bottom sheets with identical fields &amp; save handlers (dialog semantics unchanged — only presentation). Commitment Lock shows the real two states (groupLocked / groupUnlocked); the cooldown note + Request Unlock button keep their logic. Deleting a keyword keeps the delete-confirm behavior; destructive icon gets a red tint affordance.</p>
+</div>
+
+<div class="secdiv" id="sec-pin"></div>
+<div class="sechead"><span class="idx">08-09 · PIN</span></div>
+<div class="doc-head">
+  <div class="crumb">Screens 08–09 · PIN Verify · PIN Setup</div>
+  <h1>PIN Lock — calm keypad, honest states</h1>
+  <p>Bindings preserved: <span class="pkg">dot1–6 · btn0–9 · btnDel · btnOk</span> (+ <span class="pkg">txtPrompt</span> on setup). <b>Scope note: there is NO biometric API wired in this app — no fingerprint affordance is invented</b> (the v2.5 mock showed one; that was a gap). Error = red dots + existing 3-frame shake; attempts-left and lockout copy are real strings.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Verify · idle</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="pinwrap">
+      <div class="halo" style="color:var(--beacon);background:var(--bc);margin:0 auto 26px;width:84px;height:84px"><svg style="width:34px;height:34px"><use href="#i-shieldb"/></svg></div>
+      <div style="text-align:center;font-size:21px;font-weight:700;letter-spacing:-.015em">Enter PIN</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2);margin-top:6px">পিন দিন · Guardian Shield is locked</div>
+      <div class="dots" style="margin:34px 0 44px"><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div><div class="pd"></div><div class="pd"></div></div>
+      <div class="pad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key pressed">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key ghost"></div><div class="key">0</div><div class="key ghost"><svg><use href="#i-backspace"/></svg></div>
+      </div>
+      <button class="btn filled btn-block" style="margin-top:30px">Unlock</button>
+      <div style="text-align:center;font-size:12px;color:var(--t3);margin-top:18px">Forgot PIN? Reinstall is required to reset</div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Verify · wrong PIN</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="pinwrap">
+      <div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 26px;width:84px;height:84px"><svg style="width:34px;height:34px"><use href="#i-lock"/></svg></div>
+      <div style="text-align:center;font-size:21px;font-weight:700;letter-spacing:-.015em;color:var(--red)">ভুল পিন</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2);margin-top:6px">Wrong PIN — 2 attempts left</div>
+      <div class="dots shake" style="margin:34px 0 44px"><div class="pd err"></div><div class="pd err"></div><div class="pd err"></div><div class="pd err"></div><div class="pd"></div><div class="pd"></div></div>
+      <div class="pad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key ghost"></div><div class="key">0</div><div class="key ghost"><svg><use href="#i-backspace"/></svg></div>
+      </div>
+      <button class="btn tonal btn-block" style="margin-top:30px">Unlock</button>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Verify · locked out</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="pinwrap">
+      <div class="halo" style="color:var(--amber);background:var(--amber-c);margin:0 auto 26px;width:84px;height:84px"><svg style="width:34px;height:34px"><use href="#i-lock"/></svg></div>
+      <div style="text-align:center;font-size:21px;font-weight:700">Too many attempts</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2);margin-top:6px">অনেকবার ভুল পিন দিয়েছেন। <b class="tnum" style="color:var(--t1)">59s</b> পর চেষ্টা করুন।</div>
+      <div class="tnum" style="text-align:center;font-size:52px;font-weight:700;letter-spacing:-.025em;margin:30px 0;color:var(--t1)">00:59</div>
+      <div class="pad" style="opacity:.35;pointer-events:none">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key ghost"></div><div class="key">0</div><div class="key ghost"><svg><use href="#i-backspace"/></svg></div>
+      </div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Setup · confirm step</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="pinwrap">
+      <div class="halo" style="color:var(--beacon);background:var(--bc);margin:0 auto 26px;width:84px;height:84px"><svg style="width:34px;height:34px"><use href="#i-lock"/></svg></div>
+      <div style="text-align:center;font-size:21px;font-weight:700">Set Your Security PIN</div>
+      <div style="text-align:center;font-size:13px;color:var(--t2);margin-top:6px">সিকিউরিটি পিন সেট করুন — step 2 of 2</div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:20px"><div style="width:34px;height:4px;border-radius:99px;background:var(--beacon)"></div><div style="width:34px;height:4px;border-radius:99px;background:var(--beacon)"></div></div>
+      <div style="text-align:center;font-size:14px;font-weight:600;margin-top:22px">Re-enter to confirm · নিশ্চিত করতে আবার দিন</div>
+      <div class="dots" style="margin:26px 0 40px"><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div><div class="pd fill"></div></div>
+      <div class="pad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key ghost"></div><div class="key">0</div><div class="key ghost"><svg><use href="#i-backspace"/></svg></div>
+      </div>
+      <div class="snackbar"><svg style="width:18px;height:18px"><use href="#i-check"/></svg>PIN saved · পিন সংরক্ষিত হয়েছে</div>
+    </div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Keypad spec</span>70×84dp keys, 12dp radius, surface-1 + e1 shadow, 22sp numerals; pressed = surface-3 + scale .96. OK action becomes the full-width Beacon “Unlock/Save” button (btnOk preserved as button; digits identical). Dots: 14dp, Beacon fill with soft glow; error state red + shake (reuses existing <span class="pkg">shake.xml</span>). No biometric — flagged as a real gap: if wanted later it needs new code, not just design.</p>
+</div>
+
+<div class="secdiv" id="sec-perms"></div>
+<div class="sechead"><span class="idx">10-12 · Permissions & Onboarding</span></div>
+<div class="doc-head">
+  <div class="crumb">Screens 10–12 · Permission Health · Accessibility Prompt · Onboarding</div>
+  <h1>Trust screens — where premium is earned</h1>
+  <p>Bindings preserved — Permissions: <span class="pkg">rowAccessibility/UsageStats/Overlay/Notification/Battery + per-row icon &amp; FIX button · btnFixAll</span> · Prompt: <span class="pkg">btnEnable</span> + real copy (⚠️ সুরক্ষা বন্ধ হয়ে গেছে!) · Onboarding: <span class="pkg">btnSkip · viewPager · dots · btnBack · btnNext</span> with the 4 real pages (copy verbatim; emoji hero icons become family icons).</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Permission Health</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Permission Health</div><div class="sub">পারমিশন হেলথ · ৪/৫</div></div></div>
+    <div class="card" style="margin-top:6px">
+      <div class="perm"><div class="pi" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-access"/></svg></div><div style="flex:1"><div class="pt">Accessibility Service</div><div class="ps">এক্সেসিবিলিটি সার্ভিস · core engine</div></div><span class="badge ok"><svg style="width:13px;height:13px"><use href="#i-check"/></svg>Granted</span></div>
+      <div class="perm"><div class="pi" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-graph"/></svg></div><div style="flex:1"><div class="pt">Usage Stats Access</div><div class="ps">ইউসেজ স্ট্যাটস অ্যাক্সেস</div></div><span class="badge ok"><svg style="width:13px;height:13px"><use href="#i-check"/></svg>Granted</span></div>
+      <div class="perm"><div class="pi" style="background:rgba(255,122,118,.12)"><svg style="color:#FF7A76"><use href="#i-layers"/></svg></div><div style="flex:1"><div class="pt">Display Over Other Apps</div><div class="ps">অন্য অ্যাপের ওপর প্রদর্শন · required for block overlays</div></div><button class="btn danger-ghost sm" style="height:34px">Fix</button></div>
+      <div class="perm"><div class="pi" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-bell"/></svg></div><div style="flex:1"><div class="pt">Notification Permission</div><div class="ps">নোটিফিকেশন পারমিশন</div></div><span class="badge ok"><svg style="width:13px;height:13px"><use href="#i-check"/></svg>Granted</span></div>
+      <div class="perm"><div class="pi" style="background:rgba(255,194,75,.13)"><svg style="color:#FFC24B"><use href="#i-battery"/></svg></div><div style="flex:1"><div class="pt">Battery Optimization</div><div class="ps">ব্যাটারি অপটিমাইজেশন · keep service alive</div></div><span class="badge warn">Recommended</span></div>
+    </div>
+    <button class="btn filled btn-block" style="margin-top:16px"><svg><use href="#i-fix"/></svg>Fix All Critical · সব ঠিক করুন</button>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Accessibility prompt (urgent)</div>
+  <div class="phone overlay-phone" style="background:#060807"><div class="statusbar" style="color:#ECF1ED"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="background:rgba(6,8,7,.9);justify-content:center;padding:0 28px">
+      <div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 24px"><svg><use href="#i-shieldoff"/></svg></div>
+      <div style="text-align:center;font-size:21px;font-weight:700;letter-spacing:-.01em">⚠️ সুরক্ষা বন্ধ হয়ে গেছে!</div>
+      <div style="text-align:center;font-size:13.5px;color:var(--t2);line-height:1.6;margin-top:12px;max-width:290px">Guardian Shield এর Accessibility Service বন্ধ করা হয়েছে। harmful content থেকে সুরক্ষিত থাকতে এখনই চালু করুন।</div>
+      <button class="btn danger btn-block" style="margin-top:26px">Accessibility Service চালু করুন</button>
+      <div style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:16px">Settings → Accessibility → Guardian Shield → Enable</div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Onboarding · pages 1–2</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div style="display:flex;justify-content:flex-end;padding:6px 20px 0"><span style="font-size:13px;font-weight:700;color:var(--t2)">Skip</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 32px">
+      <div class="halo" style="color:var(--beacon);background:var(--bc);margin:0 auto 30px;width:104px;height:104px"><svg style="width:44px;height:44px"><use href="#i-shieldb"/></svg></div>
+      <div style="text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--beacon)">তোমার ডিজিটাল ঢাল</div>
+      <div style="text-align:center;font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:12px">Guardian Shield</div>
+      <div style="text-align:center;font-size:14px;color:var(--t2);line-height:1.65;margin-top:14px">ক্ষতিকর কন্টেন্ট থেকে নিজেকে এবং পরিবারকে রক্ষা করুন। অন-ডিভাইস AI দিয়ে স্মার্ট ব্লকিং।</div>
+    </div>
+    <div style="padding:0 24px 34px">
+      <div class="ob-dots" style="margin-bottom:22px"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+      <div style="display:flex;gap:12px">
+        <button class="btn tonal" style="flex:0 0 56px;padding:0"><svg style="width:18px;height:18px"><use href="#i-back"/></svg></button>
+        <button class="btn filled" style="flex:1">Next</button>
+      </div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Onboarding · permissions page</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div style="display:flex;justify-content:flex-end;padding:6px 20px 0"><span style="font-size:13px;font-weight:700;color:var(--t2)">Skip</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 30px">
+      <div class="halo" style="color:var(--violet);background:var(--violet-c);margin:0 auto 30px;width:104px;height:104px"><svg style="width:42px;height:42px"><use href="#i-lock"/></svg></div>
+      <div style="text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--beacon)">Privacy-friendly · On-device</div>
+      <div style="text-align:center;font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:12px">কয়েকটি অনুমতি দরকার</div>
+      <div class="rows" style="margin-top:22px">
+        <div class="row" style="min-height:52px"><svg style="width:18px;height:18px;color:var(--success);flex:0 0 auto"><use href="#i-check"/></svg><div class="rt" style="font-size:13.5px">Accessibility Service</div></div>
+        <div class="row" style="min-height:52px"><svg style="width:18px;height:18px;color:var(--success);flex:0 0 auto"><use href="#i-check"/></svg><div class="rt" style="font-size:13.5px">Display over apps</div></div>
+        <div class="row" style="min-height:52px"><svg style="width:18px;height:18px;color:var(--success);flex:0 0 auto"><use href="#i-check"/></svg><div class="rt" style="font-size:13.5px">Notification</div></div>
+        <div class="row" style="min-height:52px"><svg style="width:18px;height:18px;color:var(--success);flex:0 0 auto"><use href="#i-check"/></svg><div class="rt" style="font-size:13.5px">Battery exception</div></div>
+      </div>
+    </div>
+    <div style="padding:0 24px 34px">
+      <div class="ob-dots" style="margin-bottom:22px"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
+      <div style="display:flex;gap:12px">
+        <button class="btn tonal" style="flex:0 0 56px;padding:0"><svg style="width:18px;height:18px"><use href="#i-back"/></svg></button>
+        <button class="btn filled" style="flex:1">Grant &amp; continue</button>
+      </div>
+    </div>
+  </div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>Fix buttons deep-link to the same system settings intents; Fix All iterates critical rows exactly as today. Prompt copy is untouched (including the ⚠️ in the string — kept in text, the icon family adds the visual weight). Onboarding keeps ViewPager + 4 pages, Skip/Back/Next logic identical; page-4 CTA continues into the real PIN-setup flow. Page heroes swap emoji for halo icons; body copy verbatim from <span class="pkg">OnboardingPagerAdapter</span>.</p>
+</div>
+
+<div class="secdiv" id="sec-overlays"></div>
+<div class="sechead"><span class="idx">13-17 · Overlays</span></div>
+<div class="doc-head">
+  <div class="crumb">Screens 13–17 · Strike warning · Strike-3 block · Blocked detail · Delay unlock · Reel reminder</div>
+  <h1>Overlays — the moments of truth</h1>
+  <p>Re-skin only. Behavior identical: strike card keeps <b>3.5s auto-dismiss</b>, tap-to-dismiss, and the audit-only <b>“Not sensitive / সংবেদনশীল নয়”</b> button (never fires on strike 3). Block overlay keeps <span class="pkg">btnHome → goHome</span>, <span class="pkg">btnUnlock → DelayUnlockActivity</span>, <span class="pkg">btnMarkFalse → FalsePositiveMemory</span> (AI blocks only), temp-block banner, and reason strings. Delay unlock keeps countdown + cancel. Reel reminder keeps হাদীস copy + open-Quran + continue.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Strike 1/2 warning card (3.5s)</div>
+  <div class="phone overlay-phone" style="background:#07090A"><div class="statusbar" style="color:#ECF1ED"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="ghostapp"><div class="gbar"><div class="gavatar"></div><div style="flex:1"><div class="gline" style="width:60%"></div><div class="gline" style="width:35%;margin-top:6px"></div></div></div><div style="padding:14px"><div class="gline" style="width:100%;height:200px;border-radius:14px"></div></div></div>
+    <div class="strikecard">
+      <div class="timerring" style="--p:64%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg></div>
+      <div style="flex:1">
+        <div class="kicker" style="color:var(--amber)">Strike warning</div>
+        <div style="font-size:17px;font-weight:700;letter-spacing:-.01em;margin-top:4px">সতর্কতা ২/৩</div>
+        <div style="font-size:12.5px;color:var(--t2);line-height:1.5;margin-top:5px">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</div>
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-top:12px;padding:4px 0;align-self:flex-start">Not sensitive · সংবেদনশীল নয়</div>
+      </div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Strike-3 full block overlay</div>
+  <div class="phone overlay-phone" style="background:#060807"><div class="statusbar" style="color:#ECF1ED"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="padding:12px 20px 0">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">
+        <div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 22px"><svg><use href="#i-shieldalert"/></svg></div>
+        <div style="font-size:24px;font-weight:700;letter-spacing:-.015em">Sensitive Content Blocked</div>
+        <div style="font-size:13.5px;color:var(--t2);margin-top:8px">সংবেদনশীল কন্টেন্ট ব্লক করা হয়েছে — this content has been blocked to protect you</div>
+        <div class="pkg" style="display:inline-block;margin:16px auto 0;background:rgba(255,255,255,.06);border:1px solid var(--hairline);border-radius:99px;padding:6px 14px">com.instagram.android</div>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--amber-c);border:1px solid rgba(255,194,75,.3);border-radius:12px;padding:12px 14px;margin-top:20px;text-align:left">
+          <svg style="width:18px;height:18px;color:var(--amber);flex:0 0 auto"><use href="#i-clock"/></svg>
+          <div style="font-size:12.5px;font-weight:700;color:#FFDB8F">🚫 Blocked for 15 minutes · ১৫ মিনিট</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii" style="background:rgba(111,224,166,.13)"><svg style="color:#6FE0A6"><use href="#i-shieldchk"/></svg></div><div><div class="il">Protection</div><div class="iv" style="color:#6FE0A6">Active</div></div></div>
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii" style="background:rgba(184,161,255,.16)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div><div class="il">Category</div><div class="iv" style="color:#B8A1FF">AI 0.89</div></div></div>
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii"><svg style="color:#A9B5AD"><use href="#i-clock"/></svg></div><div><div class="il">Time</div><div class="iv tnum">9:41 PM</div></div></div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:13px;margin-top:12px;font-size:13px;font-weight:600" >AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে</div>
+      </div>
+      <div style="padding:6px 0 30px">
+        <button class="btn danger btn-block"><svg><use href="#i-home"/></svg>Stay Protected · সুরক্ষিত থাকুন</button>
+        <button class="btn tonal btn-block" style="margin-top:10px"><svg><use href="#i-lock"/></svg>Request Unlock · আনলক রিকোয়েস্ট</button>
+        <div style="text-align:center;font-size:12.5px;font-weight:600;color:var(--t2);margin-top:14px">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:22px"><div style="flex:1;height:1px;background:var(--hairline)"></div><div style="font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--t3)">STAY STRONG 💪</div><div style="flex:1;height:1px;background:var(--hairline)"></div></div>
+      </div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Blocked Content Detail</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title" style="font-size:18px">Blocked Content</div><div class="sub">ব্লক করা কন্টেন্ট</div></div></div>
+    <div style="text-align:center;margin-top:8px"><div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 16px;width:76px;height:76px"><svg style="width:32px;height:32px"><use href="#i-shieldalert"/></svg></div><div style="font-size:19px;font-weight:700">Content Blocked</div><div style="font-size:12.5px;color:var(--t2);margin-top:6px">আপনি নিরাপদ — Guardian Shield আপনাকে সুরক্ষিত রেখেছে</div></div>
+    <div class="section" style="margin-top:18px"><div class="rows">
+      <div class="row"><div class="ricon"><svg style="color:#A9B5AD"><use href="#i-home"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">App</div><div class="rt pkg" style="font-size:12.5px">com.instagram.android</div></div></div>
+      <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Blocked Category</div><div class="rt" style="font-size:13.5px">AI Detection · 0.89</div></div></div>
+      <div class="row"><div class="ricon"><svg style="color:#76827B"><use href="#i-clock"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Time</div><div class="rt tnum" style="font-size:13.5px">Today · 9:41 PM</div></div></div>
+    </div></div>
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">What you can do</div></div>
+      <div class="rows">
+        <div class="row"><div class="ricon"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="rt" style="flex:1">Stay Focused · মনোযোগ ধরে রাখুন</div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="rt" style="flex:1">View Activity · অ্যাক্টিভিটি দেখুন</div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-shieldchk"/></svg></div><div class="rt" style="flex:1">Add to Whitelist · হোয়াইটলিস্ট</div><svg class="chev"><use href="#i-chev"/></svg></div>
+      </div>
+    </div>
+    <button class="btn danger btn-block" style="margin-top:20px">Back to App</button>
+    <div style="text-align:center;font-size:12.5px;font-weight:600;color:var(--t2);margin-top:12px;padding-bottom:20px">Report This Content · রিপোর্ট ও বন্ধ করুন</div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Delay Unlock · <b>E</b> · Reel Reminder</div>
+  <div style="display:flex;gap:34px;flex-wrap:wrap">
+  <div class="phone" style="width:300px;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="justify-content:center;padding:0 26px;text-align:center">
+      <div class="halo" style="color:var(--amber);background:var(--amber-c);margin:0 auto 20px;width:76px;height:76px"><svg style="width:30px;height:30px"><use href="#i-clock"/></svg></div>
+      <div style="font-size:19px;font-weight:700">Unlock Pending · আনলক পেন্ডিং</div>
+      <div class="pkg" style="margin-top:10px">com.instagram.android</div>
+      <div style="font-size:12.5px;color:var(--t2);margin-top:14px">Access will be granted in · এক্সেস দেওয়া হবে</div>
+      <div class="tnum" style="font-size:56px;font-weight:700;letter-spacing:-.03em;margin-top:10px">00:29</div>
+      <div style="font-size:12px;color:var(--t3)">seconds · সেকেন্ড</div>
+      <button class="btn tonal btn-block" style="margin-top:28px">Cancel · বাতিল</button>
+    </div>
+  </div></div>
+  <div class="phone" style="width:300px;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="background:linear-gradient(180deg,#0B100E,#0A0C0B);justify-content:center;padding:0 26px;text-align:center">
+      <div class="halo" style="color:var(--beacon);background:var(--bc);margin:0 auto 20px;width:76px;height:76px"><svg style="width:32px;height:32px"><use href="#i-book"/></svg></div>
+      <div style="font-size:21px;font-weight:700">একটু থামো, ভাই!</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-top:14px;font-style:italic">“তোমরা কুরআন পড়ো, কারণ কিয়ামতের দিন এটি তোমাদের জন্য সুপারিশকারী হবে।”<br><span style="font-style:normal;color:var(--t3);font-size:11.5px">— সহীহ মুসলিম</span></div>
+      <div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:16px">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</div>
+      <button class="btn filled btn-block" style="margin-top:26px">📖 কুরআন অ্যাপ খুলুন</button>
+      <button class="btn text btn-block" style="margin-top:8px">এখন নয়, ফিরে যাই</button>
+    </div>
+  </div></div>
+  </div></div>
+</div>
+<p class="note"><span class="tag">Non-negotiables kept</span>Strike card: <b>3,500 ms</b> auto-dismiss + tap-anywhere dismiss + separate “Not sensitive” target (audit-only DB row — never touches detection). The new amber timer ring is purely decorative (a LinearProgress around the icon) — timing logic untouched. Block overlay: same three actions with same destinations; false-positive action only on AI blocks. Delay unlock: same countdown/cancel. Reel reminder: same hadith + same two actions (open first available Quran app / continue).</p>
+</div>
+
+<div class="secdiv" id="sec-icon"></div>
+<div class="sechead"><span class="idx">18 · Icon & Splash</span></div>
+<div class="doc-head">
+  <div class="crumb">Screen 18 · App Icon &amp; Splash</div>
+  <h1>Icon &amp; splash — the mark evolves, not replaced</h1>
+  <p>The launcher is an adaptive icon in-repo (<span class="pkg">mipmap-anydpi-v26/ic_launcher.xml → ic_launcher_foreground + monochrome</span>) — <b>fully editable by a code agent as vector XML</b>, so this is in scope. The check-mark shield becomes the <b>shield-beacon</b> mark on the new deep canvas; concentric rings echo the Watchtower hero. Splash on Android 12+ derives from the launcher + <span class="pkg">windowSplashScreenBackground</span> — we set it to the new canvas color so the cold start matches.</p>
+</div>
+
+<div class="board">
+<div class="row-label"><h2>Proposed adaptive icon</h2><span class="hint">evolution of the existing mark — same silhouette</span></div>
+<div class="iconrow">
+  <div class="iconbox">
+    <div class="squircle" style="background:radial-gradient(120% 120% at 50% 0%,#14231C 0%,#0C120F 60%,#0A0C0B 100%)">
+      <div class="rings"><i style="inset:-24px"></i><i style="inset:8px;opacity:.7"></i><i style="inset:34px;opacity:.4"></i></div>
+      <svg style="width:64px;height:64px;color:#7FE7C4;filter:drop-shadow(0 0 10px rgba(127,231,196,.5));position:relative"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Launcher · light theme canvas</div>
+  </div>
+  <div class="iconbox">
+    <div class="circleic" style="background:radial-gradient(120% 120% at 50% 0%,#14231C 0%,#0C120F 60%,#0A0C0B 100%)">
+      <div class="rings"><i style="inset:-24px"></i><i style="inset:8px;opacity:.7"></i><i style="inset:34px;opacity:.4"></i></div>
+      <svg style="width:64px;height:64px;color:#7FE7C4;filter:drop-shadow(0 0 10px rgba(127,231,196,.5));position:relative"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Round launcher</div>
+  </div>
+  <div class="iconbox">
+    <div class="squircle" style="background:#E9EFEA">
+      <svg style="width:64px;height:64px;color:#101413"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Themed (monochrome) · light</div>
+  </div>
+  <div class="iconbox">
+    <div class="squircle" style="background:#0A0C0B">
+      <svg style="width:64px;height:64px;color:#7FE7C4"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Themed (monochrome) · dark</div>
+  </div>
+  <div class="iconbox">
+    <div style="width:128px;height:128px;border-radius:34px;display:flex;align-items:center;justify-content:center;background:var(--s1);border:1px dashed var(--outline)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:52px;height:52px"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg>
+    </div>
+    <div class="lbl">Current mark (for comparison)</div>
+  </div>
+</div>
+
+<div class="row-label"><h2>Cold-start splash</h2><span class="hint">Android 12+ system splash</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap">Splash → Home</div>
+  <div class="phone overlay-phone" style="background:#0A0C0B;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div>
+  <div class="screen" style="align-items:center;justify-content:center">
+    <svg style="width:96px;height:96px;color:#7FE7C4;filter:drop-shadow(0 0 24px rgba(127,231,196,.35))"><use href="#i-shieldb"/></svg>
+    <div style="font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--t2);margin-top:28px">GUARDIAN SHIELD</div>
+  </div></div></div>
+</div>
+<p class="note"><span class="tag">Scope flag</span>In-repo and code-agent-reachable: adaptive foreground vector, background color, monochrome, splash background color. <b>Out of reach for a code agent:</b> marketing 512×512 Play-Store PNG renders, feature-graphic, and any raster brand exports — those need a designer pass (flagged, not silently skipped). App name unchanged everywhere.</p>
+</div>
+
+</body>
+</html>

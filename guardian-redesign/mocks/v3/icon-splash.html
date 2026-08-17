@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — App Icon &amp; Splash</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.iconrow{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
+.iconbox{text-align:center}
+.squircle{width:128px;height:128px;border-radius:34px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.squircle .rings{position:absolute;inset:0}
+.squircle .rings i{position:absolute;border-radius:50%;border:1.5px solid rgba(127,231,196,.16)}
+.circleic{width:128px;height:128px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.lbl{font-size:11px;color:var(--t3);margin-top:12px;font-weight:600}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screen 18 · App Icon &amp; Splash</div>
+  <h1>Icon &amp; splash — the mark evolves, not replaced</h1>
+  <p>The launcher is an adaptive icon in-repo (<span class="pkg">mipmap-anydpi-v26/ic_launcher.xml → ic_launcher_foreground + monochrome</span>) — <b>fully editable by a code agent as vector XML</b>, so this is in scope. The check-mark shield becomes the <b>shield-beacon</b> mark on the new deep canvas; concentric rings echo the Watchtower hero. Splash on Android 12+ derives from the launcher + <span class="pkg">windowSplashScreenBackground</span> — we set it to the new canvas color so the cold start matches.</p>
+</div>
+
+<div class="board">
+<div class="row-label"><h2>Proposed adaptive icon</h2><span class="hint">evolution of the existing mark — same silhouette</span></div>
+<div class="iconrow">
+  <div class="iconbox">
+    <div class="squircle" style="background:radial-gradient(120% 120% at 50% 0%,#14231C 0%,#0C120F 60%,#0A0C0B 100%)">
+      <div class="rings"><i style="inset:-24px"></i><i style="inset:8px;opacity:.7"></i><i style="inset:34px;opacity:.4"></i></div>
+      <svg style="width:64px;height:64px;color:#7FE7C4;filter:drop-shadow(0 0 10px rgba(127,231,196,.5));position:relative"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Launcher · light theme canvas</div>
+  </div>
+  <div class="iconbox">
+    <div class="circleic" style="background:radial-gradient(120% 120% at 50% 0%,#14231C 0%,#0C120F 60%,#0A0C0B 100%)">
+      <div class="rings"><i style="inset:-24px"></i><i style="inset:8px;opacity:.7"></i><i style="inset:34px;opacity:.4"></i></div>
+      <svg style="width:64px;height:64px;color:#7FE7C4;filter:drop-shadow(0 0 10px rgba(127,231,196,.5));position:relative"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Round launcher</div>
+  </div>
+  <div class="iconbox">
+    <div class="squircle" style="background:#E9EFEA">
+      <svg style="width:64px;height:64px;color:#101413"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Themed (monochrome) · light</div>
+  </div>
+  <div class="iconbox">
+    <div class="squircle" style="background:#0A0C0B">
+      <svg style="width:64px;height:64px;color:#7FE7C4"><use href="#i-shieldb"/></svg>
+    </div>
+    <div class="lbl">Themed (monochrome) · dark</div>
+  </div>
+  <div class="iconbox">
+    <div style="width:128px;height:128px;border-radius:34px;display:flex;align-items:center;justify-content:center;background:var(--s1);border:1px dashed var(--outline)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:52px;height:52px"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg>
+    </div>
+    <div class="lbl">Current mark (for comparison)</div>
+  </div>
+</div>
+
+<div class="row-label"><h2>Cold-start splash</h2><span class="hint">Android 12+ system splash</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap">Splash → Home</div>
+  <div class="phone overlay-phone" style="background:#0A0C0B;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div>
+  <div class="screen" style="align-items:center;justify-content:center">
+    <svg style="width:96px;height:96px;color:#7FE7C4;filter:drop-shadow(0 0 24px rgba(127,231,196,.35))"><use href="#i-shieldb"/></svg>
+    <div style="font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--t2);margin-top:28px">GUARDIAN SHIELD</div>
+  </div></div></div>
+</div>
+<p class="note"><span class="tag">Scope flag</span>In-repo and code-agent-reachable: adaptive foreground vector, background color, monochrome, splash background color. <b>Out of reach for a code agent:</b> marketing 512×512 Play-Store PNG renders, feature-graphic, and any raster brand exports — those need a designer pass (flagged, not silently skipped). App name unchanged everywhere.</p>
+</div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- WATCHTOWER V3 — theme mapping (mocks/v3/design-system.html) -->
     <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
@@ -14,12 +15,15 @@
 
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/on_error_container</item>
 
         <item name="android:colorBackground">@color/bg_main</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorSurfaceVariant">@color/surface_variant</item>
         <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/border_subtle</item>
 
         <item name="android:statusBarColor">@color/bg_main</item>
         <item name="android:navigationBarColor">@color/bg_main</item>
@@ -28,32 +32,37 @@
         <item name="android:windowActivityTransitions">true</item>
         <item name="colorControlHighlight">@color/ripple_primary</item>
 
-        <!-- Material You Large Corners — premium 12/20/28 -->
+        <!-- Component defaults -->
+        <item name="materialCardViewStyle">@style/Widget.GuardianShield.Card</item>
+        <item name="chipStyle">@style/Widget.GuardianShield.Chip.Filter</item>
+
+        <!-- Shape: 8 / 12 / 16 / 24 -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.GuardianShield.Small</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Medium</item>
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.GuardianShield.Large</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Small" parent="ShapeAppearance.Material3.SmallComponent">
-        <item name="cornerSize">12dp</item>
+        <item name="cornerSize">8dp</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Medium" parent="ShapeAppearance.Material3.MediumComponent">
-        <item name="cornerSize">20dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">28dp</item>
+        <item name="cornerSize">24dp</item>
     </style>
 
     <style name="Theme.GuardianShield.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">@color/surface_high</item>
+        <item name="colorSurface">@color/surface_highest</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorPrimary">@color/primary</item>
         <item name="colorSecondary">@color/secondary</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Large</item>
     </style>
 
-    <!-- Overlay theme for BlockOverlayActivity — premium dark scrim -->
+    <!-- Overlay theme for BlockOverlayActivity / ReelReminder -->
     <style name="Theme.GuardianShield.Overlay" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowBackground">@color/overlay_dim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -62,85 +71,183 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
-    <!-- Card styles — premium dark with subtle border -->
-    <style name="Widget.GuardianShield.CardGlow" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">@color/surface_high</item>
-        <item name="cardCornerRadius">28dp</item>
-        <item name="cardElevation">0dp</item>
+    <!-- ============ Cards (tonal elevation ladder + hairline) ============ -->
+    <style name="Widget.GuardianShield.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
         <item name="strokeColor">@color/border_subtle</item>
         <item name="strokeWidth">1dp</item>
     </style>
 
-    <style name="Widget.GuardianShield.CardPremium" parent="Widget.Material3.CardView.Elevated">
+    <style name="Widget.GuardianShield.Card.Row">
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">1dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Card.Raised" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/surface_high</item>
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">6dp</item>
         <item name="strokeColor">@color/border_subtle</item>
         <item name="strokeWidth">1dp</item>
     </style>
 
-    <style name="Widget.GuardianShield.CardHero" parent="Widget.Material3.CardView.Elevated">
+    <style name="Widget.GuardianShield.Card.Beacon">
         <item name="cardBackgroundColor">@color/primary_container</item>
-        <item name="cardCornerRadius">28dp</item>
-        <item name="cardElevation">0dp</item>
-        <item name="strokeColor">#24FFFFFF</item>
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">6dp</item>
+        <item name="strokeColor">#387FE7C4</item>
         <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Card.Amber">
+        <item name="cardBackgroundColor">@color/amber_hero_end</item>
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">6dp</item>
+        <item name="strokeColor">#40FFC24B</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Card.Red">
+        <item name="cardBackgroundColor">@color/red_hero_end</item>
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">6dp</item>
+        <item name="strokeColor">#47FF7A76</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- ============ Text appearances ============ -->
+    <style name="TextAppearance.GuardianShield.Display" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textSize">30sp</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.Title" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textColor">@color/on_surface</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.01</item>
+        <item name="android:letterSpacing">-0.015</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.SectionHeader" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textColor">@color/primary</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.08</item>
+        <item name="android:letterSpacing">0.14</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textSize">11sp</item>
     </style>
 
-    <style name="TextAppearance.GuardianShield.Display" parent="TextAppearance.Material3.HeadlineMedium">
-        <item name="android:textColor">@color/on_surface</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="android:textSize">28sp</item>
+    <style name="TextAppearance.GuardianShield.BodyDim" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/on_surface_dim</item>
+        <item name="android:textSize">12sp</item>
     </style>
 
-    <style name="Widget.GuardianShield.Button" parent="Widget.Material3.Button">
+    <!-- ============ Buttons ============ -->
+    <style name="Widget.GuardianShield.Button" parent="Widget.Material3.Button.UnelevatedButton">
         <item name="cornerRadius">28dp</item>
         <item name="backgroundTint">@color/primary</item>
         <item name="android:textColor">@color/on_primary</item>
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:minHeight">52dp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="android:letterSpacing">0.01</item>
+        <item name="android:paddingHorizontal">26dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">28dp</item>
+        <item name="backgroundTint">@color/surface_highest</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!-- legacy v2.5 name kept as alias so existing layouts compile -->
+    <style name="Widget.GuardianShield.ButtonTonal">
+        <item name="cornerRadius">16dp</item>
+        <item name="backgroundTint">@color/surface_highest</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Widget.GuardianShield.ButtonTonal" parent="Widget.Material3.Button.TonalButton">
-        <item name="cornerRadius">16dp</item>
-        <item name="backgroundTint">@color/surface_variant</item>
+    <style name="Widget.GuardianShield.Button.Danger" parent="Widget.Material3.Button.UnelevatedButton">
+        <item name="cornerRadius">28dp</item>
+        <item name="backgroundTint">@color/error</item>
+        <item name="android:textColor">@color/on_error</item>
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.GuardianShield.Button.Small" parent="Widget.GuardianShield.Button.Tonal">
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="cornerRadius">20dp</item>
+    </style>
+
+    <!-- ============ Chips ============ -->
+    <style name="Widget.GuardianShield.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/chip_surface_v3</item>
+        <item name="chipStrokeColor">@color/border_subtle</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/chip_text_v3</item>
+        <item name="chipCornerRadius">18dp</item>
+        <item name="chipMinHeight">36dp</item>
+        <item name="rippleColor">@color/ripple_primary</item>
+        <item name="checkedIconVisible">true</item>
+    </style>
+
+    <!-- Settings list-row buttons (icon + label, transparent surface) -->
+    <style name="Widget.GuardianShield.SettingsRow" parent="Widget.Material3.Button.TextButton">
+        <item name="android:gravity">start|center_vertical</item>
         <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconPadding">14dp</item>
+        <item name="iconSize">22dp</item>
+        <item name="rippleColor">@color/ripple_primary</item>
     </style>
 
-    <style name="Widget.GuardianShield.BadgeChip" parent="Widget.Material3.Chip.Assist">
-        <item name="chipMinHeight">24dp</item>
-        <item name="android:textSize">12sp</item>
-        <item name="chipStartPadding">8dp</item>
-        <item name="chipEndPadding">8dp</item>
-        <item name="chipCornerRadius">12dp</item>
+    <!-- Search input -->
+    <style name="Widget.GuardianShield.SearchBox" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/border_subtle</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeWidth">1dp</item>
     </style>
 
-    <!-- Bottom nav active indicator -->
+    <!-- ============ Bottom navigation ============ -->
     <style name="Widget.GuardianShield.BottomNav" parent="Widget.Material3.BottomNavigationView">
-        <item name="android:background">@color/bg_elevated</item>
+        <item name="android:background">@color/surface_high</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.GuardianShield.BottomNavActive</item>
+        <item name="elevation">0dp</item>
     </style>
 
     <style name="Widget.GuardianShield.BottomNavActive" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/primary_container</item>
+        <item name="android:color">@color/beacon_dim</item>
         <item name="android:height">32dp</item>
-        <item name="android:width">64dp</item>
+        <item name="android:width">58dp</item>
     </style>
 </resources>

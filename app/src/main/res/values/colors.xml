@@ -1,65 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ===== Premium Dark — Guardian Shield Design System (2026-08-17) =====
-     Keep app name Guardian Shield, shield mark only.
-     Primary kept #D0E4FF (existing brand light blue — premium direction). -->
-    <color name="bg_main">#0E1116</color>
-    <color name="bg_elevated">#151A22</color>
-    <color name="surface">#161C26</color>
-    <color name="surface_variant">#242E3B</color>
-    <color name="surface_high">#1C232E</color>
-    <color name="surface_highest">#2A3647</color>
+    <!-- ===== WATCHTOWER V3 — Guardian Shield Design Language (2026-08-17) =====
+     Approved mockups: guardian-redesign/mocks/v3/
+     Dark charcoal canvas + Beacon Mint primary + 4-step tonal elevation.
+     Every legacy color NAME is preserved (code refs R.color.* keep compiling);
+     values moved to the V3 palette. -->
 
-    <color name="primary">#D0E4FF</color>
-    <color name="on_primary">#003258</color>
-    <!-- Deeper container for hero / nav active pill — old #004A77 kept as fallback below -->
-    <color name="primary_container">#1A344F</color>
-    <color name="primary_container_start">#1E3A5F</color>
-    <color name="primary_container_end">#10233A</color>
-    <color name="on_primary_container">#D0E4FF</color>
-    <color name="primary_dim">#AAC7FF</color>
+    <!-- Surfaces: tonal elevation ladder L0→L3 -->
+    <color name="bg_main">#0A0C0B</color>
+    <color name="bg_elevated">#171C1A</color>
+    <color name="surface">#101413</color>
+    <color name="surface_variant">#1F2523</color>
+    <color name="surface_high">#171C1A</color>
+    <color name="surface_highest">#1F2523</color>
 
-    <color name="secondary">#B9C8DF</color>
-    <color name="on_secondary">#003258</color>
-    <color name="secondary_container">#1A344F</color>
-    <color name="on_secondary_container">#D1E4FF</color>
+    <!-- Beacon (brand / interactive) -->
+    <color name="primary">#7FE7C4</color>
+    <color name="on_primary">#052019</color>
+    <color name="primary_container">#11322A</color>
+    <color name="primary_container_start">#164134</color>
+    <color name="primary_container_end">#0D2822</color>
+    <color name="on_primary_container">#B4F0DA</color>
+    <color name="primary_dim">#A9F2D6</color>
+    <color name="beacon_dim">#247FE7C4</color>
 
-    <color name="error">#FFB4AB</color>
-    <color name="on_error">#690005</color>
-    <color name="error_container">#3A1A1A</color>
-    <color name="success">#6EE7B7</color>
-    <color name="success_container">#132A22</color>
-    <!-- Legacy success light kept for compat -->
+    <color name="secondary">#A9B8AF</color>
+    <color name="on_secondary">#101714</color>
+    <color name="secondary_container">#1B2622</color>
+    <color name="on_secondary_container">#C6D4CC</color>
+
+    <!-- Semantic -->
+    <color name="error">#FF7A76</color>
+    <color name="on_error">#2B0806</color>
+    <color name="error_container">#361B1A</color>
+    <color name="on_error_container">#FFD3D0</color>
+    <color name="success">#6FE0A6</color>
+    <color name="success_container">#14261D</color>
     <color name="success_legacy">#B0F2CC</color>
+    <color name="warning_amber">#FFC24B</color>
+    <color name="warning">#FFC24B</color>
+    <color name="warning_container">#33290F</color>
+    <color name="on_warning_container">#FFDB8F</color>
+    <color name="info_sky">#7EC8F0</color>
+    <color name="info_container">#12283A</color>
 
-    <color name="on_surface">#E2E6EB</color>
-    <color name="on_surface_variant">#A3ADBB</color>
-    <color name="on_surface_dim">#6B7585</color>
+    <!-- Text -->
+    <color name="on_surface">#ECF1ED</color>
+    <color name="on_surface_variant">#A9B5AD</color>
+    <color name="on_surface_dim">#76827B</color>
+    <color name="inverse_surface">#E9EFEA</color>
+    <color name="on_inverse">#131917</color>
 
+    <!-- Structure -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="overlay_dim">#CC0B0E14</color>
-    <color name="overlay_dim_solid">#0C0F14</color>
-    <color name="ripple_primary">#20D1E4FF</color>
-    <color name="ripple_error">#20FF4444</color>
-    <color name="card_stroke">#14FFFFFF</color>
-    <color name="border_subtle">#14FFFFFF</color>
-    <color name="border_strong">#24FFFFFF</color>
+    <color name="overlay_dim">#E6050706</color>
+    <color name="overlay_dim_solid">#060807</color>
+    <color name="ripple_primary">#1F7FE7C4</color>
+    <color name="ripple_error">#1FFF7A76</color>
+    <color name="card_stroke">#232927</color>
+    <color name="border_subtle">#232927</color>
+    <color name="border_strong">#2A322E</color>
+    <color name="seam_top">#0EFFFFFF</color>
 
     <!-- Status indicators -->
-    <color name="block_indicator">#FF8A80</color>
-    <color name="allow_indicator">#6EE7B7</color>
-    <color name="surface_gradient_start">#0E1116</color>
-    <color name="surface_gradient_end">#1C232E</color>
-    <color name="ai_detection_color">#A78BFA</color>
-    <color name="ai_accent">#A78BFA</color>
-    <color name="warning_amber">#FBBF24</color>
-    <color name="warning">#FBBF24</color>
-    <color name="purple">#D0BCFF</color>
+    <color name="block_indicator">#FF7A76</color>
+    <color name="allow_indicator">#6FE0A6</color>
+    <color name="surface_gradient_start">#0A0C0B</color>
+    <color name="surface_gradient_end">#171C1A</color>
+    <color name="ai_detection_color">#B8A1FF</color>
+    <color name="ai_accent">#B8A1FF</color>
+    <color name="purple">#B8A1FF</color>
+    <color name="ai_container">#241F3E</color>
 
-    <!-- Badge backgrounds (12% alpha) -->
-    <color name="badge_success_bg">#1F6EE7B7</color>
-    <color name="badge_error_bg">#1FFF8A80</color>
-    <color name="badge_ai_bg">#24A78BFA</color>
+    <!-- Badge backgrounds (tinted, ~12-14%) -->
+    <color name="badge_success_bg">#1F6FE0A6</color>
+    <color name="badge_error_bg">#1FFF7A76</color>
+    <color name="badge_ai_bg">#24B8A1FF</color>
+    <color name="badge_warn_bg">#1FFFC24B</color>
+    <color name="badge_neutral_bg">#12FFFFFF</color>
+
+    <!-- Hero state tints (paused / off) -->
+    <color name="amber_hero_start">#2A2414</color>
+    <color name="amber_hero_end">#1E1A0E</color>
+    <color name="red_hero_start">#311B1A</color>
+    <color name="red_hero_end">#20110F</color>
+
+    <!-- Launcher -->
+    <color name="ic_launcher_background">#0C130F</color>
 </resources>

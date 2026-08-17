@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield — Watchtower Design System V3</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:1180px}
+  .token-card{background:var(--s1);border:1px solid var(--hairline);border-radius:16px;padding:22px;box-shadow:var(--e1)}
+  .swrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--hairline)}
+  .swrow:last-child{border-bottom:none}
+  .swbig{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.12);flex:0 0 auto}
+  .swname{font-weight:700;font-size:13.5px}
+  .swhex{font-family:var(--mono);font-size:11px;color:var(--t3)}
+  .swuse{font-size:11.5px;color:var(--t2);margin-top:2px}
+  .typerow{display:flex;align-items:baseline;gap:22px;padding:14px 0;border-bottom:1px solid var(--hairline)}
+  .typerow:last-child{border-bottom:none}
+  .typemeta{width:230px;flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--t3);line-height:1.6}
+  .elevstrip{display:flex;gap:18px;align-items:flex-end;padding:26px 0 10px}
+  .elevdemo{border-radius:16px;padding:18px;width:170px;text-align:center;font-size:12px;color:var(--t2)}
+  .motionrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .motioncard{background:var(--s1);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;flex:1;min-width:240px;box-shadow:var(--e1)}
+  .motioncard h4{font-size:13.5px;margin-bottom:6px}
+  .motioncard p{font-size:12px;color:var(--t2);line-height:1.5}
+  .motioncard .dur{font-family:var(--mono);font-size:11px;color:var(--beacon);margin-top:8px;display:block}
+  .iconstrip{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+  .icell{width:86px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:14px 8px 10px;text-align:center}
+  .icell svg{width:24px;height:24px;color:var(--t1)}
+  .icell .onb svg{color:var(--beacon)}
+  .icell span{display:block;font-size:9.5px;color:var(--t3);margin-top:8px;font-family:var(--mono);letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="doc-head">
+  <div class="crumb">Guardian Shield · Design System · V3</div>
+  <h1>“Watchtower” — the Guardian Shield design language</h1>
+  <p><b>Direction.</b> A serious consumer-security product used in private moments: late-night browsing, recovery from relapse, family protection. The visual voice is <b>calm vigilance</b> — a deep charcoal night with one luminous signal color, <b>Beacon Mint</b>, that means “your guardian is awake.” Green is the natural security primitive (browser padlocks, antivirus “you are protected”), and it semantically fuses brand with the app’s core state: <i>protected</i>. Chrome stays near-monochrome; <b>color is used only for meaning</b> — mint = protected/interactive, red = blocked, amber = warning, violet = AI. Elevation is real and layered (tonal steps + diffused shadows + hairline + top light-seam), replacing v2.5’s flat bordered cards. Typography is a deliberate Roboto Flex scale with tabular numerals for every stat; Bengali set in Noto Sans Bengali at matched weights.</p>
+  <p><b>Why dark-first (reasoned choice):</b> block overlays and warnings overwhelmingly appear at night or in bed; OLED dark reduces glare in those moments; the strike-3 overlay must dominate any host app (dark scrim); and privacy-screening in public. Light theme is explicitly out of scope for V3 (flagged, not silently skipped).</p>
+  <p><b>What this replaces:</b> v2.5.0’s blue-graphite palette (#0E1116 / periwinkle #D0E4FF), flat 0-elevation bordered cards, emoji row icons, mixed radii. Nothing about detection/blocking logic changes — visual language only.</p>
+</div>
+
+<!-- ============ COLOR ============ -->
+<div class="board">
+<div class="row-label"><h2>1 · Color — surfaces &amp; elevation ladder</h2><span class="hint">tonal steps, not flat</span></div>
+<div class="grid2">
+  <div class="token-card">
+    <div class="swrow"><div class="swbig" style="background:#0A0C0B"></div><div><div class="swname">background · L0</div><div class="swhex">#0A0C0B — warm-neutral charcoal, faint green cast</div><div class="swuse">App canvas, status/nav bars. Slightly deeper than v2.5 for stronger card lift.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#101413"></div><div><div class="swname">surface-1 · L1</div><div class="swhex">#101413</div><div class="swuse">Resting cards, list rows, stat tiles. + hairline #232927 + shadow e1.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#171C1A"></div><div><div class="swname">surface-2 · L2</div><div class="swhex">#171C1A</div><div class="swuse">Raised: hero card base, bottom nav, lock banners. + shadow e2 + top seam.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#1F2523"></div><div><div class="swname">surface-3 · L3</div><div class="swhex">#1F2523</div><div class="swuse">Highest: dialogs, bottom sheets, keypad keys, menus. + shadow e3.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#E9EFEA"></div><div><div class="swname">inverse surface</div><div class="swhex">#E9EFEA / on-inverse #131917</div><div class="swuse">Snackbars (high contrast, standard M3 pattern).</div></div></div>
+  </div>
+  <div class="token-card">
+    <div class="swrow"><div class="swbig" style="background:#7FE7C4"></div><div><div class="swname">Beacon Mint — primary</div><div class="swhex">#7FE7C4 · on-beacon #052019 · hover #8FEBCB</div><div class="swuse">Interactive + “protected” state. Buttons, toggles-on, active nav, links.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:linear-gradient(168deg,#164134,#11322A)"></div><div><div class="swname">beacon container</div><div class="swhex">#11322A → #0D2822 · on-container #B4F0DA (10.9:1)</div><div class="swuse">Hero status card, active module tint. 1px beacon 22% border.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#FF7A76"></div><div><div class="swname">error / blocked</div><div class="swhex">#FF7A76 · container #361B1A · on-container #FFD3D0</div><div class="swuse">Block events, strike-3 overlay, danger actions.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#FFC24B"></div><div><div class="swname">warning</div><div class="swhex">#FFC24B · container #33290F · on-container #FFDB8F</div><div class="swuse">Strike 1/2 card, paused state, commitment-lock banners.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#B8A1FF"></div><div><div class="swname">AI violet — tertiary</div><div class="swhex">#B8A1FF · container #241F3E</div><div class="swuse">AI-detection events, AI sensitivity controls. Kept from product identity.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#7EC8F0"></div><div><div class="swname">info sky</div><div class="swhex">#7EC8F0 · container #12283A</div><div class="swuse">Educational notes, keyword-filter events.</div></div></div>
+    <div class="swrow"><div class="swbig" style="background:#6FE0A6"></div><div><div class="swname">success</div><div class="swhex">#6FE0A6</div><div class="swuse">Granted permissions, positive deltas, “active” dots. Same family as Beacon by design: protected = success.</div></div></div>
+  </div>
+</div>
+
+<table class="tbl" style="max-width:1180px">
+  <tr><th>Text / icon pair</th><th>Ratio</th><th>WCAG</th><th>Use</th></tr>
+  <tr><td><span class="swatch" style="background:#ECF1ED"></span>on-background #ECF1ED on #0A0C0B</td><td class="pass">17.2:1</td><td>AAA</td><td>Headlines, values</td></tr>
+  <tr><td><span class="swatch" style="background:#ECF1ED"></span>on-surface-1</td><td class="pass">16.2:1</td><td>AAA</td><td>Card titles</td></tr>
+  <tr><td><span class="swatch" style="background:#A9B5AD"></span>on-surface-variant #A9B5AD on surface-1 / surface-3</td><td class="pass">8.8:1 / 7.4:1</td><td>AAA</td><td>Body secondary, subtitles</td></tr>
+  <tr><td><span class="swatch" style="background:#76827B"></span>on-surface-dim #76827B on surface-1</td><td class="pass">4.6:1</td><td>AA</td><td>Microcopy only, ≥11sp (package names, axis labels, kickers)</td></tr>
+  <tr><td><span class="swatch" style="background:#7FE7C4"></span>Beacon on surface-1</td><td class="pass">12.5:1</td><td>AAA</td><td>Interactive text, active icons</td></tr>
+  <tr><td><span class="swatch" style="background:#052019"></span>on-Beacon (button text)</td><td class="pass">11.5:1</td><td>AAA</td><td>Filled button labels</td></tr>
+  <tr><td><span class="swatch" style="background:#B4F0DA"></span>on-beacon-container (hero)</td><td class="pass">10.9:1</td><td>AAA</td><td>Hero title/subtitle</td></tr>
+  <tr><td><span class="swatch" style="background:#FF7A76"></span>error on surface-1</td><td class="pass">7.3:1</td><td>AAA</td><td>Blocked badges, danger labels</td></tr>
+  <tr><td><span class="swatch" style="background:#FFC24B"></span>warning on surface-1</td><td class="pass">11.6:1</td><td>AAA</td><td>Strike card accents</td></tr>
+  <tr><td><span class="swatch" style="background:#B8A1FF"></span>AI violet on surface-1</td><td class="pass">8.5:1</td><td>AAA</td><td>AI event rows</td></tr>
+  <tr><td><span class="swatch" style="background:#FFD3D0"></span>on-error-container #FFD3D0 on #361B1A</td><td class="pass">11.7:1</td><td>AAA</td><td>Overlay icon wrapper</td></tr>
+  <tr><td><span class="swatch" style="background:#131917"></span>on-inverse on inverse surface</td><td class="pass">15.3:1</td><td>AAA</td><td>Snackbar</td></tr>
+</table>
+<p class="note"><span class="tag">Rule</span>Every text/background pair in the system is ≥4.5:1 (AA); all primary pairs are ≥7:1 (AAA). Dim text is reserved for non-essential microcopy. Focus = 2px Beacon outline, 3px offset, on every interactive element. Touch targets ≥44×48dp.</p>
+
+<!-- ============ TYPOGRAPHY ============ -->
+<div class="row-label"><h2>2 · Typography — Roboto Flex + Noto Sans Bengali</h2><span class="hint">variable weights, tabular numerals on all stats</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="typerow"><div class="typemeta">Display XL · 40/46 · w700 · ls −0.025</div><div style="font-size:40px;font-weight:700;letter-spacing:-.025em" class="tnum">00:29</div></div>
+  <div class="typerow"><div class="typemeta">Display · 30/36 · w700 · ls −0.02</div><div style="font-size:30px;font-weight:700;letter-spacing:-.02em">সুরক্ষা সক্রিয়</div></div>
+  <div class="typerow"><div class="typemeta">Headline S · 24/30 · w700 · ls −0.015</div><div style="font-size:24px;font-weight:700;letter-spacing:-.015em">Sensitive Content Blocked</div></div>
+  <div class="typerow"><div class="typemeta">Headline XS · 18/24 · w600 · ls −0.01</div><div style="font-size:18px;font-weight:600;letter-spacing:-.01em">App Blocking</div></div>
+  <div class="typerow"><div class="typemeta">Title L · 16/22 · w600</div><div style="font-size:16px;font-weight:600">Keyword Filter</div></div>
+  <div class="typerow"><div class="typemeta">Body L · 15/22 · w400</div><div style="font-size:15px">This content has been blocked to protect you.</div></div>
+  <div class="typerow"><div class="typemeta">Body S · 13/18 · w400</div><div style="font-size:13px;color:var(--t2)">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</div></div>
+  <div class="typerow"><div class="typemeta">Label M · 14/16 · w600 (buttons, sentence case)</div><div style="font-size:14px;font-weight:600">Request Unlock</div></div>
+  <div class="typerow"><div class="typemeta">Label S · 11/14 · w700 · caps · ls 0.14 (kickers)</div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)">Strike Warning</div></div>
+  <div class="typerow"><div class="typemeta">Mono · 12/16 · package names &amp; countdowns</div><div style="font-family:var(--mono);font-size:12px;color:var(--t3)">com.instagram.android</div></div>
+</div>
+<p class="note"><span class="tag">Rule</span>Sentence-case buttons (no ALL-CAPS buttons), caps reserved for 11sp kickers. Bengali never uppercase, never letterspaced beyond 0.01em. Numerals in stats, countdowns, strikes: tabular figures. Display sizes tighten to −0.02em; Bengali display uses w700 with −0.01em (Bengali glyphs clash at tighter tracking).</p>
+
+<!-- ============ SHAPE / ELEVATION / SPACING ============ -->
+<div class="row-label"><h2>3 · Shape &amp; elevation — layered, not flat</h2><span class="hint">hairline + shadow + top light-seam on every level</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:8px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">xs · 8<br>badges, inputs</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:12px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">sm · 12<br>chips, rows, tiles</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:16px;background:var(--s1);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">md · 16<br>cards, sheets</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:24px;background:var(--s2);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">lg · 24<br>hero, dialogs</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:28px;background:var(--s2);border:1px solid var(--hairline)"></div><div class="swhex" style="margin-top:8px">xl · 28<br>overlay hero</div></div>
+    <div style="text-align:center"><div style="width:84px;height:64px;border-radius:999px;background:var(--beacon)"></div><div class="swhex" style="margin-top:8px">full<br>buttons, badges</div></div>
+  </div>
+  <div class="elevstrip">
+    <div class="elevdemo" style="background:#0A0C0B">L0 · canvas<br><span class="swhex">#0A0C0B</span></div>
+    <div class="elevdemo" style="background:#101413;border:1px solid #232927;box-shadow:0 1px 2px rgba(0,0,0,.24)">L1 · card<br><span class="swhex">e1 · 0 1 2 · 24%</span></div>
+    <div class="elevdemo" style="background:#171C1A;border:1px solid #232927;box-shadow:0 6px 16px rgba(0,0,0,.3)">L2 · raised<br><span class="swhex">e2 · 0 6 16 · 30%</span></div>
+    <div class="elevdemo" style="background:#1F2523;border:1px solid #2A322E;box-shadow:0 12px 32px rgba(0,0,0,.38)">L3 · floating<br><span class="swhex">e3 · 0 12 32 · 38%</span></div>
+    <div class="elevdemo" style="background:linear-gradient(168deg,#164134,#11322A);border:1px solid rgba(127,231,196,.25);box-shadow:0 24px 64px rgba(0,0,0,.46),inset 0 0 64px rgba(127,231,196,.06)">Beacon hero<br><span class="swhex">e4 + inner glow</span></div>
+  </div>
+  <p class="swuse" style="margin-top:10px">Pressed = +5% white tonal overlay + scale 0.98 (150ms, then spring back) — never a color swap. Hover/focus (web parity) = Beacon outline. Disabled = surface-3 fill + dim text, 40% opacity.</p>
+</div>
+
+<div class="row-label"><h2>4 · Spacing &amp; grid — 4pt base</h2><span class="hint">screen gutter 20 · section gap 28 · row height 72</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div style="display:flex;gap:0;align-items:flex-end;height:64px">
+    <div style="width:24px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);height:16px;border-radius:3px"></div><div style="width:32px;height:32px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:3px;margin-left:8px"></div><div style="width:48px;height:48px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:4px;margin-left:8px"></div><div style="width:64px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:5px;margin-left:8px"></div><div style="width:80px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:6px;margin-left:8px"></div><div style="width:96px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:7px;margin-left:8px"></div><div style="width:128px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:8px;margin-left:8px"></div><div style="width:160px;height:64px;background:var(--beacon-dim);border:1px solid rgba(127,231,196,.3);border-radius:9px;margin-left:8px"></div>
+  </div>
+  <div class="swhex" style="margin-top:10px">4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 — screen gutter 20dp (roomier than v2.5’s 16), section gap 28, card padding 16–20, hero padding 28, list-row height 72, nav height 80 incl. gesture inset.</div>
+</div>
+
+<!-- ============ ICONOGRAPHY ============ -->
+<div class="row-label"><h2>5 · Iconography — one family, 24dp grid, rounded</h2><span class="hint">Material Symbols Rounded · weight 500 · 2dp stroke feel · no emoji in chrome</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="iconstrip">
+    <div class="icell onb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></svg><span>shield-beacon<br>(brand mark)</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg><span>shield-check</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg><span>shield-alert</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m9 12h6M9.4 9.2 12 6.6l2.6 2.6M9.4 14.8 12 17.4l2.6-2.6"/></svg><span>shield-off</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></svg><span>history</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg><span>apps</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></svg><span>keyword</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></svg><span>schedule</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg><span>ai-spark</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 6.8v5m-5.5 8.4 1.8-3.4h7.4l1.8 3.4M6.5 9.2 4 10.8m13.5-1.6 2.5 1.6"/></svg><span>accessibility</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><span>lock</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.35-1.3"/><path d="M12 14.4v2.2"/></svg><span>lock-open</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.2 10.4 4c.9-.7 2.3-.7 3.2 0l6.9 5.2v9.3c0 1.2-1 2.2-2.2 2.2H5.7c-1.2 0-2.2-1-2.2-2.2V9.2z"/></svg><span>home</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 4.6 4.6"/></svg><span>search</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5H5.8c-.7 0-1.3.6-1.3 1.3v12.4c0 .7.6 1.3 1.3 1.3h12.4c.7 0 1.3-.6 1.3-1.3V13"/><path d="m17.7 3.9 2.4 2.4L12 14.4l-3.2.8.8-3.2 8.1-8.1z"/></svg><span>edit</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 7.2h14.4M9.2 7.2V5.4c0-.8.6-1.4 1.4-1.4h2.8c.8 0 1.4.6 1.4 1.4v1.8M6.6 7.2l.8 11.4c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.8-11.4"/></svg><span>delete</span></div>
+    <div class="icell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v4.8l3 1.8"/></svg><span>time-lock</span></div>
+  </div>
+  <p class="swuse" style="margin-top:16px"><b>Shield mark evolution:</b> the existing check-shield becomes <b>shield-beacon</b> — same silhouette, the check replaced by a vertical beacon slit + dot (the “watchtower light”). It is the only icon that may carry the glow. Launcher monochrome + strike card + overlay heroes use it. No mascot, name unchanged.</p>
+</div>
+
+<!-- ============ MOTION ============ -->
+<div class="row-label"><h2>6 · Motion — Material 3 patterns only, no gimmicks</h2><span class="hint">emphasized decelerate in, standard out</span></div>
+<div class="token-card" style="max-width:1180px">
+  <div class="motionrow">
+    <div class="motioncard"><h4>Fade-through · bottom-nav tabs</h4><p>Outgoing fades to 0 (90ms), incoming fades in + slides 8dp up (210ms). Home ⇄ Activity ⇄ Protection ⇄ Settings.</p><span class="dur">300ms · M3 FadeThrough</span></div>
+    <div class="motioncard"><h4>Shared-axis X · pushes</h4><p>Dashboard → App List / Settings / Activity Log and all detail pushes slide along X with parallax dimming.</p><span class="dur">300ms · M3 SharedAxis</span></div>
+    <div class="motioncard"><h4>Container transform · row → detail</h4><p>Activity row expands into Blocked Content Detail (its real destination), corner radius 12→0 morphing.</p><span class="dur">400ms · M3 ContainerTransform</span></div>
+    <div class="motioncard"><h4>Press state</h4><p>scale 0.98 + tonal +5% white overlay; release springs back ( overshoot 1.0 ). Applies to cards, rows, keys, buttons.</p><span class="dur">in 150ms · out 250ms spring</span></div>
+    <div class="motioncard"><h4>List entrance</h4><p>Staggered fade-up 8dp, 12ms/item cap 8 items, 180ms each — perceptible once, never annoying.</p><span class="dur">180ms/item staggered</span></div>
+    <div class="motioncard"><h4>Skeleton → content</h4><p>Shimmer sweep 1200ms loop; on load, skeleton crossfades to content, no spinner anywhere.</p><span class="dur">crossfade 200ms</span></div>
+    <div class="motioncard"><h4>Strike 1/2 card</h4><p>Slides from top with decelerate; a thin amber timer ring drains around the icon — visualizing the <b>unchanged 3.5s auto-dismiss</b>. Exit slides up + fade.</p><span class="dur">enter 260ms · ring 3500ms linear</span></div>
+    <div class="motioncard"><h4>Strike-3 overlay</h4><p>Scrim fade + hero scale 0.92→1 with glow bloom; content staggers 40ms. Exit only via actions.</p><span class="dur">240ms emphasized</span></div>
+    <div class="motioncard"><h4>Sheets &amp; dialogs</h4><p>Bottom sheets slide up with emphasized decelerate + scrim to 60%; dialogs fade + scale 0.9→1. Keypad error = 3-frame horizontal shake (existing anim reused).</p><span class="dur">sheet 320ms · dialog 180ms</span></div>
+    <div class="motioncard"><h4>Beacon pulse</h4><p>Hero status ring breathes (opacity .35→.14, 2.4s ease-in-out, repeat with reverse) while protection is ON. Stops when paused/off.</p><span class="dur">2400ms · infinite alternate</span></div>
+    <div class="motioncard"><h4>Pull-to-refresh</h4><p>M3 Circles indicator in Beacon on Activity Log (the only list with re-queryable data).</p><span class="dur">system timing</span></div>
+  </div>
+  <p class="swuse" style="margin-top:14px"><b>Principles:</b> motion explains hierarchy (what came from where), never decorates. Durations ≤400ms. Easing: emphasized-decelerate for entrances, standard for exits. Nothing loops except beacon pulse &amp; shimmer, both sub-perceptual. Respect OS reduce-animation setting (pulse/shimmer/stagger drop out).</p>
+</div>
+
+<!-- ============ COMPONENTS ============ -->
+<div class="row-label"><h2>7 · Component library — states: default · pressed · disabled · focused</h2><span class="hint">every component, every state — used identically on every screen</span></div>
+<div style="max-width:1180px;display:grid;grid-template-columns:repeat(2,1fr);gap:26px">
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Buttons</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+      <button class="btn filled">Stay Protected</button>
+      <button class="btn filled pressed">Stay Protected</button>
+      <button class="btn tonal">Request Unlock</button>
+      <button class="btn tonal pressed">Request Unlock</button>
+      <button class="btn danger">Report &amp; Close</button>
+      <button class="btn text">Not sensitive</button>
+      <button class="btn filled" disabled>Disabled</button>
+    </div>
+    <div class="swuse" style="margin-top:12px">Filled = Beacon (one affirmative action per screen) · Tonal = secondary (surface-3) · Danger = error red (destructive/exit-intent) · Text = tertiary/low-emphasis. 52dp height, pill, sentence case. Focused: 2px Beacon ring.</div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Switches · chips · segmented</div>
+    <div style="display:flex;gap:18px;align-items:center;margin-bottom:16px">
+      <div class="sw on"></div><div class="sw"></div><div class="sw on" disabled></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <span class="chip on">All <span class="n">42</span></span><span class="chip">AI <span class="n">18</span></span><span class="chip">Keyword</span>
+      <span class="badge ok"><span class="dot pulse"></span>Active</span><span class="badge err">Blocked</span><span class="badge ai">AI 0.89</span><span class="badge neutral">PLAIN</span>
+    </div>
+    <div class="seg"><button class="on glow">Day</button><button>Week</button><button>Month</button></div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Stat tile · module card · list row</div>
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#7FE7C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div><div class="d">+12 vs yesterday</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#B8A1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div><div class="d">+8</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg viewBox="0 0 24 24" fill="none" stroke="#7EC8F0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></svg></div><div class="v tnum">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div>
+    <div class="rows">
+      <div class="row"><div class="spine ai"></div><div class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="#B8A1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs">com.instagram.android</div></div><div class="rend"><span>2m ago</span></div></div>
+      <div class="row"><div class="spine ok"></div><div class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="#6FE0A6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg></div><div class="rmain"><div class="rt">Module row — granted</div><div class="rs">supporting copy</div></div><div class="rend"><div class="sw on"></div></div></div>
+    </div>
+  </div>
+  <div class="token-card">
+    <div class="kicker" style="margin-bottom:14px">Empty · loading · error · snackbar</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:200px"><div class="statebox"><div class="art"><svg viewBox="0 0 24 24" fill="none" stroke="#76827B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></svg></div><h3>No blocks yet</h3><p>এখনো কোনো ব্লক নেই — নিরাপদ থাকুন!</p></div></div>
+      <div class="card" style="flex:1;min-width:200px;padding:16px"><div style="display:flex;gap:12px;align-items:center"><div class="sk" style="width:42px;height:42px"></div><div style="flex:1"><div class="sk line" style="width:70%"></div><div class="sk line" style="width:45%;margin-top:8px;height:10px"></div></div></div><div class="sk line" style="width:100%;height:64px;margin-top:14px;border-radius:12px"></div><div class="sk line" style="width:100%;height:64px;margin-top:10px;border-radius:12px"></div></div>
+      <div class="card" style="flex:1;min-width:200px"><div class="statebox"><div class="art" style="background:var(--red-c);border-color:rgba(255,122,118,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#FF7A76" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.4v6M12 16.6v.2"/><circle cx="12" cy="12" r="8.6"/></svg></div><h3>Couldn’t load activity</h3><p>কিছু একটা ভুল হয়েছে</p><button class="btn tonal sm">Try again</button></div></div>
+    </div>
+    <div class="snackbar" style="position:static;margin-top:16px">PIN saved <span class="act">View</span></div>
+    <p class="swuse" style="margin-top:12px">Empty states: shield art + real app copy + one recovery action. Errors: same skeleton slot, red-tinted art, retry. Snackbars inverse-surface, 14dp radius, optional action.</p>
+  </div>
+</div>
+<p class="note"><span class="tag">i18n</span>All copy ships EN + বাংলা from `values/` + `values-bn/`. Mocks show the mixed EN/বাংলা exactly as the default locale renders today; new strings will be added to both files at implementation time. Bengali line-height +25% (1.5) for Body sizes.</p>
+</div>
+</body>
+</html>

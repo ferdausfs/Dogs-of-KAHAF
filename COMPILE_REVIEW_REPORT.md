@@ -879,3 +879,67 @@ The sandbox cannot reach the Actions log CDN (results-receiver.actions.githubuse
 
 _(Pending Bug 1 green verification per task sequence — mockup first, then approval gate, then implementation.)_
 
+
+
+---
+
+# Session 2026-08-17 — WATCHTOWER V3: Complete Design-Language Overhaul (arena/01a00f5b-dogs-of-kahaf)
+
+**Base:** `main` @ `57a71eb` (v2.5.4 / 18) → **v3.0.0 / 19**
+**Scope:** Full visual-language rebuild per approved mockups — NOT a color swap. App name, identity, and ALL detection/blocking logic untouched.
+
+## 0) PROCESS — mockup gate honored
+
+1. **Audit** → `guardian-redesign/AUDIT-V3.md` (21 real surfaces mapped from AndroidManifest + layouts; no invented screens). Note: task brief referenced `AGENT_LOG.md` — that file does not exist in this repo; `COMPILE_REVIEW_REPORT.md` is the real history.
+2. **Design system + full mockups** → `guardian-redesign/mocks/v3/` (13 files incl. `ALL-SCREENS.html` single-file build, shared `guardian-v3.css`, `design-system.html` token spec). Presented via viewer + live gallery server.
+3. **Explicit user approval received** ("ami dekhlam... v3 bhalo.. kaj shuru koro") BEFORE any production code — hard constraint 3 satisfied.
+4. Implementation: 11 screen-by-screen commits (below), each statically verified; CI green build is the compile gate (no local SDK in sandbox — Maven Central unreachable, documented in prior sessions).
+
+## 1) DESIGN RATIONALE — "Watchtower"
+
+- **Dark-first (reasoned):** block overlays/warnings overwhelmingly fire at night; OLED; strike-3 must dominate any host app; v2.5 was already dark so day/night switch would not reduce rework.
+- **Beacon Mint primary `#7FE7C4`** — green is security's native "protected" primitive (browser padlocks, AV "you are protected"). Fuses brand with the app's core state. Replaces periwinkle `#D0E4FF`.
+- **Color = meaning only:** mint = protected/interactive, red `#FF7A76` = blocked, amber `#FFC24B` = warning/paused, violet `#B8A1FF` = AI (kept from product identity), sky `#7EC8F0` = info/keywords. Chrome is near-monochrome.
+- **Real elevation ladder** replaces v2.5's flat bordered cards: L0 `#0A0C0B` canvas → L1 `#101413` cards → L2 `#171C1A` raised → L3 `#1F2523` floating, each with hairline `#232927` + soft shadow + top light-seam.
+- **Type:** Roboto Flex + Noto Sans Bengali, deliberate 10-step ramp (Display 40 → Mono 11), tabular numerals on ALL stats/countdowns, sentence-case buttons, caps only for 11sp kickers (ls 0.14).
+- **Signature elements:** concentric beacon-ring hero (breathes while ON, state-colored when paused/off via new `applyHeroState()` — visual only), category "spines" on every list row, shield-beacon mark (check-shield evolved in place: slit + dot, `fillType=evenOdd`).
+- **Motion:** M3 patterns only — fade-through nav, shared-axis pushes, container-transform row→BlockedDetail, staggered list entrance (existing `item_slide_in` reused), skeleton shimmer convention, press = tonal overlay + scale.
+
+## 2) SCREEN-BY-SCREEN BEFORE → AFTER (bindings preserved, one group per commit)
+
+| Commit | Screen(s) | Change summary | Binding check |
+|---|---|---|---|
+| `e36b2a3` | Design tokens | colors.xml rewritten (ALL legacy names kept so `R.color.*` refs compile), themes/styles V3 (Card ladder, Buttons pill 52dp, Chips, SearchBox, SettingsRow, BottomNav beacon pill, PinDigit 84×70), 19 new stroke icons + halos/spines/heroes/bars, shield-beacon launcher (adaptive fg + ringed bg + monochrome) | verifier: 68 colors / 60 drawables / 30 styles resolve |
+| `2d0bf0c` | Home/Dashboard | Beacon hero w/ ring art + state theming (ON/paused/OFF bg+CTA via `applyHeroState`), 3 stat tiles w/ tinted wells + tnum, quick actions w/ real icons, spine event rows, nav: Protection tab → `ic_shield_check` | ids: statusCard shieldGlow imgShield txtStatus* btnToggle txtProtectionBadge txtStat* card* txtSeeAll recyclerRecent ✓ |
+| `b3efe06` | Activity Log | Pill segmented Day/Week/Month (MaterialButtonToggleGroup), attempts card + 7-day beacon/AI chart + legend, filter chips, designed empty state (`txtEmpty` now a card; code only toggles visibility) | btnDay/Week/Month txtBlockedAttempts chip* txtCount txtEmpty recyclerEvents ✓ |
+| `e4ad2a0` | Protection Hub | Beacon hub hero + 5 REAL module rows (AI/Apps/Keywords/Schedule/Accessibility) with family icons + chevrons | imgShield txtProtection* txtBadgeActive card* ✓ |
+| `ec56148` | App Blocking | Raised hero toggle card, pill filter chips, outlined search, spine rows w/ category tags + badges + both switches | switchHero filterGroup chip* editSearch recycler; row: viewLeftIndicator imgIcon txt* switch* imgLockIcon ✓ |
+| `232d9f7` | Settings | Grouped icon-row sections; badge values; delay slider w/ tick row; AI sensitivity card w/ violet slider + vote chips; legacy model card; PIN row | ALL 24 controls incl. chip15/30/60min chipVote1-4 slider* txt*Values btn* ✓ (lock-disable list untouched) |
+| `3ca36ca` | Keywords / Schedule / Commitment Lock | Beacon FABs, spine rows, icon wells, designed empty states (real copy), editor dialogs restyled (txtStart/txtEnd kept TextView for `findViewById<TextView>`), lock screen amber/beacon halo heroes + tnum countdown | recycler fabAdd txtEmpty; txtPackage txtSchedule btnEdit; editKeyword checkRegex; groupLocked/Unlocked chips ✓ chip-confirm flow untouched |
+| `270203e` | PIN verify + setup | Halo hero, 14dp beacon dots (drawables restyled; `setBackgroundResource` flow intact), PinDigit keys 84×70 r12, wide Beacon confirm | dot1-6 btn0-9 btnDel btnOk txtPrompt ✓ — NO biometric invented (none exists in code) |
+| `6af9af7` | Permissions / Prompt / Onboarding | Granted/Fix rows w/ wells + pill actions (state icon swap by code preserved), red-halo urgent prompt (copy verbatim incl ⚠️), onboarding shell + beacon page halo + elongated indicator dots | row*/icon*/btn* + btnFixAll; btnEnable; btnSkip viewPager indicatorContainer btnBack btnNext; page: iconFrame txtIcon txtHighlight txtTitle txtBody ✓ |
+| `0609836` | Overlays | Strike-3 block: red halo + info grid + danger CTA stack; BlockedDetail info rows + action list; DelayUnlock amber halo + 56sp tnum; Reel reminder strings-ified (copy moved verbatim to strings EN+BN); **strike 1/2 card re-skin (ringed icon, V3 ramp) — 3.5s auto-dismiss, tap-dismiss, audit-only "Not sensitive" all untouched**; overlay reason colors de-hardcoded (`#FF4444`/`#FFB300` → `R.color.error`/`R.color.warning_amber`) | txtPackage cardTempBlock txtTempBanner txtReason txtCategory btnHome btnUnlock btnMarkFalse; detail row*; txtCountdown btnCancel; imgIslamic txt* btnOpenQuran btnContinue; cardStrikeWarning txtStrike* btnNotSensitive ✓ |
+
+## 3) THINGS THAT DO NOT MAP TO REAL CODE (called out, not invented)
+
+- **Biometric unlock** — shown in v2.5 mocks, NOT wired in code → V3 mocks + implementation omit it. If wanted, needs new feature code.
+- **Standalone whitelist screen** — does not exist; whitelist remains a filter tab in App List (dashboard quick action deep-launches App List as before).
+- **DNS / VPN / safe-search modules** — do not exist; Protection hub shows the 5 real modules only.
+- **Loading skeletons** — `AppListState.loading` exists (package scan) but no skeleton views are bound today; V3 ships the token/shape system and empty states; wiring skeletons into ViewModels is a small follow-up that does NOT change data logic.
+- **Marketing assets** (512px Play Store PNG, feature graphic) — out of a code agent's reach; adaptive/monochrome vectors + splash ARE shipped in-repo.
+- **Time-remaining ring on strike card** is static decorative XML (animated ring would require touching `GuardianAccessibilityService.kt` display code — deliberately avoided; timing constants untouched).
+
+## 4) ACCESSIBILITY
+
+All pairs computed (WCAG): on-background 17.2:1, on-surface 16.2:1, variant text 8.8:1 (7.4:1 on L3), dim microcopy 4.6:1 (AA, ≥11sp only), Beacon on surface 12.5:1, on-Beacon button text 11.5:1, error 7.3:1, warning 11.6:1, violet 8.5:1, hero on-container 10.9:1, snackbar inverse 15.3:1. Touch targets ≥44dp; switches/keypad rows 48-70dp. Bengali line-height ×1.4-1.65.
+
+## 5) BUILD VERIFICATION
+
+- Sandbox: no Android SDK/JDK, Maven Central unreachable (as documented in prior sessions) → per-commit verification = `guardian-redesign/tools/verify_res.py` (all @color/@drawable/@style refs resolve) + XML well-formedness + duplicate-attr scan + binding/R.id cross-check (every Kotlin `binding.X`/`R.id.X` resolves, incl. snake↔camel ViewBinding mapping) — ALL GREEN at every commit.
+- Release: `v3.0.0` tag free (404/404 probed pre-bump; repo's config-time collision guard also verifies in CI).
+- CI: workflow runs on push to `main` via PR merge → publishes `v3.0.0` + `app-release.apk`.
+- **Green run:** _(filled below after CI completes)_
+
+## 6) COMPLIANCE
+
+App name "Guardian Shield" unchanged everywhere ✓ · no mascot ✓ · shield mark evolved not replaced ✓ · zero changes to TempBlockManager/BlockingEngine/service-detection/strike counting/DAO queries ✓ (only Kotlin visual edits: DashboardFragment `applyHeroState` color setters + BlockOverlayActivity two TextColor calls + unused-import cleanup) · EN+BN strings for every new label ✓.

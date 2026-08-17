@@ -1,91 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- WATCHTOWER V3 — PIN verify (approved: mocks/v3/pin.html)
+     Bindings preserved: dot1-6 btn0-9 btnDel btnOk (same classes). -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
     android:background="@color/bg_main"
-    android:padding="24dp">
+    android:paddingHorizontal="34dp">
 
-    <!-- Shield / Lock hero with glow — reference Lock screen -->
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.8"/>
+
+    <!-- Hero halo -->
     <FrameLayout
-        android:layout_width="88dp"
-        android:layout_height="88dp"
-        android:layout_marginTop="24dp">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/bg_shield_glow"
-            android:alpha="0.35"/>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:cardCornerRadius="26dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/primary_container"
-            app:strokeColor="@color/border_strong"
-            app:strokeWidth="1dp">
-
-            <ImageView
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_lock"
-                app:tint="@color/primary"/>
-        </com.google.android.material.card.MaterialCardView>
+        android:layout_width="84dp"
+        android:layout_height="84dp"
+        android:background="@drawable/bg_halo_beacon">
+        <ImageView
+            android:layout_width="34dp" android:layout_height="34dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_shield_on"
+            android:importantForAccessibility="no"/>
     </FrameLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="App is Locked\nEnter PIN • পিন দিন"
+        android:layout_marginTop="26dp"
+        android:text="@string/pin_verify_title"
         android:textColor="@color/on_surface"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:lineSpacingMultiplier="0.9"
-        android:gravity="center"
-        android:layout_marginTop="20dp"/>
+        android:textSize="21sp" android:textStyle="bold" android:letterSpacing="-0.015"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Enter 4–6 digit PIN to continue\nসুরক্ষিত সেটিংস অ্যাক্সেস করুন"
+        android:layout_marginTop="6dp"
+        android:text="@string/pin_lock_sub"
         android:textColor="@color/on_surface_variant"
-        android:textSize="12sp"
-        android:gravity="center"
-        android:lineSpacingMultiplier="1.2"
-        android:layout_marginTop="8dp"/>
+        android:textSize="13sp"/>
 
+    <!-- PIN dots -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="28dp">
-
-        <View android:id="@+id/dot1" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot2" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot3" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot4" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot5" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot6" android:layout_width="14dp" android:layout_height="14dp"
-            android:layout_margin="7dp" android:background="@drawable/dot_empty"/>
+        android:layout_marginTop="34dp"
+        android:layout_marginBottom="40dp">
+        <View android:id="@+id/dot1" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot2" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot3" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot4" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot5" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot6" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
     </LinearLayout>
 
+    <!-- Keypad -->
     <GridLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:columnCount="3"
-        android:rowCount="4"
-        android:layout_marginTop="24dp">
-
+        android:columnCount="3">
         <Button android:id="@+id/btn1" style="@style/PinDigit" android:text="1"/>
         <Button android:id="@+id/btn2" style="@style/PinDigit" android:text="2"/>
         <Button android:id="@+id/btn3" style="@style/PinDigit" android:text="3"/>
@@ -95,61 +70,25 @@
         <Button android:id="@+id/btn7" style="@style/PinDigit" android:text="7"/>
         <Button android:id="@+id/btn8" style="@style/PinDigit" android:text="8"/>
         <Button android:id="@+id/btn9" style="@style/PinDigit" android:text="9"/>
-        <Button android:id="@+id/btnDel" style="@style/PinDigit" android:text="⌫"/>
+        <View android:layout_width="84dp" android:layout_height="70dp" android:layout_margin="8dp"/>
         <Button android:id="@+id/btn0" style="@style/PinDigit" android:text="0"/>
-        <Button android:id="@+id/btnOk" style="@style/PinDigit.PremiumPrimary" android:text="✓"/>
+        <Button android:id="@+id/btnDel" style="@style/PinDigit.Ghost" android:text="⌫"/>
     </GridLayout>
 
-    <!-- Biometric + Forgot PIN — reference Lock screen -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="20dp">
+    <Button
+        android:id="@+id/btnOk"
+        style="@style/PinDigit.PremiumPrimary.Wide"
+        android:layout_width="match_parent"
+        android:layout_marginTop="22dp"
+        android:text="@string/pin_unlock"/>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="999dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface_variant"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🖐"
-                    android:textSize="14sp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Biometric • বায়োমেট্রিক"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="12sp"
-                    android:layout_marginStart="8dp"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-    </LinearLayout>
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Forgot PIN? • পিন ভুলে গেছেন?"
-        android:textColor="@color/on_surface_variant"
-        android:textSize="12sp"
-        android:layout_marginTop="16dp"
-        android:padding="8dp"/>
+        android:layout_marginBottom="24dp"
+        android:text="@string/pin_forgot_note"
+        android:textColor="@color/on_surface_dim"
+        android:textSize="12sp"/>
 </LinearLayout>

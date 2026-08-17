@@ -109,6 +109,7 @@ class DashboardFragment : Fragment() {
                 binding.btnToggle.text = getString(R.string.btn_enable)
                 binding.txtProtectionBadge.text = "○ ${getString(R.string.status_off_title)}"
                 binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.error))
+                applyHeroState(HeroState.OFF)
                 stopShieldPulse()
             }
             !state.protectionEnabled -> {
@@ -118,6 +119,7 @@ class DashboardFragment : Fragment() {
                 binding.btnToggle.text = getString(R.string.btn_resume)
                 binding.txtProtectionBadge.text = "○ ${getString(R.string.status_paused_title)}"
                 binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.warning_amber))
+                applyHeroState(HeroState.PAUSED)
                 stopShieldPulse()
             }
             else -> {
@@ -128,6 +130,7 @@ class DashboardFragment : Fragment() {
                 binding.btnToggle.text = getString(R.string.btn_pause)
                 binding.txtProtectionBadge.text = "● Protection Active • সক্রিয় • All Systems Active"
                 binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.success))
+                applyHeroState(HeroState.ON)
                 startShieldPulse()
             }
         }
@@ -175,6 +178,34 @@ class DashboardFragment : Fragment() {
         binding.imgShield.scaleY = 1f
         binding.shieldGlow.alpha = 0.2f
     }
+
+    // ---- WATCHTOWER V3 visual-only hero state theming (mocks/v3/home.html).
+    //      Colors the hero card + CTA per protection state; no behavior change. ----
+    private enum class HeroState { ON, PAUSED, OFF }
+
+    private fun applyHeroState(state: HeroState) {
+        val ctx = requireContext()
+        val (bg, stroke, textOn, btnBg, btnText) = when (state) {
+            HeroState.ON ->
+                Quint(ctx.getColor(R.color.primary_container), ctx.getColor(R.color.primary),
+                    R.color.on_primary_container, R.color.on_primary_container, R.color.primary_container_end)
+            HeroState.PAUSED ->
+                Quint(ctx.getColor(R.color.amber_hero_start), ctx.getColor(R.color.warning_amber),
+                    R.color.on_warning_container, R.color.warning_amber, R.color.black)
+            HeroState.OFF ->
+                Quint(ctx.getColor(R.color.red_hero_start), ctx.getColor(R.color.error),
+                    R.color.on_error_container, R.color.error, R.color.on_error)
+        }
+        binding.statusCard.setCardBackgroundColor(bg)
+        binding.statusCard.strokeColor = stroke
+        binding.txtStatusTitle.setTextColor(ctx.getColor(textOn))
+        binding.txtStatusSubtitle.setTextColor(ctx.getColor(textOn))
+        binding.txtStatusSubtitle.alpha = 0.78f
+        binding.btnToggle.backgroundTintList = ColorStateList.valueOf(ctx.getColor(btnBg))
+        binding.btnToggle.setTextColor(ctx.getColor(btnText))
+    }
+
+    private data class Quint(val bg: Int, val stroke: Int, val textOn: Int, val btnBg: Int, val btnText: Int)
 
     override fun onDestroyView() {
         super.onDestroyView()

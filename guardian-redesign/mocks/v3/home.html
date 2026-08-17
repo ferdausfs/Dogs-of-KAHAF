@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — Home / Dashboard</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<script>/* shared icons */</script>
+<style>
+.qa{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qa .card{padding:14px 12px;text-align:left}
+.qa .qi{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--s3)}
+.qa .qi svg{width:18px;height:18px}
+.qa .t{font-size:12.5px;font-weight:700;margin-top:10px}
+.qa .s{font-size:10.5px;color:var(--t2);margin-top:3px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-shieldchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></symbol>
+<symbol id="i-shieldoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m9 12h6M9.4 9.2 12 6.6l2.6 2.6M9.4 14.8 12 17.4l2.6-2.6"/></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></symbol>
+<symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></symbol>
+<symbol id="i-access" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 6.8v5m-5.5 8.4 1.8-3.4h7.4l1.8 3.4M6.5 9.2 4 10.8m13.5-1.6 2.5 1.6"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 7 6.5-7 6.5"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screen 01 · Home / Dashboard</div>
+  <h1>Home — the Watchtower</h1>
+  <p>The hero becomes a <b>beacon</b>: concentric rings breathe while protection is ON, state-colored when not (amber = paused, red = service off). All existing bindings preserved — <span class="pkg">statusCard · imgShield · txtStatusTitle · txtStatusSubtitle · btnToggle · txtProtectionBadge · txtStatTotal/Ai/Time · cardAppBlocking/Keywords/Whitelist · txtSeeAll · recyclerRecent</span>. Tap targets unchanged (hero card → toggle flow with TimeLock + accessibility check intact).</p>
+</div>
+
+<div class="board">
+<div class="row-label"><h2>State — Protection ON (default)</h2><span class="hint">সুরক্ষা সক্রিয় · beacon pulse 2.4s</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · ON — loaded</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span><div class="icons"><svg viewBox="0 0 24 24"><path d="M2 20V9l5 3.4V9l5 3.4V9l5 3.4V9l5 3.4v7.4z" opacity=".9"/></svg><svg viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="9" rx="2.4"/><rect x="2" y="10.5" width="2.6" height="4.5" rx="1"/><path d="M20.6 12.4v2.2" stroke="#ECF1ED" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div><div class="actions"><div class="icon-btn"><svg><use href="#i-hist"/></svg></div></div></div>
+
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">আজ ১২টি ইভেন্ট মনিটর করা হচ্ছে</div>
+      <div class="btn" style="background:var(--on-bc);color:var(--bc);margin-top:20px;height:46px">বিরতি · Pause</div>
+      <div style="margin-top:16px"><span class="badge ok"><span class="dot pulse"></span>Protection Active · সক্রিয়</span></div>
+    </div>
+
+    <div class="section">
+      <div class="stats">
+        <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div><div class="d tnum">+12</div></div>
+        <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div><div class="d tnum">+8</div></div>
+        <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-h"><div class="kicker onBeacon">Quick actions · দ্রুত পদক্ষেপ</div></div>
+      <div class="qa">
+        <div class="card"><div class="qi"><svg style="color:#7FE7C4"><use href="#i-apps"/></svg></div><div class="t">App Blocking</div><div class="s">১২টি ব্লক</div></div>
+        <div class="card"><div class="qi"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="t">Keywords</div><div class="s">৮টি কিওয়ার্ড</div></div>
+        <div class="card"><div class="qi"><svg style="color:#B8A1FF"><use href="#i-shieldchk"/></svg></div><div class="t">Whitelist</div><div class="s">৩টি অ্যাপ</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-h"><div class="kicker onBeacon">Today’s activity · সাম্প্রতিক ব্লক</div><a class="kicker lnk">See all</a></div>
+      <div class="rows">
+        <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rt">AI Detection</div><div class="rs pkg">com.instagram.android</div></div><div class="rend tnum">2m</div></div>
+        <div class="row"><div class="spine red"></div><div class="ricon"><svg style="color:#FF7A76"><use href="#i-lock"/></svg></div><div class="rmain"><div class="rt">App Blocked</div><div class="rs pkg">com.android.chrome</div></div><div class="rend tnum">14m</div></div>
+        <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">Keyword</div><div class="rs pkg">com.zhiliaoapp.musically</div></div><div class="rend tnum">1h</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Paused (amber beacon)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span><div class="icons"><svg viewBox="0 0 24 24"><path d="M2 20V9l5 3.4V9l5 3.4V9l5 3.4V9l5 3.4v7.4z" opacity=".9"/></svg></div></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card raised" style="padding:30px 24px;text-align:center;background:linear-gradient(168deg,#2A2414,#1E1A0E);border:1px solid rgba(255,194,75,.25)">
+      <div class="beacon-art warn"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldoff"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:#FFDB8F">বিরাম</div>
+      <div style="font-size:13.5px;color:#FFDB8F;opacity:.75;margin-top:6px">সুরক্ষা বর্তমানে বন্ধ · Protection is paused</div>
+      <div class="btn" style="background:var(--amber);color:#2B1E02;margin-top:20px;height:46px">চালু করুন · Resume</div>
+      <div style="margin-top:16px"><span class="badge warn"><span class="dot"></span>Protection paused · বিরতি</span></div>
+    </div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+    <div class="section"><div class="statebox" style="padding:34px 24px"><div class="art"><svg style="color:#76827B"><use href="#i-hist"/></svg></div><h3>আজ আর কোনো ইভেন্ট নেই</h3><p>Protection resumes when you do.</p></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Service OFF (red beacon)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div>
+  <div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card raised" style="padding:30px 24px;text-align:center;background:linear-gradient(168deg,#311B1A,#20110F);border:1px solid rgba(255,122,118,.28)">
+      <div class="beacon-art err"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldoff"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;letter-spacing:-.015em;margin-top:18px;color:#FFD3D0">সার্ভিস বন্ধ</div>
+      <div style="font-size:13.5px;color:#FFD3D0;opacity:.78;margin-top:6px">Accessibility service is not running</div>
+      <div class="btn danger" style="margin-top:20px;height:46px">Enable protection</div>
+      <div style="margin-top:16px"><span class="badge err"><span class="dot"></span>Service off · বন্ধ</span></div>
+    </div>
+    <div class="section"><div class="banner"><svg><use href="#i-shieldoff"/></svg><div class="btxt">Accessibility Service বন্ধ — Settings → Accessibility → Guardian Shield</div></div></div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">42</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">18</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">6h 12m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div>
+  </div></div></div>
+</div>
+
+<div class="row-label"><h2>States — loading · empty · error</h2><span class="hint">skeletons, never spinners</span></div>
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Loading</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0"><div class="sk line" style="width:170px;height:18px"></div></div>
+    <div class="sk" style="height:300px;border-radius:24px"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px">
+      <div class="sk" style="height:120px"></div><div class="sk" style="height:120px"></div><div class="sk" style="height:120px"></div>
+    </div>
+    <div class="sk line" style="width:120px;height:11px;margin:26px 0 12px"></div>
+    <div class="sk" style="height:72px"></div><div class="sk" style="height:72px;margin-top:10px"></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>E</b> · Empty day</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div><div class="sub">ON-DEVICE · PRIVATE</div></div></div>
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">আজ ০টি ইভেন্ট মনিটর করা হচ্ছে</div>
+      <div class="btn" style="background:var(--on-bc);color:var(--bc);margin-top:20px;height:46px">বিরতি · Pause</div>
+      <div style="margin-top:16px"><span class="badge ok"><span class="dot pulse"></span>Protection Active · সক্রিয়</span></div>
+    </div>
+    <div class="section"><div class="stats">
+      <div class="stat"><div class="ic"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="v tnum">0</div><div class="l">Blocked today<br>মোট ব্লক</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="v tnum">0</div><div class="l">AI detections<br>AI বিশ্লেষণ</div></div>
+      <div class="stat"><div class="ic" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="v tnum" style="font-size:21px;padding-top:3px">0m</div><div class="l">Time protected<br>সময় সুরক্ষিত</div></div>
+    </div></div>
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Today’s activity</div></div>
+    <div class="card"><div class="statebox"><div class="art"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><h3>No blocks yet</h3><p>এখনো কোনো ব্লক নেই — নিরাপদ থাকুন!</p></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>F</b> · Stats DB error</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll">
+    <div class="appbar" style="padding-left:0;padding-right:0"><div><div class="title">Guardian Shield</div></div></div>
+    <div class="card beacon" style="padding:30px 24px;text-align:center">
+      <div class="beacon-art"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"><svg><use href="#i-shieldb"/></svg></div></div>
+      <div style="font-size:27px;font-weight:700;margin-top:18px;color:var(--on-bc)">সুরক্ষা সক্রিয়</div>
+      <div style="font-size:13.5px;color:var(--on-bc);opacity:.78;margin-top:6px">Protection is ON — stats unavailable</div>
+    </div>
+    <div class="section"><div class="card"><div class="statebox" style="padding:32px 24px"><div class="art" style="background:var(--red-c);border-color:rgba(255,122,118,.3)"><svg style="color:#FF7A76" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 7.4v6M12 16.6v.2"/><circle cx="12" cy="12" r="8.6"/></svg></div><h3>Couldn’t load stats</h3><p>ব্লক ইভেন্ট ডেটাবেজ পড়া যায়নি</p><button class="btn tonal sm"><svg><use href="#i-refresh"/></svg>Try again</button></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab on"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+
+<p class="note"><span class="tag">Wiring kept</span>btnToggle → same TimeLock/accessibility gate flow · cardAppBlocking → AppListActivity · cardKeywords → KeywordActivity · cardWhitelist → AppList whitelist filter · txtSeeAll → ActivityLogActivity · recyclerRecent → same BlockEventAdapter data. New visuals only: beacon hero replaces glow-blob shield, stat tiles gain category-tinted icon wells + tabular numerals, quick actions keep 3-card grid with real counts. Bottom nav: 4 tabs preserved, active = Beacon pill + tinted icon; toolbar gains the Activity shortcut icon (existing menu destination).</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — Keywords · Schedule · Commitment Lock</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s3);border-radius:24px 24px 0 0;padding:10px 20px 26px;box-shadow:var(--e3);border-top:1px solid var(--seam)}
+.sheet .grab{width:36px;height:4px;border-radius:99px;background:var(--outline);margin:0 auto 16px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:8px}
+.field input,.field .fakeinput{width:100%;height:50px;background:var(--s1);border:1px solid var(--outline);border-radius:12px;padding:0 14px;color:var(--t1);font:400 14px var(--font);outline:none}
+.field input:focus{border-color:var(--beacon);box-shadow:0 0 0 3px rgba(127,231,196,.15)}
+.checkrow{display:flex;align-items:center;gap:12px;margin-top:14px}
+.cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--outline);display:flex;align-items:center;justify-content:center}
+.cb.on{background:var(--beacon);border-color:var(--beacon)}
+.cb.on svg{width:13px;height:13px;color:var(--on-beacon)}
+.daychip{width:38px;height:38px;border-radius:50%;border:1px solid var(--hairline);background:var(--s1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t2)}
+.daychip.on{background:var(--beacon-dim);border-color:rgba(127,231,196,.4);color:var(--beacon)}
+.timefield{flex:1;text-align:center;font-size:15px;font-weight:600}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 7.5 12l7 6.5"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></symbol>
+<symbol id="i-del" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 7.2h14.4M9.2 7.2V5.4c0-.8.6-1.4 1.4-1.4h2.8c.8 0 1.4.6 1.4 1.4v1.8M6.6 7.2l.8 11.4c.1.8.7 1.4 1.5 1.4h6.2c.8 0 1.4-.6 1.5-1.4l.8-11.4"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5H5.8c-.7 0-1.3.6-1.3 1.3v12.4c0 .7.6 1.3 1.3 1.3h12.4c.7 0 1.3-.6 1.3-1.3V13"/><path d="m17.7 3.9 2.4 2.4L12 14.4l-3.2.8.8-3.2 8.1-8.1z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.6L19 7.5"/></symbol>
+<symbol id="i-timelock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v4.8l3 1.8"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screens 06–07 · Keywords · Schedule · Commitment Lock</div>
+  <h1>Rules screens — one list language, three lists</h1>
+  <p>Bindings preserved — Keywords: <span class="pkg">txtEmpty · recycler · fabAdd</span>, row <span class="pkg">txtKeyword · badge · btnDelete</span>, dialog <span class="pkg">editKeyword · checkRegex</span> · Schedule: <span class="pkg">txtEmpty · recycler · fabAdd</span>, row <span class="pkg">txtPackage · txtSchedule · btnEdit</span>, editor <span class="pkg">editPackage · txtStart · txtEnd · chipSun–Sat</span> · Commitment Lock: <span class="pkg">groupLocked (txtLockStatus · txtLockLabel · txtRemaining · txtLockEnd · txtCooldownNote · btnRequestUnlock) / groupUnlocked (chip 1–30day)</span>. Dialogs restyle as bottom sheets (same fields, same save flow).</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Keywords · loaded</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Keywords</div><div class="sub">কিওয়ার্ড · ৮টি</div></div></div>
+    <div class="rows" style="margin-top:6px">
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">adult</div><div class="rs">matches text content</div></div><div class="rend"><span class="badge neutral">PLAIN</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt" style="font-family:var(--mono);font-size:13px">nsfw|porn|xxx</div><div class="rs">pattern match</div></div><div class="rend"><span class="badge ai">REGEX</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+      <div class="row"><div class="spine sky"></div><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div class="rmain"><div class="rt">xxx</div><div class="rs">matches text content</div></div><div class="rend"><span class="badge neutral">PLAIN</span><div class="icon-btn" style="width:38px;height:38px"><svg style="width:18px;height:18px;color:var(--red)"><use href="#i-del"/></svg></div></div></div>
+    </div>
+    <div class="fab"><svg><use href="#i-plus"/></svg>Add Keyword</div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Keywords · empty + add sheet</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px;position:relative">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Keywords</div><div class="sub">কিওয়ার্ড</div></div></div>
+    <div class="card"><div class="statebox"><div class="art"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><h3>No keywords yet</h3><p>কোনো কিওয়ার্ড নেই। + ট্যাপ করে যোগ করুন।</p><button class="btn filled sm"><svg><use href="#i-plus"/></svg>Add Keyword</button></div></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div style="font-size:18px;font-weight:700;letter-spacing:-.01em">Add Keyword <span style="font-size:12px;color:var(--t3);font-weight:600">কিওয়ার্ড যোগ করুন</span></div>
+      <div class="field" style="margin-top:18px"><label>Keyword · কিওয়ার্ড</label><input placeholder="Enter keyword"></div>
+      <div class="checkrow"><div class="cb"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><span style="font-size:13.5px;font-weight:600">Regex</span><span style="font-size:11px;color:var(--t3)">treat as pattern</span></div>
+      <div style="display:flex;gap:10px;margin-top:22px"><button class="btn tonal" style="flex:1">Cancel</button><button class="btn filled" style="flex:1">Save</button></div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Schedule · loaded + editor</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Schedule Rules</div><div class="sub">সময়সূচী রুলস · ১টি</div></div></div>
+    <div class="rows" style="margin-top:6px">
+      <div class="row"><div class="spine amber"></div><div class="ricon"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div class="rmain"><div class="rt pkg" style="font-size:12.5px">com.instagram.android</div><div class="rs tnum">22:00 – 06:00 · প্রতিদিন</div></div><div class="rend"><div class="icon-btn" style="width:38px;height:38px"><svg style="width:17px;height:17px;color:var(--t2)"><use href="#i-edit"/></svg></div></div></div>
+    </div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div style="font-size:18px;font-weight:700">Add Schedule <span style="font-size:12px;color:var(--t3);font-weight:600">সময়সূচী যোগ করুন</span></div>
+      <div class="field" style="margin-top:16px"><label>Package</label><input placeholder="com.instagram.android" style="font-family:var(--mono);font-size:13px"></div>
+      <div style="display:flex;gap:12px;margin-top:14px">
+        <div class="field" style="flex:1"><label>Start · শুরু</label><div class="fakeinput timefield tnum" style="display:flex;align-items:center;justify-content:center">22:00</div></div>
+        <div class="field" style="flex:1"><label>End · শেষ</label><div class="fakeinput timefield tnum" style="display:flex;align-items:center;justify-content:center">06:00</div></div>
+      </div>
+      <div style="margin-top:16px"><label style="display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Days · দিন</label>
+        <div style="display:flex;gap:8px;justify-content:space-between">
+          <div class="daychip on">S</div><div class="daychip on">M</div><div class="daychip on">T</div><div class="daychip on">W</div><div class="daychip on">T</div><div class="daychip on">F</div><div class="daychip on">S</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:22px"><button class="btn tonal" style="flex:1">Cancel</button><button class="btn filled" style="flex:1">Save</button></div>
+    </div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Commitment Lock · both groups</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Commitment Lock</div><div class="sub">কমিটেড লক</div></div></div>
+    <div class="card raised" style="margin-top:6px;padding:28px 22px;text-align:center;background:linear-gradient(168deg,#2A2414,#1E1A0E);border:1px solid rgba(255,194,75,.25)">
+      <div class="halo" style="color:var(--amber);margin:0 auto;background:var(--amber-c)"><svg><use href="#i-timelock"/></svg></div>
+      <div style="font-size:20px;font-weight:700;margin-top:16px;color:#FFDB8F">Commitment Lock active</div>
+      <div style="font-size:12.5px;color:#FFDB8F;opacity:.75;margin-top:5px">সেটিংস পরিবর্তন বন্ধ — লক শেষ হবে</div>
+      <div class="tnum" style="font-size:44px;font-weight:700;letter-spacing:-.025em;margin-top:14px;color:#FFDB8F">2d 14:05</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">ends Fri, Aug 21 · 09:41</div>
+    </div>
+    <div class="section"><div class="card" style="padding:16px"><div style="font-size:12.5px;color:var(--t2);line-height:1.5">Unlock requests are limited — after a request there is a cooldown before the next one.</div><button class="btn tonal btn-block" style="margin-top:14px">Request Unlock · আনলক রিকোয়েস্ট</button></div></div>
+    <div class="divider"></div>
+    <div class="kicker" style="margin-bottom:12px">Not locked — choose a duration · লক করুন</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">1 day</span><span class="chip on">3 days</span><span class="chip">7 days</span><span class="chip">15 days</span><span class="chip">30 days</span></div>
+    <button class="btn danger btn-block" style="margin-top:16px"><svg><use href="#i-lock"/></svg>Lock for 3 days — ফেরানো যাবে না</button>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>Empty states use the app’s real copy (“কোনো কিওয়ার্ড নেই। + ট্যাপ করে যোগ করুন।”). Add-keyword / schedule-editor become M3 bottom sheets with identical fields &amp; save handlers (dialog semantics unchanged — only presentation). Commitment Lock shows the real two states (groupLocked / groupUnlocked); the cooldown note + Request Unlock button keep their logic. Deleting a keyword keeps the delete-confirm behavior; destructive icon gets a red tint affordance.</p>
+</div>
+</body>
+</html>

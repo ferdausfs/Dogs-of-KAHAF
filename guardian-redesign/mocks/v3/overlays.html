@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — Overlays (Strike card · Block · Detail · Delay · Reel)</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.info-row{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px}
+.info-row .ii{width:34px;height:34px;border-radius:10px;background:var(--s3);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.info-row .ii svg{width:17px;height:17px}
+.info-row .il{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.info-row .iv{font-size:13px;font-weight:700;margin-top:2px}
+.ghostapp{position:absolute;inset:0;background:linear-gradient(160deg,#151A22 0%,#0C0F14 60%);overflow:hidden}
+.ghostapp .gbar{height:52px;background:#10151C;display:flex;align-items:center;gap:10px;padding:0 18px}
+.ghostapp .gavatar{width:30px;height:30px;border-radius:50%;background:#232C38}
+.ghostapp .gline{height:8px;border-radius:99px;background:#1B222C}
+.strikecard{position:absolute;left:16px;right:16px;top:14%;background:var(--s3);border:1.5px solid var(--amber);border-radius:20px;box-shadow:var(--e4);padding:16px;display:flex;gap:14px;z-index:4}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-shieldalert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-shieldchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.6 4.9 8.6 4.3 4.5 4.3v13.4c4.1 0 6.1.6 7.5 1.9 1.4-1.3 3.4-1.9 7.5-1.9V4.3c-4.1 0-6.1.6-7.5 1.9z"/><path d="M12 6.2v13.4"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.2 10.4 4c.9-.7 2.3-.7 3.2 0l6.9 5.2v9.3c0 1.2-1 2.2-2.2 2.2H5.7c-1.2 0-2.2-1-2.2-2.2V9.2z"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 7.5 12l7 6.5"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 7 6.5-7 6.5"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screens 13–17 · Strike warning · Strike-3 block · Blocked detail · Delay unlock · Reel reminder</div>
+  <h1>Overlays — the moments of truth</h1>
+  <p>Re-skin only. Behavior identical: strike card keeps <b>3.5s auto-dismiss</b>, tap-to-dismiss, and the audit-only <b>“Not sensitive / সংবেদনশীল নয়”</b> button (never fires on strike 3). Block overlay keeps <span class="pkg">btnHome → goHome</span>, <span class="pkg">btnUnlock → DelayUnlockActivity</span>, <span class="pkg">btnMarkFalse → FalsePositiveMemory</span> (AI blocks only), temp-block banner, and reason strings. Delay unlock keeps countdown + cancel. Reel reminder keeps হাদীস copy + open-Quran + continue.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Strike 1/2 warning card (3.5s)</div>
+  <div class="phone overlay-phone" style="background:#07090A"><div class="statusbar" style="color:#ECF1ED"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="ghostapp"><div class="gbar"><div class="gavatar"></div><div style="flex:1"><div class="gline" style="width:60%"></div><div class="gline" style="width:35%;margin-top:6px"></div></div></div><div style="padding:14px"><div class="gline" style="width:100%;height:200px;border-radius:14px"></div></div></div>
+    <div class="strikecard">
+      <div class="timerring" style="--p:64%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 7.6v4.6"/><circle cx="12" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg></div>
+      <div style="flex:1">
+        <div class="kicker" style="color:var(--amber)">Strike warning</div>
+        <div style="font-size:17px;font-weight:700;letter-spacing:-.01em;margin-top:4px">সতর্কতা ২/৩</div>
+        <div style="font-size:12.5px;color:var(--t2);line-height:1.5;margin-top:5px">পরের বার শনাক্ত হলে অ্যাপটি সাময়িকভাবে ব্লক হবে</div>
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-top:12px;padding:4px 0;align-self:flex-start">Not sensitive · সংবেদনশীল নয়</div>
+      </div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Strike-3 full block overlay</div>
+  <div class="phone overlay-phone" style="background:#060807"><div class="statusbar" style="color:#ECF1ED"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="padding:12px 20px 0">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center">
+        <div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 22px"><svg><use href="#i-shieldalert"/></svg></div>
+        <div style="font-size:24px;font-weight:700;letter-spacing:-.015em">Sensitive Content Blocked</div>
+        <div style="font-size:13.5px;color:var(--t2);margin-top:8px">সংবেদনশীল কন্টেন্ট ব্লক করা হয়েছে — this content has been blocked to protect you</div>
+        <div class="pkg" style="display:inline-block;margin:16px auto 0;background:rgba(255,255,255,.06);border:1px solid var(--hairline);border-radius:99px;padding:6px 14px">com.instagram.android</div>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--amber-c);border:1px solid rgba(255,194,75,.3);border-radius:12px;padding:12px 14px;margin-top:20px;text-align:left">
+          <svg style="width:18px;height:18px;color:var(--amber);flex:0 0 auto"><use href="#i-clock"/></svg>
+          <div style="font-size:12.5px;font-weight:700;color:#FFDB8F">🚫 Blocked for 15 minutes · ১৫ মিনিট</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii" style="background:rgba(111,224,166,.13)"><svg style="color:#6FE0A6"><use href="#i-shieldchk"/></svg></div><div><div class="il">Protection</div><div class="iv" style="color:#6FE0A6">Active</div></div></div>
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii" style="background:rgba(184,161,255,.16)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div><div class="il">Category</div><div class="iv" style="color:#B8A1FF">AI 0.89</div></div></div>
+          <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px"><div class="ii"><svg style="color:#A9B5AD"><use href="#i-clock"/></svg></div><div><div class="il">Time</div><div class="iv tnum">9:41 PM</div></div></div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--hairline);border-radius:12px;padding:13px;margin-top:12px;font-size:13px;font-weight:600" >AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে</div>
+      </div>
+      <div style="padding:6px 0 30px">
+        <button class="btn danger btn-block"><svg><use href="#i-home"/></svg>Stay Protected · সুরক্ষিত থাকুন</button>
+        <button class="btn tonal btn-block" style="margin-top:10px"><svg><use href="#i-lock"/></svg>Request Unlock · আনলক রিকোয়েস্ট</button>
+        <div style="text-align:center;font-size:12.5px;font-weight:600;color:var(--t2);margin-top:14px">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:22px"><div style="flex:1;height:1px;background:var(--hairline)"></div><div style="font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--t3)">STAY STRONG 💪</div><div style="flex:1;height:1px;background:var(--hairline)"></div></div>
+      </div>
+    </div>
+  </div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>C</b> · Blocked Content Detail</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title" style="font-size:18px">Blocked Content</div><div class="sub">ব্লক করা কন্টেন্ট</div></div></div>
+    <div style="text-align:center;margin-top:8px"><div class="halo" style="color:var(--red);background:var(--red-c);margin:0 auto 16px;width:76px;height:76px"><svg style="width:32px;height:32px"><use href="#i-shieldalert"/></svg></div><div style="font-size:19px;font-weight:700">Content Blocked</div><div style="font-size:12.5px;color:var(--t2);margin-top:6px">আপনি নিরাপদ — Guardian Shield আপনাকে সুরক্ষিত রেখেছে</div></div>
+    <div class="section" style="margin-top:18px"><div class="rows">
+      <div class="row"><div class="ricon"><svg style="color:#A9B5AD"><use href="#i-home"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">App</div><div class="rt pkg" style="font-size:12.5px">com.instagram.android</div></div></div>
+      <div class="row"><div class="spine ai"></div><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Blocked Category</div><div class="rt" style="font-size:13.5px">AI Detection · 0.89</div></div></div>
+      <div class="row"><div class="ricon"><svg style="color:#76827B"><use href="#i-clock"/></svg></div><div class="rmain"><div class="rs" style="margin:0;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Time</div><div class="rt tnum" style="font-size:13.5px">Today · 9:41 PM</div></div></div>
+    </div></div>
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">What you can do</div></div>
+      <div class="rows">
+        <div class="row"><div class="ricon"><svg style="color:#7FE7C4"><use href="#i-shieldchk"/></svg></div><div class="rt" style="flex:1">Stay Focused · মনোযোগ ধরে রাখুন</div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ricon"><svg style="color:#7EC8F0"><use href="#i-clock"/></svg></div><div class="rt" style="flex:1">View Activity · অ্যাক্টিভিটি দেখুন</div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ricon"><svg style="color:#B8A1FF"><use href="#i-shieldchk"/></svg></div><div class="rt" style="flex:1">Add to Whitelist · হোয়াইটলিস্ট</div><svg class="chev"><use href="#i-chev"/></svg></div>
+      </div>
+    </div>
+    <button class="btn danger btn-block" style="margin-top:20px">Back to App</button>
+    <div style="text-align:center;font-size:12.5px;font-weight:600;color:var(--t2);margin-top:12px;padding-bottom:20px">Report This Content · রিপোর্ট ও বন্ধ করুন</div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>D</b> · Delay Unlock · <b>E</b> · Reel Reminder</div>
+  <div style="display:flex;gap:34px;flex-wrap:wrap">
+  <div class="phone" style="width:300px;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="justify-content:center;padding:0 26px;text-align:center">
+      <div class="halo" style="color:var(--amber);background:var(--amber-c);margin:0 auto 20px;width:76px;height:76px"><svg style="width:30px;height:30px"><use href="#i-clock"/></svg></div>
+      <div style="font-size:19px;font-weight:700">Unlock Pending · আনলক পেন্ডিং</div>
+      <div class="pkg" style="margin-top:10px">com.instagram.android</div>
+      <div style="font-size:12.5px;color:var(--t2);margin-top:14px">Access will be granted in · এক্সেস দেওয়া হবে</div>
+      <div class="tnum" style="font-size:56px;font-weight:700;letter-spacing:-.03em;margin-top:10px">00:29</div>
+      <div style="font-size:12px;color:var(--t3)">seconds · সেকেন্ড</div>
+      <button class="btn tonal btn-block" style="margin-top:28px">Cancel · বাতিল</button>
+    </div>
+  </div></div>
+  <div class="phone" style="width:300px;min-height:640px"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen">
+    <div class="scrim" style="background:linear-gradient(180deg,#0B100E,#0A0C0B);justify-content:center;padding:0 26px;text-align:center">
+      <div class="halo" style="color:var(--beacon);background:var(--bc);margin:0 auto 20px;width:76px;height:76px"><svg style="width:32px;height:32px"><use href="#i-book"/></svg></div>
+      <div style="font-size:21px;font-weight:700">একটু থামো, ভাই!</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-top:14px;font-style:italic">“তোমরা কুরআন পড়ো, কারণ কিয়ামতের দিন এটি তোমাদের জন্য সুপারিশকারী হবে।”<br><span style="font-style:normal;color:var(--t3);font-size:11.5px">— সহীহ মুসলিম</span></div>
+      <div style="font-size:12.5px;color:var(--t2);line-height:1.6;margin-top:16px">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</div>
+      <button class="btn filled btn-block" style="margin-top:26px">📖 কুরআন অ্যাপ খুলুন</button>
+      <button class="btn text btn-block" style="margin-top:8px">এখন নয়, ফিরে যাই</button>
+    </div>
+  </div></div>
+  </div></div>
+</div>
+<p class="note"><span class="tag">Non-negotiables kept</span>Strike card: <b>3,500 ms</b> auto-dismiss + tap-anywhere dismiss + separate “Not sensitive” target (audit-only DB row — never touches detection). The new amber timer ring is purely decorative (a LinearProgress around the icon) — timing logic untouched. Block overlay: same three actions with same destinations; false-positive action only on AI blocks. Delay unlock: same countdown/cancel. Reel reminder: same hadith + same two actions (open first available Quran app / continue).</p>
+</div>
+</body>
+</html>

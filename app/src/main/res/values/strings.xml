@@ -212,4 +212,103 @@
     <string name="action_fix">Fix</string>
     <string name="action_later">Later</string>
     <string name="action_enable">Enable</string>
+<!-- WATCHTOWER V3 dashboard copy -->
+    <string name="stat_tile_total">Blocked today\nমোট ব্লক</string>
+    <string name="stat_tile_ai">AI detections\nAI বিশ্লেষণ</string>
+    <string name="stat_tile_time">Time protected\nসময় সুরক্ষিত</string>
+    <string name="quick_actions">Quick actions · দ্রুত পদক্ষেপ</string>
+    <string name="todays_activity">Today’s activity · সাম্প্রতিক ব্লক</string>
+    <string name="see_all">See all</string>
+    <string name="quick_apps_title">App Blocking</string>
+    <string name="quick_apps_sub">১২টি ব্লক করা</string>
+    <string name="quick_keywords_title">Keywords</string>
+    <string name="quick_keywords_sub">৮টি কিওয়ার্ড</string>
+    <string name="quick_whitelist_sub">৩টি অ্যাপ</string>
+    <!-- WATCHTOWER V3 activity log copy -->
+    <string name="period_day">Day</string>
+    <string name="period_week">Week</string>
+    <string name="period_month">Month</string>
+    <string name="blocked_attempts">Blocked attempts · ব্লক</string>
+    <string name="attempts_vs_yesterday">↗ +24% vs yesterday</string>
+    <string name="legend_all">All blocks</string>
+    <string name="legend_ai">AI detections</string>
+    <!-- WATCHTOWER V3 protection hub copy -->
+    <string name="all_shields_active">All shields active</string>
+    <string name="protection_hub_sub">on-device · ফোন ছাড়া কিছু যায় না
+৫টি মডিউল সক্রিয়</string>
+    <string name="protection_modules">Modules · মডিউল</string>
+    <string name="module_ai_sub">NSFW detection · 3-strike system</string>
+    <string name="module_app_blocking">App Blocking</string>
+    <string name="module_apps_sub">অ্যাপ ব্লকিং · whitelist</string>
+    <string name="module_keywords_sub">কিওয়ার্ড ফিল্টার · regex</string>
+    <string name="module_schedule">Schedule Rules</string>
+    <string name="module_schedule_sub">সময়সূচী রুলস · প্রতিদিন</string>
+    <string name="module_accessibility_sub">Content monitoring engine</string>
+    <!-- WATCHTOWER V3 app blocking copy -->
+    <string name="app_blocking_title">App Blocking</string>
+    <string name="app_blocking_sub">Block inappropriate apps · অনুপযুক্ত অ্যাপ ব্লক</string>
+    <string name="status_on_bn">সক্রিয়</string>
+    <!-- WATCHTOWER V3 settings copy -->
+    <string name="section_blocking_v3">Blocking · ব্লকিং</string>
+    <string name="section_ai_v3">AI · AI মডেল</string>
+    <string name="keyword_filter_sub">কিওয়ার্ড ফিল্টার</string>
+    <string name="ai_detection_sub">AI কন্টেন্ট ডিটেকশন</string>
+    <string name="unlock_delay_sub">আনলক বিলম্ব</string>
+    <string name="duration_15">15 min</string>
+    <string name="duration_30">30 min</string>
+    <string name="duration_60">1 ঘণ্টা</string>
+    <string name="btn_commitment_lock">Commitment Lock · কমিটেড লক</string>
+    <string name="ai_sensitivity_sub">AI সংবেদনশীলতা (Ultimate)</string>
+    <string name="ai_sensitivity_note">Lower = fewer false positives · Higher = stricter blocking</string>
+    <string name="vote_1">1 · Sensitive</string>
+    <string name="vote_2">2 · Balanced</string>
+    <string name="vote_3">3 · Strict</string>
+    <string name="vote_4">4 · Very strict</string>
+    <string name="settings_footer">GUARDIAN SHIELD · ON-DEVICE · PRIVATE</string>
+    <!-- WATCHTOWER V3 rules + commitment lock copy -->
+    <string name="no_keywords_heading">No keywords yet</string>
+    <string name="no_schedules_heading">No schedules yet</string>
+    <string name="day_sun">Sun</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="lock_choose_duration">Choose a duration · সময় নির্বাচন</string>
+    <string name="lock_choose_sub">একবার লক করলে লক শেষ না হওয়া পর্যন্ত খোলা যাবে না</string>
+    <string name="lock_1day">1 day</string>
+    <string name="lock_3day">3 days</string>
+    <string name="lock_7day">7 days</string>
+    <string name="lock_15day">15 days</string>
+    <string name="lock_30day">30 days</string>
+    <string name="lock_tap_hint">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
+    <!-- WATCHTOWER V3 PIN copy -->
+    <string name="pin_unlock">Unlock · আনলক</string>
+    <string name="pin_lock_sub">পিন দিন · Guardian Shield is locked</string>
+    <string name="pin_forgot_note">Forgot PIN? Reinstall is required to reset</string>
+    <!-- WATCHTOWER V3 permissions + onboarding copy -->
+    <string name="perm_accessibility_sub">core engine · এক্সেসিবিলিটি সার্ভিস</string>
+    <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>
+    <string name="perm_overlay_sub">block overlays need this · ব্লক ওভারলে</string>
+    <string name="perm_notification_sub">নোটিফিকেশন পারমিশন</string>
+    <string name="perm_battery_sub">keep service alive · সার্ভিস চালু রাখে</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <!-- WATCHTOWER V3 overlays + blocked detail copy -->
+    <string name="overlay_time_now">Now</string>
+    <string name="detail_app">App</string>
+    <string name="detail_source">Content source</string>
+    <string name="detail_what_you_can_do">What you can do</string>
+    <string name="detail_stay_focused">Stay Focused · মনোযোগ ধরে রাখুন</string>
+    <string name="detail_view_activity">View Activity · অ্যাক্টিভিটি দেখুন</string>
+    <string name="detail_whitelist">Add to Whitelist · হোয়াইটলিস্ট</string>
+    <string name="detail_back_to_app">Back to App</string>
+    <string name="reel_title">একটু থামো, ভাই!</string>
+    <string name="reel_hadith">“তোমরা কুরআন পড়ো, কারণ কিয়ামতের দিন এটি তোমাদের জন্য সুপারিশকারী হবে।”
+
+— সহীহ মুসলিম</string>
+    <string name="reel_subtitle">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</string>
+    <string name="reel_open_quran">📖 কুরআন অ্যাপ খুলুন</string>
+    <string name="reel_continue">এখন নয়, ফিরে যাই</string>
 </resources>
