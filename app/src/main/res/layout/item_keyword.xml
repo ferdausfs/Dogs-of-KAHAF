@@ -23,15 +23,16 @@
             android:layout_height="36dp"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface_variant"
+            app:cardBackgroundColor="@color/badge_info_bg"
             app:strokeWidth="0dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:layout_gravity="center"
-                android:text="🔤"
-                android:textSize="16sp"/>
+                android:src="@drawable/ic_key"
+                android:importantForAccessibility="no"
+                app:tint="@color/info"/>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
