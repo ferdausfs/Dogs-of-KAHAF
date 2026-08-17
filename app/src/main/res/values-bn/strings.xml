@@ -230,4 +230,16 @@
     <string name="attempts_vs_yesterday">↗ গতকালের চেয়ে +২৪%</string>
     <string name="legend_all">সব ব্লক</string>
     <string name="legend_ai">AI ডিটেকশন</string>
+    <!-- WATCHTOWER V3 protection hub copy -->
+    <string name="all_shields_active">সব শিল্ড সক্রিয়</string>
+    <string name="protection_hub_sub">on-device · ফোন ছাড়া কিছু যায় না
+৫টি মডিউল সক্রিয়</string>
+    <string name="protection_modules">মডিউল · Modules</string>
+    <string name="module_ai_sub">NSFW ডিটেকশন · ৩-স্ট্রাইক সিস্টেম</string>
+    <string name="module_app_blocking">অ্যাপ ব্লকিং</string>
+    <string name="module_apps_sub">অ্যাপ ব্লকিং · whitelist</string>
+    <string name="module_keywords_sub">কিওয়ার্ড ফিল্টার · regex</string>
+    <string name="module_schedule">সময়সূচী রুলস</string>
+    <string name="module_schedule_sub">সময়সূচী · প্রতিদিন</string>
+    <string name="module_accessibility_sub">কন্টেন্ট মনিটরিং ইঞ্জিন</string>
 </resources>
