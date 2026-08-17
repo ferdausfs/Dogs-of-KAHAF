@@ -879,3 +879,87 @@ The sandbox cannot reach the Actions log CDN (results-receiver.actions.githubuse
 
 _(Pending Bug 1 green verification per task sequence — mockup first, then approval gate, then implementation.)_
 
+
+---
+
+# Session 2026-08-17 — "Not sensitive" report action on the strike-1/2 warning card (arena/01a00f3e-dogs-of-kahaf)
+
+**Base:** `main` @ `35e4f10` ("feat: strike 1/2 warning overlay card … bump v2.5.3/17") — `versionName 2.5.3 / versionCode 17`
+**Date:** 2026-08-17
+**Deliverable:** add a lightweight "Not sensitive" (সংবেদনশীল নয়) report action to the existing
+strike-1/2 warning card (`view_strike_warning.xml` + `GuardianAccessibilityService.showStrikeWarningOverlay`),
+audit-only — the user explicitly requested the OPPOSITE of the false-positive whitelist for this button.
+
+## 1) STEP 1 — which block-event logging table was reused (and why)
+
+**Found and REUSED:** the existing `block_events` table — `BlockEventEntity`
+(`id, packageName, reason, matchedTerm, timestamp`) + `BlockEventDao`, created by `BlockingEngine.logEvent()`
+and surfaced by the Dashboard "Recent Blocks" list and `ActivityLogActivity`. This is the canonical
+evidence-trail table the parent reviews; it is a perfect fit and required **no new table**.
+
+**How the report is encoded (no schema change):**
+- New `BlockReason.NOT_SENSITIVE` enum value → stored in the existing TEXT `reason` column as `"NOT_SENSITIVE"`.
+- Strike count (1 or 2) → stored in the existing nullable `matchedTerm` column as `"strike=N"` (the same
+  column `BlockingEngine` already uses for its block `detail` string).
+- `packageName` + `timestamp` → existing columns.
+
+Because the enum is persisted as TEXT and `matchedTerm` already exists, **no Room schema version bump and no
+migration** were needed — the shipped `app/schemas/.../2.json` is untouched. `Mappers.kt`
+(`BlockReason.valueOf(reason).getOrDefault(MANUAL)`) already round-trips the new value with zero edits.
+
+**Deliberately NOT reused:** `FalsePositiveMemory` (the strike-3 auto-whitelist / learning memory). This
+button must not call `addSignature()` or `isKnown()` — it only logs, and must never change what `AiDetector`
+blocks in the future. No code path in this change references `FalsePositiveMemory`.
+
+## 2) IMPLEMENTATION SUMMARY
+
+| File | Change |
+|------|--------|
+| `view_strike_warning.xml` | Added `btnNotSensitive` TextView below title/body — muted `@color/on_surface_variant`, 11sp, no background/border, own click target. |
+| `GuardianAccessibilityService.kt` | Threaded `pkg` through `showAiStrikeWarning`/`showStrikeWarningOverlay`; wired `btnNotSensitive.setOnClickListener { reportNotSensitive(pkg, strikeCount); dismissAiStrikeWarning() }`; added `reportNotSensitive()` — inserts the audit row on `ioScope` (Dispatchers.IO, never main thread), shows confirmation Toast (`ai_strike_report_confirmed`), and the caller dismisses the card. |
+| `domain/model/BlockEvent.kt` | Added `BlockReason.NOT_SENSITIVE`. |
+| `ui/dashboard/BlockEventAdapter.kt` | Added the `NOT_SENSITIVE` branches (exhaustive `when` forced this) — "📝 Not Sensitive" row with `R.color.success` accent and a "Reported" badge. |
+| `values/strings.xml` + `values-bn/strings.xml` | `ai_strike_warning_not_sensitive`, `ai_strike_report_confirmed`, `reason_not_sensitive` (EN + BN). |
+
+**Hard constraints verified:**
+- Card auto-dismiss stays **`STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L` (3.5 s)** — unchanged.
+- The button's own click listener consumes the tap, so the card's `setOnClickListener { dismiss }` is NOT fired
+  by the button (and even if it were, the log write happens first in `reportNotSensitive`).
+- `evaluateAiStrike`, `TempBlockManager`, `BlockingEngine`, `AiDetector`, `FalsePositiveMemory`, and the
+  strike-3 `BlockOverlayActivity` path are all untouched.
+
+## 3) DETECTION LOGIC UNTOUCHED — PROOF (the key constraint)
+
+```
+$ git diff 35e4f10..HEAD -- app/src/main/java/com/guardian/shield/service/detection/
+(empty — 0 lines changed)
+```
+
+Full change set vs base is exactly 7 files (none under `service/detection/`):
+
+```
+2  2  app/build.gradle.kts
+6  1  app/src/main/java/com/guardian/shield/domain/model/BlockEvent.kt
+49 4  app/src/main/java/com/guardian/shield/service/accessibility/GuardianAccessibilityService.kt
+2  0  app/src/main/java/com/guardian/shield/ui/dashboard/BlockEventAdapter.kt
+23 0  app/src/main/res/layout/view_strike_warning.xml
+4  0  app/src/main/res/values-bn/strings.xml
+4  0  app/src/main/res/values/strings.xml
+```
+
+## 4) VERSION BUMP + RELEASE (green, verified via CI)
+
+- `app/build.gradle.kts`: `versionCode 17 → 18`, `versionName "2.5.3" → "2.5.4"` (fresh tag `v2.5.4`; the
+  fail-fast release-tag guard confirmed the tag was free, so no "RELEASE TAG COLLISION" fired).
+- Local `./gradlew assembleRelease` is impossible in this sandbox (no JDK/Android SDK; `dl.google.com` /
+  Maven Central / `plugins.gradle.org` all unreachable — same as prior sessions), so CI is the build.
+
+**GREEN build (real CI, not a trace):** push-to-main workflow `Build Release APK` after merging PR #38.
+
+- Actions run: **32020470533** — `conclusion: success` ✅
+  https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32020470533
+- Release: **Guardian Shield v2.5.4** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v2.5.4
+- APK download: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.5.4/app-release.apk
+  (asset `app-release.apk`, 52,650,506 bytes, state `uploaded`)
+- PR: #38 (merged 2026-08-17T10:30:18Z, merge commit `57a71eb`)
+
