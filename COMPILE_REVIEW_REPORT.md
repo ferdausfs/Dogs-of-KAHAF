@@ -879,3 +879,111 @@ The sandbox cannot reach the Actions log CDN (results-receiver.actions.githubuse
 
 _(Pending Bug 1 green verification per task sequence — mockup first, then approval gate, then implementation.)_
 
+
+---
+
+# Session 2026-08-17 — "Sentinel" Complete Visual Design-Language Overhaul (arena/01a00f6c-dogs-of-kahaf)
+
+**Base:** `main` @ `57a71eb` (Merge PR #38) — `versionName 2.5.4 / versionCode 18`
+**Date:** 2026-08-17
+**Agent:** arena/01a00f6c-dogs-of-kahaf
+**Task:** Full design-language overhaul (not a color-swap). Mockup-approval gate **held** — every screen
+was built as static HTML/CSS first (`guardian-redesign/mocks/`) and approved before any Kotlin/XML.
+
+## 1) DESIGN RATIONALE — "Sentinel"
+
+Previous design language ("Premium Dark", v2.5.0) was a blue-on-navy Material palette with
+**emoji-as-icon** usage (🔤 📱 ⏰ 🔐 🔧 🚫 ⚠️ ✅ 🖐 💪) and a **teal `#00E5CC` launcher** that clashed
+with everything else. The new system ("Sentinel") replaces it wholesale:
+
+- **Light-on-dark, green-graphite obsidian** canvas (`#0B0F0D`) — an always-watching security product
+  reads as vigilant in dark; lower OLED drain; continuity with the dark-only codebase.
+- **One phosphor-emerald signal color** (`#3BE39A`) where **green = "protected / all-clear"** — the
+  product's single semantic truth. Amber = warning, red = blocked/error, violet = AI, blue = info.
+- **One stroke icon family** (24dp grid, 1.8 stroke, rounded caps) replacing every emoji-as-icon.
+  Shield mark **refined** (outline + check), not replaced.
+- Elevation expressed as **1px inner top highlight + soft shadow + 1px border**; hero/overlay get a
+  radial emerald glow. Radii 10/14/20/28 + pill. 4pt spacing scale.
+
+## 2) CONTRAST / ACCESSIBILITY (WCAG 2.1, computed)
+
+All pairs meet AA (≥ 4.5:1); primary text pairs exceed 10:1:
+
+| Pair | Ratio | Grade |
+|---|---|---|
+| on_surface `#E9F1EC` on bg `#0B0F0D` | 16.78 : 1 | AAA |
+| on_surface on surface2 `#161F1A` | 14.66 : 1 | AAA |
+| on_variant `#A7B9AE` on bg | 9.37 : 1 | AAA |
+| on_dim `#80918A` on surface2 | 4.75 : 1 | AA |
+| on_dim on surface3 `#1C2721` | 4.65 : 1 | AA |
+| primary `#3BE39A` on bg | 11.61 : 1 | AAA |
+| on_primary `#04231A` on primary | 10.03 : 1 | AAA |
+| on_primary_container `#B9F7DA` on container `#123B2C` | 10.30 : 1 | AAA |
+| error `#FF8F86` on bg | 8.75 : 1 | AAA |
+
+(Full table in `guardian-redesign/mocks/design-tokens.html`, generated with real luminance math.)
+
+## 3) SCREEN-BY-SCREEN BEFORE/AFTER
+
+| Screen | Before | After (Sentinel) | Bindings preserved |
+|---|---|---|---|
+| Design tokens | blue-on-navy, emoji icons, teal launcher | emerald-on-graphite, stroke icon set, refined adaptive icon + monochrome | n/a (colors/themes/styles/drawables/launcher) |
+| Home / Dashboard | blue hero `#1A344F`, emoji-free but flat | emerald gradient hero + radial glow, icon-chip stat tiles, delta pills, quick actions | statusCard/shieldGlow/imgShield/txtStatusTitle/txtStatusSubtitle/btnToggle/txtProtectionBadge/txtStatTotal/txtStatAi/txtStatTime/txtStatKeyword/txtSeeAll/cardAppBlocking/cardKeywords/cardWhitelist/recyclerRecent + pulse animators |
+| Activity log | hardcoded bar hexes | token-tinted 7-bar chart, segmented control, filter chips | toolbar/recyclerEvents/chipAll/Ai/Keyword/App/Schedule/txtCount/txtEmpty/btnDay/Week/Month/txtBlockedAttempts |
+| Protection hub | 2-col blue cards | emerald hero + 4 real module cards + strict-mode card | imgShield/txtProtectionTitle/Subtitle/txtBadgeActive/cardAppBlocking/cardKeyword/cardSchedule/cardAi/cardAccessibility |
+| App blocking | flat hero + tabs | hero toggle card, elevated search, icon-chip rows | toolbar/lockBanner/txtLockRemaining/switchHero/filterGroup/chipAll/Blocked/Whitelisted/editSearch/recycler + row ids (viewLeftIndicator/imgIcon/txtAppName/txtStatusBadge/txtPackage/txtCategory/switchBlock/imgLockIcon/switchWhitelist) |
+| Keywords | emoji 🔤 row | key icon row, pill FAB | toolbar/lockBanner/txtLockRemaining/txtEmpty/recycler/fabAdd + txtKeyword/badge/btnDelete |
+| Schedule | emoji ⏰ row | timer icon row, pill FAB | toolbar/lockBanner/txtLockRemaining/txtEmpty/recycler/fabAdd + txtPackage/txtSchedule/btnEdit |
+| Settings | emoji tonal buttons | stroke-icon tonal rows, consistent chip groups, token pills | switchKeyword/switchAi/sliderDelay/txtDelayValue/chip15-60/btnApps/Keywords/Schedule/Permissions/CommitmentLock/sliderGuardianThreshold/txtGuardianThresholdValue/chipVote1-4/btnImportLegacy/btnRemoveLegacy/txtLegacyStatus/btnChangePin |
+| Permission health | default icons | stroke icons (accessibility/layers/usage/bell/battery) | row*/icon*/btn* + btnFixAll |
+| PIN lock | 🖐 emoji biometric | fingerprint icon, emerald mark | dot1-6/btn0-9/Del/Ok/txtPrompt |
+| Block overlay (strike 3) | blue/red, 🚫 | error_container mark, token temp banner, error CTA | txtPackage/txtReason/txtCategory/cardTempBlock/txtTempBanner/btnHome/btnUnlock/btnMarkFalse — goHome/DelayUnlock/false-positive flows untouched |
+| Strike 1/2 warning card | (v2.5.2 card) | re-skin (warning card + "Not sensitive") | **3.5s auto-dismiss, 18%-height position, audit-only report preserved** — timing/position live in GuardianAccessibilityService.kt, unchanged |
+| Blocked detail | emoji ☰ 🔗 🕐 📊 | stroke icons, token tints | toolbar/txtApp/txtCategory/txtSource/txtTime/btnBackToApp/rowStayFocused/rowViewActivity/rowWhitelist/btnReport |
+| Accessibility prompt | red CTA | error_container mark + error CTA | btnEnable |
+| Delay unlock | flat | warning_container mark, primary countdown | txtPackage/txtCountdown/btnCancel |
+| Commitment lock | emoji 🔒/🛡️ | stroke lock mark, token cards | chip1day-30day/btnRequestUnlock/groupUnlocked/groupLocked/txtLockStatus/txtLockLabel/txtLockEnd/txtCooldownNote/txtRemaining |
+| Onboarding (4 pages) | black-text CTA | emerald CTA, refined type | btnSkip/viewPager/indicatorContainer/btnBack/btnNext + iconFrame/txtIcon/txtHighlight/txtTitle/txtBody |
+| Reel reminder | black-text CTA | primary CTA retint | imgIslamic/txtTitle/txtHadith/txtSubtitle/btnOpenQuran/btnContinue |
+| App icon / splash | teal `#00E5CC` shield | emerald-on-charcoal adaptive icon + monochrome + gradient bg | launcher XML |
+
+## 4) HARD-CONSTRAINT COMPLIANCE
+
+- **App name kept `Guardian Shield`** — no rebrand/mascot (strings.xml untouched).
+- **No detection/blocking logic touched.** `git log --stat` over the branch shows **zero `.kt`
+  changes** — only `res/` (colors/themes/styles/drawables/menu/layouts/mipmap) and `build.gradle.kts`
+  (version) plus the `guardian-redesign/` docs/mocks. `TempBlockManager`, `BlockingEngine`,
+  `AiDetector`, `FalsePositiveMemory`, `ReelScrollDetector`, strike thresholds in
+  `GuardianAccessibilityService`, and Room DAO/entity queries are byte-for-byte unchanged.
+- **Mockup gate honored** — full HTML set approved before any Kotlin/XML.
+
+## 5) FEATURE-GAP CALL-OUTS (not silently skipped, not invented)
+
+- **Loading skeletons:** mocked for every screen; in production only `AppListState.loading` exists as a
+  flag (and is never set true — Room reads are near-instant). No skeleton was wired into code that
+  lacks a real loading signal; flagged rather than faked.
+- **Pull-to-refresh:** not implemented anywhere in the app — left out (do not invent).
+- **Bottom sheets:** the app uses `AlertDialog` only — no bottom-sheet component exists to reskin.
+- **Side drawer / DNS / VPN / browser modules / standalone whitelist screen:** none exist in the
+  codebase; intentionally not added (consistent with prior sessions).
+- **Splash:** no dedicated splash activity exists; the OS auto-splash now derives from the new icon +
+  `bg_main` window background. A custom `SplashScreen` API screen is optional asset work — flagged.
+
+## 6) VERIFICATION + GREEN BUILD
+
+Local `./gradlew assembleRelease` is impossible in this sandbox (no JDK/Android SDK, no egress to
+Google/Maven). Static verification performed and **all clean**:
+
+- 112 resource XML files parse (well-formed).
+- Every `@color/`, `@drawable/`, `@style/` reference resolves (0 missing).
+- Every `binding.<id>` (camelCase) and `R.id.<id>` referenced in Kotlin resolves to an `@+id` in a
+  layout/menu (0 missing) — i.e. no ViewBinding regressions.
+- Release-tag guard: `v2.5.4` exists (immutable) → bumped to **`versionName 2.5.5 / versionCode 19`**
+  (verified `v2.5.5` is free via `gh release list` / `git ls-remote --tags`).
+
+CI (`Build Release APK`, `.github/workflows/build.yml`) runs on push to `main`; it is the source of
+truth for the green build. Expected after merge: tag **`v2.5.5`**, release "Guardian Shield v2.5.5",
+direct APK `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.5.5/app-release.apk`.
+
+- Green Actions run: _(to be confirmed after merge to main)_
+- Release link: _(to be confirmed after merge to main)_
