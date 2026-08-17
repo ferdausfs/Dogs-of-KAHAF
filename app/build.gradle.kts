@@ -5,6 +5,13 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// NOTE: `java.net.X` must NOT be used package-qualified in this script — the
+// `java` extension (JavaPluginExtension, exposed by the Android plugin) shadows
+// the `java` package, causing "Unresolved reference: net" (see
+// COMPILE_REVIEW_REPORT.md 2026-08-17 session). Import instead.
+import java.net.HttpURLConnection
+import java.net.URI
+
 android {
     namespace = "com.guardian.shield"
     compileSdk = 35
@@ -132,7 +139,7 @@ dependencies {
 //     ./gradlew assembleRelease -PskipReleaseTagCheck
 // ---------------------------------------------------------------------------
 logger.lifecycle(
-    "::notice::GuardianShield build.gradle.kts evaluated - gradle=${gradle.gradleVersion}, " +
+    "::warning file=release-tag-guard,line=1::GuardianShield build.gradle.kts evaluated - gradle=${gradle.gradleVersion}, " +
         "requestedTasks=${gradle.startParameter.taskNames}"
 )
 
@@ -143,13 +150,13 @@ val isReleaseAssemble = gradle.startParameter.taskNames.any {
 
 if (isReleaseAssemble) {
     if (project.hasProperty("skipReleaseTagCheck")) {
-        logger.warn("::warning::checkReleaseTagAvailable SKIPPED via -PskipReleaseTagCheck")
+        logger.warn("::warning file=release-tag-guard,line=1::checkReleaseTagAvailable SKIPPED via -PskipReleaseTagCheck")
     } else {
         val tag = "v${android.defaultConfig.versionName}"
         val repo = System.getenv("GITHUB_REPOSITORY") ?: "ferdausfs/Dogs-of-KAHAF"
-        logger.lifecycle("::notice::release-tag guard: checking availability of $tag on $repo")
+        logger.lifecycle("::warning file=release-tag-guard,line=1::release-tag guard: checking availability of $tag on $repo")
         fun httpGet(url: String): Int = try {
-            val conn = java.net.URI(url).toURL().openConnection() as java.net.HttpURLConnection
+            val conn = URI(url).toURL().openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.setRequestProperty("User-Agent", "GuardianShieldReleaseTagGuard")
             conn.instanceFollowRedirects = true
@@ -157,18 +164,18 @@ if (isReleaseAssemble) {
             conn.readTimeout = 10_000
             conn.responseCode
         } catch (e: Exception) {
-            logger.error("::error::checkReleaseTagAvailable: HTTP failure for $url: ${e.message}")
+            logger.error("::error file=release-tag-guard,line=1::checkReleaseTagAvailable: HTTP failure for $url: ${e.message}")
             -1
         }
         val relCode = httpGet("https://github.com/$repo/releases/tag/$tag")
         val refCode = httpGet("https://github.com/$repo/tree/$tag")
         logger.lifecycle(
-            "::notice::release-tag guard result: $tag release-page=$relCode tree-page=$refCode"
+            "::warning file=release-tag-guard,line=1::release-tag guard result: $tag release-page=$relCode tree-page=$refCode"
         )
         when {
             relCode == 200 || refCode == 200 -> {
                 logger.error(
-                    "::error::RELEASE TAG COLLISION: $tag already exists on GitHub " +
+                    "::error file=release-tag-guard,line=1::RELEASE TAG COLLISION: $tag already exists on GitHub " +
                         "(release page HTTP $relCode, tree page HTTP $refCode). Published GitHub " +
                         "releases are immutable; the Create GitHub Release step would fail with " +
                         "HTTP 422 'tag_name was used by an immutable release'. " +
@@ -182,10 +189,13 @@ if (isReleaseAssemble) {
                 )
             }
             relCode == 404 && refCode == 404 ->
-                logger.lifecycle("::notice::Release tag $tag is free (release page 404, tree page 404) - proceeding.")
+                logger.lifecycle(
+                    "::warning file=release-tag-guard,line=1::Release tag $tag is free " +
+                        "(release page 404, tree page 404) - proceeding."
+                )
             else -> {
                 logger.error(
-                    "::error::Could not verify release tag availability for $tag " +
+                    "::error file=release-tag-guard,line=1::Could not verify release tag availability for $tag " +
                         "(release page HTTP $relCode, tree page HTTP $refCode). Aborting the " +
                         "release build rather than risk publishing over an existing immutable " +
                         "release. Re-run, or bypass local builds with -PskipReleaseTagCheck."
