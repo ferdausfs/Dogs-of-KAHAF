@@ -116,54 +116,72 @@ dependencies {
 //
 // This task runs as a dependency of `preReleaseBuild`, i.e. before any Kotlin
 // compilation starts, and fails loudly with a fix instruction when the target
-// tag is already taken. It is the earliest fail-fast point reachable from this
-// file (workflow-file edits are blocked for bot tokens by GitHub policy).
+// tag is already taken. It checks the same URLs a human would:
+//   - https://github.com/<repo>/releases/tag/v<version>  (200 = release exists)
+//   - https://github.com/<repo>/tree/v<version>          (200 = tag exists)
+// The github.com web endpoints are NOT subject to the 60 req/hour/IP rate limit
+// of the unauthenticated REST API, so CI runs cannot be flaked by rate limits.
+// Results are also emitted as GitHub Actions workflow commands (::error::/
+// ::warning::) so they surface as check-run annotations.
 //
 // Escape hatch for local/offline release builds:
 //     ./gradlew assembleRelease -PskipReleaseTagCheck
 // ---------------------------------------------------------------------------
 val checkReleaseTagAvailable by tasks.registering {
     group = "verification"
-    description = "Fails the release build if the GitHub tag v<versionName> already exists"
+    description = "Fails the release build if the GitHub tag/release v<versionName> already exists"
     doFirst {
         if (project.hasProperty("skipReleaseTagCheck")) {
-            logger.warn("checkReleaseTagAvailable SKIPPED via -PskipReleaseTagCheck")
+            logger.warn("::warning::checkReleaseTagAvailable SKIPPED via -PskipReleaseTagCheck")
             return@doFirst
         }
         val versionName = android.defaultConfig.versionName
         val tag = "v$versionName"
         val repo = System.getenv("GITHUB_REPOSITORY") ?: "ferdausfs/Dogs-of-KAHAF"
-        fun httpGet(path: String): Int = try {
-            val conn = java.net.URI("https://api.github.com/repos/$repo/$path")
-                .toURL().openConnection() as java.net.HttpURLConnection
+        fun httpGet(url: String): Int = try {
+            val conn = java.net.URI(url).toURL().openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "GET"
-            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.setRequestProperty("User-Agent", "GuardianShieldReleaseTagGuard")
+            conn.instanceFollowRedirects = true
             conn.connectTimeout = 10_000
             conn.readTimeout = 10_000
             conn.responseCode
         } catch (e: Exception) {
-            logger.error("checkReleaseTagAvailable: could not reach GitHub API (${e.message})")
+            logger.error("checkReleaseTagAvailable: HTTP failure for $url: ${e.message}")
             -1
         }
-        val refCode = httpGet("git/refs/tags/$tag")
-        val relCode = httpGet("releases/tags/$tag")
+        val relCode = httpGet("https://github.com/$repo/releases/tag/$tag")
+        val refCode = httpGet("https://github.com/$repo/tree/$tag")
         when {
-            refCode == 200 || relCode == 200 -> throw GradleException(
-                "RELEASE TAG COLLISION: $tag already exists on GitHub " +
-                    "(git ref HTTP $refCode, release HTTP $relCode). Published GitHub " +
-                    "releases are immutable; the Create GitHub Release step would fail " +
-                    "with HTTP 422 'tag_name was used by an immutable release'. " +
-                    "Bump versionName in app/build.gradle.kts, commit, and push again. " +
-                    "(Local-only builds may bypass with -PskipReleaseTagCheck.)"
+            relCode == 200 || refCode == 200 -> {
+                logger.error(
+                    "::error::RELEASE TAG COLLISION: $tag already exists on GitHub " +
+                        "(release page HTTP $relCode, tree page HTTP $refCode). Published GitHub " +
+                        "releases are immutable; the Create GitHub Release step would fail with " +
+                        "HTTP 422. Bump versionName in app/build.gradle.kts, commit, and push again. " +
+                        "(Local-only builds may bypass with -PskipReleaseTagCheck.)"
+                )
+                throw GradleException(
+                    "RELEASE TAG COLLISION: $tag already exists on GitHub " +
+                        "(release page HTTP $relCode, tree page HTTP $refCode). " +
+                        "Bump versionName in app/build.gradle.kts and push again."
+                )
+            }
+            relCode == 404 && refCode == 404 -> logger.lifecycle(
+                "::warning::Release tag check: $tag is free (release page 404, tree page 404) - proceeding."
             )
-            refCode == 404 && relCode == 404 ->
-                logger.lifecycle("Release tag $tag is free (git ref 404, release 404) - proceeding.")
-            else -> throw GradleException(
-                "Could not verify release tag availability for $tag " +
-                    "(git ref HTTP $refCode, release HTTP $relCode). Aborting the release " +
-                    "build rather than risk publishing over an existing immutable release. " +
-                    "Re-run, or bypass local builds with -PskipReleaseTagCheck."
-            )
+            else -> {
+                logger.error(
+                    "::error::Could not verify release tag availability for $tag " +
+                        "(release page HTTP $relCode, tree page HTTP $refCode). Aborting the " +
+                        "release build rather than risk publishing over an existing immutable " +
+                        "release. Re-run, or bypass local builds with -PskipReleaseTagCheck."
+                )
+                throw GradleException(
+                    "Could not verify release tag availability for $tag " +
+                        "(release page HTTP $relCode, tree page HTTP $refCode)."
+                )
+            }
         }
     }
 }
