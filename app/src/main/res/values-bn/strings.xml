@@ -246,4 +246,21 @@
     <string name="app_blocking_title">অ্যাপ ব্লকিং</string>
     <string name="app_blocking_sub">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</string>
     <string name="status_on_bn">সক্রিয়</string>
+    <!-- WATCHTOWER V3 settings copy -->
+    <string name="section_blocking_v3">ব্লকিং · Blocking</string>
+    <string name="section_ai_v3">AI মডেল · AI</string>
+    <string name="keyword_filter_sub">Keyword filter</string>
+    <string name="ai_detection_sub">AI content detection</string>
+    <string name="unlock_delay_sub">Unlock delay</string>
+    <string name="duration_15">১৫ মিনিট</string>
+    <string name="duration_30">৩০ মিনিট</string>
+    <string name="duration_60">১ ঘণ্টা</string>
+    <string name="btn_commitment_lock">কমিটেড লক · Commitment Lock</string>
+    <string name="ai_sensitivity_sub">AI সংবেদনশীলতা (Ultimate)</string>
+    <string name="ai_sensitivity_note">কম = কম ভুল ব্লক · বেশি = কঠোর ব্লকিং</string>
+    <string name="vote_1">১ · সংবেদনশীল</string>
+    <string name="vote_2">২ · ব্যালান্সড</string>
+    <string name="vote_3">৩ · স্ট্রিক্ট</string>
+    <string name="vote_4">৪ · খুব স্ট্রিক্ট</string>
+    <string name="settings_footer">গার্ডিয়ান শিল্ড · অন-ডিভাইস · প্রাইভেট</string>
 </resources>

@@ -248,4 +248,21 @@
     <string name="app_blocking_title">App Blocking</string>
     <string name="app_blocking_sub">Block inappropriate apps · অনুপযুক্ত অ্যাপ ব্লক</string>
     <string name="status_on_bn">সক্রিয়</string>
+    <!-- WATCHTOWER V3 settings copy -->
+    <string name="section_blocking_v3">Blocking · ব্লকিং</string>
+    <string name="section_ai_v3">AI · AI মডেল</string>
+    <string name="keyword_filter_sub">কিওয়ার্ড ফিল্টার</string>
+    <string name="ai_detection_sub">AI কন্টেন্ট ডিটেকশন</string>
+    <string name="unlock_delay_sub">আনলক বিলম্ব</string>
+    <string name="duration_15">15 min</string>
+    <string name="duration_30">30 min</string>
+    <string name="duration_60">1 ঘণ্টা</string>
+    <string name="btn_commitment_lock">Commitment Lock · কমিটেড লক</string>
+    <string name="ai_sensitivity_sub">AI সংবেদনশীলতা (Ultimate)</string>
+    <string name="ai_sensitivity_note">Lower = fewer false positives · Higher = stricter blocking</string>
+    <string name="vote_1">1 · Sensitive</string>
+    <string name="vote_2">2 · Balanced</string>
+    <string name="vote_3">3 · Strict</string>
+    <string name="vote_4">4 · Very strict</string>
+    <string name="settings_footer">GUARDIAN SHIELD · ON-DEVICE · PRIVATE</string>
 </resources>
