@@ -14,12 +14,16 @@
 
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/error</item>
 
         <item name="android:colorBackground">@color/bg_main</item>
-        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurface">@color/surface_high</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorSurfaceVariant">@color/surface_variant</item>
         <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/border_subtle</item>
+        <item name="colorOutlineVariant">@color/border_strong</item>
 
         <item name="android:statusBarColor">@color/bg_main</item>
         <item name="android:navigationBarColor">@color/bg_main</item>
@@ -28,14 +32,14 @@
         <item name="android:windowActivityTransitions">true</item>
         <item name="colorControlHighlight">@color/ripple_primary</item>
 
-        <!-- Material You Large Corners — premium 12/20/28 -->
+        <!-- Shape: 10 / 20 / 28 -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.GuardianShield.Small</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Medium</item>
         <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.GuardianShield.Large</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Small" parent="ShapeAppearance.Material3.SmallComponent">
-        <item name="cornerSize">12dp</item>
+        <item name="cornerSize">10dp</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Medium" parent="ShapeAppearance.Material3.MediumComponent">
@@ -47,13 +51,14 @@
     </style>
 
     <style name="Theme.GuardianShield.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">@color/surface_high</item>
+        <item name="colorSurface">@color/surface_variant</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorSecondary">@color/secondary</item>
     </style>
 
-    <!-- Overlay theme for BlockOverlayActivity — premium dark scrim -->
+    <!-- Overlay theme — premium dark scrim -->
     <style name="Theme.GuardianShield.Overlay" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowBackground">@color/overlay_dim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -62,7 +67,7 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
-    <!-- Card styles — premium dark with subtle border -->
+    <!-- Cards: 0dp elevation + 1dp border + inner highlight -->
     <style name="Widget.GuardianShield.CardGlow" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/surface_high</item>
         <item name="cardCornerRadius">28dp</item>
@@ -83,20 +88,20 @@
         <item name="cardBackgroundColor">@color/primary_container</item>
         <item name="cardCornerRadius">28dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeColor">#24FFFFFF</item>
+        <item name="strokeColor">@color/border_strong</item>
         <item name="strokeWidth">1dp</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.Title" parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:textColor">@color/on_surface</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.01</item>
+        <item name="android:letterSpacing">-0.01</item>
     </style>
 
     <style name="TextAppearance.GuardianShield.SectionHeader" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textColor">@color/primary</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.08</item>
+        <item name="android:letterSpacing">0.13</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:textSize">11sp</item>
     </style>
@@ -119,7 +124,7 @@
     </style>
 
     <style name="Widget.GuardianShield.ButtonTonal" parent="Widget.Material3.Button.TonalButton">
-        <item name="cornerRadius">16dp</item>
+        <item name="cornerRadius">20dp</item>
         <item name="backgroundTint">@color/surface_variant</item>
         <item name="android:textColor">@color/on_surface</item>
     </style>

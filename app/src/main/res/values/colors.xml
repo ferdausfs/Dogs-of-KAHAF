@@ -1,65 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ===== Premium Dark — Guardian Shield Design System (2026-08-17) =====
-     Keep app name Guardian Shield, shield mark only.
-     Primary kept #D0E4FF (existing brand light blue — premium direction). -->
-    <color name="bg_main">#0E1116</color>
-    <color name="bg_elevated">#151A22</color>
-    <color name="surface">#161C26</color>
-    <color name="surface_variant">#242E3B</color>
-    <color name="surface_high">#1C232E</color>
-    <color name="surface_highest">#2A3647</color>
+    <!-- ================================================================
+         Guardian Shield — "Sentinel" Design Language (2026-08-17)
+         Light-on-dark. Green-graphite obsidian canvas + one phosphor-emerald
+         signal color (green = "protected / all-clear"). Amber = warning,
+         red = blocked/error, violet = AI, blue = info.
+         App name "Guardian Shield" kept. Shield mark refined, not replaced.
+         Full rationale + computed WCAG ratios: guardian-redesign/design-tokens.html
+         ================================================================ -->
 
-    <color name="primary">#D0E4FF</color>
-    <color name="on_primary">#003258</color>
-    <!-- Deeper container for hero / nav active pill — old #004A77 kept as fallback below -->
-    <color name="primary_container">#1A344F</color>
-    <color name="primary_container_start">#1E3A5F</color>
-    <color name="primary_container_end">#10233A</color>
-    <color name="on_primary_container">#D0E4FF</color>
-    <color name="primary_dim">#AAC7FF</color>
+    <!-- Canvas -->
+    <color name="bg_main">#0B0F0D</color>          <!-- window / scrim background -->
+    <color name="bg_elevated">#101612</color>      <!-- app bar / bottom nav -->
 
-    <color name="secondary">#B9C8DF</color>
-    <color name="on_secondary">#003258</color>
-    <color name="secondary_container">#1A344F</color>
-    <color name="on_secondary_container">#D1E4FF</color>
+    <!-- Surface layers (elevation steps) -->
+    <color name="surface">#121915</color>         <!-- s1 — tab wells, nested regions -->
+    <color name="surface_high">#161F1A</color>    <!-- s2 — standard cards -->
+    <color name="surface_variant">#1C2721</color> <!-- s3 — elevated cards / inputs / tonal -->
+    <color name="surface_highest">#232F29</color> <!-- s4 — hover / pressed / highest -->
 
-    <color name="error">#FFB4AB</color>
-    <color name="on_error">#690005</color>
-    <color name="error_container">#3A1A1A</color>
-    <color name="success">#6EE7B7</color>
-    <color name="success_container">#132A22</color>
-    <!-- Legacy success light kept for compat -->
-    <color name="success_legacy">#B0F2CC</color>
+    <!-- Text -->
+    <color name="on_surface">#E9F1EC</color>
+    <color name="on_surface_variant">#A7B9AE</color>
+    <color name="on_surface_dim">#80918A</color>
 
-    <color name="on_surface">#E2E6EB</color>
-    <color name="on_surface_variant">#A3ADBB</color>
-    <color name="on_surface_dim">#6B7585</color>
+    <!-- Brand accent -->
+    <color name="primary">#3BE39A</color>
+    <color name="on_primary">#04231A</color>
+    <color name="primary_container">#123B2C</color>
+    <color name="primary_container_start">#1B4A38</color> <!-- gradient light step -->
+    <color name="primary_container_end">#0E2A1F</color>   <!-- gradient end -->
+    <color name="on_primary_container">#B9F7DA</color>
+    <color name="primary_dim">#9BEEC6</color>            <!-- muted primary (pressed fills) -->
 
+    <color name="secondary">#A7B9AE</color>
+    <color name="on_secondary">#0E2A1F</color>
+    <color name="secondary_container">#161F1A</color>
+    <color name="on_secondary_container">#E9F1EC</color>
+
+    <!-- Semantic -->
+    <color name="error">#FF8F86</color>
+    <color name="on_error">#2B0B08</color>
+    <color name="error_container">#3A1E1C</color>
+
+    <color name="success">#5CF0AC</color>
+    <color name="success_legacy">#B9F7DA</color>
+    <color name="success_container">#0E2B1E</color>
+
+    <color name="info">#7CC4FF</color>
+    <color name="info_container">#12283A</color>
+
+    <color name="warning">#FFC94D</color>
+    <color name="warning_amber">#FFC94D</color>
+    <color name="warning_container">#2A2210</color>
+
+    <color name="ai_detection_color">#B79BFF</color>
+    <color name="ai_accent">#B79BFF</color>
+    <color name="purple">#B79BFF</color>
+
+    <!-- Neutrals -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="overlay_dim">#CC0B0E14</color>
-    <color name="overlay_dim_solid">#0C0F14</color>
-    <color name="ripple_primary">#20D1E4FF</color>
-    <color name="ripple_error">#20FF4444</color>
-    <color name="card_stroke">#14FFFFFF</color>
-    <color name="border_subtle">#14FFFFFF</color>
-    <color name="border_strong">#24FFFFFF</color>
+    <color name="overlay_dim">#E60B0F0D</color>       <!-- scrim over content -->
+    <color name="overlay_dim_solid">#0B0F0D</color>
+
+    <!-- Ripples / strokes -->
+    <color name="ripple_primary">#203BE39A</color>
+    <color name="ripple_error">#20FF8F86</color>
+    <color name="card_stroke">#12E9F1EC</color>       <!-- 7% light -->
+    <color name="border_subtle">#12E9F1EC</color>     <!-- 7% light -->
+    <color name="border_strong">#26E9F1EC</color>     <!-- 15% light -->
 
     <!-- Status indicators -->
-    <color name="block_indicator">#FF8A80</color>
-    <color name="allow_indicator">#6EE7B7</color>
-    <color name="surface_gradient_start">#0E1116</color>
-    <color name="surface_gradient_end">#1C232E</color>
-    <color name="ai_detection_color">#A78BFA</color>
-    <color name="ai_accent">#A78BFA</color>
-    <color name="warning_amber">#FBBF24</color>
-    <color name="warning">#FBBF24</color>
-    <color name="purple">#D0BCFF</color>
+    <color name="block_indicator">#FF8F86</color>
+    <color name="allow_indicator">#5CF0AC</color>
+    <color name="surface_gradient_start">#0B0F0D</color>
+    <color name="surface_gradient_end">#161F1A</color>
 
-    <!-- Badge backgrounds (12% alpha) -->
-    <color name="badge_success_bg">#1F6EE7B7</color>
-    <color name="badge_error_bg">#1FFF8A80</color>
-    <color name="badge_ai_bg">#24A78BFA</color>
+    <!-- Badge backgrounds (~12-14% alpha) -->
+    <color name="badge_success_bg">#1F5CF0AC</color>
+    <color name="badge_error_bg">#1FFF8F86</color>
+    <color name="badge_ai_bg">#24B79BFF</color>
+    <color name="badge_info_bg">#1F7CC4FF</color>
+    <color name="badge_warn_bg">#1FFFC94D</color>
+
+    <!-- Skeleton shimmer -->
+    <color name="skeleton_base">#1C2721</color>
+    <color name="skeleton_hi">#232F29</color>
 </resources>
