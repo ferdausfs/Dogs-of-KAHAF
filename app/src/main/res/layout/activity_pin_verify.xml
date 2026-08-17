@@ -8,7 +8,7 @@
     android:background="@color/bg_main"
     android:padding="24dp">
 
-    <!-- Shield / Lock hero with glow — reference Lock screen -->
+    <!-- Shield / Lock hero with glow -->
     <FrameLayout
         android:layout_width="88dp"
         android:layout_height="88dp"
@@ -34,6 +34,7 @@
                 android:layout_height="42dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_lock"
+                android:importantForAccessibility="no"
                 app:tint="@color/primary"/>
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
@@ -45,7 +46,8 @@
         android:textColor="@color/on_surface"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:lineSpacingMultiplier="0.9"
+        android:letterSpacing="-0.01"
+        android:lineSpacingMultiplier="1.05"
         android:gravity="center"
         android:layout_marginTop="20dp"/>
 
@@ -100,49 +102,43 @@
         <Button android:id="@+id/btnOk" style="@style/PinDigit.PremiumPrimary" android:text="✓"/>
     </GridLayout>
 
-    <!-- Biometric + Forgot PIN — reference Lock screen -->
-    <LinearLayout
+    <!-- Biometric pill -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        app:cardCornerRadius="999dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/surface_variant"
+        app:strokeColor="@color/border_subtle"
+        app:strokeWidth="1dp"
         android:layout_marginTop="20dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="999dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface_variant"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp">
 
-            <LinearLayout
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_fingerprint"
+                android:importantForAccessibility="no"
+                app:tint="@color/on_surface_variant"/>
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🖐"
-                    android:textSize="14sp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Biometric • বায়োমেট্রিক"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="12sp"
-                    android:layout_marginStart="8dp"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-    </LinearLayout>
+                android:text="Biometric • বায়োমেট্রিক"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:layout_width="wrap_content"
