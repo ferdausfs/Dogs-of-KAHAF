@@ -222,4 +222,12 @@
     <string name="quick_keywords_title">কিওয়ার্ড</string>
     <string name="quick_keywords_sub">৮টি কিওয়ার্ড</string>
     <string name="quick_whitelist_sub">৩টি অ্যাপ</string>
+    <!-- WATCHTOWER V3 activity log copy -->
+    <string name="period_day">দিন</string>
+    <string name="period_week">সপ্তাহ</string>
+    <string name="period_month">মাস</string>
+    <string name="blocked_attempts">ব্লক · Blocked attempts</string>
+    <string name="attempts_vs_yesterday">↗ গতকালের চেয়ে +২৪%</string>
+    <string name="legend_all">সব ব্লক</string>
+    <string name="legend_ai">AI ডিটেকশন</string>
 </resources>

@@ -224,4 +224,12 @@
     <string name="quick_keywords_title">Keywords</string>
     <string name="quick_keywords_sub">৮টি কিওয়ার্ড</string>
     <string name="quick_whitelist_sub">৩টি অ্যাপ</string>
+    <!-- WATCHTOWER V3 activity log copy -->
+    <string name="period_day">Day</string>
+    <string name="period_week">Week</string>
+    <string name="period_month">Month</string>
+    <string name="blocked_attempts">Blocked attempts · ব্লক</string>
+    <string name="attempts_vs_yesterday">↗ +24% vs yesterday</string>
+    <string name="legend_all">All blocks</string>
+    <string name="legend_ai">AI detections</string>
 </resources>
