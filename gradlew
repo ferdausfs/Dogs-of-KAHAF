@@ -247,37 +247,9 @@ eval "set -- $(
     )" '"$@"'
 
 # --- TEMPORARY CI DIAGNOSTIC (session 2026-08-17, arena/01a00eb8-dogs-of-kahaf) ---
-# Emits build diagnostics as workflow-command annotations WITH file parameters
-# (file/line params are what make commands surface in the check-runs
-# annotations API) and uploads an artifact copy. REMOVE AFTER DIAGNOSIS.
-echo "::error file=diag.txt,line=1::DIAG gradlew script entered. TOKEN=${ACTIONS_RUNTIME_TOKEN:+set} RUN_ID=${GITHUB_RUN_ID:-none} JAVACMD=$JAVACMD"
-
-diag_upload() {
-    DIAG_TOKEN="$ACTIONS_RUNTIME_TOKEN"
-    DIAG_RUN="$GITHUB_RUN_ID"
-    DIAG_NAME="$1"
-    DIAG_FILE="$2"
-    if [ -z "$DIAG_TOKEN" ] || [ -z "$DIAG_RUN" ]; then
-        echo "::error file=diag.txt,line=2::DIAG upload skipped - missing token/run env"
-        return 0
-    fi
-    DIAG_SIZE=$(wc -c < "$DIAG_FILE" | tr -d ' ')
-    DIAG_API="https://pipelines.actions.githubusercontent.com/_apis/pipelines/workflows/${DIAG_RUN}/artifacts?api-version=6.0-preview"
-    DIAG_RESP=$(curl -sS -X POST "$DIAG_API" -H "Authorization: Bearer $DIAG_TOKEN" -H "Content-Type: application/json" -d "{\"Type\":\"actions_storage\",\"Name\":\"${DIAG_NAME}\"}")
-    DIAG_FC=$(printf '%s' "$DIAG_RESP" | sed -n 's/.*"fileContainerResourceUrl":"\([^"]*\)".*//p')
-    if [ -z "$DIAG_FC" ]; then
-        echo "::error file=diag.txt,line=3::DIAG artifact create failed: ${DIAG_RESP}"
-        return 0
-    fi
-    curl -sS -X PUT "${DIAG_FC}?itemPath=diag.txt" -H "Content-Length: $DIAG_SIZE" --data-binary @"$DIAG_FILE" >/dev/null 2>&1
-    DIAG_PATCH=$(curl -sS -X PATCH "$DIAG_API" -H "Authorization: Bearer $DIAG_TOKEN" -H "Content-Type: application/json" -d "{\"Size\":${DIAG_SIZE},\"Name\":\"${DIAG_NAME}\"}")
-    if [ -n "$DIAG_PATCH" ]; then
-        echo "::error file=diag.txt,line=4::DIAG artifact finalize response: ${DIAG_PATCH}"
-    else
-        echo "::error file=diag.txt,line=5::DIAG artifact uploaded: ${DIAG_NAME}"
-    fi
-}
-
+# Captures GradleWrapperMain stdout/stderr and re-emits the tails as workflow
+# commands WITH file parameters so they surface in the check-runs annotations
+# API (bare commands do not annotate). REMOVE AFTER DIAGNOSIS.
 DIAG_TMP="${RUNNER_TEMP:-/tmp}"
 DIAG_OUT="$DIAG_TMP/gradlew-diag-out.txt"
 DIAG_ERR="$DIAG_TMP/gradlew-diag-err.txt"
@@ -285,23 +257,30 @@ DIAG_ERR="$DIAG_TMP/gradlew-diag-err.txt"
 "$JAVACMD" "$@" > "$DIAG_OUT" 2> "$DIAG_ERR"
 DIAG_RC=$?
 
-echo "::error file=diag.txt,line=6::DIAG GradleWrapperMain exited with rc=${DIAG_RC}; stderr bytes=$(wc -c < "$DIAG_ERR" | tr -d ' ')"
+echo "::error file=diag.txt,line=6::DIAG GradleWrapperMain exited rc=${DIAG_RC}; stdout_bytes=$(wc -c < "$DIAG_OUT" | tr -d ' '); stderr_bytes=$(wc -c < "$DIAG_ERR" | tr -d ' ')"
 
-# Emit the captured output as annotations (first 25 chunks x 2500 chars).
-if [ "$DIAG_RC" -ne 0 ]; then
-    LINE=10
-    tail -c 60000 "$DIAG_ERR" 2>/dev/null | while IFS= read -r L; do
+emit_annotations() {
+    DIAG_FILE="$1"
+    DIAG_PREFIX="$2"
+    DIAG_LINE=10
+    tail -c 60000 "$DIAG_FILE" 2>/dev/null | while IFS= read -r L; do
         if [ -n "$L" ]; then
             MSG=$(printf '%s' "$L" | cut -c1-2500)
-            echo "::error file=diag.txt,line=${LINE}::${MSG}"
+            echo "::error file=diag-${DIAG_PREFIX}.txt,line=${DIAG_LINE}::${MSG}"
         fi
-        LINE=$((LINE+1))
-        if [ "$LINE" -gt 34 ]; then break; fi
+        DIAG_LINE=$((DIAG_LINE+1))
+        if [ "$DIAG_LINE" -gt 40 ]; then break; fi
     done
+}
+
+if [ "$DIAG_RC" -eq 0 ]; then
+    echo "::error file=diag.txt,line=7::DIAG BUILD SUCCEEDED (rc=0)"
+else
+    emit_annotations "$DIAG_ERR" "err"
+    emit_annotations "$DIAG_OUT" "out"
 fi
 
-DIAG_SAN=$(printf 'rc%s' "$DIAG_RC")
-diag_upload "diag_${DIAG_SAN}" "$DIAG_ERR"
 exit "$DIAG_RC"
 # --- end TEMPORARY CI DIAGNOSTIC ---
+
 
