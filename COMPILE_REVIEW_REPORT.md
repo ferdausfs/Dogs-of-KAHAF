@@ -942,6 +942,11 @@ All pairs computed (WCAG): on-background 17.2:1, on-surface 16.2:1, variant text
   - **APK download:** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.0/app-release.apk
   - **Fix-up cycle (3 PRs, all verified green):** #40 `AAPT: resource style/Widget.GuardianShield not found` → base style + explicit parents · #41 `compileReleaseKotlin` overloaded-setter synthetic property → explicit `setStrokeColor(int)` · #42 missing `ColorStateList` import → added. Each error was captured via check-run annotations (log CDN blocked from this sandbox, as before) and root-caused to the line; final run green on first try after #42.
 
+### 5.1) Post-release housekeeping
+
+- The docs-only follow-up PR #44 triggered the next main push with `versionName 3.0.0` still set → the repo's **release-tag guard failed fast in 58s** with the expected `RELEASE TAG COLLISION: v3.0.0 already exists` annotation (designed behavior — protected the immutable v3.0.0 release; no wasted build).
+- Fixed by bumping to **3.0.1 (20)** so every future push to main is releasable again. v3.0.1 contains the Watchtower V3 design + the report docs (no code deltas vs v3.0.0).
+
 ## 6) COMPLIANCE
 
 App name "Guardian Shield" unchanged everywhere ✓ · no mascot ✓ · shield mark evolved not replaced ✓ · zero changes to TempBlockManager/BlockingEngine/service-detection/strike counting/DAO queries ✓ (only Kotlin visual edits: DashboardFragment `applyHeroState` color setters + BlockOverlayActivity two TextColor calls + unused-import cleanup) · EN+BN strings for every new label ✓.
