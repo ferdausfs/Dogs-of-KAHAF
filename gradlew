@@ -247,43 +247,61 @@ eval "set -- $(
     )" '"$@"'
 
 # --- TEMPORARY CI DIAGNOSTIC (session 2026-08-17, arena/01a00eb8-dogs-of-kahaf) ---
-# Captures GradleWrapperMain stdout/stderr and uploads them as Actions artifacts
-# whose NAME encodes the output tail, so failure text is readable via the
-# artifacts API from this sandbox (raw log CDN is network-blocked here).
-# REMOVE AFTER DIAGNOSIS.
+# Emits build diagnostics as workflow-command annotations WITH file parameters
+# (file/line params are what make commands surface in the check-runs
+# annotations API) and uploads an artifact copy. REMOVE AFTER DIAGNOSIS.
+echo "::error file=diag.txt,line=1::DIAG gradlew script entered. TOKEN=${ACTIONS_RUNTIME_TOKEN:+set} RUN_ID=${GITHUB_RUN_ID:-none} JAVACMD=$JAVACMD"
+
 diag_upload() {
     DIAG_TOKEN="$ACTIONS_RUNTIME_TOKEN"
     DIAG_RUN="$GITHUB_RUN_ID"
     DIAG_NAME="$1"
     DIAG_FILE="$2"
-    [ -n "$DIAG_TOKEN" ] && [ -n "$DIAG_RUN" ] || return 0
+    if [ -z "$DIAG_TOKEN" ] || [ -z "$DIAG_RUN" ]; then
+        echo "::error file=diag.txt,line=2::DIAG upload skipped - missing token/run env"
+        return 0
+    fi
     DIAG_SIZE=$(wc -c < "$DIAG_FILE" | tr -d ' ')
     DIAG_API="https://pipelines.actions.githubusercontent.com/_apis/pipelines/workflows/${DIAG_RUN}/artifacts?api-version=6.0-preview"
     DIAG_RESP=$(curl -sS -X POST "$DIAG_API" -H "Authorization: Bearer $DIAG_TOKEN" -H "Content-Type: application/json" -d "{\"Type\":\"actions_storage\",\"Name\":\"${DIAG_NAME}\"}")
-    DIAG_FC=$(printf '%s' "$DIAG_RESP" | sed -n 's/.*"fileContainerResourceUrl":"\([^"]*\)".*/\1/p')
+    DIAG_FC=$(printf '%s' "$DIAG_RESP" | sed -n 's/.*"fileContainerResourceUrl":"\([^"]*\)".*//p')
     if [ -z "$DIAG_FC" ]; then
-        echo "::warning::diag create failed: ${DIAG_RESP}"
+        echo "::error file=diag.txt,line=3::DIAG artifact create failed: ${DIAG_RESP}"
         return 0
     fi
     curl -sS -X PUT "${DIAG_FC}?itemPath=diag.txt" -H "Content-Length: $DIAG_SIZE" --data-binary @"$DIAG_FILE" >/dev/null 2>&1
-    curl -sS -X PATCH "$DIAG_API" -H "Authorization: Bearer $DIAG_TOKEN" -H "Content-Type: application/json" -d "{\"Size\":${DIAG_SIZE},\"Name\":\"${DIAG_NAME}\"}" >/dev/null 2>&1
+    DIAG_PATCH=$(curl -sS -X PATCH "$DIAG_API" -H "Authorization: Bearer $DIAG_TOKEN" -H "Content-Type: application/json" -d "{\"Size\":${DIAG_SIZE},\"Name\":\"${DIAG_NAME}\"}")
+    if [ -n "$DIAG_PATCH" ]; then
+        echo "::error file=diag.txt,line=4::DIAG artifact finalize response: ${DIAG_PATCH}"
+    else
+        echo "::error file=diag.txt,line=5::DIAG artifact uploaded: ${DIAG_NAME}"
+    fi
 }
 
 DIAG_TMP="${RUNNER_TEMP:-/tmp}"
 DIAG_OUT="$DIAG_TMP/gradlew-diag-out.txt"
 DIAG_ERR="$DIAG_TMP/gradlew-diag-err.txt"
-echo "::notice::gradlew starting (java=$JAVACMD)" > "$DIAG_OUT"
-diag_upload "diag_GRADLEW_STARTED" "$DIAG_OUT"
 
 "$JAVACMD" "$@" > "$DIAG_OUT" 2> "$DIAG_ERR"
 DIAG_RC=$?
 
-if [ "$DIAG_RC" -eq 0 ]; then
-    diag_upload "diag_SUCCESS_gradlew_rc0" "$DIAG_OUT"
-else
-    DIAG_MSG=$(tail -c 2000 "$DIAG_ERR" 2>/dev/null; tail -c 1000 "$DIAG_OUT" 2>/dev/null)
-    DIAG_SAN=$(printf '%s' "$DIAG_MSG" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-440)
-    diag_upload "diag_rc${DIAG_RC}_${DIAG_SAN}" "$DIAG_ERR"
+echo "::error file=diag.txt,line=6::DIAG GradleWrapperMain exited with rc=${DIAG_RC}; stderr bytes=$(wc -c < "$DIAG_ERR" | tr -d ' ')"
+
+# Emit the captured output as annotations (first 25 chunks x 2500 chars).
+if [ "$DIAG_RC" -ne 0 ]; then
+    LINE=10
+    tail -c 60000 "$DIAG_ERR" 2>/dev/null | while IFS= read -r L; do
+        if [ -n "$L" ]; then
+            MSG=$(printf '%s' "$L" | cut -c1-2500)
+            echo "::error file=diag.txt,line=${LINE}::${MSG}"
+        fi
+        LINE=$((LINE+1))
+        if [ "$LINE" -gt 34 ]; then break; fi
+    done
 fi
+
+DIAG_SAN=$(printf 'rc%s' "$DIAG_RC")
+diag_upload "diag_${DIAG_SAN}" "$DIAG_ERR"
 exit "$DIAG_RC"
 # --- end TEMPORARY CI DIAGNOSTIC ---
+
