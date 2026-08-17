@@ -1,73 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- WATCHTOWER V3 — keyword row. Bindings preserved: txtKeyword badge btnDelete. -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardBackgroundColor="@color/surface_high"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/border_subtle"
-    app:strokeWidth="1dp">
+    android:layout_marginBottom="10dp"
+    style="@style/Widget.GuardianShield.Card.Row">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="14dp">
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            app:cardCornerRadius="10dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/surface_variant"
-            app:strokeWidth="0dp">
+        <View
+            android:layout_width="3.5dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_spine"
+            android:backgroundTint="@color/info_sky"/>
 
+        <FrameLayout
+            android:layout_width="42dp" android:layout_height="42dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_icon_well"
+            android:backgroundTint="#1F7EC8F0">
+            <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                android:layout_gravity="center" android:src="@drawable/ic_keyword"
+                app:tint="@color/info_sky" android:importantForAccessibility="no"/>
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="🔤"
-                android:textSize="16sp"/>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:id="@+id/txtKeyword"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="keyword"
-            android:textColor="@color/on_surface"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginStart="12dp"/>
-
-        <TextView
-            android:id="@+id/badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="PLAIN"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            android:background="@drawable/bg_badge"
-            android:backgroundTint="@color/surface_variant"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:layout_marginEnd="8dp"/>
+                android:id="@+id/txtKeyword"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/on_surface" android:textSize="14.5sp"
+                android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
+            <TextView
+                android:id="@+id/badge"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:background="@drawable/bg_badge"
+                android:backgroundTint="@color/badge_neutral_bg"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="9.5sp" android:textStyle="bold"
+                android:letterSpacing="0.08" android:textAllCaps="true"
+                android:paddingHorizontal="8dp" android:paddingVertical="2dp"
+                tools:text="PLAIN"/>
+        </LinearLayout>
 
         <ImageButton
             android:id="@+id/btnDelete"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_delete"
+            android:layout_width="40dp" android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_delete"
+            app:tint="@color/error"
             android:contentDescription="@string/delete"/>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

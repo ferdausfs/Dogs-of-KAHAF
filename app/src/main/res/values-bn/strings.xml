@@ -263,4 +263,22 @@
     <string name="vote_3">৩ · স্ট্রিক্ট</string>
     <string name="vote_4">৪ · খুব স্ট্রিক্ট</string>
     <string name="settings_footer">গার্ডিয়ান শিল্ড · অন-ডিভাইস · প্রাইভেট</string>
+    <!-- WATCHTOWER V3 rules + commitment lock copy -->
+    <string name="no_keywords_heading">কোনো কিওয়ার্ড নেই</string>
+    <string name="no_schedules_heading">কোনো সময়সূচী নেই</string>
+    <string name="day_sun">রবি</string>
+    <string name="day_mon">সোম</string>
+    <string name="day_tue">মঙ্গল</string>
+    <string name="day_wed">বুধ</string>
+    <string name="day_thu">বৃহঃ</string>
+    <string name="day_fri">শুক্র</string>
+    <string name="day_sat">শনি</string>
+    <string name="lock_choose_duration">সময় নির্বাচন · Choose a duration</string>
+    <string name="lock_choose_sub">একবার লক করলে লক শেষ না হওয়া পর্যন্ত খোলা যাবে না</string>
+    <string name="lock_1day">১ দিন</string>
+    <string name="lock_3day">৩ দিন</string>
+    <string name="lock_7day">৭ দিন</string>
+    <string name="lock_15day">১৫ দিন</string>
+    <string name="lock_30day">৩০ দিন</string>
+    <string name="lock_tap_hint">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
 </resources>

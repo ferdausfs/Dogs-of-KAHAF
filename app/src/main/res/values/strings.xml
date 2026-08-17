@@ -265,4 +265,22 @@
     <string name="vote_3">3 · Strict</string>
     <string name="vote_4">4 · Very strict</string>
     <string name="settings_footer">GUARDIAN SHIELD · ON-DEVICE · PRIVATE</string>
+    <!-- WATCHTOWER V3 rules + commitment lock copy -->
+    <string name="no_keywords_heading">No keywords yet</string>
+    <string name="no_schedules_heading">No schedules yet</string>
+    <string name="day_sun">Sun</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="lock_choose_duration">Choose a duration · সময় নির্বাচন</string>
+    <string name="lock_choose_sub">একবার লক করলে লক শেষ না হওয়া পর্যন্ত খোলা যাবে না</string>
+    <string name="lock_1day">1 day</string>
+    <string name="lock_3day">3 days</string>
+    <string name="lock_7day">7 days</string>
+    <string name="lock_15day">15 days</string>
+    <string name="lock_30day">30 days</string>
+    <string name="lock_tap_hint">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
 </resources>

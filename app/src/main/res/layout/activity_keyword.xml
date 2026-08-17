@@ -1,71 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- WATCHTOWER V3 — Keywords list (approved: mocks/v3/rules.html)
+     Bindings preserved: toolbar lockBanner txtLockRemaining txtEmpty recycler fabAdd. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_main">
 
-    <LinearLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
+        android:layout_height="wrap_content"
+        android:background="@color/bg_main"
+        app:elevation="0dp">
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="Keywords • কিওয়ার্ড ফিল্টার"
+            app:title="@string/keywords_title"
             app:titleTextColor="@color/on_surface"
-            app:navigationIcon="@drawable/ic_arrow_back"/>
+            app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
+    </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- Lock banner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
         <LinearLayout
             android:id="@+id/lockBanner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:background="#2A2520"
-            android:visibility="gone">
+            android:background="@drawable/bg_lock_banner"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="12dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="14dp"
+            android:visibility="gone"
+            tools:visibility="gone">
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_lock"
-                android:contentDescription="@null"/>
+                android:layout_width="19dp" android:layout_height="19dp"
+                android:src="@drawable/ic_time_lock"
+                app:tint="@color/warning_amber"
+                android:importantForAccessibility="no"/>
             <TextView
                 android:id="@+id/txtLockRemaining"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:textColor="@color/warning_amber"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:text=""/>
+                android:layout_marginStart="12dp"
+                android:textColor="@color/on_warning_container"
+                android:textSize="12.5sp" android:textStyle="bold"/>
         </LinearLayout>
 
-        <TextView
+        <!-- Empty state -->
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/txtEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/no_keywords"
-            android:textColor="@color/on_surface_dim"
-            android:gravity="center"
-            android:padding="32dp"
-            android:visibility="gone"/>
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            style="@style/Widget.GuardianShield.Card"
+            tools:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center"
+                android:paddingVertical="44dp" android:paddingHorizontal="30dp">
+                <FrameLayout
+                    android:layout_width="76dp" android:layout_height="76dp"
+                    android:background="@drawable/bg_icon_well"
+                    android:backgroundTint="#1F7EC8F0">
+                    <ImageView android:layout_width="34dp" android:layout_height="34dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_keyword"
+                        app:tint="@color/info_sky" android:importantForAccessibility="no"/>
+                </FrameLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:text="@string/no_keywords_heading"
+                    android:textColor="@color/on_surface" android:textSize="16.5sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:text="@string/no_keywords"
+                    android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="12dp"
-            android:clipToPadding="false"/>
+            android:paddingBottom="110dp"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            tools:itemCount="6"/>
     </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -74,13 +104,11 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:text="Add Keyword • যোগ করুন"
-        android:textSize="13sp"
-        android:textStyle="bold"
+        android:text="@string/add_keyword"
         android:textColor="@color/on_primary"
         app:icon="@drawable/ic_add"
         app:iconTint="@color/on_primary"
         app:backgroundTint="@color/primary"
-        app:cornerSize="20dp"
-        android:contentDescription="@string/add_keyword"/>
+        app:elevation="6dp"
+        app:rippleColor="@color/ripple_primary"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
