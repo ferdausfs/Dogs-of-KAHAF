@@ -281,4 +281,8 @@
     <string name="lock_15day">১৫ দিন</string>
     <string name="lock_30day">৩০ দিন</string>
     <string name="lock_tap_hint">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
+    <!-- WATCHTOWER V3 PIN copy -->
+    <string name="pin_unlock">আনলক · Unlock</string>
+    <string name="pin_lock_sub">পিন দিন · Guardian Shield locked</string>
+    <string name="pin_forgot_note">পিন ভুলে গেছেন? রিসেট করতে রিইনস্টল করতে হবে</string>
 </resources>

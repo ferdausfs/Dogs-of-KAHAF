@@ -37,4 +37,17 @@
         <item name="android:insetBottom">0dp</item>
         <item name="android:textColor">@color/on_surface_variant</item>
     </style>
+
+    <style name="PinDigit.PremiumPrimary.Wide">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="cornerRadius">999dp</item>
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
 </resources>
