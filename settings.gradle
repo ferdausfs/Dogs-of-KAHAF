@@ -72,19 +72,32 @@ def diagUpload = { String name, String content ->
     }
 }
 
+// Marker uploaded at settings EVALUATION time (runs before any project plugin
+// resolves). If this artifact appears but the buildFinished one does not, the
+// build is exiting without firing buildFinished (hard crash / System.exit).
+try {
+    diagUpload('diag_EVAL_settingsEvaluated', 'settings.gradle evaluated at ' + new Date().toString())
+} catch (Throwable t) {
+    println "::warning::eval-time diag upload failed: ${t.toString().take(200)}"
+}
+
 gradle.buildFinished { result ->
-    def fail = result.failure
-    if (fail == null) {
-        diagUpload('diag_SUCCESS_buildFinished', 'buildFinished: success')
-    } else {
-        def text = "buildFinished: ${fail.toString()}"
-        def cause = fail.cause
-        int depth = 0
-        while (cause != null && depth < 4) {
-            text += " <<< ${cause.toString()}"
-            cause = cause.cause
-            depth++
+    try {
+        def fail = result.failure
+        if (fail == null) {
+            diagUpload('diag_SUCCESS_buildFinished', 'buildFinished: success')
+        } else {
+            def text = "buildFinished: ${fail.toString()}"
+            def cause = fail.cause
+            int depth = 0
+            while (cause != null && depth < 4) {
+                text += " <<< ${cause.toString()}"
+                cause = cause.cause
+                depth++
+            }
+            diagUpload("diag_${diagSanitize(text)}", text)
         }
-        diagUpload("diag_${diagSanitize(text)}", text)
+    } catch (Throwable t) {
+        println "::warning::buildFinished diag upload failed: ${t.toString().take(200)}"
     }
 }
