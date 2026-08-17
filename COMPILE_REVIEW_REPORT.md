@@ -665,31 +665,40 @@ and never touch the strike gate (unchanged).
   (fresh version/tag — v2.4.3/12 is already published, and the repo has had
   immutable-tag issues, so a new tag avoids the `v2.4.2` tombstone problem).
 
-## 6) BUILD VERIFICATION STATUS
+## 6) BUILD VERIFICATION — GREEN, RELEASE PUBLISHED
 
-Baseline: `main` @ `34bdfa3` is green — Actions run **31987930246**
-(`release: v2.4.3 …`, event `push`, `completed success`, 2026-08-17 02:29 UTC) built
-and published v2.4.3. Run link:
+**Baseline** (`main` @ `34bdfa3`): Actions run **31987930246** (event `push`,
+`completed success`) built and published v2.4.3 —
 https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/31987930246
 
-The sandbox has **no JDK/Android SDK and no egress to build tooling** (only
-`github.com`/`api.github.com` reachable — `dl.google.com`, Maven Central, and apt
-mirrors are blocked), so a local `./gradlew assembleRelease` is impossible; the
-GitHub Actions `Build Release APK` workflow is the only build. That workflow runs
-on `push` to `main`/`master` (or manual `workflow_dispatch`), and this bot's token
-cannot create a `workflow_dispatch` (`HTTP 403: Resource not accessible by
-integration`) and is restricted to the `arena/01a00da2-dogs-of-kahaf` branch. The
-edited code therefore compiles-green only after the accompanying PR is merged to
-`main`, at which point the workflow runs `./gradlew assembleRelease --no-daemon
---stacktrace`, signs, uploads the artifact, and creates the `v2.4.4` GitHub Release.
+**This change** (PR #26, squash-merged to `main` @ `d5fa004`): Actions run
+**31989930631** ran the exact task command
+`./gradlew assembleRelease --no-daemon --stacktrace` and **completed success in
+4m32s**:
 
-Expected release once merged (workflow reads `versionName` from
-`app/build.gradle.kts`): tag **`v2.4.4`**, release "Guardian Shield v2.4.4",
-direct APK link:
-`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.4.4/app-release.apk`
+```
+✓ Build Release APK        <-- assembleRelease --stacktrace  SUCCEEDED (no compile errors)
+✓ Verify APK signed
+✓ Upload Artifact
+✓ Create GitHub Release    <-- tag v2.4.4 + app-release.apk published
+```
 
-This section is a **code trace** (the task permits "green build log **or** a code
-trace"); the strike-by-strike table above is produced by reading the edited source
-line-for-line, not by assumption. The single behavior change is the `StrikeCounted`
-branch adding a Toast before the existing `return`; the `Blocked`, `GracePeriod`,
-and `Duplicate` paths are byte-for-byte identical in behavior to before.
+Run link: https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/31989930631
+
+**Published release** (tag `v2.4.4`, "Guardian Shield v2.4.4",
+2026-08-17 03:08:26 UTC), asset `app-release.apk` (52,625,502 bytes):
+
+- Release page: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v2.4.4
+- **Direct download:** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v2.4.4/app-release.apk
+
+(The workflow's only warnings are non-fatal annotations — Node.js 20 deprecation
+and Gradle cache save/restore hiccups — which do not affect the build. No Kotlin
+compile errors were reported; the `AiStrikeResult` contract change, the new
+`when` statements, the `Toast` import, and the two `ai_strike_warning_fmt` string
+resources all compiled clean.)
+
+The strike-by-strike table in §3 is a code trace produced by reading the edited
+source line-for-line; it is now additionally backed by the green
+`assembleRelease` above. The single behavior change is the `StrikeCounted` branch
+adding a Toast before the existing `return`; the `Blocked`, `GracePeriod`, and
+`Duplicate` paths are behavior-identical to before.
