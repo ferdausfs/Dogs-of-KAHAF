@@ -3,6 +3,7 @@ package com.guardian.shield.ui.dashboard.fragments
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
