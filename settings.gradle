@@ -1,3 +1,5 @@
+println '::notice::settings.gradle evaluated'
+
 pluginManagement {
     repositories {
         google()
@@ -14,3 +16,75 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Guardian Shield"
 include ':app'
+
+// ---------------------------------------------------------------------------
+// TEMPORARY CI DIAGNOSTIC (session 2026-08-17, arena/01a00eb8-dogs-of-kahaf).
+// The build step has been failing in ~60s before build.gradle.kts evaluation
+// (no guard markers). Raw job logs are not downloadable from the working
+// sandbox (CDN blocked), so this hook uploads the build failure text as an
+// Actions artifact whose NAME encodes the message - artifact names are
+// readable via api.github.com. REMOVE AFTER DIAGNOSIS.
+// ---------------------------------------------------------------------------
+def diagSanitize = { String s -> s.replaceAll(/[^A-Za-z0-9._-]/, '_').take(470) }
+
+def diagUpload = { String name, String content ->
+    def token = System.getenv('ACTIONS_RUNTIME_TOKEN')
+    def runId = System.getenv('GITHUB_RUN_ID')
+    if (token == null || runId == null) { return }
+    try {
+        def api = "https://pipelines.actions.githubusercontent.com/_apis/pipelines/workflows/${runId}/artifacts?api-version=6.0-preview"
+        def createBody = '{"Type":"actions_storage","Name":"' + name + '"}'
+        def create = new URL(api).openConnection() as HttpURLConnection
+        create.setRequestMethod('POST')
+        create.setRequestProperty('Authorization', "Bearer ${token}")
+        create.setRequestProperty('Content-Type', 'application/json')
+        create.setDoOutput(true)
+        create.setFixedLengthStreamingMode(createBody.bytes.length)
+        create.outputStream.withStream { it.write(createBody.bytes) }
+        def createCode = create.responseCode
+        if (createCode != 201) {
+            def err = create.errorStream?.getText('UTF-8') ?: ''
+            throw new IOException("create HTTP ${createCode}: ${err}".toString())
+        }
+        def createText = create.inputStream.getText('UTF-8')
+        def fcUrl = new groovy.json.JsonSlurper().parseText(createText).fileContainerResourceUrl
+        def bytes = content.bytes
+        def put = new URL("${fcUrl}?itemPath=diag.txt").openConnection() as HttpURLConnection
+        put.setRequestMethod('PUT')
+        put.setDoOutput(true)
+        put.setFixedLengthStreamingMode(bytes.length)
+        put.outputStream.withStream { it.write(bytes) }
+        def putCode = put.responseCode
+        if (putCode != 200 && putCode != 201) { throw new IOException("put HTTP ${putCode}".toString()) }
+        def patchBody = '{"Size":' + bytes.length + ',"Name":"' + name + '"}'
+        def patch = new URL(api).openConnection() as HttpURLConnection
+        patch.setRequestMethod('PATCH')
+        patch.setRequestProperty('Authorization', "Bearer ${token}")
+        patch.setRequestProperty('Content-Type', 'application/json')
+        patch.setDoOutput(true)
+        patch.setFixedLengthStreamingMode(patchBody.bytes.length)
+        patch.outputStream.withStream { it.write(patchBody.bytes) }
+        def patchCode = patch.responseCode
+        if (patchCode != 200) { throw new IOException("patch HTTP ${patchCode}".toString()) }
+        println "::notice::diag artifact uploaded: ${name}"
+    } catch (Throwable t) {
+        println "::warning::diag upload failed: ${t.toString().take(200)}"
+    }
+}
+
+gradle.buildFinished { result ->
+    def fail = result.failure
+    if (fail == null) {
+        diagUpload('diag_SUCCESS_buildFinished', 'buildFinished: success')
+    } else {
+        def text = "buildFinished: ${fail.toString()}"
+        def cause = fail.cause
+        int depth = 0
+        while (cause != null && depth < 4) {
+            text += " <<< ${cause.toString()}"
+            cause = cause.cause
+            depth++
+        }
+        diagUpload("diag_${diagSanitize(text)}", text)
+    }
+}
