@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield V3 — Settings</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.set-row{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.set-row .si{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.set-row .si svg{width:19px;height:19px}
+.set-row .st{font-size:14.5px;font-weight:600}
+.set-row .ss{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.35}
+.set-row .end{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ctl-card{padding:16px}
+.vote{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.vote .v{border:1px solid var(--hairline);border-radius:12px;padding:10px 6px;text-align:center;background:var(--s1)}
+.vote .v b{display:block;font-size:11px;font-weight:700;color:var(--t2)}
+.vote .v span{font-size:9.5px;color:var(--t3)}
+.vote .v.on{background:var(--beacon-dim);border-color:rgba(127,231,196,.4)}
+.vote .v.on b{color:var(--beacon)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-shieldb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="M12 8.2v3.3"/><circle cx="12" cy="14.6" r="1.15" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-shieldchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4.5 5.8v5.4c0 4.9 3.2 9.4 7.5 10.8 4.3-1.4 7.5-5.9 7.5-10.8V5.8L12 2.5z"/><path d="m8.8 11.8 2.3 2.3 4.4-4.4"/></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 1.9"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03z"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="3.4"/><path d="M11.4 12h8.2M16.2 12v-2.6M19 12v2.2"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4 9.9 8.6l-5.6.3 4.3 3.7-1.4 5.5L12 15l4.8 3.1-1.4-5.5 4.3-3.7-5.6-.3L12 3.4z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.2" r="7.2"/><path d="M12 9.8v3.4l2.4 1.5M9.6 3.4h4.8"/></symbol>
+<symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol>
+<symbol id="i-access" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 6.8v5m-5.5 8.4 1.8-3.4h7.4l1.8 3.4M6.5 9.2 4 10.8m13.5-1.6 2.5 1.6"/></symbol>
+<symbol id="i-timelock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v4.8l3 1.8"/></symbol>
+<symbol id="i-lockopen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.35-1.3"/><path d="M12 14.4v2.2"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 7 6.5-7 6.5"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 7.5 12l7 6.5"/></symbol>
+<symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.6" rx="7.5" ry="2.8"/><path d="M4.5 5.6v12.8c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V5.6M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/></symbol>
+</defs></svg>
+
+<div class="doc-head">
+  <div class="crumb">Screen 05 · Settings</div>
+  <h1>Settings — grouped, correct control per row</h1>
+  <p>Every real binding preserved: <span class="pkg">switchKeyword · switchAi · sliderDelay + txtDelayValue · chip15/30/60min · btnApps/Keywords/Schedule/Permissions/CommitmentLock · sliderGuardianThreshold + txtGuardianThresholdValue · chipVote1–4 · btnImportLegacy/RemoveLegacy + txtLegacyStatus · btnChangePin · lockBanner + txtLockRemaining</span>. Emoji row labels (📱🔤⏰🔧) become icon wells from the single icon family; copy stays identical.</p>
+</div>
+
+<div class="board">
+<div class="frames">
+  <div class="frame-wrap"><div class="cap"><b>A</b> · Normal (unlocked)</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Settings</div><div class="sub">সেটিংস</div></div></div>
+
+    <div class="section" style="margin-top:10px"><div class="sec-h"><div class="kicker onBeacon">Protection · সুরক্ষা</div></div>
+      <div class="card"><div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keyword Filter</div><div class="ss">কিওয়ার্ড ফিল্টার</div></div><div class="end"><div class="sw on"></div></div></div>
+      <div class="set-row"><div class="si" style="background:rgba(184,161,255,.14)"><svg style="color:#B8A1FF"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="st">AI Content Detection</div><div class="ss">AI কন্টেন্ট ডিটেকশন</div></div><div class="end"><div class="sw on"></div></div></div></div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Blocking · ব্লকিং</div></div>
+      <div class="card ctl-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center"><div style="flex:1"><div class="st" style="font-size:14.5px;font-weight:600">Unlock Delay</div><div class="ss">আনলক বিলম্ব</div></div><span class="badge neutral tnum">30s</span></div>
+        <div class="slider" style="margin-top:14px"><div class="track"></div><div class="fill" style="width:50%"></div><div class="thumb" style="left:50%"></div></div>
+        <div class="tickrow"><span>0s</span><span>30s</span><span>60s</span></div>
+      </div>
+      <div class="card ctl-card">
+        <div class="st" style="font-size:14.5px;font-weight:600">Temp Block Duration · সাময়িক ব্লক</div>
+        <div class="ss" style="margin-top:4px;line-height:1.45">AI বারবার detect করলে app টি এই সময়ের জন্য block হবে (৩টি স্ট্রাইক = temp block)</div>
+        <div style="display:flex;gap:8px;margin-top:12px"><span class="chip on">15 min</span><span class="chip">30 min</span><span class="chip">1 ঘণ্টা</span></div>
+      </div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Rules · ব্লকিং রুলস</div></div>
+      <div class="card">
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="st">App List</div><div class="ss">১২টি ব্লক · ৩টি whitelist</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(126,200,240,.13)"><svg style="color:#7EC8F0"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keywords</div><div class="ss">৮টি কিওয়ার্ড</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(255,194,75,.13)"><svg style="color:#FFC24B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="st">Schedule</div><div class="ss">১টি রুল</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-access"/></svg></div><div style="flex:1"><div class="st">Permission Health</div><div class="ss">৪/৫ অনুমোদিত</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+        <div class="set-row"><div class="si" style="background:rgba(255,122,118,.12)"><svg style="color:#FF7A76"><use href="#i-timelock"/></svg></div><div style="flex:1"><div class="st">Commitment Lock</div><div class="ss">সময়-লক — একবার চালু করলে আর খোলা যায় না</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      </div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">AI · AI মডেল</div></div>
+      <div class="card ctl-card">
+        <div style="display:flex;align-items:center"><div style="flex:1"><div class="st" style="font-size:14.5px;font-weight:600">AI Sensitivity</div><div class="ss">AI সংবেদনশীলতা (Ultimate)</div></div><span class="badge ai tnum">0.72</span></div>
+        <div class="slider" style="margin-top:14px"><div class="track"></div><div class="fill" style="width:64%;background:var(--violet)"></div><div class="thumb" style="left:64%;background:var(--violet);border-color:#2A2440;box-shadow:0 2px 10px rgba(184,161,255,.45)"></div></div>
+        <div class="vote" style="margin-top:14px">
+          <div class="v"><b>1</b><span>Sensitive</span></div>
+          <div class="v on"><b>2</b><span>Balanced</span></div>
+          <div class="v"><b>3</b><span>Strict</span></div>
+          <div class="v"><b>4</b><span>Very Strict</span></div>
+        </div>
+        <div class="ss" style="margin-top:10px;line-height:1.45">Lower = fewer false positives · Higher = stricter blocking</div>
+      </div>
+      <div class="card" style="margin-top:10px"><div class="set-row">
+        <div class="si" style="background:rgba(255,255,255,.07)"><svg style="color:#A9B5AD"><use href="#i-db"/></svg></div>
+        <div style="flex:1"><div class="st">Legacy Model</div><div class="ss">Legacy classifier — optional import</div></div>
+        <div class="end"><button class="btn tonal sm">Import</button></div>
+      </div></div>
+    </div>
+
+    <div class="section"><div class="sec-h"><div class="kicker onBeacon">Security · নিরাপত্তা</div></div>
+      <div class="card"><div class="set-row"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-lockopen"/></svg></div><div style="flex:1"><div class="st">Change PIN</div><div class="ss">পিন পরিবর্তন</div></div><svg class="chev"><use href="#i-chev"/></svg></div></div>
+      <div style="text-align:center;font-size:10.5px;color:var(--t3);margin-top:18px;letter-spacing:.08em;font-weight:700">GUARDIAN SHIELD · V3.0.0 · ON-DEVICE</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+
+  <div class="frame-wrap"><div class="cap"><b>B</b> · Commitment Lock active</div>
+  <div class="phone"><div class="statusbar"><span class="tnum">9:41</span></div><div class="screen"><div class="scroll" style="padding-top:4px">
+    <div class="appbar"><div class="back-btn"><svg><use href="#i-back"/></svg></div><div><div class="title">Settings</div></div></div>
+    <div class="banner" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg><div class="btxt">🔒 কমিটেড লক সক্রিয় — সম্পাদনা বন্ধ · <span class="tnum">2d 14h 05m</span></div></div>
+    <div class="section" style="margin-top:6px"><div class="card" style="opacity:.55">
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keyword Filter</div></div><div class="end"><div class="sw on" disabled></div></div></div>
+      <div class="set-row"><div class="si"><svg style="color:#76827B"><use href="#i-spark"/></svg></div><div style="flex:1"><div class="st">AI Content Detection</div></div><div class="end"><div class="sw on" disabled></div></div></div>
+    </div></div>
+    <div class="section"><div class="card" style="opacity:.55">
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-apps"/></svg></div><div style="flex:1"><div class="st">App List</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="set-row" style="border-bottom:1px solid var(--hairline)"><div class="si"><svg style="color:#76827B"><use href="#i-key"/></svg></div><div style="flex:1"><div class="st">Keywords</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+      <div class="set-row"><div class="si"><svg style="color:#76827B"><use href="#i-clock"/></svg></div><div style="flex:1"><div class="st">Schedule</div></div><svg class="chev"><use href="#i-chev"/></svg></div>
+    </div></div>
+    <div class="section"><div class="card"><div class="set-row"><div class="si" style="background:rgba(127,231,196,.12)"><svg style="color:#7FE7C4"><use href="#i-lockopen"/></svg></div><div style="flex:1"><div class="st">Change PIN</div><div class="ss">Available while locked</div></div><svg class="chev"><use href="#i-chev"/></svg></div></div></div>
+  </div>
+  <div class="nav">
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldb"/></svg></div><span>Home</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-hist"/></svg></div><span>Activity</span></div>
+    <div class="tab"><div class="pill"><svg><use href="#i-shieldchk"/></svg></div><span>Protection</span></div>
+    <div class="tab on"><div class="pill"><svg><use href="#i-set"/></svg></div><span>Settings</span></div>
+  </div></div></div></div>
+</div>
+<p class="note"><span class="tag">Behavior</span>Lock banner disables the exact same controls as today (TimeLockManager gate untouched). Vote chips stay single-select wired to the same threshold mapping — visual only. AI sensitivity slider tinted violet (its AI identity), all other sliders Beacon.</p>
+</div>
+</body>
+</html>

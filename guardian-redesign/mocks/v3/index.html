@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian Shield — Watchtower V3 Redesign · Mockup Review Gate</title>
+<link rel="stylesheet" href="guardian-v3.css">
+<style>
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;max-width:1480px;margin-top:22px}
+.gcard{display:block;text-decoration:none;background:var(--s1);border:1px solid var(--hairline);border-radius:16px;padding:20px;box-shadow:var(--e1);transition:transform .15s}
+.gcard:hover{transform:translateY(-2px);border-color:rgba(127,231,196,.35)}
+.gcard .num{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--beacon);text-transform:uppercase}
+.gcard h3{font-size:16.5px;font-weight:700;margin-top:8px;color:var(--t1)}
+.gcard p{font-size:12.5px;color:var(--t2);margin-top:6px;line-height:1.5}
+.check{max-width:1480px;margin-top:30px}
+.check .item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13.5px;color:var(--t2)}
+.check .item b{color:var(--t1)}
+.check .ok{color:var(--success);font-weight:700;flex:0 0 auto}
+</style>
+</head>
+<body>
+<div class="doc-head">
+  <div class="crumb">Mockup review gate · v3 · 2026-08-17 · awaiting approval before any Kotlin/XML</div>
+  <h1>Guardian Shield — “Watchtower” V3 redesign</h1>
+  <p>A complete visual-language overhaul built as static HTML/CSS mockups <b>before any production code</b>, per this repo’s hard constraint 3. One design system — dark charcoal canvas, <b>Beacon Mint</b> primary, layered tonal elevation, Roboto Flex + Noto Sans Bengali, single rounded icon family, Material 3 motion — applied to <b>every real screen</b> in the app. All real copy (বাংলা where the app uses বাংলা), all real bindings listed per screen, all four UI states (loaded/empty/loading/error) where applicable.</p>
+  <p style="color:var(--t1);font-weight:600;margin-top:14px">Review order: Design System first, then screens. Nothing below is implemented yet.</p>
+</div>
+
+<div class="board">
+<div class="gallery">
+  <a class="gcard" href="design-system.html"><div class="num">Start here · Spec</div><h3>Design System</h3><p>Color + WCAG ratios, type scale, shape &amp; elevation ladder, spacing, iconography, motion principles, component library with all states.</p></a>
+  <a class="gcard" href="home.html"><div class="num">Screen 01</div><h3>Home / Dashboard</h3><p>Beacon hero (ON / paused / off), stats, quick actions, recent activity. Loading · empty · error.</p></a>
+  <a class="gcard" href="activity.html"><div class="num">Screen 02</div><h3>Activity Log</h3><p>Day/Week/Month, attempts card + chart, filter chips, event rows. Empty filter · loading · DB error.</p></a>
+  <a class="gcard" href="protection.html"><div class="num">Screen 03</div><h3>Protection Hub</h3><p>Five REAL modules only (AI, apps, keywords, schedule, accessibility). Active · partial.</p></a>
+  <a class="gcard" href="app-blocking.html"><div class="num">Screen 04</div><h3>App Blocking + Whitelist</h3><p>Hero toggle, tabs, search, decisive rows. Whitelist tab · loading · empty search · locked.</p></a>
+  <a class="gcard" href="settings.html"><div class="num">Screen 05</div><h3>Settings</h3><p>All real controls — switches, sliders, duration chips, votes, models, PIN. Normal · commitment-locked.</p></a>
+  <a class="gcard" href="rules.html"><div class="num">Screens 06–07</div><h3>Keywords · Schedule · Commitment Lock</h3><p>Lists + bottom-sheet editors with identical fields. Lock screen both states.</p></a>
+  <a class="gcard" href="pin.html"><div class="num">Screens 08–09</div><h3>PIN Verify · Setup</h3><p>Keypad + dots, error shake, attempts-left, lockout, confirm step. No biometric (none exists in code).</p></a>
+  <a class="gcard" href="permissions-onboarding.html"><div class="num">Screens 10–12</div><h3>Permissions · Prompt · Onboarding</h3><p>Permission health rows, urgent accessibility prompt, 4 real onboarding pages.</p></a>
+  <a class="gcard" href="overlays.html"><div class="num">Screens 13–17</div><h3>Overlays</h3><p>Strike 1/2 card (3.5s + “Not sensitive”), strike-3 block, blocked detail, delay unlock, reel reminder.</p></a>
+  <a class="gcard" href="icon-splash.html"><div class="num">Screen 18</div><h3>App Icon &amp; Splash</h3><p>Shield-beacon adaptive icon evolution, monochrome, splash. Vector work in reach of a code agent.</p></a>
+</div>
+
+<div class="check">
+  <div class="row-label"><h2>Compliance checklist</h2><span class="hint">against the task’s hard constraints</span></div>
+  <div class="item"><span class="ok">✓</span><div><b>App name unchanged.</b> “Guardian Shield” everywhere; shield mark evolved, never replaced; no mascot.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>No detection/blocking logic touched.</b> Mockups are visual only; implementation will not modify TempBlockManager, BlockingEngine, service/detection/**, strike counting, or Room queries. Strike card keeps the exact <b>3.5s</b> auto-dismiss + audit-only “Not sensitive” flow.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>Mockups before code.</b> Zero Kotlin/XML written in this phase — this gallery IS the approval gate.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>One design system.</b> Every screen uses the same tokens file (<span style="font-family:var(--mono);font-size:11px">guardian-v3.css</span>); component states defined once, reused everywhere.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>No invented screens or features.</b> Mapped from AndroidManifest + layouts: 21 real surfaces audited in <span style="font-family:var(--mono);font-size:11px">guardian-redesign/AUDIT-V3.md</span>. Whitelist = tab (no standalone screen exists); no biometric shown (not wired in code); Protection modules = real five only.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>Accessibility.</b> All text pairs ≥4.5:1 AA (most ≥7:1 AAA) — full ratio table in the Design System page. Focus rings, 44dp+ targets, tabular numerals, reduced-motion support.</div></div>
+  <div class="item"><span class="ok">✓</span><div><b>i18n.</b> Real copy from values/ + values-bn/ verbatim; new strings will ship EN+BN both.</div></div>
+</div>
+
+<div class="note" style="margin-top:30px"><span class="tag">Decision log</span>
+<b>Dark-first</b> (reasoned: night-time block moments, OLED, overlay dominance) · <b>Beacon Mint primary</b> (security’s native “protected” color; replaces periwinkle) · <b>success shares the Beacon family by design</b> (protected = success) · <b>real elevation</b> replaces flat bordered cards · <b>sentence-case buttons</b>, caps only for 11sp kickers · <b>emoji removed from UI chrome</b> (kept only in user-facing motivational/religious copy where the strings include them). What this deliberately is NOT: a Material You default demo — the beacon-ring hero, category spines, and watchtower mark give it a signature; everything else stays restrained and native.</div>
+</div>
+</body>
+</html>
