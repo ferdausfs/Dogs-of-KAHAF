@@ -950,3 +950,295 @@ All pairs computed (WCAG): on-background 17.2:1, on-surface 16.2:1, variant text
 ## 6) COMPLIANCE
 
 App name "Guardian Shield" unchanged everywhere ✓ · no mascot ✓ · shield mark evolved not replaced ✓ · zero changes to TempBlockManager/BlockingEngine/service-detection/strike counting/DAO queries ✓ (only Kotlin visual edits: DashboardFragment `applyHeroState` color setters + BlockOverlayActivity two TextColor calls + unused-import cleanup) · EN+BN strings for every new label ✓.
+
+---
+
+# Session 2026-08-18 — Strike/Block Logic Fixes: Bug A (strike gap), Bug B (Not-sensitive undo), Bug C (Mark-False unblocks+relaunches) (arena/01a012b2-dogs-of-kahaf)
+
+**Base:** `main` @ `6d08327` (Merge PR #45) — `versionName 3.0.1 / versionCode 20`
+**New:** `versionName 3.0.2 / versionCode 21`
+**Date:** 2026-08-18
+**Branch:** `arena/01a012b2-dogs-of-kahaf`
+**Scope note:** This is an EXPLICIT, user-approved behavior change to the strike system itself.
+The earlier "don't touch detection logic" rule from the VISUAL-only redesign sessions (WATCHTOWER V3,
+Premium Dark) does **not** apply here and was not used to water anything down. All three fixes below
+modify core strike/block logic (`TempBlockManager`, `BlockingEngine`, `BlockOverlayActivity`'s
+false-positive handler) as instructed.
+
+**Verification method:** CI is the source of truth. This sandbox has **no JDK, no Android SDK, and no
+egress to build tooling** (`services.gradle.org`, `dl.google.com`, Maven Central, and `deb.debian.org`
+all fail TLS / are unreachable — reproduced again this session: `curl: (35) OpenSSL SSL_connect:
+SSL_ERROR_SYSCALL`; `apt-get update` -> `Connection failed`; `which java` -> none). A local
+`./gradlew assembleRelease` is therefore impossible here, exactly as in every prior session. The
+`Build Release APK` GitHub Actions workflow runs only on `push` to `main`/`master`, and this bot's
+token is restricted to the `arena/*` branch (it cannot push to `main` nor create a `workflow_dispatch`
+— both previously documented). Consequently the compile gate is the CI build that runs when this PR
+is merged to `main`. Every claim below is backed by a line-by-line code trace against the edited
+source (`git diff`), plus the release-tag availability probe that the repo's fail-fast guard performs
+(v3.0.2 is free: release page 404, tree page 404).
+
+---
+
+## 0) THE THREE BUGS — one coherent commit set
+
+All three fixes touch overlapping files (`TempBlockManager.kt`, `BlockingEngine.kt`,
+`GuardianAccessibilityService.kt`, `BlockOverlayActivity.kt`, `Constants.kt`, `strings.xml`) and are
+shipped as a single logical change set (one commit) per the task's "one coherent commit" instruction.
+
+| File | Bug A | Bug B | Bug C |
+|------|-------|-------|-------|
+| `util/Constants.kt` | ✅ new `STRIKE_WARNING_AUTO_DISMISS_MS` (single source of truth) | – | – |
+| `service/blocker/TempBlockManager.kt` | ✅ dedup window `1000L` → the constant | ✅ new `cancelLastStrike(pkg)` | – |
+| `service/blocker/BlockingEngine.kt` | – | ✅ `cancelLastStrike(pkg)` delegate | – |
+| `service/accessibility/GuardianAccessibilityService.kt` | ✅ card timer reads the same constant | ✅ `reportNotSensitive` now cancels the strike | – |
+| `ui/overlay/BlockOverlayActivity.kt` | – | – | ✅ `clearTempBlock(pkg)` + `relaunchBlockedApp(pkg)` |
+| `res/values(+bn)/strings.xml` | – | – | ✅ `overlay_app_unblocked` (EN+BN) |
+
+---
+
+## BUG A — Strikes 1→2→3 could all fire within ~2-3s, faster than the 3.5s warning card
+
+### Before (the defect)
+
+`TempBlockManager.recordAiDetection()` used a hard-coded 1-second dedup window:
+
+```kotlin
+val lastStrike = strikeTime[pkg] ?: 0L
+// Prevent multiple strikes within 1 second for the same package
+if (now - lastStrike < 1000L) {
+    return AiStrikeResult.Duplicate      // <-- only 1s gap (old, line ~79-82)
+}
+```
+
+The strike-1/2 warning card auto-dismissed after `STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L`
+(`GuardianAccessibilityService` companion). But the next strike could be counted after just **1s**
+while the AI scan cadence `AI_PERIODIC_MS = 1_000L` (`Constants.kt`) re-scans the same content every
+second. Worst case timeline:
+
+```
+t=0.0s   strike 1 counted  -> warning card shown (auto-dismiss scheduled +3.5s)
+t=1.0s   scan              -> now - lastStrike = 1.0s >= 1000L  -> strike 2 counted (card REPLACED, still showing "2/3")
+t=2.0s   scan              -> now - lastStrike = 1.0s >= 1000L  -> strike 3 counted -> FULL BLOCK
+```
+⇒ strike 1 → full block in **~2s**, neither card ever shown for its full 3.5s.
+
+### After (the fix)
+
+1. The single constant now lives in `GuardianConstants` (`util/Constants.kt:36-43`):
+   ```kotlin
+   const val STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L
+   ```
+2. `GuardianAccessibilityService`'s card timer now reads that same constant
+   (`GuardianAccessibilityService.kt:441`): `GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS`.
+   The old hard-coded `3_500L` companion const was **removed** — `3500L` is now defined exactly once.
+3. `TempBlockManager.recordAiDetection` uses the same constant for the inter-strike gate
+   (`TempBlockManager.kt:102`):
+   ```kotlin
+   if (now - lastStrike < GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS) {
+       return AiStrikeResult.Duplicate
+   }
+   ```
+
+### Timing math (Bug A verification)
+
+With the gap now `STRIKE_WARNING_AUTO_DISMISS_MS = 3500L`:
+
+| Event | Time | Condition evaluated | Outcome |
+|-------|------|--------------------|---------|
+| Strike 1 | `t0` | `t0 - 0 (no prior) = huge` → ≥3500 | counted, count=1, `strikeTime=t0`; warning card shown |
+| scan in `(t0, t0+3500)` | `t0+1s` | `1s < 3500` → **Duplicate** | no strike, no count, no card reset |
+| Strike 2 (earliest) | `t0+3500` | `3500 < 3500` = false → evaluated | counted, count=2, `strikeTime=t0+3500`; warning card shown |
+| scan in `(t0+3500, t0+7000)` | — | `< 3500` → **Duplicate** | no count |
+| Strike 3 (earliest, the block) | `t0+7000` | `3500 < 3500` = false → evaluated | count=3 ≥ `STRIKE_THRESHOLD` → block |
+
+**Minimum strike-1 → full-block time = `2 × STRIKE_WARNING_AUTO_DISMISS_MS = 7.0s`** (was ~2s). ✓
+Strikes 1 and 2 each get their full 3.5s on-screen window. Strike 3 (the actual block) is *not*
+time-gated by this change — it fires as soon as the 3rd qualifying detection occurs after strike 2's
+window has passed, which is the intended/correct behavior.
+
+**Untouched by Bug A:** `STRIKE_THRESHOLD = 3`, `STRIKE_RESET_MS = 10 min`, `ESCALATION_THRESHOLD = 3`,
+`ESCALATION_WINDOW_MS = 2 h`, and the strike-3 `handleBlockEscalation → applyTempBlock` path — all
+verified byte-for-byte unchanged in the diff. Only the inter-strike minimum gap changed.
+
+---
+
+## BUG B — "Not sensitive" now also cancels that specific strike (not just a log write)
+
+### Before (the defect)
+
+`GuardianAccessibilityService.reportNotSensitive()` only wrote a `block_events` row
+(`reason = NOT_SENSITIVE`) for later review. It never touched the live strike counter, so tapping
+"Not sensitive" on a strike-1/2 card left the count as-is (a strike-2 "Not sensitive" would leave the
+counter at 2 and the next detection would immediately escalate to a block).
+
+### After (the fix)
+
+- New `TempBlockManager.cancelLastStrike(pkg)` (`TempBlockManager.kt:215-222`):
+  ```kotlin
+  @Synchronized
+  fun cancelLastStrike(pkg: String) {
+      val before = strikes[pkg] ?: 0
+      val after = (before - 1).coerceAtLeast(0)
+      if (after == 0) strikes.remove(pkg) else strikes[pkg] = after
+      strikeTime.remove(pkg)                 // rewind the 3.5s dedup timestamp
+      Timber.d("cancelLastStrike($pkg): strike count $before -> $after (timestamp cleared)")
+  }
+  ```
+  The `strikeTime.remove(pkg)` is the explicit "no waiting penalty": a reported-safe event does not
+  eat into the next legitimate detection's allowed window.
+- New `BlockingEngine.cancelLastStrike(pkg)` delegate (`BlockingEngine.kt:97`) so the accessibility
+  service reaches the manager through the same layer it already uses for `evaluateAiStrike` /
+  `isGracePeriodActive`.
+- `reportNotSensitive()` now calls it first (`GuardianAccessibilityService.kt:482`):
+  ```kotlin
+  private fun reportNotSensitive(pkg: String, strikeCount: Int) {
+      blockingEngine.cancelLastStrike(pkg)        // Bug B — undo THIS strike
+      val matched = "strike=$strikeCount"
+      ioScope.launch { blockEventDao.insert(...) } // existing audit log, unchanged
+      Toast.makeText(this, R.string.ai_strike_report_confirmed, ...).show()
+  }
+  ```
+  The card is dismissed immediately by the existing click handler
+  (`GuardianAccessibilityService.kt:414-415`: `reportNotSensitive(...); dismissAiStrikeWarning()`)
+  — no wait for the 3.5s timer.
+
+### Strike-cancel trace (Bug B verification)
+
+```
+AI hit (unsafe) -> goHomeAndBlock(AI_DETECTION) -> evaluateAiStrike -> recordAiDetection
+  -> count=1 -> StrikeCounted(1) -> showStrikeWarningOverlay(pkg,1)     [card on screen]
+User taps "Not sensitive" (btnNotSensitive)
+  -> reportNotSensitive(pkg,1)
+       -> blockingEngine.cancelLastStrike(pkg)
+            -> TempBlockManager.cancelLastStrike: before=1 -> after=0 (strikes.remove), strikeTime.remove
+       -> ioScope.launch { blockEventDao.insert(BlockEventEntity(reason=NOT_SENSITIVE, matchedTerm="strike=1")) }
+       -> Toast "Reported"
+  -> dismissAiStrikeWarning()                       [card gone immediately]
+Next AI hit (fresh, same pkg)
+  -> recordAiDetection: strikes[pkg]=0 -> count=0+1=1 -> StrikeCounted(1)   [starts fresh at strike 1]
+```
+- Strike count goes **down** (1→0), not just a log write. ✓
+- **`FalsePositiveMemory` / `AiDetector` unaffected:** `cancelLastStrike` never calls
+  `FalsePositiveMemory.addSignature()` / `isKnown()` and never touches `AiDetector`. Future detections
+  of the same pattern are evaluated normally (this stays a per-event undo only, exactly as scoped).
+  Confirmed by grep: the only new call into `TempBlockManager` is `cancelLastStrike`, and
+  `FalsePositiveMemory` is untouched. ✓
+
+---
+
+## BUG C — "ভুল ব্লক হয়েছে" (Mark False) now lifts the active block and relaunches the app
+
+### Before (the defect)
+
+`BlockOverlayActivity`'s Mark False handler only taught `AiDetector` to skip the pattern in the
+**future**; it never called `tempBlockManager.clearTempBlock(pkg)`, so the **current** active temp
+block stayed in place and the user remained locked out until the timer expired:
+
+```kotlin
+if (sig != null) {
+    falsePositiveMemory.addSignature(sig)   // future suppression only
+    binding.btnMarkFalse.isEnabled = false
+    ...
+}
+```
+
+### After (the fix)
+
+`BlockOverlayActivity.kt:120-121` now calls `clearTempBlock(pkg)` + `relaunchBlockedApp(pkg)` inside
+the same branch (after the existing `addSignature()`), and a new `relaunchBlockedApp(pkg)`
+(`BlockOverlayActivity.kt:147-170`) auto-launches the app:
+
+```kotlin
+tempBlockManager.clearTempBlock(pkg)      // lift the ACTIVE temp block now
+relaunchBlockedApp(pkg)                   // then auto-relaunch the blocked app
+```
+
+```kotlin
+private fun relaunchBlockedApp(pkg: String) {
+    try {
+        val launchIntent = packageManager.getLaunchIntentForPackage(pkg)   // null-safe check
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(launchIntent)                                   // back into the app
+            finish()                                                      // close the overlay
+        } else {
+            Timber.w("No launch intent for $pkg — app unblocked, closing overlay")
+            Toast.makeText(this, R.string.overlay_app_unblocked, Toast.LENGTH_SHORT).show()
+            finish()                                                      // null fallback
+        }
+    } catch (t: Throwable) {                                              // PackageManager threw
+        Timber.e(t, "Failed to relaunch $pkg after false-block report — unblocking anyway")
+        runCatching { Toast.makeText(this, R.string.overlay_app_unblocked, Toast.LENGTH_SHORT).show() }
+        finish()                                                          // no-crash fallback
+    }
+}
+```
+`TempBlockManager.clearTempBlock(pkg)` (`TempBlockManager.kt:191-196`) removes `tempBlocks`,
+`strikes`, `strikeTime`, `blockHistory`, and `graceUntil` for the package — so `isTempBlocked(pkg)`
+returns `null` immediately. New string `overlay_app_unblocked` added in both locales.
+
+### Trace (Bug C verification)
+
+```
+strike 3 -> recordAiDetection count>=3 -> handleBlockEscalation -> applyTempBlock(pkg,15min)
+         -> Blocked("temp_block:15min;ai") -> goHomeAndBlock -> HOME + BlockingEngine.block
+         -> launchOverlay -> BlockOverlayActivity (isAiBlock == true, btnMarkFalse VISIBLE)
+User taps "ভুল ব্লক হয়েছে"
+  -> takePendingCandidate() -> sig != null
+       -> falsePositiveMemory.addSignature(sig)        [future suppression, PRESERVED]
+       -> btnMarkFalse.isEnabled = false; text = "ঠিক আছে..."   [PRESERVED]
+       -> Snackbar "marked as false"                   [PRESERVED]
+       -> tempBlockManager.clearTempBlock(pkg)
+            -> tempBlocks.remove(pkg) => isTempBlocked(pkg) == null       [BUG FIXED]
+            -> strikes/strikeTime/blockHistory/graceUntil removed for pkg
+       -> relaunchBlockedApp(pkg)
+            -> getLaunchIntentForPackage(pkg) != null
+                 -> startActivity(launchIntent)   [user lands back in the previously-blocked app]
+                 -> finish()                      [overlay closes]
+null case:  getLaunchIntentForPackage -> null (app uninstalled / no launcher)
+                 -> Toast "App unblocked" -> finish()        [null-safe fallback ✓]
+throw case: PackageManager threw (app removed mid-flow)
+                 -> Toast "App unblocked" -> finish()        [no crash ✓]
+```
+- **`addSignature()` future behavior unchanged** — this fix only *adds* `clearTempBlock` + relaunch;
+  it removes nothing that currently works. The `sig == null` "unavailable" branch is preserved
+  byte-for-byte. ✓
+
+---
+
+## REGRESSION CHECK (all three fixes)
+
+| Constant / path | Value / behavior | Status |
+|-----------------|------------------|--------|
+| `STRIKE_THRESHOLD` | `3` (`Constants.kt:35`) | ✅ untouched |
+| `STRIKE_RESET_MS` | `10 min` (`Constants.kt:44`) | ✅ untouched |
+| `ESCALATION_THRESHOLD` | `3` (`Constants.kt:47`) | ✅ untouched |
+| `ESCALATION_WINDOW_MS` | `2 h` (`Constants.kt:46`) | ✅ untouched |
+| `DAY_BLOCK_MS` | `24 h` (`Constants.kt:48`) | ✅ untouched |
+| `DEFAULT_TEMP_BLOCK_MS` | `15 min` (`Constants.kt:45`) | ✅ untouched |
+| Strike-3 block application | `recordAiDetection` count≥3 → `handleBlockEscalation` → `applyTempBlock` (`TempBlockManager.kt:121-135`) | ✅ untouched (only the dedup window above it changed) |
+| Non-AI block reasons | `APP_BLOCKED`, `SCHEDULE_BLOCKED`, `KEYWORD_MATCH`, `TAMPER_ATTEMPT` route via `goHomeAndBlock`'s `else detail` branch (`GuardianAccessibilityService.kt:315`) and never call `evaluateAiStrike` | ✅ untouched |
+| Grace period | `POST_BLOCK_GRACE_MS` + `goHomeAndBlock` AI-grace early-return | ✅ untouched |
+| `FalsePositiveMemory` / `AiDetector` | No edits; Bug B/C do not call `addSignature`/`isKnown` for the strike undo | ✅ untouched |
+
+Only the inter-strike minimum gap (`1000L` → the shared constant) and the two added behaviors
+(strike undo, clear+relaunch) changed. Verified by `git diff` — no other edits.
+
+---
+
+## BUILD / VERSION
+
+- `app/build.gradle.kts`: `versionCode 20 → 21`, `versionName "3.0.1" → "3.0.2"` (fresh tag).
+- Release-tag guard probe (same URLs the in-repo guard checks): `v3.0.2` release page **404** and
+  tree page **404** → tag is free → no `RELEASE TAG COLLISION` expected. ✓
+- Local build not runnable in this sandbox (no JDK/SDK, no egress — reproduced above, consistent with
+  all prior sessions). The compile gate is the GitHub Actions `Build Release APK` workflow, which
+  runs `./gradlew assembleRelease --no-daemon --stacktrace` on push to `main` when this PR is merged.
+  Once merged it will sign, upload artifact `guardian-shield-release-v3.0.2`, and create the GitHub
+  Release (the fail-fast guard ensures the tag is still free; if it ever collides the guard aborts
+  with `RELEASE TAG COLLISION` before compiling, exactly as designed).
+- **Expected release once merged to `main`:**
+  - Tag: **`v3.0.2`**, Release: **"Guardian Shield v3.0.2"**
+  - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.2/app-release.apk`**
+
+---

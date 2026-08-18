@@ -33,6 +33,14 @@ object GuardianConstants {
     // After the 3rd AI strike → 15-minute block.
     // If blocked 3 times within 2 hours → Block for the day.
     const val STRIKE_THRESHOLD = 3
+
+    // Strike-1/2 warning card auto-dismiss (the overlay timer reads this) AND
+    // the minimum inter-strike gap enforced by TempBlockManager.recordAiDetection
+    // (Bug A). Single source of truth so the backend strike gate always matches
+    // the warning card's own visible duration — a strike-1 or strike-2 warning
+    // is guaranteed its full ~3.5 s on screen before another strike can be
+    // evaluated/counted. Do NOT hardcode 3500L anywhere else.
+    const val STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L
     const val STRIKE_RESET_MS = 10 * 60 * 1_000L           // 10 min idle resets the counter
     const val DEFAULT_TEMP_BLOCK_MS = 15 * 60 * 1_000L    // 15 minutes
     const val ESCALATION_WINDOW_MS = 2 * 60 * 60 * 1_000L // 2 hours

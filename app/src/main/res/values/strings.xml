@@ -152,6 +152,8 @@
     <string name="overlay_mark_false">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</string>
     <string name="overlay_mark_false_done">ঠিক আছে, এই প্যাটার্নটি আর ব্লক হবে না ✓</string>
     <string name="overlay_mark_false_unavailable">মনে রাখা যায়নি, আবার চেষ্টা করুন</string>
+    <!-- v3.0.2 Bug C — shown when a false-block report lifts the active block but the app cannot be relaunched (no launcher intent / app removed). -->
+    <string name="overlay_app_unblocked">App unblocked</string>
 
     <string name="delay_title">Unlock Pending</string>
     <string name="delay_text">Access will be granted in:</string>

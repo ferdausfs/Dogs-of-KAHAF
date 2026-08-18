@@ -30,7 +30,10 @@ sealed class AiStrikeResult {
      */
     data class StrikeCounted(val strikeCount: Int) : AiStrikeResult()
 
-    /** Duplicate detection within the 1-second dedup window — no user-visible action. */
+    /**
+     * Duplicate detection within the inter-strike gap
+     * ([GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]) — no user-visible action.
+     */
     data object Duplicate : AiStrikeResult()
 
     /** A recent temp block just expired; the user gets a grace period. */
@@ -70,8 +73,11 @@ class TempBlockManager @Inject constructor() {
      *  • If blocked 3 times within 2 hours, escalate to a 24-hour lock.
      *  • If a temp block just expired, return [AiStrikeResult.GracePeriod] so the
      *    app stays unlocked for [GuardianConstants.POST_BLOCK_GRACE_MS].
-     *  • A second detection within 1s of the previous strike returns
-     *    [AiStrikeResult.Duplicate] (dedup — no strike counted, no warning).
+     *  • A second detection within [GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]
+     *    of the previous strike returns [AiStrikeResult.Duplicate] (dedup — no
+     *    strike counted, no warning). The gap is the same as the strike-1/2
+     *    warning card's visible duration so each warning gets its full on-screen
+     *    time before the next strike can land (Bug A).
      *
      * @param pkg the offending package
      * @param blockDurationMs the user-configured temp-block duration
@@ -88,8 +94,15 @@ class TempBlockManager @Inject constructor() {
 
         val lastStrike = strikeTime[pkg] ?: 0L
 
-        // Prevent multiple strikes within 1 second for the same package
-        if (now - lastStrike < 1000L) {
+        // Prevent another strike from being counted until the strike-1/2 warning
+        // card has had its full visible duration. This guarantees each warning
+        // (strike 1, then strike 2) is on screen for at least
+        // STRIKE_WARNING_AUTO_DISMISS_MS (~3.5s) before the next strike can be
+        // evaluated/counted (Bug A). Without this, the ~1s AI scan cadence could
+        // walk strike 1 -> strike 3 (full block) in ~2-3s, so the user never saw
+        // either warning for its full duration. Uses the same constant as the
+        // card's own auto-dismiss timer (single source of truth, GuardianConstants).
+        if (now - lastStrike < GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS) {
             Timber.d("Ignoring duplicate AI strike for $pkg (too soon)")
             return AiStrikeResult.Duplicate
         }
@@ -188,4 +201,27 @@ class TempBlockManager @Inject constructor() {
 
     @Synchronized
     fun getStrikeCount(pkg: String): Int = strikes[pkg] ?: 0
+
+    /**
+     * Undo the most recent strike for [pkg] (Bug B — the strike-1/2 warning card's
+     * "Not sensitive" report). Decrements the live strike counter by one (floor 0)
+     * and clears the inter-strike timestamp so the
+     * [com.guardian.shield.util.GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]
+     * gap does not impose a "waiting" penalty on the user's next legitimate scan.
+     *
+     * This is a per-event undo ONLY — it never calls
+     * [com.guardian.shield.service.detection.FalsePositiveMemory.addSignature] and
+     * never whitelists any visual pattern, so future detections are evaluated
+     * normally by AiDetector exactly as before.
+     */
+    @Synchronized
+    fun cancelLastStrike(pkg: String) {
+        val before = strikes[pkg] ?: 0
+        val after = (before - 1).coerceAtLeast(0)
+        if (after == 0) strikes.remove(pkg) else strikes[pkg] = after
+        // Rewind the dedup timestamp so a reported-safe event doesn't eat into the
+        // next legitimate strike's allowed window (no "waiting" penalty).
+        strikeTime.remove(pkg)
+        Timber.d("cancelLastStrike($pkg): strike count $before -> $after (timestamp cleared)")
+    }
 }

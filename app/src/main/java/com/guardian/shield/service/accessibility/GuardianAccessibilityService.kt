@@ -309,7 +309,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                     return
                 }
                 AiStrikeResult.Duplicate -> {
-                    Timber.d("AI strike duplicate for $pkg (1s dedup) — ignored")
+                    Timber.d("AI strike duplicate for $pkg (3.5s dedup) — ignored")
                     return
                 }
             }
@@ -436,7 +436,10 @@ class GuardianAccessibilityService : AccessibilityService() {
         strikeWarningView = card
 
         mainHandler.removeCallbacks(strikeWarningDismissRunnable)
-        mainHandler.postDelayed(strikeWarningDismissRunnable, STRIKE_WARNING_AUTO_DISMISS_MS)
+        mainHandler.postDelayed(
+            strikeWarningDismissRunnable,
+            GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS
+        )
         Timber.d("Strike %d/%d warning card shown", strikeCount, GuardianConstants.STRIKE_THRESHOLD)
     }
 
@@ -452,19 +455,32 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * v2.5.4 — lightweight "not sensitive" audit report for a strike-1/2 warning.
+     * "Not sensitive" report for a strike-1/2 warning (Bug B).
      *
-     * This ONLY writes a [BlockEventEntity] row (reason = [BlockReason.NOT_SENSITIVE],
-     * strike count recorded in `matchedTerm`) into the existing `block_events` table
-     * for later human review. It is deliberately isolated from the detection path:
-     * it never calls [FalsePositiveMemory.addSignature]/[FalsePositiveMemory.isKnown],
-     * never touches [AiDetector], and never affects [com.guardian.shield.service.blocker.TempBlockManager]
-     * strike counting — future scans for this pattern behave exactly as before.
+     * Two effects, both triggered when the user taps the card's "Not sensitive":
+     *   1. Audit log (unchanged): writes a [BlockEventEntity] row (reason =
+     *      [BlockReason.NOT_SENSITIVE], strike count recorded in `matchedTerm`)
+     *      for later human review.
+     *   2. Live strike undo (Bug B fix): calls
+     *      [com.guardian.shield.service.blocker.TempBlockManager.cancelLastStrike]
+     *      (via [BlockingEngine.cancelLastStrike]) so the current strike counter
+     *      for [pkg] drops by one (floor 0) and the inter-strike timestamp is
+     *      cleared — the user's next legitimate scan is not penalised by the
+     *      3.5s gap.
+     *
+     * It remains deliberately isolated from the detection path: it never calls
+     * [FalsePositiveMemory.addSignature]/[FalsePositiveMemory.isKnown], never
+     * touches [AiDetector], and never whitelists any visual pattern — this is a
+     * per-event undo only, so future scans for the same pattern are still
+     * evaluated normally by AiDetector.
      *
      * The DB write runs on [ioScope] (off the main thread); the confirmation Toast
      * is shown immediately from the click handler's (main) thread.
      */
     private fun reportNotSensitive(pkg: String, strikeCount: Int) {
+        // Bug B — undo this specific strike before (or alongside) the log.
+        blockingEngine.cancelLastStrike(pkg)
+
         val matched = "strike=$strikeCount"
         ioScope.launch {
             runCatching {
@@ -964,11 +980,6 @@ class GuardianAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {
         Timber.w("Accessibility service interrupted")
         clearBlockingFlag("interrupted")
-    }
-
-    companion object {
-        /** Strike-warning card auto-dismiss — 3.5 s (approved 3–4 s range). */
-        private const val STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L
     }
 
     override fun onDestroy() {
