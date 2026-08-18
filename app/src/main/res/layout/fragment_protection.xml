@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Protection Hub (approved: mocks/v3/protection.html)
-     REAL modules only — no invented DNS/VPN/browser shields.
-     Bindings preserved: imgShield txtProtectionTitle txtProtectionSubtitle
-     txtBadgeActive cardAppBlocking cardKeyword cardSchedule cardAi
-     cardAccessibility (same classes + destinations). -->
+<!-- ONE SHIELD — Protection Hub. 5 real modules. Bindings preserved. -->
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:overScrollMode="never"
@@ -17,37 +12,40 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="6dp"
         android:paddingBottom="28dp">
 
-        <!-- Hub hero — beacon -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="14dp"
+            android:text="@string/protection_title"
+            android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
             style="@style/Widget.GuardianShield.Card.Beacon">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center"
-                android:paddingHorizontal="22dp"
-                android:paddingVertical="26dp">
+                android:padding="20dp">
 
                 <FrameLayout
-                    android:layout_width="110dp"
-                    android:layout_height="110dp">
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="@drawable/bg_shield_glow"
-                        android:alpha="0.5"/>
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_icon_well"
+                    android:backgroundTint="@color/beacon_dim">
                     <ImageView
                         android:id="@+id/imgShield"
-                        android:layout_width="58dp"
-                        android:layout_height="58dp"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_shield_on"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="@color/primary_dim"
                         android:contentDescription="@null"/>
                 </FrameLayout>
 
@@ -60,234 +58,99 @@
                     android:textColor="@color/on_primary_container"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:letterSpacing="-0.015"
-                    android:gravity="center"/>
+                    android:letterSpacing="-0.02"/>
 
                 <TextView
                     android:id="@+id/txtProtectionSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
+                    android:layout_marginTop="4dp"
                     android:text="@string/protection_hub_sub"
                     android:textColor="@color/on_primary_container"
                     android:alpha="0.78"
-                    android:textSize="13sp"
-                    android:lineSpacingMultiplier="1.25"
-                    android:gravity="center"/>
+                    android:textSize="13.5sp"
+                    android:lineSpacingMultiplier="1.35"/>
 
                 <TextView
                     android:id="@+id/txtBadgeActive"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="12dp"
                     android:text="● Active • সক্রিয়"
-                    android:textColor="@color/success"
-                    android:textSize="11sp"
+                    android:textColor="@color/primary_dim"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.05"
                     android:background="@drawable/bg_badge"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"/>
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:layout_marginBottom="12dp"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="22dp"
+            android:paddingBottom="8dp"
             android:text="@string/protection_modules"
             style="@style/TextAppearance.GuardianShield.SectionHeader"/>
 
-        <!-- Module rows -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_marginHorizontal="20dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAi"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true" android:focusable="true"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal" android:gravity="center_vertical"
-                    android:padding="16dp">
-                    <FrameLayout
-                        android:layout_width="46dp" android:layout_height="46dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_ai_bg">
-                        <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                            android:layout_gravity="center" android:src="@drawable/ic_ai_spark"
-                            app:tint="@color/ai_accent" android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="wrap_content" android:orientation="vertical"
-                        android:layout_marginStart="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/ai_detection" android:textColor="@color/on_surface"
-                            android:textSize="15sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp" android:text="@string/module_ai_sub"
-                            android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                            android:lineSpacingMultiplier="1.3"/>
+                <LinearLayout android:id="@+id/cardAi" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_ai_spark" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_detection" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_ai_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
-                    <ImageView android:layout_width="18dp" android:layout_height="18dp"
-                        android:src="@drawable/ic_arrow_back" android:rotationY="180"
-                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAppBlocking"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true" android:focusable="true"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal" android:gravity="center_vertical"
-                    android:padding="16dp">
-                    <FrameLayout
-                        android:layout_width="46dp" android:layout_height="46dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_success_bg">
-                        <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                            android:layout_gravity="center" android:src="@drawable/ic_apps"
-                            app:tint="@color/primary" android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="wrap_content" android:orientation="vertical"
-                        android:layout_marginStart="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/module_app_blocking" android:textColor="@color/on_surface"
-                            android:textSize="15sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp" android:text="@string/module_apps_sub"
-                            android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                            android:lineSpacingMultiplier="1.3"/>
+                <LinearLayout android:id="@+id/cardAppBlocking" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_apps" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_app_blocking" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_apps_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
-                    <ImageView android:layout_width="18dp" android:layout_height="18dp"
-                        android:src="@drawable/ic_arrow_back" android:rotationY="180"
-                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardKeyword"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true" android:focusable="true"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal" android:gravity="center_vertical"
-                    android:padding="16dp">
-                    <FrameLayout
-                        android:layout_width="46dp" android:layout_height="46dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="#1F7EC8F0">
-                        <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                            android:layout_gravity="center" android:src="@drawable/ic_keyword"
-                            app:tint="@color/info_sky" android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="wrap_content" android:orientation="vertical"
-                        android:layout_marginStart="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/keyword_filter" android:textColor="@color/on_surface"
-                            android:textSize="15sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp" android:text="@string/module_keywords_sub"
-                            android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                            android:lineSpacingMultiplier="1.3"/>
+                <LinearLayout android:id="@+id/cardKeyword" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_keyword" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/keyword_filter" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_keywords_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
-                    <ImageView android:layout_width="18dp" android:layout_height="18dp"
-                        android:src="@drawable/ic_arrow_back" android:rotationY="180"
-                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardSchedule"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true" android:focusable="true"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal" android:gravity="center_vertical"
-                    android:padding="16dp">
-                    <FrameLayout
-                        android:layout_width="46dp" android:layout_height="46dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_warn_bg">
-                        <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                            android:layout_gravity="center" android:src="@drawable/ic_clock"
-                            app:tint="@color/warning_amber" android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="wrap_content" android:orientation="vertical"
-                        android:layout_marginStart="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/module_schedule" android:textColor="@color/on_surface"
-                            android:textSize="15sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp" android:text="@string/module_schedule_sub"
-                            android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                            android:lineSpacingMultiplier="1.3"/>
+                <LinearLayout android:id="@+id/cardSchedule" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_clock" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_schedule" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_schedule_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
-                    <ImageView android:layout_width="18dp" android:layout_height="18dp"
-                        android:src="@drawable/ic_arrow_back" android:rotationY="180"
-                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAccessibility"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true" android:focusable="true"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal" android:gravity="center_vertical"
-                    android:padding="16dp">
-                    <FrameLayout
-                        android:layout_width="46dp" android:layout_height="46dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_neutral_bg">
-                        <ImageView android:layout_width="22dp" android:layout_height="22dp"
-                            android:layout_gravity="center" android:src="@drawable/ic_access"
-                            app:tint="@color/on_surface_variant" android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                        android:layout_height="wrap_content" android:orientation="vertical"
-                        android:layout_marginStart="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/perm_accessibility" android:textColor="@color/on_surface"
-                            android:textSize="15sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp" android:text="@string/module_accessibility_sub"
-                            android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                            android:lineSpacingMultiplier="1.3"/>
+                <LinearLayout android:id="@+id/cardAccessibility" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_access" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/perm_accessibility" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_accessibility_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
-                    <ImageView android:layout_width="18dp" android:layout_height="18dp"
-                        android:src="@drawable/ic_arrow_back" android:rotationY="180"
-                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

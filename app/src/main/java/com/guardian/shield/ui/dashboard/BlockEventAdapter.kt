@@ -50,17 +50,17 @@ class BlockEventAdapter(
             val time = fmt.format(Date(e.timestamp))
             val ctx = b.root.context
 
-            val (reasonText, colorRes, emoji) = when (e.reason) {
-                BlockReason.AI_DETECTION    -> Triple(ctx.getString(R.string.reason_ai),    R.color.primary,       "🤖")
-                BlockReason.KEYWORD_MATCH   -> Triple(ctx.getString(R.string.reason_kw),    R.color.secondary,     "🔑")
-                BlockReason.APP_BLOCKED     -> Triple(ctx.getString(R.string.reason_app),   R.color.error,         "🚫")
-                BlockReason.SCHEDULE_BLOCKED-> Triple(ctx.getString(R.string.reason_sched), R.color.purple,        "🕐")
-                BlockReason.MANUAL          -> Triple(ctx.getString(R.string.reason_manual),R.color.on_surface_dim,"✋")
-                BlockReason.TAMPER_ATTEMPT   -> Triple(ctx.getString(R.string.reason_tamper), R.color.error,         "⚠️")
-                BlockReason.NOT_SENSITIVE   -> Triple(ctx.getString(R.string.reason_not_sensitive), R.color.success, "📝")
+            val (reasonText, colorRes) = when (e.reason) {
+                BlockReason.AI_DETECTION    -> ctx.getString(R.string.reason_ai) to R.color.primary_dim
+                BlockReason.KEYWORD_MATCH   -> ctx.getString(R.string.reason_kw) to R.color.on_surface_variant
+                BlockReason.APP_BLOCKED     -> ctx.getString(R.string.reason_app) to R.color.error
+                BlockReason.SCHEDULE_BLOCKED-> ctx.getString(R.string.reason_sched) to R.color.primary_dim
+                BlockReason.MANUAL          -> ctx.getString(R.string.reason_manual) to R.color.on_surface_dim
+                BlockReason.TAMPER_ATTEMPT   -> ctx.getString(R.string.reason_tamper) to R.color.error
+                BlockReason.NOT_SENSITIVE   -> ctx.getString(R.string.reason_not_sensitive) to R.color.primary_dim
             }
 
-            b.txtReason.text = "$emoji $reasonText"
+            b.txtReason.text = reasonText
             b.txtTime.text   = time
             try { b.txtTimeInline.text = time } catch (_: Throwable) {}
             try {

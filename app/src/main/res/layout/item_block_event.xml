@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — activity event row (category spine + tabular time)
-     Binding contract preserved: badge imgAppIcon txtPackage txtReason
-     txtTimeInline txtBadgeBlocked txtTime (same widget classes). -->
-<com.google.android.material.card.MaterialCardView
+<!-- ONE SHIELD — event row (sits inside a sheet). IDs preserved. -->
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    style="@style/Widget.GuardianShield.Card.Row"
-    android:foreground="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
@@ -19,21 +15,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:minHeight="64dp">
 
-        <!-- category spine — tinted in code (setBackgroundTintList) -->
         <View
             android:id="@+id/badge"
-            android:layout_width="3.5dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_spine"/>
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/imgAppIcon"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_marginStart="12dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:scaleType="fitCenter"
             android:contentDescription="@null"/>
 
@@ -49,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/on_surface"
-                android:textSize="14sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"/>
@@ -59,9 +54,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textColor="@color/on_surface_dim"
+                android:textColor="@color/on_surface_variant"
                 android:fontFamily="monospace"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:maxLines="1"
                 android:ellipsize="middle"/>
 
@@ -86,11 +81,10 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_badge"
                 android:backgroundTint="@color/badge_error_bg"
-                android:textColor="@color/error"
-                android:textSize="10sp"
+                android:textColor="@color/error_bright"
+                android:textSize="11sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.04"
-                android:paddingHorizontal="10dp"
+                android:paddingHorizontal="9dp"
                 android:paddingVertical="4dp"
                 tools:text="AI Blocked"/>
 
@@ -101,8 +95,14 @@
                 android:layout_marginTop="6dp"
                 android:textColor="@color/on_surface_dim"
                 android:fontFeatureSettings="tnum"
-                android:textSize="11.5sp"
+                android:textSize="12sp"
                 tools:text="09:41"/>
         </LinearLayout>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_subtle"
+        android:layout_marginStart="68dp"/>
+</LinearLayout>

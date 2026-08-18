@@ -130,7 +130,7 @@ class DashboardFragment : Fragment() {
                 binding.imgShield.setImageResource(R.drawable.ic_shield_on)
                 binding.btnToggle.text = getString(R.string.btn_pause)
                 binding.txtProtectionBadge.text = "● Protection Active • সক্রিয় • All Systems Active"
-                binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.success))
+                binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.primary_dim))
                 applyHeroState(HeroState.ON)
                 startShieldPulse()
             }
@@ -189,12 +189,12 @@ class DashboardFragment : Fragment() {
         val (bg, stroke, textOn, btnBg, btnText) = when (state) {
             HeroState.ON ->
                 Quint(ctx.getColor(R.color.primary_container), ctx.getColor(R.color.primary),
-                    R.color.on_primary_container, R.color.on_primary_container, R.color.primary_container_end)
+                    R.color.on_primary_container, R.color.primary, R.color.on_primary)
             HeroState.PAUSED ->
-                Quint(ctx.getColor(R.color.amber_hero_start), ctx.getColor(R.color.warning_amber),
-                    R.color.on_warning_container, R.color.warning_amber, R.color.black)
+                Quint(ctx.getColor(R.color.warning_container), ctx.getColor(R.color.warning_amber),
+                    R.color.on_warning_container, R.color.primary, R.color.on_primary)
             HeroState.OFF ->
-                Quint(ctx.getColor(R.color.red_hero_start), ctx.getColor(R.color.error),
+                Quint(ctx.getColor(R.color.error_container), ctx.getColor(R.color.error),
                     R.color.on_error_container, R.color.error, R.color.on_error)
         }
         binding.statusCard.setCardBackgroundColor(bg)
