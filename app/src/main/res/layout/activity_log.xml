@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Activity Log (approved: mocks/v3/activity.html)
-     Bindings preserved: toolbar btnDay btnWeek btnMonth txtBlockedAttempts
-     chipAll chipAi chipKeyword chipApp chipSchedule txtCount txtEmpty
-     recyclerEvents (+ toolbar menu Export/Clear). -->
+<!-- ONE SHIELD — Activity Log. Bindings preserved including unbound Day/Week/Month chrome. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -17,11 +14,9 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="@string/activity_log_title"
+        app:title=""
         app:titleTextColor="@color/on_surface"
-        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"
-        app:subtitleTextAppearance="@style/TextAppearance.GuardianShield.BodyDim"
-        app:subtitleTextColor="@color/on_surface_dim"/>
+        app:navigationIconTint="@color/on_surface"/>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -32,270 +27,111 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="4dp"
             android:paddingBottom="28dp">
 
-            <!-- Period segmented control -->
-            <com.google.android.material.button.MaterialButtonToggleGroup
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:singleSelection="true"
-                app:selectionRequired="true"
-                android:orientation="horizontal">
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="10dp"
+                android:text="@string/activity_log_title"
+                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDay"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="38dp"
-                    android:text="@string/period_day"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="999dp"/>
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnWeek"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="38dp"
-                    android:text="@string/period_week"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="999dp"/>
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMonth"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="38dp"
-                    android:text="@string/period_month"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="999dp"/>
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-
-            <!-- Attempts summary + static week chart -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                style="@style/Widget.GuardianShield.Card">
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp">
 
-                <LinearLayout
+                <com.google.android.material.button.MaterialButtonToggleGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:background="@color/inset"
+                    android:padding="4dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDay"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp"
+                        android:text="@string/period_day" android:textSize="13sp" android:textStyle="bold"
+                        app:strokeWidth="0dp" app:cornerRadius="999dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnWeek"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp"
+                        android:text="@string/period_week" android:textSize="13sp" android:textStyle="bold"
+                        app:strokeWidth="0dp" app:cornerRadius="999dp"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMonth"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp"
+                        android:text="@string/period_month" android:textSize="13sp" android:textStyle="bold"
+                        app:strokeWidth="0dp" app:cornerRadius="999dp"/>
+                </com.google.android.material.button.MaterialButtonToggleGroup>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/blocked_attempts"
-                                style="@style/TextAppearance.GuardianShield.SectionHeader"
-                                android:textColor="@color/on_surface_dim"/>
-                            <TextView
-                                android:id="@+id/txtBlockedAttempts"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:text="0"
-                                android:fontFeatureSettings="tnum"
-                                android:textColor="@color/on_surface"
-                                android:textSize="34sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="-0.02"/>
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:background="@drawable/bg_badge"
-                                android:backgroundTint="@color/badge_success_bg"
-                                android:text="@string/attempts_vs_yesterday"
-                                android:textColor="@color/success"
-                                android:textSize="10.5sp"
-                                android:textStyle="bold"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="4dp"/>
-                        </LinearLayout>
-                        <!-- legend -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:gravity="end">
-                            <TextView
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:drawableStart="@drawable/dot_filled"
-                                android:drawablePadding="6dp"
-                                android:drawableTint="@color/primary"
-                                android:text="@string/legend_all"
-                                android:textColor="@color/on_surface_dim"
-                                android:textSize="10.5sp" android:textStyle="bold"/>
-                            <TextView
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:drawableStart="@drawable/dot_filled"
-                                android:drawablePadding="6dp"
-                                android:drawableTint="@color/ai_accent"
-                                android:text="@string/legend_ai"
-                                android:textColor="@color/on_surface_dim"
-                                android:textSize="10.5sp" android:textStyle="bold"/>
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- 7-day chart (static, decorative) -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="96dp"
-                        android:orientation="horizontal"
-                        android:gravity="bottom|center_vertical"
-                        android:layout_marginTop="22dp"
-                        android:baselineAligned="false">
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="34dp" android:background="@drawable/bg_bar_dim" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="52dp" android:background="@drawable/bg_bar_dim" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="41dp" android:background="@drawable/bg_bar_dim" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="88dp" android:background="@drawable/bg_bar_beacon" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="63dp" android:background="@drawable/bg_bar_ai" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="30dp" android:background="@drawable/bg_bar_dim" android:layout_marginHorizontal="4dp"/>
-                        <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="12dp" android:background="@drawable/bg_bar_dim" android:layout_marginHorizontal="4dp"/>
-                    </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="M" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="T" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="W" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="T" android:textSize="10sp" android:textColor="@color/primary" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="F" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="S" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:gravity="center" android:text="S" android:textSize="10sp" android:textColor="@color/on_surface_dim" android:textStyle="bold"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Filters -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:layout_marginTop="20dp">
-                <LinearLayout
+                <TextView
+                    android:id="@+id/txtBlockedAttempts"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAll"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/log_filter_all"
-                        android:layout_marginEnd="8dp"
-                        style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAi"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/log_filter_ai"
-                        android:layout_marginEnd="8dp"
-                        style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipKeyword"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/log_filter_keyword"
-                        android:layout_marginEnd="8dp"
-                        style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipApp"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/log_filter_app"
-                        android:layout_marginEnd="8dp"
-                        style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipSchedule"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/log_filter_schedule"
-                        style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:checkable="true"/>
-                </LinearLayout>
-            </HorizontalScrollView>
+                    android:visibility="gone"
+                    tools:text="0"/>
 
-            <TextView
-                android:id="@+id/txtCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="10dp"
-                android:textColor="@color/on_surface_dim"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1"
-                android:textAllCaps="true"
-                tools:text="42 events"/>
-
-            <!-- Empty state -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/txtEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                style="@style/Widget.GuardianShield.Card"
-                tools:visibility="visible">
-                <LinearLayout
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:paddingVertical="44dp"
-                    android:paddingHorizontal="30dp">
-                    <FrameLayout
-                        android:layout_width="76dp" android:layout_height="76dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_success_bg">
-                        <ImageView
-                            android:layout_width="34dp" android:layout_height="34dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_shield_check"
-                            app:tint="@color/success"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:text="@string/log_empty"
-                        android:textColor="@color/on_surface"
-                        android:textSize="16.5sp" android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/empty_no_blocks"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                    android:scrollbars="none"
+                    android:layout_marginTop="16dp">
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <com.google.android.material.chip.Chip android:id="@+id/chipAll" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/log_filter_all" android:layout_marginEnd="8dp" style="@style/Widget.GuardianShield.Chip.Filter" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip android:id="@+id/chipAi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/log_filter_ai" android:layout_marginEnd="8dp" style="@style/Widget.GuardianShield.Chip.Filter" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip android:id="@+id/chipKeyword" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/log_filter_keyword" android:layout_marginEnd="8dp" style="@style/Widget.GuardianShield.Chip.Filter" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip android:id="@+id/chipApp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/log_filter_app" android:layout_marginEnd="8dp" style="@style/Widget.GuardianShield.Chip.Filter" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip android:id="@+id/chipSchedule" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/log_filter_schedule" style="@style/Widget.GuardianShield.Chip.Filter" android:checkable="true"/>
+                    </LinearLayout>
+                </HorizontalScrollView>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerEvents"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:overScrollMode="never"
-                tools:itemCount="5"
-                tools:visibility="gone"/>
+                <TextView
+                    android:id="@+id/txtCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="10dp"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="12 events"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/txtEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    style="@style/Widget.GuardianShield.Card"
+                    tools:visibility="visible">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="44dp" android:paddingHorizontal="30dp">
+                        <FrameLayout android:layout_width="64dp" android:layout_height="64dp" android:background="@drawable/bg_icon_well">
+                            <ImageView android:layout_width="28dp" android:layout_height="28dp" android:layout_gravity="center" android:src="@drawable/ic_shield_check" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                        </FrameLayout>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/log_empty" android:textColor="@color/on_surface" android:textSize="17sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/empty_no_blocks" android:textColor="@color/on_surface_variant" android:textSize="13.5sp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.GuardianShield.Card">
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerEvents"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        tools:itemCount="5"/>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>
