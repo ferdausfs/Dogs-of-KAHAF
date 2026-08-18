@@ -1602,3 +1602,227 @@ Next scan of frame F: AiDetector.isUnsafe → isKnown(bitmap) == true →
 - **Expected release once merged to `main`:**
   - Tag: **`v3.1.1`**, Release: **"Guardian Shield v3.1.1"**
   - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.1/app-release.apk`**
+
+
+---
+
+# Session 2026-08-18 — Mark False restyled as proper outlined secondary button (arena/01a013cb-dogs-of-kahaf)
+
+**Base:** `main` @ `ebe85e3` (Merge PR #48 — Bug D/E fixes, v3.1.1 / versionCode 23)
+**New:** `versionName 3.1.2 / versionCode 24`
+**Date:** 2026-08-18
+**Branch:** `arena/01a013cb-dogs-of-kahaf` · **PR:** #49
+**Scope:** PURE UI/styling change. No click-handler / gating / unblock / learn logic touched.
+
+## 1) BEFORE → AFTER (strike-3 full-block overlay)
+
+The block screen's action area previously rendered (bottom to top):
+
+```
+[ btnHome      — "Stay Protected"  — solid red Danger pill, 54dp ]
+[ btnUnlock    — "Request Unlock"  — tonal pill, 54dp ]
+[ btnMarkFalse — "ভুল ব্লক হয়েছে?..." — Widget.GuardianShield.Button.Text, 48dp, 8dp gap ]  ← small text link
+─────────────── STAY STRONG 💪 ───────────────
+```
+
+`btnMarkFalse` used `Widget.GuardianShield.Button.Text` (a `Widget.Material3.Button.TextButton`
+with `primary_dim` 15sp text) and read as a small underlined-looking plain-text link pushed past
+the motivation divider to the very bottom of the screen — easy to miss and awkward to tap.
+
+After this session:
+
+```
+[ btnHome      — "Stay Protected"  — solid red Danger pill, 54dp ]
+[ btnUnlock    — "Request Unlock"  — tonal pill, 54dp ]
+[ btnMarkFalse — "ভুল ব্লক হয়েছে?..." — Widget.GuardianShield.Button.Outlined, 54dp, 10dp gap, flag icon ]  ← outlined secondary
+─────────────── STAY STRONG 💪 ───────────────
+```
+
+- Same **full width** and horizontal margins as `btnHome`/`btnUnlock` (`match_parent`, parent
+  `paddingHorizontal=20dp`) — all three buttons now line up as a single grouped action column.
+- **Outlined**, transparent fill (not solid red) with a visible **1.5dp `warning_amber` border**
+  and `warning_amber` 15sp bold text — clear secondary/destructive-adjacent action, distinct from
+  the red primary. `warning_amber` is the app's existing danger/warning accent already used for
+  the temp-block banner, the reason text, and the strike-warning chrome (`colors.xml`); **no new
+  color was invented**.
+- **54dp height** (was 48dp) with `minHeight=52dp` from the style — comfortable 48–56dp tap
+  target, matching the app's existing 52–54dp button-height convention.
+- Small **flag/report icon** (`@drawable/ic_flag`, 18dp, `iconGravity=textStart`, tinted
+  `warning_amber`) so it reads as a distinct "report this block" action rather than relocated
+  text. The icon is a new 24dp vector added under the app's existing `ic_*` naming convention
+  (no third-party asset).
+- The **"STAY STRONG 💪" divider/footer is unchanged in content** and now sits *below* the new
+  button instead of above it — all three buttons are grouped together as the screen's action area.
+
+## 2) FILES CHANGED (layout/XML/drawable/style only)
+
+| File | Change |
+|------|--------|
+| `app/src/main/res/layout/activity_block_overlay.xml` | `btnMarkFalse` style `Button.Text` → `Button.Outlined`; height 48dp→54dp; marginTop 8dp→10dp; added `app:icon=@drawable/ic_flag` + `iconTint=warning_amber` + `iconSize=18dp` + `iconGravity=textStart`. The button already sits directly under `btnUnlock` and above the divider in the existing LinearLayout order — no ID move / no reorder of other views. |
+| `app/src/main/res/values/themes.xml` | New `Widget.GuardianShield.Button.Outlined` (parent `Widget.Material3.Button.OutlinedButton`): 999dp corner, transparent `backgroundTint`, `warning_amber` text + 1.5dp `strokeColor`, 15sp bold, `minHeight=52dp`, zero vertical insets, 24dp horizontal padding, `ripple_error`. |
+| `app/src/main/res/drawable/ic_flag.xml` | New 24dp flag vector, `android:tint=@color/warning_amber`. |
+| `app/build.gradle.kts` | `versionCode 23→24`, `versionName "3.1.1"→"3.1.2"` (release-tag bump — see §5). |
+
+`BlockOverlayActivity.kt`, `GuardianAccessibilityService.kt`, `TempBlockManager.kt`,
+`BlockingEngine.kt`, `FalsePositiveMemory.kt`, `AiDetector.kt`, `Constants.kt`, and both
+`strings.xml` files are **unchanged**.
+
+## 3) SCOPE AUDIT — only one mark-false pattern; strike-1/2 card untouched
+
+`grep` for `btnMarkFalse`/`mark_false` across `app/src/main` confirms the mark-false pattern
+exists in exactly **one** layout — `activity_block_overlay.xml` (the strike-3 full-block screen) —
+plus its single binding reference in `BlockOverlayActivity.kt`. There is no second layout to
+update.
+
+The separate strike-1/2 warning card is `view_strike_warning.xml` with its **own**
+`btnNotSensitive` ("সংবেদনশীল নয়" / "Not sensitive"), already correctly styled in a prior
+session. This task explicitly excluded it; verified `git diff main -- view_strike_warning.xml`
+is **empty**.
+
+## 4) LOGIC-UNTOUCHED PROOF (Bug D / Bug E byte-identical)
+
+```
+$ git diff --name-only main
+app/build.gradle.kts
+app/src/main/res/drawable/ic_flag.xml          (new)
+app/src/main/res/layout/activity_block_overlay.xml
+app/src/main/res/values/themes.xml
+
+$ git diff --name-only main | grep '\.kt$'   →  (empty — ZERO Kotlin files changed)
+
+$ git diff main -- app/src/main/java/com/guardian/shield/ui/overlay/BlockOverlayActivity.kt
+(empty — IDENTICAL to main)
+
+$ git diff main -- app/src/main/java/com/guardian/shield/service/accessibility/GuardianAccessibilityService.kt
+(empty — IDENTICAL to main)
+```
+
+Specifically preserved exactly as Bug D/E left them:
+
+- **`btnMarkFalse` ID and type unchanged** — still `@+id/btnMarkFalse` on a
+  `com.google.android.material.button.MaterialButton`; ViewBinding field
+  `ActivityBlockOverlayBinding.btnMarkFalse` resolves to the same type, so no Kotlin/binding
+  change is required (and none was made).
+- **`isAiBlock` visibility gate** (`BlockOverlayActivity.kt:107`:
+  `if (isAiBlock) { binding.btnMarkFalse.visibility = View.VISIBLE; ... }`) — untouched.
+- **Bug D unconditional unblock+relaunch** — `tempBlockManager.clearTempBlock(pkg)` runs first on
+  every tap, then disable/retitle/Snackbar, then best-effort
+  `takePendingCandidate()`/`addSignature(sig)` (with the `null`-candidate `Timber.w` path), then
+  `relaunchBlockedApp(pkg)` — byte-for-byte identical.
+- **`relaunchBlockedApp(pkg)`** null-safe `getLaunchIntentForPackage` fallback + `try/catch(Throwable)`
+  Toast/finish paths — unchanged.
+- **Bug E "Not sensitive learns the pattern"** in `GuardianAccessibilityService.reportNotSensitive`
+  (`cancelLastStrike` + `takePendingCandidate`/`addSignature` + audit row) — untouched; that
+  button lives on `view_strike_warning.xml`, which is not part of this change.
+
+No view-binding reference changes were needed (the button's ID and parent hierarchy did not move
+between binding-inflatable containers; it remains a direct child of the same root LinearLayout,
+just with a different style).
+
+### Full diff
+
+```diff
+diff --git a/app/build.gradle.kts
+-        versionCode = 23
+-        versionName = "3.1.1"
++        versionCode = 24
++        versionName = "3.1.2"
+
+diff --git a/app/src/main/res/layout/activity_block_overlay.xml
+         <com.google.android.material.button.MaterialButton
+             android:id="@+id/btnMarkFalse"
+-            style="@style/Widget.GuardianShield.Button.Text"
++            style="@style/Widget.GuardianShield.Button.Outlined"
+             android:layout_width="match_parent"
+-            android:layout_height="48dp"
+-            android:layout_marginTop="8dp"
++            android:layout_height="54dp"
++            android:layout_marginTop="10dp"
++            app:icon="@drawable/ic_flag"
++            app:iconTint="@color/warning_amber"
++            app:iconSize="18dp"
++            app:iconGravity="textStart"
+             android:text="@string/overlay_mark_false"/>
+
+diff --git a/app/src/main/res/values/themes.xml  (+20)
++    <style name="Widget.GuardianShield.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
++        <item name="cornerRadius">999dp</item>
++        <item name="backgroundTint">@android:color/transparent</item>
++        <item name="android:textColor">@color/warning_amber</item>
++        <item name="android:textSize">15sp</item>
++        <item name="android:textStyle">bold</item>
++        <item name="android:minHeight">52dp</item>
++        <item name="strokeColor">@color/warning_amber</item>
++        <item name="strokeWidth">1.5dp</item>
++        <item name="android:insetTop">0dp</item>
++        <item name="android:insetBottom">0dp</item>
++        <item name="android:paddingHorizontal">24dp</item>
++        <item name="android:textAllCaps">false</item>
++        <item name="rippleColor">@color/ripple_error</item>
++    </style>
+
+new file: app/src/main/res/drawable/ic_flag.xml  (24dp flag vector, tint=warning_amber)
+```
+
+## 5) BUILD / VERSION
+
+- **Version bump required:** `v3.1.1` is **already published** (release page `200`, tree page
+  `200`) — the repo's fail-fast release-tag guard would abort an `assembleRelease` with
+  `RELEASE TAG COLLISION: v3.1.1 already exists`. Bumped to **`3.1.2` (24)**; probed
+  `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.1.2` → **404** and
+  `…/tree/v3.1.2` → **404** → tag is free, no collision expected.
+- **Local compile gate (real, not just visual assumption):** this sandbox has no Android SDK and
+  no egress to `dl.google.com` / Maven Central / `services.gradle.org` (reproduced), so a full
+  `./gradlew assembleRelease` cannot run locally — same as every prior session. I therefore stood
+  up the same real Kotlin compile gate used in the Bug D/E session:
+  - JRE 25 via `pip install jdk4py`;
+  - Kotlin **2.3.10-RC** JVM compiler (`K2JVMCompiler`) extracted from the `kotlin-jupyter-kernel`
+    PyPI wheel;
+  - the **real `android.jar` (android-35, 14,488 entries)** fetched via `gh api` from
+    `Sable/android-platforms`;
+  - generated stubs for androidx/material/hilt/room/coroutines/tflite/timber, plus generated `R`
+    and all 23 ViewBinding classes (71 colors / 63 drawables / 36 styles all resolve via
+    `guardian-redesign/tools/verify_res.py`).
+  - **Result: `exit=0`, 0 errors, 532 `.class` files**, compiling all 65 app sources together.
+    `BlockOverlayActivity.class` (and its `onCreate$7` click-listener lambda + `Companion`) emitted
+    successfully. Only pre-existing deprecation warnings (e.g. `AccessibilityNodeInfo.recycle()`),
+    none on the changed lines. This proves the XML/style change (the new Outlined style, the
+    `ic_flag` reference, and the unchanged `btnMarkFalse` binding) resolves and the Kotlin side —
+    including the Bug D/E click logic — still compiles with zero changes.
+- **CI release gate:** the `Build Release APK` workflow runs `./gradlew assembleRelease
+  --no-daemon --stacktrace` on push to `main` (it does not run on PR branches — confirmed
+  `gh pr checks` shows no checks on the arena branch, and the workflow `on:` is `push:
+  [main, master]` + `workflow_dispatch` only, as in prior sessions). The green build + signed
+  APK + GitHub Release publish when PR #49 merges to `main`. The fail-fast guard verifies
+  `v3.1.2` is free at configuration time, before compilation.
+
+## 6) GREEN BUILD + RELEASE LINK
+
+- **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/49
+- **Expected CI run after merge:** `Build Release APK` on `main` → `./gradlew assembleRelease
+  --no-daemon --stacktrace` → sign → upload artifact `guardian-shield-release-v3.1.2` → create
+  release tag `v3.1.2`.
+- **Expected release once merged to `main`:**
+  - Tag: **`v3.1.2`**, Release: **"Guardian Shield v3.1.2"**
+  - Direct APK download: **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.2/app-release.apk**
+  (Link resolves after the post-merge Actions run completes; the tag is free per the §5 probe.)
+
+## 7) COMPLIANCE CHECKLIST
+
+- [x] `btnMarkFalse` is now a proper **outlined** secondary button (Material3
+  `OutlinedButton` parent), not solid red.
+- [x] Same **full width / matching margins** as the primary "Stay Protected" button.
+- [x] Sits **directly below** "Stay Protected"/"Request Unlock" with normal button spacing —
+  grouped as the action area, not pushed to the bottom past the divider.
+- [x] Visible outline/border in the app's **existing `warning_amber`** danger/warning accent —
+  no new color invented.
+- [x] **54dp height** (48–56dp comfortable tap target, matching app convention).
+- [x] Small **flag icon** (reusing the app's vector-icon convention; new `ic_flag.xml`, no
+  third-party asset) paired with the text.
+- [x] **"STAY STRONG 💪" divider unchanged** in content, now below the button.
+- [x] **Zero** click-handler / `isAiBlock` gate / Bug-D-unblock / Bug-E-learn changes —
+  `BlockOverlayActivity.kt` byte-identical to `main`; `view_strike_warning.xml` untouched.
+- [x] Change applied to the **only** mark-false layout (strike-3 full block); no other layout
+  uses the pattern.
+- [x] Version bumped past the already-published v3.1.1; release-tag guard confirms v3.1.2 free.
+- [x] Local Kotlin compile gate green (0 errors); CI `assembleRelease` runs on merge.
