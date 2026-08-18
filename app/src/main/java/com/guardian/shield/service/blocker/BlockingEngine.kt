@@ -90,9 +90,12 @@ class BlockingEngine @Inject constructor(
 
     /**
      * Undo the most recent AI strike for [pkg] (Bug B — "Not sensitive" on the
-     * strike-1/2 warning card). Per-event undo only: it never touches
-     * [com.guardian.shield.service.detection.FalsePositiveMemory], so future
-     * detections are still evaluated normally by AiDetector.
+     * strike-1/2 warning card). This delegate only adjusts the strike counter /
+     * inter-strike timestamp in [TempBlockManager]; it never touches
+     * [com.guardian.shield.service.detection.FalsePositiveMemory]. Whether the
+     * calling code (GuardianAccessibilityService.reportNotSensitive, Bug E)
+     * additionally learns the visual pattern is the caller's decision — the
+     * strike undo itself is pattern-agnostic either way.
      */
     fun cancelLastStrike(pkg: String): Unit = tempBlockManager.cancelLastStrike(pkg)
 

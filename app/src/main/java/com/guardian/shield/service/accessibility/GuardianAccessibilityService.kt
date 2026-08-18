@@ -405,10 +405,12 @@ class GuardianAccessibilityService : AccessibilityService() {
         )
         // kicker + body are static copy from the approved mockup (no strike number).
 
-        // v2.5.4 — "Not sensitive" audit report. Own click target: does NOT trigger
-        // the card's tap-to-dismiss listener below. Writes one block_events row
-        // (audit-only) then dismisses the card. Deliberately does NOT call
-        // FalsePositiveMemory.addSignature() or otherwise alter AiDetector.
+        // v2.5.4 — "Not sensitive" audit report (Bug B + Bug E). Own click target:
+        // does NOT trigger the card's tap-to-dismiss listener below. Writes one
+        // block_events row (reason=NOT_SENSITIVE), cancels the current strike, and
+        // (Bug E, v3.1.1) learns the pending AI-detection candidate via
+        // FalsePositiveMemory.addSignature so the same pattern is skipped in the
+        // future, then dismisses the card.
         val notSensitiveBtn = card.findViewById<TextView>(R.id.btnNotSensitive)
         notSensitiveBtn.setOnClickListener {
             reportNotSensitive(pkg, strikeCount)
@@ -455,9 +457,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * "Not sensitive" report for a strike-1/2 warning (Bug B).
+     * "Not sensitive" report for a strike-1/2 warning (Bug B + Bug E).
      *
-     * Two effects, both triggered when the user taps the card's "Not sensitive":
+     * Three effects, all triggered when the user taps the card's "Not sensitive":
      *   1. Audit log (unchanged): writes a [BlockEventEntity] row (reason =
      *      [BlockReason.NOT_SENSITIVE], strike count recorded in `matchedTerm`)
      *      for later human review.
@@ -467,12 +469,17 @@ class GuardianAccessibilityService : AccessibilityService() {
      *      for [pkg] drops by one (floor 0) and the inter-strike timestamp is
      *      cleared — the user's next legitimate scan is not penalised by the
      *      3.5s gap.
-     *
-     * It remains deliberately isolated from the detection path: it never calls
-     * [FalsePositiveMemory.addSignature]/[FalsePositiveMemory.isKnown], never
-     * touches [AiDetector], and never whitelists any visual pattern — this is a
-     * per-event undo only, so future scans for the same pattern are still
-     * evaluated normally by AiDetector.
+     *   3. Pattern learning (Bug E, user-confirmed reversal of the earlier
+     *      audit-only scope): takes the pending AI-detection candidate
+     *      ([FalsePositiveMemory.takePendingCandidate]) and, if one is available,
+     *      learns it via [FalsePositiveMemory.addSignature] — the same mechanism
+     *      the strike-3 "Mark False" button uses. From then on, the same visual
+     *      pattern is skipped by [AiDetector.isKnown] before inference, so the
+     *      same content no longer re-triggers strikes 1/2/3 (the user found the
+     *      old per-event-undo-only behaviour worse: the same content kept
+     *      re-triggering strikes repeatedly). Learning is best-effort: a missing
+     *      candidate (e.g. process restart) only logs a warning — the strike
+     *      undo and the audit log still happen.
      *
      * The DB write runs on [ioScope] (off the main thread); the confirmation Toast
      * is shown immediately from the click handler's (main) thread.
@@ -480,6 +487,17 @@ class GuardianAccessibilityService : AccessibilityService() {
     private fun reportNotSensitive(pkg: String, strikeCount: Int) {
         // Bug B — undo this specific strike before (or alongside) the log.
         blockingEngine.cancelLastStrike(pkg)
+
+        // Bug E — also learn the offending pattern so the same content is skipped
+        // by AiDetector in the future (same mechanism as the strike-3 Mark False
+        // button). Best-effort: the candidate may be absent (process restarted
+        // between detection and tap) — the undo above still applies.
+        val sig = falsePositiveMemory.takePendingCandidate()
+        if (sig != null) {
+            falsePositiveMemory.addSignature(sig)
+        } else {
+            Timber.w("Not-sensitive report: no pending candidate signature to learn from for $pkg")
+        }
 
         val matched = "strike=$strikeCount"
         ioScope.launch {
