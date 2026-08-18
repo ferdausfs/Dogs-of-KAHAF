@@ -1,35 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — app rule row (approved: mocks/v3/app-blocking.html)
-     Bindings preserved: viewLeftIndicator imgIcon txtAppName txtStatusBadge
-     txtPackage txtCategory switchBlock imgLockIcon switchWhitelist. -->
-<com.google.android.material.card.MaterialCardView
+<!-- ONE SHIELD — app row inside a sheet. IDs preserved. -->
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    style="@style/Widget.GuardianShield.Card.Row">
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:minHeight="72dp">
 
         <View
             android:id="@+id/viewLeftIndicator"
-            android:layout_width="3.5dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_spine"/>
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/imgIcon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="12dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:scaleType="fitCenter"
             android:contentDescription="@null"/>
 
@@ -40,90 +37,21 @@
             android:layout_marginStart="12dp"
             android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <TextView
-                    android:id="@+id/txtAppName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/on_surface"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"/>
-                <ImageView
-                    android:id="@+id/imgLockIcon"
-                    android:layout_width="13dp"
-                    android:layout_height="13dp"
-                    android:layout_marginStart="7dp"
-                    android:src="@drawable/ic_lock"
-                    app:tint="@color/error"
-                    android:importantForAccessibility="no"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/txtAppName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
+                <ImageView android:id="@+id/imgLockIcon" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginStart="7dp" android:src="@drawable/ic_lock" app:tint="@color/error" android:importantForAccessibility="no"/>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/txtPackage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/on_surface_dim"
-                android:fontFamily="monospace"
-                android:textSize="10.5sp"
-                android:maxLines="1"
-                android:ellipsize="middle"/>
+            <TextView android:id="@+id/txtPackage" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/on_surface_dim" android:fontFamily="monospace" android:textSize="11sp" android:maxLines="1" android:ellipsize="middle"/>
 
-            <TextView
-                android:id="@+id/txtCategory"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:background="@drawable/bg_badge"
-                android:backgroundTint="@color/badge_neutral_bg"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="9.5sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:textAllCaps="true"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                tools:text="SOCIAL"/>
+            <TextView android:id="@+id/txtCategory" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/bg_badge" android:textColor="@color/on_surface_variant" android:textSize="10sp" android:textStyle="bold" android:paddingHorizontal="8dp" android:paddingVertical="2dp" tools:text="SOCIAL"/>
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end"
-            android:layout_marginStart="8dp">
-
-            <TextView
-                android:id="@+id/txtStatusBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_badge"
-                android:backgroundTint="@color/badge_error_bg"
-                android:textColor="@color/error"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.04"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                tools:text="BLOCKED"/>
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switchBlock"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"/>
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switchWhitelist"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"/>
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="end" android:layout_marginStart="8dp">
+            <TextView android:id="@+id/txtStatusBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_badge" android:backgroundTint="@color/badge_error_bg" android:textColor="@color/error_bright" android:textSize="11sp" android:textStyle="bold" android:paddingHorizontal="9dp" android:paddingVertical="4dp" tools:text="BLOCKED"/>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchWhitelist" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp"/>
         </LinearLayout>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="68dp"/>
+</LinearLayout>
