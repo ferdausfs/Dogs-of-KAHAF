@@ -40,6 +40,8 @@
     <string name="reason_manual">Manual</string>
     <string name="reason_not_sensitive">Not Sensitive</string>
 
+    <string name="home_title">Home</string>
+    <string name="protection_title">Protection</string>
     <string name="settings_title">Settings</string>
     <string name="section_protection">PROTECTION</string>
     <string name="section_gender">GENDER FILTER</string>

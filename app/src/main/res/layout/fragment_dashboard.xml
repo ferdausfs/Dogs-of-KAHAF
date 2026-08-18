@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Home / Dashboard (approved: guardian-redesign/mocks/v3/home.html)
-     Binding contract preserved: statusCard shieldGlow imgShield txtStatusTitle
-     txtStatusSubtitle btnToggle txtProtectionBadge txtStatTotal txtStatAi
-     txtStatTime txtStatKeyword cardAppBlocking cardKeywords cardWhitelist
-     txtSeeAll recyclerRecent — same widget classes as before. -->
+<!-- ONE SHIELD — Home. Bindings preserved. -->
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -18,401 +14,182 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="6dp"
         android:paddingBottom="28dp">
 
-        <!-- ============ BEACON HERO ============ -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/statusCard"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.GuardianShield.Card.Beacon">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="14dp"
+            android:text="@string/home_title"
+            android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
 
-            <LinearLayout
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/statusCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:paddingHorizontal="24dp"
-                android:paddingVertical="30dp">
+                style="@style/Widget.GuardianShield.Card.Beacon">
 
-                <FrameLayout
-                    android:layout_width="132dp"
-                    android:layout_height="132dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="22dp"
+                    android:paddingBottom="18dp">
 
-                    <View
-                        android:id="@+id/shieldGlow"
+                    <FrameLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:background="@drawable/bg_icon_well"
+                        android:backgroundTint="@color/beacon_dim">
+                        <View
+                            android:id="@+id/shieldGlow"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:alpha="0.35"/>
+                        <ImageView
+                            android:id="@+id/imgShield"
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_shield_check"
+                            app:tint="@color/primary_dim"
+                            android:contentDescription="@null"/>
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/txtStatusTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/status_active"
+                        android:textColor="@color/on_primary_container"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="-0.02"
+                        android:lineSpacingMultiplier="1.15"/>
+
+                    <TextView
+                        android:id="@+id/txtStatusSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/on_primary_container"
+                        android:alpha="0.78"
+                        android:textSize="13.5sp"
+                        android:lineSpacingMultiplier="1.35"
+                        android:layout_marginTop="4dp"/>
+
+                    <TextView
+                        android:id="@+id/txtProtectionBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="● Protection Active"
+                        android:textColor="@color/primary_dim"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_badge"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnToggle"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="@drawable/bg_shield_glow"
-                        android:alpha="0.5"/>
+                        android:layout_height="52dp"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/btn_pause"
+                        style="@style/Widget.GuardianShield.Button"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                    <ImageView
-                        android:id="@+id/imgShield"
-                        android:layout_width="72dp"
-                        android:layout_height="72dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_shield_on"
-                        android:contentDescription="@null"/>
-                </FrameLayout>
-
-                <TextView
-                    android:id="@+id/txtStatusTitle"
-                    android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/status_active"
-                    android:textColor="@color/on_primary_container"
-                    android:textSize="27sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="-0.015"
-                    android:lineSpacingMultiplier="1.05"
-                    android:gravity="center"
-                    android:layout_marginTop="18dp"/>
+                    android:orientation="horizontal"
+                    android:paddingVertical="16dp"
+                    android:paddingHorizontal="8dp">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        <TextView android:id="@+id/txtStatTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_total" android:textColor="@color/on_surface_variant" android:textSize="11sp" android:gravity="center" android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        <TextView android:id="@+id/txtStatAi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_ai" android:textColor="@color/on_surface_variant" android:textSize="11sp" android:gravity="center" android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        <TextView android:id="@+id/txtStatTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0h 0m" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="18sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_time" android:textColor="@color/on_surface_variant" android:textSize="11sp" android:gravity="center" android:layout_marginTop="4dp"/>
+                        <TextView android:id="@+id/txtStatKeyword" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" tools:text="0"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
-                <TextView
-                    android:id="@+id/txtStatusSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/on_primary_container"
-                    android:alpha="0.78"
-                    android:textSize="13.5sp"
-                    android:lineSpacingMultiplier="1.25"
-                    android:gravity="center"
-                    android:layout_marginTop="6dp"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="22dp"
+            android:paddingBottom="8dp"
+            android:text="@string/quick_actions"
+            style="@style/TextAppearance.GuardianShield.SectionHeader"/>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnToggle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="46dp"
-                    android:layout_marginTop="20dp"
-                    android:paddingHorizontal="26dp"
-                    android:text="@string/btn_pause"
-                    android:textColor="@color/primary_container_end"
-                    app:backgroundTint="@color/on_primary_container"
-                    app:cornerRadius="999dp"
-                    app:rippleColor="@color/ripple_primary"
-                    style="@style/Widget.Material3.Button.UnelevatedButton"
-                    android:textSize="13.5sp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/txtProtectionBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="● Protection Active"
-                    android:textColor="@color/success"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.05"
-                    android:background="@drawable/bg_badge"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"/>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/cardAppBlocking" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_apps" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_apps_title" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_apps_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <LinearLayout android:id="@+id/cardKeywords" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_keyword" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_keywords_title" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_keywords_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <LinearLayout android:id="@+id/cardWhitelist" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_shield_check" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/whitelist" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_whitelist_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ============ STATS ============ -->
-        <GridLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:columnCount="3"
-            android:layout_marginTop="24dp">
-
-            <!-- Tile 1 — Blocked today -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginEnd="5dp"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="30dp" android:layout_height="30dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_success_bg">
-                        <ImageView
-                            android:layout_width="16dp" android:layout_height="16dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_shield_check"
-                            app:tint="@color/success"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:id="@+id/txtStatTotal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:fontFeatureSettings="tnum"
-                        android:textColor="@color/on_surface"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.02"
-                        android:layout_marginTop="10dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stat_tile_total"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="11sp"
-                        android:lineSpacingMultiplier="1.15"
-                        android:layout_marginTop="3dp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Tile 2 — AI detections -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginHorizontal="5dp"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="30dp" android:layout_height="30dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_ai_bg">
-                        <ImageView
-                            android:layout_width="16dp" android:layout_height="16dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_ai_spark"
-                            app:tint="@color/ai_accent"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:id="@+id/txtStatAi"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:fontFeatureSettings="tnum"
-                        android:textColor="@color/on_surface"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.02"
-                        android:layout_marginTop="10dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stat_tile_ai"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="11sp"
-                        android:lineSpacingMultiplier="1.15"
-                        android:layout_marginTop="3dp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Tile 3 — Time protected (keyword stat kept for binding) -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginStart="5dp"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="30dp" android:layout_height="30dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="#1F7EC8F0">
-                        <ImageView
-                            android:layout_width="16dp" android:layout_height="16dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_clock"
-                            app:tint="@color/info_sky"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:id="@+id/txtStatTime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0h 0m"
-                        android:fontFeatureSettings="tnum"
-                        android:textColor="@color/on_surface"
-                        android:textSize="21sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.02"
-                        android:layout_marginTop="12dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stat_tile_time"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="11sp"
-                        android:lineSpacingMultiplier="1.15"
-                        android:layout_marginTop="4dp"/>
-                    <TextView
-                        android:id="@+id/txtStatKeyword"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:visibility="gone"
-                        tools:text="0"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </GridLayout>
-
-        <!-- ============ QUICK ACTIONS ============ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="28dp"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_vertical">
-            <TextView
-                android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="@string/quick_actions"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-        </LinearLayout>
-
-        <GridLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:columnCount="3">
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAppBlocking"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginEnd="5dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="36dp" android:layout_height="36dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_success_bg">
-                        <ImageView
-                            android:layout_width="18dp" android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_apps"
-                            app:tint="@color/primary"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/quick_apps_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="12.5sp" android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/quick_apps_sub"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="10.5sp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardKeywords"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginHorizontal="5dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="36dp" android:layout_height="36dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="#1F7EC8F0">
-                        <ImageView
-                            android:layout_width="18dp" android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_keyword"
-                            app:tint="@color/info_sky"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/quick_keywords_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="12.5sp" android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/quick_keywords_sub"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="10.5sp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardWhitelist"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_columnWeight="1"
-                android:layout_marginStart="5dp"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                style="@style/Widget.GuardianShield.Card.Row">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="14dp">
-                    <FrameLayout
-                        android:layout_width="36dp" android:layout_height="36dp"
-                        android:background="@drawable/bg_icon_well"
-                        android:backgroundTint="@color/badge_ai_bg">
-                        <ImageView
-                            android:layout_width="18dp" android:layout_height="18dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_shield_check"
-                            app:tint="@color/ai_accent"
-                            android:importantForAccessibility="no"/>
-                    </FrameLayout>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/whitelist"
-                        android:textColor="@color/on_surface"
-                        android:textSize="12.5sp" android:textStyle="bold"/>
-                    <TextView
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/quick_whitelist_sub"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="10.5sp"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </GridLayout>
-
-        <!-- ============ TODAY'S ACTIVITY ============ -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="28dp"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="22dp"
+            android:paddingBottom="8dp">
             <TextView
                 android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -422,20 +199,25 @@
                 android:id="@+id/txtSeeAll"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingVertical="6dp"
-                android:paddingStart="4dp"
+                android:padding="6dp"
                 android:text="@string/see_all"
-                android:textColor="@color/primary"
-                android:textSize="12.5sp"
+                android:textColor="@color/primary_dim"
+                android:textSize="13sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerRecent"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:overScrollMode="never"
-            tools:itemCount="3"/>
+            android:layout_marginHorizontal="20dp"
+            style="@style/Widget.GuardianShield.Card">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerRecent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                tools:itemCount="3"/>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

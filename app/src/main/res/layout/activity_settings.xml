@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Settings (approved: mocks/v3/settings.html)
-     Bindings preserved: toolbar lockBanner txtLockRemaining switchKeyword
-     switchAi sliderDelay txtDelayValue chipGroupBlockDuration chip15min
-     chip30min chip60min btnApps btnKeywords btnSchedule btnPermissions
-     btnCommitmentLock txtGuardianThresholdValue sliderGuardianThreshold
-     chipGroupGridVote chipVote1-4 txtLegacyStatus btnImportLegacy
-     btnRemoveLegacy btnChangePin (same widget classes; lock-disable list intact). -->
+<!-- ONE SHIELD — Settings. All control IDs preserved. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -20,9 +14,9 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="@string/settings_title"
+        app:title=""
         app:titleTextColor="@color/on_surface"
-        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
+        app:navigationIconTint="@color/on_surface"/>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -34,409 +28,140 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="4dp"
             android:paddingBottom="36dp">
 
-            <!-- Commitment lock banner -->
-            <LinearLayout
-                android:id="@+id/lockBanner"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_lock_banner"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="12dp"
-                android:layout_marginBottom="6dp"
-                android:visibility="gone"
-                tools:visibility="gone">
-                <ImageView
-                    android:layout_width="19dp" android:layout_height="19dp"
-                    android:src="@drawable/ic_time_lock"
-                    app:tint="@color/warning_amber"
-                    android:importantForAccessibility="no"/>
-                <TextView
-                    android:id="@+id/txtLockRemaining"
-                    android:layout_width="0dp" android:layout_weight="1"
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="10dp"
+                android:text="@string/settings_title"
+                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp">
+
+                <LinearLayout
+                    android:id="@+id/lockBanner"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:textColor="@color/on_warning_container"
-                    android:textSize="12.5sp"
-                    android:textStyle="bold"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_lock_banner"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="12dp"
+                    android:layout_marginBottom="14dp"
+                    android:visibility="gone"
+                    tools:visibility="gone">
+                    <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_time_lock" app:tint="@color/warning_amber" android:importantForAccessibility="no"/>
+                    <TextView android:id="@+id/txtLockRemaining" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/on_warning_container" android:textSize="13sp" android:textStyle="bold"/>
+                </LinearLayout>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="@string/section_protection" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp">
+                            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/keyword_filter" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/keyword_filter_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchKeyword" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        </LinearLayout>
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="16dp"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp">
+                            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_detection" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_detection_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                            </LinearLayout>
+                            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchAi" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/unlock_delay" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/unlock_delay" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/unlock_delay_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                            </LinearLayout>
+                            <TextView android:id="@+id/txtDelayValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_badge" android:textColor="@color/on_surface" android:fontFeatureSettings="tnum" android:textSize="13sp" android:textStyle="bold" android:paddingHorizontal="10dp" android:paddingVertical="4dp" tools:text="30s"/>
+                        </LinearLayout>
+                        <com.google.android.material.slider.Slider android:id="@+id/sliderDelay" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="5" android:valueTo="120" android:stepSize="5" app:tickVisible="false" android:layout_marginTop="10dp"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5s" android:textColor="@color/on_surface_dim" android:textSize="11sp"/>
+                            <Space android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="120s" android:textColor="@color/on_surface_dim" android:textSize="11sp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/section_temp_block" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/temp_block_info" android:textColor="@color/on_surface_variant" android:textSize="13sp" android:lineSpacingMultiplier="1.45"/>
+                        <com.google.android.material.chip.ChipGroup android:id="@+id/chipGroupBlockDuration" android:layout_width="match_parent" android:layout_height="wrap_content" app:singleSelection="true" app:selectionRequired="true" app:chipSpacingHorizontal="8dp" android:layout_marginTop="12dp">
+                            <com.google.android.material.chip.Chip android:id="@+id/chip15min" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duration_15" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                            <com.google.android.material.chip.Chip android:id="@+id/chip30min" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duration_30" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                            <com.google.android.material.chip.Chip android:id="@+id/chip60min" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duration_60" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                        </com.google.android.material.chip.ChipGroup>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_rules" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="4dp">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnApps" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_apps" app:icon="@drawable/ic_apps" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnKeywords" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_keywords" app:icon="@drawable/ic_keyword" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnSchedule" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_schedule" app:icon="@drawable/ic_clock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnPermissions" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_permissions" app:icon="@drawable/ic_access" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnCommitmentLock" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_commitment_lock" app:icon="@drawable/ic_time_lock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_ai_v3" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_sensitivity" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_sensitivity_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                            </LinearLayout>
+                            <TextView android:id="@+id/txtGuardianThresholdValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_badge" android:textColor="@color/primary_dim" android:fontFeatureSettings="tnum" android:textSize="13sp" android:textStyle="bold" android:paddingHorizontal="10dp" android:paddingVertical="4dp" tools:text="0.72"/>
+                        </LinearLayout>
+                        <com.google.android.material.slider.Slider android:id="@+id/sliderGuardianThreshold" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="0.30" android:valueTo="0.95" android:stepSize="0.01" app:tickVisible="false" android:layout_marginTop="10dp"/>
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/ai_sensitivity_note" android:textColor="@color/on_surface_dim" android:textSize="12sp" android:lineSpacingMultiplier="1.4"/>
+                        <com.google.android.material.chip.ChipGroup android:id="@+id/chipGroupGridVote" android:layout_width="match_parent" android:layout_height="wrap_content" app:singleSelection="true" app:selectionRequired="true" app:chipSpacingHorizontal="8dp" android:layout_marginTop="12dp">
+                            <com.google.android.material.chip.Chip android:id="@+id/chipVote1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_1" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                            <com.google.android.material.chip.Chip android:id="@+id/chipVote2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_2" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                            <com.google.android.material.chip.Chip android:id="@+id/chipVote3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_3" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                            <com.google.android.material.chip.Chip android:id="@+id/chipVote4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_4" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
+                        </com.google.android.material.chip.ChipGroup>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/legacy_model" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtLegacyStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/on_surface_variant" android:textSize="13sp" tools:text="✗ Missing"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="14dp">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnImportLegacy" style="@style/Widget.GuardianShield.Button.Small" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp" android:layout_marginEnd="5dp" android:text="@string/import_"/>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btnRemoveLegacy" style="@style/Widget.GuardianShield.Button.Small" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp" android:layout_marginStart="5dp" android:text="@string/remove"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_security" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnChangePin" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_change_pin" app:icon="@drawable/ic_lock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:text="@string/settings_footer" android:textColor="@color/on_surface_dim" android:textSize="11sp" android:letterSpacing="0.08"/>
             </LinearLayout>
-
-            <!-- ======== PROTECTION ======== -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:layout_marginBottom="12dp"
-                android:text="@string/section_protection"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <!-- Keyword filter -->
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical"
-                        android:paddingHorizontal="16dp" android:paddingVertical="14dp">
-                        <FrameLayout
-                            android:layout_width="40dp" android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="#1F7EC8F0">
-                            <ImageView android:layout_width="19dp" android:layout_height="19dp"
-                                android:layout_gravity="center" android:src="@drawable/ic_keyword"
-                                app:tint="@color/info_sky" android:importantForAccessibility="no"/>
-                        </FrameLayout>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/keyword_filter" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp" android:text="@string/keyword_filter_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="12sp"/>
-                        </LinearLayout>
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchKeyword"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    </LinearLayout>
-                    <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:layout_marginHorizontal="16dp" android:background="@color/border_subtle"/>
-                    <!-- AI detection -->
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical"
-                        android:paddingHorizontal="16dp" android:paddingVertical="14dp">
-                        <FrameLayout
-                            android:layout_width="40dp" android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_ai_bg">
-                            <ImageView android:layout_width="19dp" android:layout_height="19dp"
-                                android:layout_gravity="center" android:src="@drawable/ic_ai_spark"
-                                app:tint="@color/ai_accent" android:importantForAccessibility="no"/>
-                        </FrameLayout>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/ai_detection" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp" android:text="@string/ai_detection_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="12sp"/>
-                        </LinearLayout>
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchAi"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ======== BLOCKING ======== -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="28dp" android:layout_marginBottom="12dp"
-                android:text="@string/section_blocking_v3"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-
-            <!-- Unlock delay -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/unlock_delay" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp" android:text="@string/unlock_delay_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="12sp"/>
-                        </LinearLayout>
-                        <TextView
-                            android:id="@+id/txtDelayValue"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:background="@drawable/bg_badge"
-                            android:backgroundTint="@color/badge_neutral_bg"
-                            android:textColor="@color/on_surface"
-                            android:fontFeatureSettings="tnum"
-                            android:textSize="12sp" android:textStyle="bold"
-                            android:paddingHorizontal="10dp" android:paddingVertical="4dp"
-                            tools:text="30s"/>
-                    </LinearLayout>
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/sliderDelay"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:valueFrom="5" android:valueTo="120" android:stepSize="5"
-                        app:tickVisible="false"
-                        android:layout_marginTop="10dp"/>
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="5s" android:textColor="@color/on_surface_dim" android:textSize="10.5sp"/>
-                        <Space android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="120s" android:textColor="@color/on_surface_dim" android:textSize="10.5sp"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Temp block duration -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/section_temp_block"
-                        android:textColor="@color/on_surface" android:textSize="14.5sp" android:textStyle="bold"/>
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/temp_block_info"
-                        android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                        android:lineSpacingMultiplier="1.45"/>
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupBlockDuration"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        app:singleSelection="true" app:selectionRequired="true"
-                        app:chipSpacingHorizontal="8dp"
-                        android:layout_marginTop="12dp">
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chip15min"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/duration_15"
-                            android:checkable="true"
-                            style="@style/Widget.GuardianShield.Chip.Filter"/>
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chip30min"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/duration_30"
-                            android:checkable="true"
-                            style="@style/Widget.GuardianShield.Chip.Filter"/>
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chip60min"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/duration_60"
-                            android:checkable="true"
-                            style="@style/Widget.GuardianShield.Chip.Filter"/>
-                    </com.google.android.material.chip.ChipGroup>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ======== RULES ======== -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="28dp" android:layout_marginBottom="12dp"
-                android:text="@string/section_rules"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="6dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnApps"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_apps"
-                        app:icon="@drawable/ic_apps"
-                        app:iconTint="@color/primary"
-                        app:iconGravity="textStart"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnKeywords"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_keywords"
-                        app:icon="@drawable/ic_keyword"
-                        app:iconTint="@color/info_sky"
-                        app:iconGravity="textStart"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSchedule"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_schedule"
-                        app:icon="@drawable/ic_clock"
-                        app:iconTint="@color/warning_amber"
-                        app:iconGravity="textStart"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnPermissions"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_permissions"
-                        app:icon="@drawable/ic_access"
-                        app:iconTint="@color/on_surface_variant"
-                        app:iconGravity="textStart"/>
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCommitmentLock"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_commitment_lock"
-                        app:icon="@drawable/ic_time_lock"
-                        app:iconTint="@color/error"
-                        app:iconGravity="textStart"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ======== AI ======== -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="28dp" android:layout_marginBottom="12dp"
-                android:text="@string/section_ai_v3"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical">
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/ai_sensitivity" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp" android:text="@string/ai_sensitivity_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="12sp"/>
-                        </LinearLayout>
-                        <TextView
-                            android:id="@+id/txtGuardianThresholdValue"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:background="@drawable/bg_badge"
-                            android:backgroundTint="@color/badge_ai_bg"
-                            android:textColor="@color/ai_accent"
-                            android:fontFeatureSettings="tnum"
-                            android:textSize="12sp" android:textStyle="bold"
-                            android:paddingHorizontal="10dp" android:paddingVertical="4dp"
-                            tools:text="0.72"/>
-                    </LinearLayout>
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/sliderGuardianThreshold"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:valueFrom="0.30" android:valueTo="0.95" android:stepSize="0.01"
-                        app:tickVisible="false"
-                        app:thumbColor="@color/ai_accent"
-                        app:trackColor="@color/ai_accent"
-                        app:haloColor="#33B8A1FF"
-                        android:layout_marginTop="10dp"/>
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/ai_sensitivity_note"
-                        android:textColor="@color/on_surface_dim" android:textSize="11.5sp"
-                        android:lineSpacingMultiplier="1.4"/>
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupGridVote"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        app:singleSelection="true" app:selectionRequired="true"
-                        app:chipSpacingHorizontal="8dp"
-                        android:layout_marginTop="12dp">
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipVote1" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="@string/vote_1"
-                            android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipVote2" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="@string/vote_2"
-                            android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipVote3" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="@string/vote_3"
-                            android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipVote4" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="@string/vote_4"
-                            android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
-                    </com.google.android.material.chip.ChipGroup>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Legacy model -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/legacy_model" android:textColor="@color/on_surface"
-                        android:textSize="14.5sp" android:textStyle="bold"/>
-                    <TextView
-                        android:id="@+id/txtLegacyStatus"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/on_surface_variant" android:textSize="12sp"
-                        tools:text="✗ Missing"/>
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:layout_marginTop="14dp">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnImportLegacy"
-                            style="@style/Widget.GuardianShield.Button.Small"
-                            android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="40dp"
-                            android:layout_marginEnd="5dp"
-                            android:text="@string/import_"/>
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRemoveLegacy"
-                            style="@style/Widget.GuardianShield.Button.Small"
-                            android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="5dp"
-                            android:text="@string/remove"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ======== SECURITY ======== -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="28dp" android:layout_marginBottom="12dp"
-                android:text="@string/section_security"
-                style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                style="@style/Widget.GuardianShield.Card">
-                <LinearLayout
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="6dp">
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnChangePin"
-                        style="@style/Widget.GuardianShield.SettingsRow"
-                        android:layout_width="match_parent" android:layout_height="56dp"
-                        android:text="@string/btn_change_pin"
-                        app:icon="@drawable/ic_lock"
-                        app:iconTint="@color/primary"
-                        app:iconGravity="textStart"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:gravity="center"
-                android:text="@string/settings_footer"
-                android:textColor="@color/on_surface_dim"
-                android:textSize="10.5sp" android:textStyle="bold" android:letterSpacing="0.08"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

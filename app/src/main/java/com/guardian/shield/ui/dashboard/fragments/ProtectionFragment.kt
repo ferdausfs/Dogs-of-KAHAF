@@ -76,7 +76,7 @@ class ProtectionFragment : Fragment() {
                         binding.txtProtectionSubtitle.text = "You are fully protected\nসুরক্ষা সক্রিয়"
                         binding.imgShield.setImageResource(com.guardian.shield.R.drawable.ic_shield_on)
                         binding.txtBadgeActive.text = "● Active • সক্রিয়"
-                        binding.txtBadgeActive.setTextColor(requireContext().getColor(com.guardian.shield.R.color.success))
+                        binding.txtBadgeActive.setTextColor(requireContext().getColor(com.guardian.shield.R.color.primary_dim))
                     } else if (!state.protectionActive) {
                         binding.txtProtectionTitle.text = "Protection Off"
                         binding.txtProtectionSubtitle.text = "Accessibility service not running\nসার্ভিস বন্ধ"

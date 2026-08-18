@@ -17,21 +17,9 @@
         android:paddingHorizontal="14dp"
         android:paddingVertical="12dp">
 
-        <View
-            android:layout_width="3.5dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_spine"
-            android:backgroundTint="@color/info_sky"/>
-
-        <FrameLayout
-            android:layout_width="42dp" android:layout_height="42dp"
-            android:layout_marginStart="12dp"
-            android:background="@drawable/bg_icon_well"
-            android:backgroundTint="#1F7EC8F0">
-            <ImageView android:layout_width="20dp" android:layout_height="20dp"
-                android:layout_gravity="center" android:src="@drawable/ic_keyword"
-                app:tint="@color/info_sky" android:importantForAccessibility="no"/>
-        </FrameLayout>
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_keyword"
+            app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
 
         <LinearLayout
             android:layout_width="0dp" android:layout_weight="1"
@@ -41,7 +29,7 @@
             <TextView
                 android:id="@+id/txtKeyword"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textColor="@color/on_surface" android:textSize="14.5sp"
+                android:textColor="@color/on_surface" android:textSize="16sp"
                 android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
             <TextView
                 android:id="@+id/badge"

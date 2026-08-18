@@ -19,9 +19,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/bg_main"
-            app:title="@string/keywords_title"
+            app:title=""
             app:titleTextColor="@color/on_surface"
-            app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
+            app:navigationIconTint="@color/on_surface"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
@@ -30,6 +30,13 @@
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="10dp"
+            android:text="@string/keywords_title"
+            android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
 
         <LinearLayout
             android:id="@+id/lockBanner"

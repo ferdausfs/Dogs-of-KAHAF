@@ -1,92 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ===== WATCHTOWER V3 — Guardian Shield Design Language (2026-08-17) =====
-     Approved mockups: guardian-redesign/mocks/v3/
-     Dark charcoal canvas + Beacon Mint primary + 4-step tonal elevation.
-     Every legacy color NAME is preserved (code refs R.color.* keep compiling);
-     values moved to the V3 palette. -->
+    <!-- ===== ONE SHIELD — One UI 8 (2026-08-18) =====
+         Approved mockups: guardian-redesign/mocks/oneui8/
+         AMOLED black canvas + Galaxy Blue accent. Every legacy color NAME is
+         preserved so R.color.* refs keep compiling; values moved to One UI 8. -->
 
-    <!-- Surfaces: tonal elevation ladder L0→L3 -->
-    <color name="bg_main">#0A0C0B</color>
-    <color name="bg_elevated">#171C1A</color>
-    <color name="surface">#101413</color>
-    <color name="surface_variant">#1F2523</color>
-    <color name="surface_high">#171C1A</color>
-    <color name="surface_highest">#1F2523</color>
+    <!-- Surfaces -->
+    <color name="bg_main">#000000</color>
+    <color name="bg_elevated">#121212</color>
+    <color name="surface">#2A2A2A</color>
+    <color name="surface_variant">#3C3C3C</color>
+    <color name="surface_high">#333333</color>
+    <color name="surface_highest">#3C3C3C</color>
 
-    <!-- Beacon (brand / interactive) -->
-    <color name="primary">#7FE7C4</color>
-    <color name="on_primary">#052019</color>
-    <color name="primary_container">#11322A</color>
-    <color name="primary_container_start">#164134</color>
-    <color name="primary_container_end">#0D2822</color>
-    <color name="on_primary_container">#B4F0DA</color>
-    <color name="primary_dim">#A9F2D6</color>
-    <color name="beacon_dim">#247FE7C4</color>
+    <!-- Galaxy Blue — one accent (fill + on-dark stop) -->
+    <color name="primary">#1E64D8</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="primary_container">#0D2A52</color>
+    <color name="primary_container_start">#12356A</color>
+    <color name="primary_container_end">#0A2040</color>
+    <color name="on_primary_container">#D4E5FF</color>
+    <color name="primary_dim">#82B1FF</color>
+    <color name="beacon_dim">#381E64D8</color>
 
-    <color name="secondary">#A9B8AF</color>
-    <color name="on_secondary">#101714</color>
-    <color name="secondary_container">#1B2622</color>
-    <color name="on_secondary_container">#C6D4CC</color>
+    <color name="secondary">#A8A8A8</color>
+    <color name="on_secondary">#101010</color>
+    <color name="secondary_container">#333333</color>
+    <color name="on_secondary_container">#F5F5F5</color>
 
-    <!-- Semantic -->
-    <color name="error">#FF7A76</color>
-    <color name="on_error">#2B0806</color>
-    <color name="error_container">#361B1A</color>
-    <color name="on_error_container">#FFD3D0</color>
-    <color name="success">#6FE0A6</color>
-    <color name="success_container">#14261D</color>
-    <color name="success_legacy">#B0F2CC</color>
-    <color name="warning_amber">#FFC24B</color>
-    <color name="warning">#FFC24B</color>
-    <color name="warning_container">#33290F</color>
-    <color name="on_warning_container">#FFDB8F</color>
-    <color name="info_sky">#7EC8F0</color>
-    <color name="info_container">#12283A</color>
+    <!-- Semantic — status only -->
+    <color name="error">#C44747</color>
+    <color name="error_bright">#FF8A80</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#3A1A1A</color>
+    <color name="on_error_container">#FFD0CC</color>
+    <color name="success">#2E9B64</color>
+    <color name="success_container">#123024</color>
+    <color name="success_legacy">#6BCF97</color>
+    <color name="warning_amber">#FFC14D</color>
+    <color name="warning">#E0A12E</color>
+    <color name="warning_container">#3A2C10</color>
+    <color name="on_warning_container">#FFE2A8</color>
+    <color name="info_sky">#82B1FF</color>
+    <color name="info_container">#0D2A52</color>
 
     <!-- Text -->
-    <color name="on_surface">#ECF1ED</color>
-    <color name="on_surface_variant">#A9B5AD</color>
-    <color name="on_surface_dim">#76827B</color>
-    <color name="inverse_surface">#E9EFEA</color>
-    <color name="on_inverse">#131917</color>
+    <color name="on_surface">#F5F5F5</color>
+    <color name="on_surface_variant">#A8A8A8</color>
+    <color name="on_surface_dim">#7A7A7A</color>
+    <color name="inverse_surface">#F5F5F5</color>
+    <color name="on_inverse">#121212</color>
 
     <!-- Structure -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="overlay_dim">#E6050706</color>
-    <color name="overlay_dim_solid">#060807</color>
-    <color name="ripple_primary">#1F7FE7C4</color>
-    <color name="ripple_error">#1FFF7A76</color>
-    <color name="card_stroke">#232927</color>
-    <color name="border_subtle">#232927</color>
-    <color name="border_strong">#2A322E</color>
+    <color name="overlay_dim">#9E000000</color>
+    <color name="overlay_dim_solid">#000000</color>
+    <color name="ripple_primary">#3382B1FF</color>
+    <color name="ripple_error">#33C44747</color>
+    <color name="card_stroke">#14FFFFFF</color>
+    <color name="border_subtle">#14FFFFFF</color>
+    <color name="border_strong">#24FFFFFF</color>
     <color name="seam_top">#0EFFFFFF</color>
+    <color name="inset">#1A1A1A</color>
 
     <!-- Status indicators -->
-    <color name="block_indicator">#FF7A76</color>
-    <color name="allow_indicator">#6FE0A6</color>
-    <color name="surface_gradient_start">#0A0C0B</color>
-    <color name="surface_gradient_end">#171C1A</color>
-    <color name="ai_detection_color">#B8A1FF</color>
-    <color name="ai_accent">#B8A1FF</color>
-    <color name="purple">#B8A1FF</color>
-    <color name="ai_container">#241F3E</color>
+    <color name="block_indicator">#C44747</color>
+    <color name="allow_indicator">#1E64D8</color>
+    <color name="surface_gradient_start">#000000</color>
+    <color name="surface_gradient_end">#121212</color>
+    <!-- AI no longer gets its own brand hue — same Galaxy Blue family -->
+    <color name="ai_detection_color">#82B1FF</color>
+    <color name="ai_accent">#82B1FF</color>
+    <color name="purple">#82B1FF</color>
+    <color name="ai_container">#0D2A52</color>
 
-    <!-- Badge backgrounds (tinted, ~12-14%) -->
-    <color name="badge_success_bg">#1F6FE0A6</color>
-    <color name="badge_error_bg">#1FFF7A76</color>
-    <color name="badge_ai_bg">#24B8A1FF</color>
-    <color name="badge_warn_bg">#1FFFC24B</color>
-    <color name="badge_neutral_bg">#12FFFFFF</color>
+    <!-- Badge backgrounds -->
+    <color name="badge_success_bg">#381E64D8</color>
+    <color name="badge_error_bg">#33C44747</color>
+    <color name="badge_ai_bg">#381E64D8</color>
+    <color name="badge_warn_bg">#33E0A12E</color>
+    <color name="badge_neutral_bg">#14FFFFFF</color>
 
-    <!-- Hero state tints (paused / off) -->
-    <color name="amber_hero_start">#2A2414</color>
-    <color name="amber_hero_end">#1E1A0E</color>
-    <color name="red_hero_start">#311B1A</color>
-    <color name="red_hero_end">#20110F</color>
+    <!-- Hero state tints -->
+    <color name="amber_hero_start">#3A2C10</color>
+    <color name="amber_hero_end">#2A200C</color>
+    <color name="red_hero_start">#3A1A1A</color>
+    <color name="red_hero_end">#2A1212</color>
 
     <!-- Launcher -->
-    <color name="ic_launcher_background">#0C130F</color>
+    <color name="ic_launcher_background">#000000</color>
 </resources>

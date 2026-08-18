@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Blocking — Guardian Shield · One UI 8</title>
+<style>
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap");
+:root{
+  --bg:#000;--bg-elev:#121212;--surface:#2A2A2A;--surface-high:#333;--surface-highest:#3C3C3C;--inset:#1A1A1A;
+  --text:#F5F5F5;--text-sec:#A8A8A8;--text-ter:#7A7A7A;
+  --accent:#1E64D8;--accent-press:#1854B8;--accent-bright:#82B1FF;--on-accent:#fff;
+  --accent-container:#0D2A52;--on-accent-container:#D4E5FF;--accent-soft:rgba(30,100,216,.22);
+  --error:#C44747;--error-bright:#FF8A80;--error-container:#3A1A1A;--on-error-container:#FFD0CC;
+  --warning:#E0A12E;--warning-bright:#FFC14D;--warning-container:#3A2C10;--on-warning-container:#FFE2A8;
+  --success:#2E9B64;--success-bright:#6BCF97;
+  --hairline:rgba(255,255,255,.08);--r-lg:28px;--r-xl:32px;--r-pill:999px;
+  --font:"Pretendard","Segoe UI",Roboto,"Noto Sans Bengali",ui-sans-serif,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);--spring:cubic-bezier(.34,1.3,.64,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0a0a0a;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{padding:28px 18px 80px}
+a{color:var(--accent-bright);text-decoration:none}
+.page-h{max-width:1100px;margin:0 auto 22px}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px}
+.page-h h1{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.page-h p{color:var(--text-sec);font-size:15px;margin-top:8px;max-width:720px;line-height:1.5}
+.note{margin-top:10px;padding:12px 14px;background:#161616;border-radius:16px;color:var(--text-sec);font-size:13px;line-height:1.5;max-width:720px}
+.note b{color:var(--text)}
+.gallery{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;max-width:1400px;margin:0 auto}
+.block{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cap{font-size:12px;font-weight:700;color:var(--text-sec);letter-spacing:.04em}
+.cap em{font-style:normal;color:var(--text-ter);font-weight:500}
+
+.phone{width:360px;height:780px;background:var(--bg);border-radius:38px;border:10px solid #1c1c1c;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.sb{height:28px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 3px;font-size:11px;font-weight:700;flex:0 0 auto}
+.sb .ic{display:flex;gap:5px;align-items:center;font-size:10px}
+.screen{flex:1;overflow:auto;padding:0 0 8px;position:relative}
+.screen::-webkit-scrollbar{display:none}
+.pad{padding:0 20px}
+.title{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.08;padding:6px 20px 14px}
+.title.sm{font-size:34px}
+.subhead{font-size:13px;font-weight:700;color:var(--text-sec);padding:4px 4px 8px}
+.bn{font-family:"Noto Sans Bengali",var(--font)}
+.tnum{font-variant-numeric:tabular-nums}
+
+.sheet{background:var(--surface);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 16px;border-bottom:1px solid var(--hairline)}
+.row:last-child{border-bottom:0}
+.row .t{font-size:16px;font-weight:600}
+.row .s{font-size:13px;color:var(--text-sec);margin-top:2px;line-height:1.35}
+.chev{color:var(--text-ter);font-size:22px;font-weight:300;margin-left:auto}
+.mono{font-family:var(--mono);font-size:11.5px;color:var(--text-ter)}
+
+.sw{width:52px;height:32px;background:#4A4A4A;border-radius:999px;position:relative;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.sw::after{content:"";width:28px;height:28px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.sw.on{background:var(--accent)}
+.sw.on::after{left:22px}
+.sw.dis{opacity:.38}
+
+.btn{display:flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border:0;border-radius:999px;font-family:inherit;font-size:16px;font-weight:700;cursor:default}
+.btn.filled{background:var(--accent);color:#fff}
+.btn.tonal{background:var(--surface-highest);color:var(--text)}
+.btn.ghost{background:transparent;color:var(--accent-bright)}
+.btn.danger{background:var(--error);color:#fff}
+.btn.block{width:100%}
+.btn.sm{min-height:40px;font-size:14px;padding:0 16px}
+.btn.dis{opacity:.38}
+
+.chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;background:var(--inset);color:var(--text-sec);font-size:13.5px;font-weight:600}
+.chip.on{background:var(--accent-soft);color:var(--accent-bright)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+
+.badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:700}
+.badge .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--accent-soft);color:var(--accent-bright)}
+.badge.warn{background:rgba(224,161,46,.18);color:var(--warning-bright)}
+.badge.err{background:rgba(196,71,71,.2);color:var(--error-bright)}
+.badge.neu{background:rgba(255,255,255,.08);color:var(--text-sec)}
+
+.hero{border-radius:32px;padding:22px 20px 18px;margin-bottom:18px}
+.hero.on{background:var(--accent-container);color:var(--on-accent-container)}
+.hero.pause{background:var(--warning-container);color:var(--on-warning-container)}
+.hero.off{background:var(--error-container);color:var(--on-error-container)}
+.hero h2{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.hero p{font-size:13.5px;opacity:.78;margin-top:4px;line-height:1.4}
+.iw{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin-bottom:14px;background:rgba(130,177,255,.14)}
+.hero.pause .iw{background:rgba(255,193,77,.14)}
+.hero.off .iw{background:rgba(255,138,128,.14)}
+
+.nav{flex:0 0 auto;height:64px;background:var(--bg-elev);display:flex;border-top:1px solid var(--hairline)}
+.nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-ter);font-size:10.5px;font-weight:700}
+.nav a.on{color:var(--accent-bright)}
+.nav svg{width:22px;height:22px}
+.gest{height:10px;display:flex;justify-content:center;align-items:flex-start;flex:0 0 auto}
+.gest i{width:108px;height:4px;border-radius:4px;background:#2a2a2a}
+
+.search{background:var(--inset);border-radius:20px;height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--text-ter);font-size:15px;margin-bottom:14px}
+.fab{position:absolute;right:18px;bottom:18px;width:56px;height:56px;border-radius:18px;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 8px 24px rgba(30,100,216,.35);font-size:28px;font-weight:400}
+.topbar{display:flex;align-items:center;gap:8px;padding:4px 12px 0;min-height:40px}
+.back{width:40px;height:40px;display:grid;place-items:center;color:var(--text);font-size:22px}
+
+.sk{background:linear-gradient(90deg,#2a2a2a 0%,#3a3a3a 50%,#2a2a2a 100%);background-size:200% 100%;animation:sh 1.2s linear infinite;border-radius:10px}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.empty{text-align:center;padding:36px 16px}
+.empty h3{font-size:17px;font-weight:800;margin-top:12px}
+.empty p{color:var(--text-sec);font-size:13.5px;margin-top:6px;line-height:1.5}
+
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px 20px 6px}
+.key{height:64px;border-radius:20px;background:var(--surface);display:grid;place-items:center;font-size:22px;font-weight:700}
+.key.ok{background:var(--accent);color:#fff;font-size:15px}
+.key.ghost{background:transparent;color:var(--text-sec);font-size:18px}
+.dots{display:flex;justify-content:center;gap:12px;margin:18px 0 10px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--surface-highest)}
+.dot.on{background:var(--accent-bright)}
+
+.seg{display:flex;background:var(--inset);border-radius:999px;padding:4px;margin-bottom:14px}
+.seg span{flex:1;height:32px;display:grid;place-items:center;border-radius:999px;font-size:13px;font-weight:700;color:var(--text-sec)}
+.seg span.on{background:var(--surface-highest);color:var(--text)}
+
+.slider{height:8px;border-radius:8px;background:var(--inset);position:relative;margin:14px 0 6px}
+.slider i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:8px}
+.slider b{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;background:#fff;border:5px solid var(--accent);transform:translate(-50%,-50%)}
+
+.lockban{background:var(--warning-container);border-radius:20px;padding:12px 14px;display:flex;gap:10px;align-items:center;margin-bottom:14px;color:var(--on-warning-container);font-size:13px;font-weight:700}
+
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:18px}
+.card-float{background:var(--surface-highest);border-radius:24px;padding:16px;width:100%;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+
+.footlink{text-align:center;margin-top:28px;color:var(--text-ter);font-size:13px}
+.footlink a{margin:0 8px}
+</style>
+</head>
+<body>
+<div class="page-h">
+  <div class="kicker">One UI 8 · Screen 5</div>
+  <h1>App Blocking</h1>
+  <p>Hero toggle + All / Blocked / Whitelisted chips + search. Whitelist is a filter, not a screen. Loading uses the existing <code>AppListState.loading</code> flag.</p>
+  
+</div>
+<div class="gallery">
+<div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="topbar"><div class="back">‹</div></div><div class="title sm">App blocking</div><div class="pad"><div class="sheet" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1"><div class="t">App Blocking</div><div class="s bn">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</div></div>
+        <div class="sw on"></div>
+      </div>
+    </div><div class="chips" style="margin-bottom:12px"><span class="chip">Blocked</span><span class="chip on">All</span><span class="chip">Whitelisted</span></div><div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.2"/><path d="m15.2 15.2 4.4 4.4"/></svg> Search apps… অ্যাপ খুঁজুন</div><div class="sheet">
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">C</div>
+            <div style="flex:1"><div class="t">Chrome</div><div class="mono">com.android.chrome</div></div>
+            <span class="badge err">BLOCKED</span><div class="sw on"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">I</div>
+            <div style="flex:1"><div class="t">Instagram</div><div class="mono">com.instagram.android</div></div>
+            <span class="badge err">BLOCKED</span><div class="sw on"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">W</div>
+            <div style="flex:1"><div class="t">WhatsApp</div><div class="mono">com.whatsapp</div></div>
+            <span class="badge ok">ALLOWED</span><div class="sw"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">Y</div>
+            <div style="flex:1"><div class="t">YouTube</div><div class="mono">com.google.android.youtube</div></div>
+            <span class="badge neu">WHITELIST</span><div class="sw"></div></div>
+        </div></div></div><div class="gest"><i></i></div></div><div class="cap">Loaded</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="topbar"><div class="back">‹</div></div><div class="title sm">App blocking</div><div class="pad"><div class="sheet" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1"><div class="t">App Blocking</div><div class="s bn">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</div></div>
+        <div class="sw on"></div>
+      </div>
+    </div><div class="chips" style="margin-bottom:12px"><span class="chip">Blocked</span><span class="chip on">All</span><span class="chip">Whitelisted</span></div><div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.2"/><path d="m15.2 15.2 4.4 4.4"/></svg> Search apps… অ্যাপ খুঁজুন</div><div class="empty"><div class="iw" style="margin:0 auto;background:var(--inset)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg></div><h3>No apps match</h3><p>Try another filter or search.</p></div></div></div><div class="gest"><i></i></div></div><div class="cap">Empty filter</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="topbar"><div class="back">‹</div></div><div class="title sm">App blocking</div><div class="pad"><div class="sheet" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1"><div class="t">App Blocking</div><div class="s bn">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</div></div>
+        <div class="sw on"></div>
+      </div>
+    </div><div class="chips" style="margin-bottom:12px"><span class="chip">Blocked</span><span class="chip on">All</span><span class="chip">Whitelisted</span></div><div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.2"/><path d="m15.2 15.2 4.4 4.4"/></svg> Search apps… অ্যাপ খুঁজুন</div><div class="sheet" style="padding:14px">
+          <div class="sk" style="height:56px;border-radius:16px;margin-bottom:10px"></div>
+          <div class="sk" style="height:56px;border-radius:16px;margin-bottom:10px"></div>
+          <div class="sk" style="height:56px;border-radius:16px"></div>
+        </div></div></div><div class="gest"><i></i></div></div><div class="cap">Loading skeleton</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="topbar"><div class="back">‹</div></div><div class="title sm">App blocking</div><div class="pad"><div class="lockban"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC14D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="10.4" width="14.8" height="9.2" rx="2.2"/><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8"/></svg> Commitment Lock active — editing disabled</div><div class="sheet" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1"><div class="t">App Blocking</div><div class="s bn">অনুপযুক্ত অ্যাপ ব্লক · Block inappropriate apps</div></div>
+        <div class="sw on dis"></div>
+      </div>
+    </div><div class="chips" style="margin-bottom:12px"><span class="chip">Blocked</span><span class="chip on">All</span><span class="chip">Whitelisted</span></div><div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.6" cy="10.6" r="6.2"/><path d="m15.2 15.2 4.4 4.4"/></svg> Search apps… অ্যাপ খুঁজুন</div><div class="sheet">
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">C</div>
+            <div style="flex:1"><div class="t">Chrome</div><div class="mono">com.android.chrome</div></div>
+            <span class="badge err">BLOCKED</span><div class="sw on"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">I</div>
+            <div style="flex:1"><div class="t">Instagram</div><div class="mono">com.instagram.android</div></div>
+            <span class="badge err">BLOCKED</span><div class="sw on"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">W</div>
+            <div style="flex:1"><div class="t">WhatsApp</div><div class="mono">com.whatsapp</div></div>
+            <span class="badge ok">ALLOWED</span><div class="sw"></div></div>
+          <div class="row"><div style="width:40px;height:40px;border-radius:12px;background:#3a3a3a;display:grid;place-items:center;font-size:15px;font-weight:800;color:#F5F5F5">Y</div>
+            <div style="flex:1"><div class="t">YouTube</div><div class="mono">com.google.android.youtube</div></div>
+            <span class="badge neu">WHITELIST</span><div class="sw"></div></div>
+        </div></div></div><div class="gest"><i></i></div></div><div class="cap">Locked</div></div>
+</div>
+<p class="footlink"><a href="index.html">← Gallery</a><a href="design-system.html">Design system</a></p>
+</body>
+</html>
