@@ -951,6 +951,7 @@ All pairs computed (WCAG): on-background 17.2:1, on-surface 16.2:1, variant text
 
 App name "Guardian Shield" unchanged everywhere ✓ · no mascot ✓ · shield mark evolved not replaced ✓ · zero changes to TempBlockManager/BlockingEngine/service-detection/strike counting/DAO queries ✓ (only Kotlin visual edits: DashboardFragment `applyHeroState` color setters + BlockOverlayActivity two TextColor calls + unused-import cleanup) · EN+BN strings for every new label ✓.
 
+
 ---
 
 # Session 2026-08-18 — Strike/Block Logic Fixes: Bug A (strike gap), Bug B (Not-sensitive undo), Bug C (Mark-False unblocks+relaunches) (arena/01a012b2-dogs-of-kahaf)
@@ -1242,3 +1243,96 @@ Only the inter-strike minimum gap (`1000L` → the shared constant) and the two 
   - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.2/app-release.apk`**
 
 ---
+
+
+---
+
+# Session 2026-08-18 — One UI 8 / “One Shield” visual overhaul (arena/01a012b4-dogs-of-kahaf)
+
+**Base:** `main` @ `6d08327` (v3.0.1 / 20, Watchtower V3) → **v3.1.0 / 22** (rebased on v3.0.2 logic)  
+**Date:** 2026-08-18  
+**Scope:** Complete visual-language replacement. App name, identity, and ALL detection/blocking/unblock logic untouched.
+
+## 0) Process — mockup gate honored
+
+1. **Audit** → `guardian-redesign/AUDIT-ONEUI8.md` (re-verified against current `main`; `AUDIT.md` is gone). XML Views + ViewBinding + Material 3 confirmed (no Compose). 21 real surfaces mapped. Unbound leftover chrome (`btnDay/Week/Month`, `txtBlockedAttempts`, `txtStatKeyword`) called out.
+2. **Design system** → `guardian-redesign/mocks/oneui8/design-system.html` (self-contained, inline CSS). Presented and **approved** before any screen mocks.
+3. **Screen mocks** → `guardian-redesign/mocks/oneui8/` gallery (`index.html` + 16 screen files, every file inlines its own `<style>`). Presented and **approved** before any Kotlin/XML.
+4. **Implementation** after explicit “Approve all”. Visual-only. Rebased onto `main` @ `27e72b2` (PR #46 strike/block logic: 3.5s inter-strike gap, Not-sensitive undo, Mark-False clear+relaunch) — those logic files are taken from main unchanged.
+
+## 1) Design rationale — why this is One UI 8
+
+Watchtower V3 was a custom mint/charcoal language (Beacon Mint `#7FE7C4`, category spines, violet-for-AI). One UI 8 is a different product:
+
+| Trait | One UI 8 expression here |
+|---|---|
+| Large titles | 40sp / w800 / left / `TextAppearance.GuardianShield.Display`. Compact bar is 21sp. |
+| One-handed | Status/title at top; Pause/Enable/Fix All/keypad/FAB/primary CTAs in the lower two-thirds. |
+| Sheets not tiles | Settings / modules / lists are 28dp gray cards (`#2A2A2A`) on true black `#000`, separated by **16dp gaps**, not hairlines. Hairlines only *inside* a sheet. |
+| Pill controls | 52dp buttons, 52×32 switches (`Widget.GuardianShield.Switch`), 999dp chips. |
+| One accent | Galaxy Blue fill `#1E64D8` (white on fill 5.43:1 AA) + on-dark `#82B1FF` (6.62:1 on sheets). Same hue, two stops. Watchtower mint **and** AI violet retired (`ai_accent` remapped to `#82B1FF`). |
+| Protected = switch on | ON hero uses accent-container, not a second “success green” brand. Green remains granted-only. |
+| Icon | Rounded filled shield. Beacon slit retired. Adaptive launcher on `#000`. |
+| Motion (spec) | Soft One UI ease + slight elastic on controls; documented in the design-system mock. Implementation reuses existing fade/slide anims; no new detection-adjacent animators. |
+
+**Not invented:** DNS/VPN/Safe Search, biometric, Forgot-PIN control, standalone whitelist, splash Activity, gender-filter UI, Day/Week analytics (buttons kept as unbound chrome; fake +24% chart removed).
+
+## 2) Screen-by-screen before → after
+
+| Screen | Before (Watchtower V3) | After (One UI 8) | Bindings |
+|---|---|---|---|
+| Tokens / theme | Charcoal + mint, 16dp cards, hairline+seam | AMOLED `#000` + `#2A2A2A` sheets, 28/32dp, 0 elevation, Galaxy Blue | All `R.color.*` names kept |
+| Home | Centered mint hero, 3 separate stat tiles, 3 quick-action tiles, spine rows | 40sp “Home”, left hero, Pause at bottom of hero, one stats sheet, one quick-action sheet, one recent sheet | `statusCard shieldGlow imgShield txtStatus* btnToggle txtProtectionBadge txtStat* card* txtSeeAll recyclerRecent` |
+| Protection | Separate mint module cards | 40sp “Protection”, one 5-row sheet | `imgShield txtProtection* txtBadgeActive cardAi/AppBlocking/Keyword/Schedule/Accessibility` |
+| Activity | Fake +24% chart + decorative week bars | Large title, leftover Day/Week/Month chrome, real reason chips, sheet list, designed empty | `toolbar btnDay/Week/Month txtBlockedAttempts chip* txtCount txtEmpty recyclerEvents` |
+| Settings | Caps kickers, mixed icon tints | Large title, grouped sheets, large switches, sentence-case section labels | All 24 controls + lock banner |
+| App Blocking | Spine rows, individual cards | Hero toggle sheet, chips, inset search, rows inside one sheet | `switchHero filterGroup chip* editSearch recycler` + row IDs |
+| Keywords / Schedule | Spine + wells | Large title, quieter rows, FAB unchanged destination | `toolbar lockBanner txtEmpty recycler fabAdd` + row/dialog IDs |
+| Commitment Lock | Amber/mint halos | Large title, same locked/unlocked groups | `groupLocked/* groupUnlocked chip*day` |
+| PIN | 12dp keys, 21sp title | 34/32sp title, 20dp soft-rect keys 84×64, keypad in thumb zone | `txtPrompt? dot1–6 btn0–9 btnDel btnOk` |
+| Permissions / prompt / onboarding | V3 wells | Large title + same IDs; prompt copy verbatim incl. ⚠️ | all row/icon/btn IDs; `btnEnable`; onboarding pager IDs |
+| Overlays | Red halo + mint leftovers | Same actions, One UI sheets, 26sp title, strike card 24dp no hairline | overlay + delay + detail + strike IDs |
+| Icon | Mint beacon rings | Adaptive shield on black; manifest uses `@mipmap/ic_launcher` | — |
+
+Kotlin visual-only: `DashboardFragment.applyHeroState` (ON=accent fill button, Paused=accent, Off=error); badge tint → `primary_dim`; `BlockEventAdapter` drops emoji chrome. **No detection/strike/DAO files touched.**
+
+## 3) Contrast (WCAG) — production tokens
+
+| Pair | Ratio | Grade |
+|---|---|---|
+| `#F5F5F5` on `#000000` | 19.26:1 | AAA |
+| `#F5F5F5` on `#2A2A2A` | 13.17:1 | AAA |
+| `#A8A8A8` on `#2A2A2A` | 6.04:1 | AA |
+| `#A8A8A8` on `#3C3C3C` | 4.64:1 | AA |
+| `#82B1FF` on `#2A2A2A` | 6.62:1 | AA |
+| `#FFFFFF` on `#1E64D8` | 5.43:1 | AA |
+| `#D4E5FF` on `#0D2A52` | 11.19:1 | AAA |
+| `#FFFFFF` on `#C44747` | 4.84:1 | AA |
+| `#FFC14D` on `#2A2A2A` | 8.88:1 | AAA |
+
+`#7A7A7A` on sheets is AA-large only — reserved for microcopy ≥12sp. Touch targets ≥48dp. Switches 52×32. Keypad 84×64.
+
+## 4) Things that do not map (not invented)
+
+- Biometric / Forgot PIN control (string note only)
+- Standalone whitelist Activity
+- DNS / VPN / browser / Safe Search / gender-filter panel
+- Day/Week/Month period filtering (IDs kept, unbound)
+- Real protected-uptime clock (`txtStatTime` still placeholder formula)
+- Splash Activity (none exists)
+- Loading skeletons wired to `AppListState.loading` (flag exists; follow-up)
+
+## 5) Build
+
+- Local `./gradlew assembleRelease` impossible here (no JDK / Android SDK), same as prior sessions.
+- Static gate: `python3 guardian-redesign/tools/verify_res.py` → **OK — 71 colors, 62 drawables, 35 styles**.
+- Version **3.1.0 (22)** — `v3.0.2` is published (versionCode 21); `v3.1.0` tag is free; fresh tag avoids the release-tag collision guard.
+- CI on merge to `main` publishes `Guardian Shield v3.1.0` + `app-release.apk`.
+
+Expected APK (post-merge):  
+https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.0/app-release.apk
+
+## 6) Compliance
+
+App name **Guardian Shield** unchanged ✓ · no mascot ✓ · shield refined not replaced ✓ · detection/blocking/unblock/strike-3.5s/DAO untouched ✓ · mocks were self-contained (inline CSS) ✓ · implementation only after two explicit approvals ✓.
+
