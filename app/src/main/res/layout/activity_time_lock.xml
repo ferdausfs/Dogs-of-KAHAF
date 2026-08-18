@@ -17,9 +17,9 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="@string/btn_commitment_lock"
+        app:title=""
         app:titleTextColor="@color/on_surface"
-        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
+        app:navigationIconTint="@color/on_surface"/>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -34,6 +34,13 @@
             android:paddingHorizontal="20dp"
             android:paddingTop="4dp"
             android:paddingBottom="36dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="12dp"
+                android:text="@string/btn_commitment_lock"
+                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
 
             <!-- ======== LOCKED STATE ======== -->
             <LinearLayout
