@@ -1242,3 +1242,24 @@ Only the inter-strike minimum gap (`1000L` → the shared constant) and the two 
   - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.2/app-release.apk`**
 
 ---
+
+### ✅ GREEN BUILD + RELEASE CONFIRMED (filled after merge)
+
+PR #46 (arena/01a012b2-dogs-of-kahaf → main) was approved and merged via a merge commit
+`27e72b28` (2026-08-18 02:39:33Z). The `Build Release APK` workflow then ran on `main`:
+
+- **Actions run:** [32092634531](https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32092634531)
+- **Status:** `completed` / **`success`** — job `build` → `success`.
+- Build log evidence: `X DIAG BUILD SUCCEEDED (rc=0)` / `X DIAG GradleWrapperMain exited rc=0;
+  stdout_bytes=9353; stderr_bytes=0`. (The only warnings were GitHub cache-save/restore service
+  errors — a GitHub infrastructure incident, not a code/build failure; the compile/sign steps
+  passed and the release step succeeded.)
+- **Release:** [Guardian Shield v3.0.2](https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.0.2),
+  published 2026-08-18 02:43:20Z.
+- **APK asset:** `app-release.apk`, 52,709,970 bytes (~50.3 MB), `application/vnd.android.package-archive`.
+- **Direct APK download link:**
+  `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.0.2/app-release.apk`
+
+No `RELEASE TAG COLLISION` occurred — the release-tag guard passed because `v3.0.2` was verified free
+before the bump. All three fixes (Bug A strike gap, Bug B Not-sensitive undo, Bug C Mark-False
+unblock+relaunch) ship in this green v3.0.2 build.
