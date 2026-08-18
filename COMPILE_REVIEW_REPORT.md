@@ -1796,16 +1796,25 @@ new file: app/src/main/res/drawable/ic_flag.xml  (24dp flag vector, tint=warning
   APK + GitHub Release publish when PR #49 merges to `main`. The fail-fast guard verifies
   `v3.1.2` is free at configuration time, before compilation.
 
-## 6) GREEN BUILD + RELEASE LINK
+## 6) GREEN BUILD + RELEASE LINK ✅ (post-merge, verified)
 
-- **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/49
-- **Expected CI run after merge:** `Build Release APK` on `main` → `./gradlew assembleRelease
-  --no-daemon --stacktrace` → sign → upload artifact `guardian-shield-release-v3.1.2` → create
-  release tag `v3.1.2`.
-- **Expected release once merged to `main`:**
-  - Tag: **`v3.1.2`**, Release: **"Guardian Shield v3.1.2"**
-  - Direct APK download: **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.2/app-release.apk**
-  (Link resolves after the post-merge Actions run completes; the tag is free per the §5 probe.)
+- **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/49 — merged to `main` as squash commit **`b760104`** at 2026-08-18T09:04:18Z.
+- **CI run (green):** https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32119653785
+  - event `push` (main), head `b760104`, started 09:04:21Z, completed **success** 09:08:31Z (~4m10s).
+  - Every step ✓: `Set up JDK 17`, `Read app version` (→ **3.1.2**), `Setup Gradle`, `Decode keystore`,
+    **`Build Release APK`** (`./gradlew assembleRelease --no-daemon --stacktrace`),
+    **`Verify APK signed`**, `Upload Artifact`, **`Create GitHub Release`**.
+  - The fail-fast release-tag guard did **not** fire (v3.1.2 free as probed) — build proceeded to publish.
+  - Actions artifact: `guardian-shield-release-v3.1.2` — **23,533,278 bytes zipped**, `expired=false`.
+- **Published release (verified via GitHub API):**
+  - Tag **`v3.1.2`**, name **"Guardian Shield v3.1.2"**, `draft=false`, `prerelease=false`,
+    published 2026-08-18T09:08:22Z.
+  - Asset `app-release.apk` — **size 52,709,635 bytes (~50.3 MB)**, `state=uploaded`,
+    `content_type=application/vnd.android.package-archive`.
+  - **Direct APK download: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.2/app-release.apk**
+- **Local Kotlin compile gate (pre-merge):** `exit=0`, 0 errors, 532 `.class` files (JRE 25 + Kotlin 2.3.10-RC + real android-35.jar).
+
+*(Original expected-link note retained below for history; the link is now live.)*
 
 ## 7) COMPLIANCE CHECKLIST
 
