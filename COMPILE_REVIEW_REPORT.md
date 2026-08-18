@@ -1602,3 +1602,33 @@ Next scan of frame F: AiDetector.isUnsafe → isKnown(bitmap) == true →
 - **Expected release once merged to `main`:**
   - Tag: **`v3.1.1`**, Release: **"Guardian Shield v3.1.1"**
   - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.1/app-release.apk`**
+
+---
+
+# CI VERIFICATION (follow-up, same session) — GREEN on first run ✅
+
+**PR #48 merged to `main`** (`gh pr merge 48 --merge` → merge commit `ebe85e3`, 2026-08-18). The `push` to `main` triggered the `Build Release APK` workflow automatically.
+
+## CI run evidence
+
+| Item | Value |
+|---|---|
+| Run | **32103610761** — "Merge pull request #48 from ferdausfs/arena/01a01333-dogs-of-kahaf" |
+| Event / branch | `push` → `main` |
+| Status | **`completed` / `success`** (`gh run list` + `gh run view` + `gh run watch --exit-status` rc=0) |
+| Duration | 4m28s |
+| Run link | https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32103610761 |
+
+The build ran `./gradlew assembleRelease --no-daemon --stacktrace` (with the keystore secrets), verified the signed APK, uploaded the artifact, and created the GitHub Release. The only warnings in the log are cache-service/deprecation notices (gradle cache restore/save, `setup-java@v4` deprecation) — **not build failures**; `DIAG BUILD SUCCEEDED (rc=0)`.
+
+## Release + APK evidence
+
+- Release **"Guardian Shield v3.1.1"**, tag **`v3.1.1`** — created by CI from the merged main.
+- Asset attached: **`app-release.apk`, 52,708,771 bytes** (verified via `gh release view --json assets`).
+- Release page: `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.1.1` → **HTTP 200**.
+- Direct APK link: `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.1/app-release.apk` (HTTP 302 → standard GitHub release-asset redirect; the sandbox blocks the `release-assets.githubusercontent.com` CDN egress, so the byte download itself is not possible *from this sandbox* — the asset is confirmed present via the API and the redirect).
+- **Main-branch content check:** `git show origin/main:...BlockOverlayActivity.kt` contains the Bug D block; `git show origin/main:...GuardianAccessibilityService.kt` contains the Bug E warning; `app/build.gradle.kts` on main is `versionCode 23 / versionName "3.1.1"`. Both fixes are live on `main`.
+
+## Result
+
+**GREEN on the first CI attempt — no further fix iterations were needed.** Bug D + Bug E (v3.1.1) are compiled, signed, released, and downloadable from the link above.
