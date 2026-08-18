@@ -44,7 +44,7 @@
             android:layout_marginTop="22dp"
             android:text="@string/overlay_access_blocked"
             android:textColor="@color/on_surface"
-            android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.015"
+            android:textSize="26sp" android:textStyle="bold" android:letterSpacing="-0.025"
             android:gravity="center"/>
 
         <TextView

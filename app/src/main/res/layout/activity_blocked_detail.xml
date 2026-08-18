@@ -16,9 +16,9 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_main"
-        app:title="@string/overlay_blocked_content"
+        app:title=""
         app:titleTextColor="@color/on_surface"
-        app:titleTextAppearance="@style/TextAppearance.GuardianShield.Title"/>
+        app:navigationIconTint="@color/on_surface"/>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
