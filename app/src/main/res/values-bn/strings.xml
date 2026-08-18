@@ -40,6 +40,8 @@
     <string name="reason_manual">ম্যানুয়াল</string>
     <string name="reason_not_sensitive">সংবেদনশীল নয়</string>
 
+    <string name="home_title">হোম</string>
+    <string name="protection_title">সুরক্ষা</string>
     <string name="settings_title">সেটিংস</string>
     <string name="section_protection">সুরক্ষা</string>
     <string name="section_gender">জেন্ডার ফিল্টার</string>
