@@ -9,14 +9,17 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
+import com.guardian.shield.service.blocker.TempBlockManager
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -25,6 +28,8 @@ class BlockOverlayActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBlockOverlayBinding
 
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
+
+    @Inject lateinit var tempBlockManager: TempBlockManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +112,13 @@ class BlockOverlayActivity : AppCompatActivity() {
                     binding.btnMarkFalse.isEnabled = false
                     binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
                     Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+                    // BUG C — the prior code only taught AiDetector to skip this
+                    // pattern in the FUTURE; it left the CURRENT active temp block
+                    // in place, so the user stayed locked out until the timer ran
+                    // out even after correctly reporting a false block. Lift the
+                    // active block now and auto-relaunch the app that was blocked.
+                    tempBlockManager.clearTempBlock(pkg)
+                    relaunchBlockedApp(pkg)
                 } else {
                     Snackbar.make(binding.root, R.string.overlay_mark_false_unavailable, Snackbar.LENGTH_SHORT).show()
                 }
@@ -118,6 +130,39 @@ class BlockOverlayActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { goHome() }
         })
+    }
+
+    /**
+     * Bug C — after the active temp block is cleared on a false-block report,
+     * auto-relaunch the app the user was blocked from via its launcher intent.
+     *
+     * - Uses [android.content.pm.PackageManager.getLaunchIntentForPackage] so the
+     *   target app opens with its normal MAIN/LAUNCHER intent.
+     * - If the launch intent is null (app uninstalled / no launcher activity) we
+     *   still finish the overlay and tell the user the app was unblocked.
+     * - [android.content.pm.PackageManager] can throw (e.g. app removed between
+     *   the block and the tap); the whole block is wrapped in try/catch so a
+     *   failure can never crash the overlay — we finish gracefully either way.
+     */
+    private fun relaunchBlockedApp(pkg: String) {
+        try {
+            val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(launchIntent)
+                finish()
+            } else {
+                Timber.w("No launch intent for $pkg — app unblocked, closing overlay")
+                Toast.makeText(this, R.string.overlay_app_unblocked, Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        } catch (t: Throwable) {
+            Timber.e(t, "Failed to relaunch $pkg after false-block report — unblocking anyway")
+            runCatching {
+                Toast.makeText(this, R.string.overlay_app_unblocked, Toast.LENGTH_SHORT).show()
+            }
+            finish()
+        }
     }
 
     /**

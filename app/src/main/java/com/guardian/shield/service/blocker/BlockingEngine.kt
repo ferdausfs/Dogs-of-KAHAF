@@ -88,6 +88,14 @@ class BlockingEngine @Inject constructor(
     /** True right after a temp block expires, when AI re-blocking is paused. */
     fun isGracePeriodActive(pkg: String): Boolean = tempBlockManager.isGracePeriodActive(pkg)
 
+    /**
+     * Undo the most recent AI strike for [pkg] (Bug B — "Not sensitive" on the
+     * strike-1/2 warning card). Per-event undo only: it never touches
+     * [com.guardian.shield.service.detection.FalsePositiveMemory], so future
+     * detections are still evaluated normally by AiDetector.
+     */
+    fun cancelLastStrike(pkg: String): Unit = tempBlockManager.cancelLastStrike(pkg)
+
     private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
         runCatching {
             context.startActivity(
