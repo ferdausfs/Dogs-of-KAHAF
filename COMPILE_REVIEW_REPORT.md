@@ -1336,3 +1336,269 @@ https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.0/app-release.
 
 App name **Guardian Shield** unchanged ✓ · no mascot ✓ · shield refined not replaced ✓ · detection/blocking/unblock/strike-3.5s/DAO untouched ✓ · mocks were self-contained (inline CSS) ✓ · implementation only after two explicit approvals ✓.
 
+
+---
+
+# Session 2026-08-18 — Bug D (Mark False dead button) + Bug E (Not-sensitive learns the pattern) (arena/01a01333-dogs-of-kahaf)
+
+**Base:** `main` @ `aac50ab` (Merge PR #47, One UI 8) — `versionName 3.1.0 / versionCode 22`
+**New:** `versionName 3.1.1 / versionCode 23`
+**Date:** 2026-08-18
+**Branch:** `arena/01a01333-dogs-of-kahaf`
+**Scope:** Two logic fixes, both explicitly user-confirmed:
+- **Bug D** — the strike-3 "ভুল ব্লক হয়েছে?" (Mark False) button must **always** unblock + relaunch on tap; the old code only unblocked inside the `sig != null` branch.
+- **Bug E** — a user-confirmed **reversal** of the earlier audit-only scope decision: "Not sensitive" on a strike-1/2 warning card must now ALSO learn the pattern (same mechanism as Mark False), not just cancel the strike.
+
+**Verification method (this session had NEW tooling):** unlike all prior sessions, this sandbox could reach `pypi.org` and `registry.npmjs.org` (Maven Central / dl.google.com / gradle.org still blocked — reproduced: `curl` exit 35 on each). I therefore stood up a **real local compile gate**:
+- JRE 25 via `pip install jdk4py` (`/home/user/.local/lib/python3.11/site-packages/jdk4py/java-runtime`).
+- Kotlin JVM compiler 2.3.10-RC extracted from the `kotlin-jupyter-kernel` pypi wheel (`org.jetbrains.kotlin.cli.jvm.K2JVMCompiler` inside `kotlin-jupyter-kernel-0.19.0-944-all.jar`).
+- **Real `android-35.jar`** (the genuine framework jar, 14,493 entries) downloaded from the `Sable/android-platforms` GitHub repo via `gh api` (raw media type).
+- Hand-written + generated stubs for the non-framework deps (androidx, dagger/hilt, room, datastore, security, tflite, timber, kotlinx-coroutines/flow — generated from the app's own imports; `R.kt` + 29 ViewBinding classes generated from the real `res/` tree).
+- `kotlin.coroutines.CoroutineStart` is absent from the kernel-bundled stdlib → supplied as a stub compiled with `-Xallow-kotlin-package`.
+
+**Result: `./gradlew assembleRelease` is still impossible locally (no Android Gradle Plugin / SDK, and Maven Central is unreachable), but the full Kotlin compile gate — all 65 app source files + stubs, `-jvm-target 17` — is GREEN: `exit=0`, **0 errors**, 525 `.class` files emitted.** The GitHub Actions `Build Release APK` workflow remains the release gate (runs on push to `main`; `workflow_dispatch` from this bot is `HTTP 403 Resource not accessible by integration` — reproduced this session, same as all prior sessions).
+
+---
+
+## BUG D — "Mark False" sometimes did nothing when tapped (blocked user stayed blocked)
+
+### The user's report (verbatim)
+
+> "block hobar por bul block click kora kaj kore na" — after being blocked, tapping "wrong block" does nothing.
+
+### Root-cause investigation (traced, not assumed)
+
+**1. The old code gated the unblock on the signature.** `BlockOverlayActivity.kt` (pre-fix, lines 108–128):
+
+```kotlin
+binding.btnMarkFalse.setOnClickListener {
+    val sig = falsePositiveMemory.takePendingCandidate()
+    if (sig != null) {
+        falsePositiveMemory.addSignature(sig)
+        binding.btnMarkFalse.isEnabled = false
+        binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
+        Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+        // BUG C — ... (added in v3.0.2)
+        tempBlockManager.clearTempBlock(pkg)      // <-- unblock lived HERE
+        relaunchBlockedApp(pkg)                   // <-- relaunch lived HERE
+    } else {
+        Snackbar.make(binding.root, R.string.overlay_mark_false_unavailable, Snackbar.LENGTH_SHORT).show()
+    }
+}
+```
+
+So when `takePendingCandidate()` returned `null`, the user saw a "মনে রাখা যায়নি, আবার চেষ্টা করুন" Snackbar and **nothing else happened** — no `clearTempBlock`, no relaunch, the temp block kept running (up to 15 min, or 24 h on escalation). Exactly the reported dead button.
+
+**2. `sig` CAN legitimately be null at tap time — process death between detection and tap.** `FalsePositiveMemory.kt:112-114`:
+
+```kotlin
+// The most recent AI-block candidate (the image that actually caused the
+// block). The block overlay reads this when the user taps "this was wrong".
+@Volatile private var pendingCandidate: IntArray? = null
+```
+
+It is a **plain in-memory `@Volatile` field of a `@Singleton`** — deliberately not persisted (`FalsePositiveMemory.kt:110` `rememberCandidate` is a bare assignment; the only disk state is the learned `signatures` list via `save()`, `FalsePositiveMemory.kt:140-153`). The candidate is therefore wiped on any process death/restart. The overlay, meanwhile, is an `Activity` whose intent extras (`BlockingEngine.launchOverlay`, `BlockingEngine.kt:106-118` — `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_CLEAR_TASK` + `putExtra(EXTRA_PACKAGE/REASON/DETAIL)`) are **persisted by the system for task restoration**: after the process is killed (LMK / user "close app"), Android can recreate `BlockOverlayActivity` with the same intent, while the freshly-initialised `FalsePositiveMemory` singleton has `pendingCandidate == null`. The button is visible (it only needs `isAiBlock`, derived from the intent's `reason`/`detail` strings, `BlockOverlayActivity.kt:95-96`) — but tapping it hit the dead `else` branch. That is the concrete, code-backed mechanism for the user's report.
+
+**3. Drain audit — is anything else consuming the candidate?** `takePendingCandidate()` has exactly **one** call site in the whole app (grep across `app/src/main/java`):
+
+```
+FalsePositiveMemory.kt:115  fun takePendingCandidate(): IntArray? { ... }
+BlockOverlayActivity.kt:109  val sig = falsePositiveMemory.takePendingCandidate()   (pre-fix)
+```
+
+No other code path drains it — the only ways to have `sig == null` at tap time are (a) process death/restart between the strike-3 detection and the tap, or (b) the candidate never having been set (see the Bug E trace below for why strikes 1/2 *do* capture candidates too — so (b) is not reachable via the normal strike ladder, leaving (a) as the real-world path).
+
+**4. Candidate capture sites — both fire before every AI detection hand-off.** The two AI entry points both call `rememberCandidate(computeSignature(...))` immediately before `goHomeAndBlock` (`GuardianAccessibilityService.kt:806-808` in `runContentAwareScan`, and `:878-880` in `triggerAiCheck`), so the candidate is set on **every** AI detection — strike 1, 2 AND 3 (see Bug E trace below). At strike 3 the candidate is the freshly-blocked frame; nothing between detection and overlay tap clears it **except process death**.
+
+### The fix (Bug D)
+
+`BlockOverlayActivity.kt:107-137` — the unblock now runs **unconditionally on every tap**; signature learning is best-effort afterwards:
+
+```kotlin
+if (isAiBlock) {
+    binding.btnMarkFalse.visibility = View.VISIBLE
+    binding.btnMarkFalse.setOnClickListener {
+        // BUG D — the unblock (clearTempBlock + relaunch) runs
+        // UNCONDITIONALLY on every tap and must NEVER depend on whether a
+        // pattern signature happened to survive in memory. ...
+        tempBlockManager.clearTempBlock(pkg)
+        binding.btnMarkFalse.isEnabled = false
+        binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
+        Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+
+        // Learning the pattern is best-effort and fully independent of the
+        // unblock above: ...
+        val sig = falsePositiveMemory.takePendingCandidate()
+        if (sig != null) {
+            falsePositiveMemory.addSignature(sig)
+        } else {
+            Timber.w("Mark False: no pending candidate signature to learn from (unblock still applied)")
+        }
+
+        relaunchBlockedApp(pkg)
+    }
+}
+```
+
+`relaunchBlockedApp(pkg)` (`BlockOverlayActivity.kt:159-184`) is **unchanged** — the existing null-safe (`getLaunchIntentForPackage` → `null` fallback Toast + `finish()`) and `try/catch` (`Throwable` → Toast + `finish()`) logic is preserved byte-for-byte.
+
+### Bug D traces (before / after)
+
+**Before (dead path):**
+```
+tap "ভুল ব্লক হয়েছে?"
+ └─ takePendingCandidate() → null          (process restarted since the block; pendingCandidate lost)
+     └─ Snackbar "মনে রাখা যায়নি, আবার চেষ্টা করুন"
+     └─ NO clearTempBlock, NO relaunch     ✗ user stays blocked (temp block still active)
+```
+
+**After — same null-candidate situation (the exact reported scenario):**
+```
+tap "ভুল ব্লক হয়েছে?"
+ ├─ tempBlockManager.clearTempBlock(pkg)                       ✅ runs FIRST, always
+ │    └─ TempBlockManager.kt:194-200: tempBlocks.remove(pkg) ⇒ isTempBlocked(pkg) == null
+ │       strikes/strikeTime/blockHistory/graceUntil also removed for pkg
+ ├─ btnMarkFalse disabled; text "ঠিক আছে, এই প্যাটার্নটি আর ব্লক হবে না ✓"; Snackbar
+ ├─ takePendingCandidate() → null
+ │    └─ Timber.w("Mark False: no pending candidate signature to learn from (unblock still applied)")
+ │       — learning skipped silently, unblock unaffected
+ └─ relaunchBlockedApp(pkg)                                     ✅ runs ALWAYS
+      ├─ getLaunchIntentForPackage(pkg) != null → startActivity(launchIntent); finish()
+      ├─ null (uninstalled/no launcher) → Toast "App unblocked"; finish()
+      └─ Throwable → Toast "App unblocked"; finish()            (no-crash fallback)
+```
+
+**After — normal path (candidate present, behaviour identical to v3.0.2):**
+```
+tap → clearTempBlock(pkg) → disable/retitle/Snackbar → takePendingCandidate() → sig != null
+     → addSignature(sig)   [future suppression, PRESERVED]
+     → relaunchBlockedApp(pkg)
+```
+
+**`overlay_mark_false_unavailable` removed (both locales).** After Bug D there is **no reachable user-visible failure state** for this button: the unblock + relaunch always run (with their own null/throw fallbacks), and a missing candidate only logs. Keeping the string would mislead future readers into believing an "unavailable" state still exists. Verified by grep: zero remaining references in code or XML. The Bug E `Timber.w` warnings now carry the "best-effort" information instead.
+
+---
+
+## BUG E — "Not sensitive" (strike 1/2) now learns the pattern too
+
+### The deliberate scope decision being reversed
+
+The v3.0.2 session (Bug B, arena/01a012b2) explicitly scoped `reportNotSensitive()` to only (1) write the `NOT_SENSITIVE` audit row and (2) cancel the strike via `BlockingEngine.cancelLastStrike` — deliberately **without** `FalsePositiveMemory.addSignature()` ("this stays a per-event undo only, exactly as scoped"). The user tested it in practice and found the same content kept re-triggering strikes 1/2/3 repeatedly — worse UX than learning the pattern. This session reverses that decision per explicit user confirmation.
+
+### Trace: do strikes 1 and 2 capture a candidate? (required check — answer: YES, no new capture site needed)
+
+Both AI entry points capture the candidate **before** the strike is even counted — the capture is at detection time, not at block time:
+
+```
+triggerAiCheck(pkg)                                    GuardianAccessibilityService.kt:842-906
+ └─ aiDetector.isUnsafe(b) == true  &&  currentPackage == pkg
+     └─ falsePositiveMemory.rememberCandidate(computeSignature(b))    :878-880   ✅ fires for EVERY AI hit
+         └─ withContext(Main) { goHomeAndBlock(pkg, AI_DETECTION, "legacy") }    :881-885
+
+runContentAwareScan(b, regions, pkg)                   GuardianAccessibilityService.kt:770-820
+ └─ aiDetector.isUnsafe(regionBmp) == true  &&  currentPackage == pkg
+     └─ falsePositiveMemory.rememberCandidate(computeSignature(regionBmp))  :806-808 ✅ same
+         └─ goHomeAndBlock(pkg, AI_DETECTION, "content-aware-legacy")
+```
+
+`goHomeAndBlock` (which funnels both sites, `:272`) then routes by strike count (`evaluateAiStrike` → `recordAiDetection`, `TempBlockManager.kt:86-135`):
+
+| Detection | `recordAiDetection` returns | Candidate captured at :806/:878? |
+|---|---|---|
+| Strike 1 | `StrikeCounted(1)` → warning card | ✅ yes (capture happens before `goHomeAndBlock`) |
+| Strike 2 | `StrikeCounted(2)` → warning card | ✅ yes |
+| Strike 3 | `Blocked("temp_block:…;ai")` → overlay | ✅ yes |
+
+So **strikes 1 and 2 already capture a candidate**; `reportNotSensitive` only needs to take it. No new `rememberCandidate` call site is required — the candidate for the strike-1/2 card is the exact frame that triggered that strike, which is precisely the pattern the user is calling "not sensitive".
+
+### The fix (Bug E)
+
+`GuardianAccessibilityService.kt:487-510` — after the existing strike cancel, take + learn the candidate:
+
+```kotlin
+private fun reportNotSensitive(pkg: String, strikeCount: Int) {
+    // Bug B — undo this specific strike before (or alongside) the log.
+    blockingEngine.cancelLastStrike(pkg)
+
+    // Bug E — also learn the offending pattern so the same content is skipped
+    // by AiDetector in the future (same mechanism as the strike-3 Mark False
+    // button). Best-effort: the candidate may be absent (process restarted
+    // between detection and tap) — the undo above still applies.
+    val sig = falsePositiveMemory.takePendingCandidate()
+    if (sig != null) {
+        falsePositiveMemory.addSignature(sig)
+    } else {
+        Timber.w("Not-sensitive report: no pending candidate signature to learn from for $pkg")
+    }
+
+    val matched = "strike=$strikeCount"
+    ioScope.launch { /* existing NOT_SENSITIVE audit row, unchanged */ }
+    runCatching { Toast... }   // unchanged
+}
+```
+
+The two now-stale comments that claimed the old audit-only scope were updated in the same commit: the inline comment at the `btnNotSensitive` wiring (`:409-417`) and the KDoc on `reportNotSensitive` itself (`:462-486`). `BlockingEngine.cancelLastStrike`'s KDoc (`BlockingEngine.kt:91-101`) was tightened to say the strike-undo itself stays pattern-agnostic while the caller decides on learning. **No logic in `TempBlockManager.cancelLastStrike` (the manager never touches `FalsePositiveMemory`) was changed.**
+
+### Bug E trace (before / after)
+
+**Before (v3.0.2, audit-only):**
+```
+Strike-2 card for pkg; user taps "Not sensitive"
+ └─ cancelLastStrike(pkg): strikes 2 → 1, strikeTime cleared          ✅
+ └─ insert BlockEventEntity(reason=NOT_SENSITIVE, matchedTerm="strike=2")  ✅
+ └─ Toast "Reported"; card dismissed
+ └─ FalsePositiveMemory: UNTOUCHED  → next scan of the same frame:
+      AiDetector.isKnown(bitmap) → false → full inference → strike counted again  ✗ re-triggers
+```
+
+**After (v3.1.1) — trace both effects together:**
+```
+Strike-1 detection (frame F): rememberCandidate(sig(F))  [:806 or :878] → pendingCandidate = sig(F)
+card shown; user taps "Not sensitive" on the strike-1 card
+ ├─ [effect 1 — strike undo]  cancelLastStrike(pkg): strikes 1 → 0, strikeTime removed
+ │                            (TempBlockManager.kt:218-226; via BlockingEngine.kt:100)
+ ├─ [effect 2 — pattern learning]  takePendingCandidate() → sig(F) ≠ null
+ │                            addSignature(sig(F)):
+ │                              isMatch(existing, sig(F))? no →
+ │                              signatures.add(sig(F)) → size() = size()+1   ✅
+ │                              (FalsePositiveMemory.kt:87-98; size() at :121)
+ ├─ audit row reason=NOT_SENSITIVE, matchedTerm="strike=1"               (unchanged)
+ └─ Toast "Reported"; card dismissed
+Next scan of frame F: AiDetector.isUnsafe → isKnown(bitmap) == true →
+    "Known false-positive pattern — skipping block" (AiDetector.kt:182-185) → no strike ✗→✅
+```
+
+**`FalsePositiveMemory.size()` +1 is guaranteed by the trace above when a candidate is available:** `addSignature` only early-returns when the pattern is already known (`isMatch` hit), otherwise it appends and `size()` increments — verified in `FalsePositiveMemory.kt:87-98` and `:121`. Null-candidate case: only a `Timber.w`, the strike cancel + audit log still happen (identical structure to Bug D's best-effort learning).
+
+---
+
+## REGRESSION CHECK (Bug A/B/C invariants — untouched)
+
+| Constant / path | Value / behavior | Status |
+|---|---|---|
+| `STRIKE_THRESHOLD` | `3` (`Constants.kt:35`) | ✅ untouched (no edit to Constants.kt at all) |
+| Inter-strike gate | `STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L` (`Constants.kt:36-43`), enforced at `TempBlockManager.kt:103-108` | ✅ untouched |
+| `STRIKE_RESET_MS` | 10 min (`Constants.kt:44`) | ✅ untouched |
+| Strike-3 full block | `recordAiDetection` count≥3 → `handleBlockEscalation` → `applyTempBlock` (`TempBlockManager.kt:115-127`) → `Blocked` → HOME + overlay | ✅ untouched |
+| Bug B strike undo | `TempBlockManager.cancelLastStrike` (`:218-226`) — manager-level logic **unchanged**; the caller now additionally learns the pattern (Bug E) | ✅ manager untouched |
+| Bug C clear+relaunch | `BlockOverlayActivity` `clearTempBlock` + `relaunchBlockedApp` — now unconditional (Bug D), null-safe/try-catch logic unchanged | ✅ preserved |
+| Non-AI block reasons | `APP_BLOCKED`, `SCHEDULE_BLOCKED`, `KEYWORD_MATCH`, `TAMPER_ATTEMPT` route via `goHomeAndBlock`'s `else detail` branch (`GuardianAccessibilityService.kt:314`) and never touch `evaluateAiStrike` | ✅ untouched |
+| Grace period | `POST_BLOCK_GRACE_MS` + AI-grace early-return (`:275-280`) | ✅ untouched |
+| `FalsePositiveMemory` storage/load | `save()`/`load()`/`isMatch`/`MAX_SIGNATURES` — no edits | ✅ untouched |
+| Mark False button visibility | still gated on `isAiBlock` only (AI blocks only) | ✅ unchanged |
+
+**Diff footprint (evidence):** `git diff --stat` on this session = 6 files, 61 insertions / 30 deletions:
+`app/build.gradle.kts` (version), `GuardianAccessibilityService.kt` (Bug E + comments), `BlockingEngine.kt` (KDoc precision), `BlockOverlayActivity.kt` (Bug D), `values/strings.xml` + `values-bn/strings.xml` (remove dead string). `TempBlockManager.kt`, `Constants.kt`, `FalsePositiveMemory.kt`, `AiDetector.kt` — **zero edits**.
+
+---
+
+## BUILD / VERSION
+
+- **Version:** `versionName "3.1.0" → "3.1.1"`, `versionCode 22 → 23` (`app/build.gradle.kts:23-24`).
+- **Release-tag guard:** `v3.1.0` **is already published** (release "Guardian Shield v3.1.0", tag `v3.1.0` @ `aac50ab`, 2026-08-18T04:01:57Z — `gh release list` + `git ls-remote --tags` evidence above) — the guard would fire on a 3.1.0 release build, so the bump is mandatory, not cosmetic.
+- **`v3.1.1` tag availability (same URLs the in-repo guard probes):** release page `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.1.1` → **404**; tree page `https://github.com/ferdausfs/Dogs-of-KAHAF/tree/v3.1.1` → **404**. Tag is free → no `RELEASE TAG COLLISION` expected.
+- **Local compile gate (NEW this session):** all 65 app sources + generated stubs + real `android-35.jar`, Kotlin 2.3.10-RC JVM compiler — **0 errors** (`/tmp/compile.log`, `exit=0`, 525 `.class` files; only pre-existing deprecation warnings). The three edited files compile clean; no warnings point at the changed lines.
+- **CI release gate:** the `Build Release APK` workflow runs `./gradlew assembleRelease --no-daemon --stacktrace` on push to `main` and publishes the GitHub Release. This bot cannot trigger `workflow_dispatch` (`HTTP 403: Resource not accessible by integration` — reproduced this session) and cannot push to `main`, so the green CI run happens when PR → `main` merges, exactly as in every prior session.
+- **Expected release once merged to `main`:**
+  - Tag: **`v3.1.1`**, Release: **"Guardian Shield v3.1.1"**
+  - Direct APK download: **`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.1/app-release.apk`**

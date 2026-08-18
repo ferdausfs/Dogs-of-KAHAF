@@ -106,22 +106,34 @@ class BlockOverlayActivity : AppCompatActivity() {
         if (isAiBlock) {
             binding.btnMarkFalse.visibility = View.VISIBLE
             binding.btnMarkFalse.setOnClickListener {
+                // BUG D — the unblock (clearTempBlock + relaunch) runs
+                // UNCONDITIONALLY on every tap and must NEVER depend on whether a
+                // pattern signature happened to survive in memory. The old code
+                // gated clearTempBlock + relaunch behind `sig != null`, so when
+                // takePendingCandidate() came back null the button did nothing
+                // but show an "unavailable" Snackbar and the user stayed blocked
+                // ("ব্লক হবার পর ভুল ব্লক ক্লিক করলে কাজ করে না"). That null case
+                // is real: pendingCandidate is a plain @Volatile in-memory field
+                // of a @Singleton, so it is lost on process death/restart between
+                // the detection and the tap (the overlay activity can be recreated
+                // from its persisted intent extras with a freshly-initialised,
+                // candidate-less FalsePositiveMemory).
+                tempBlockManager.clearTempBlock(pkg)
+                binding.btnMarkFalse.isEnabled = false
+                binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
+                Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+
+                // Learning the pattern is best-effort and fully independent of the
+                // unblock above: if no candidate survived we simply don't learn,
+                // and the user is still unblocked either way.
                 val sig = falsePositiveMemory.takePendingCandidate()
                 if (sig != null) {
                     falsePositiveMemory.addSignature(sig)
-                    binding.btnMarkFalse.isEnabled = false
-                    binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
-                    Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
-                    // BUG C — the prior code only taught AiDetector to skip this
-                    // pattern in the FUTURE; it left the CURRENT active temp block
-                    // in place, so the user stayed locked out until the timer ran
-                    // out even after correctly reporting a false block. Lift the
-                    // active block now and auto-relaunch the app that was blocked.
-                    tempBlockManager.clearTempBlock(pkg)
-                    relaunchBlockedApp(pkg)
                 } else {
-                    Snackbar.make(binding.root, R.string.overlay_mark_false_unavailable, Snackbar.LENGTH_SHORT).show()
+                    Timber.w("Mark False: no pending candidate signature to learn from (unblock still applied)")
                 }
+
+                relaunchBlockedApp(pkg)
             }
         }
 
