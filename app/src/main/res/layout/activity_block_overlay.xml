@@ -215,10 +215,14 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMarkFalse"
-            style="@style/Widget.GuardianShield.Button.Text"
+            style="@style/Widget.GuardianShield.Button.Outlined"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            app:icon="@drawable/ic_flag"
+            app:iconTint="@color/warning_amber"
+            app:iconSize="18dp"
+            app:iconGravity="textStart"
             android:text="@string/overlay_mark_false"/>
 
         <LinearLayout

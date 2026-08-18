@@ -204,6 +204,26 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <!-- Secondary OUTLINED danger-adjacent action (e.g. strike-3 "Mark false").
+         Transparent fill, visible warning-amber outline — distinct from the
+         solid red Danger primary. Same pill shape / 52dp tap target as the
+         other GuardianShield buttons. -->
+    <style name="Widget.GuardianShield.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">999dp</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/warning_amber</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="strokeColor">@color/warning_amber</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingHorizontal">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="rippleColor">@color/ripple_error</item>
+    </style>
+
     <style name="Widget.GuardianShield.Button.Small" parent="Widget.GuardianShield.Button.Tonal">
         <item name="android:minHeight">40dp</item>
         <item name="android:textSize">14sp</item>
