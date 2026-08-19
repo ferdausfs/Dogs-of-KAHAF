@@ -93,7 +93,26 @@ class AppListActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.state.collect { adapter.submit(it.apps) }
+                viewModel.state.collect { state ->
+                    adapter.submit(state.apps)
+                    // Visual-only state completeness (mocks/oneui8/app-blocking.html):
+                    // skeleton while AppListState.loading, designed empty when the
+                    // filter/search matches nothing. No VM or blocking logic change.
+                    if (state.loading) {
+                        binding.skeleton.visibility = View.VISIBLE
+                        binding.txtEmptyApps.visibility = View.GONE
+                        val pulse = android.view.animation.AlphaAnimation(0.45f, 1f).apply {
+                            duration = 700; repeatMode = android.view.animation.Animation.REVERSE
+                            repeatCount = android.view.animation.Animation.INFINITE
+                        }
+                        binding.skeleton.startAnimation(pulse)
+                    } else {
+                        binding.skeleton.clearAnimation()
+                        binding.skeleton.visibility = View.GONE
+                        binding.txtEmptyApps.visibility =
+                            if (state.apps.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
             }
         }
     }

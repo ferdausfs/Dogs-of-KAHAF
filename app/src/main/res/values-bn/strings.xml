@@ -88,6 +88,8 @@
     <string name="filter_all">সব</string>
     <string name="filter_blocked">ব্লকড</string>
     <string name="filter_whitelisted">হোয়াইটলিস্টেড</string>
+    <string name="app_empty_title">কোনো অ্যাপ মেলেনি</string>
+    <string name="app_empty_sub">অন্য ফিল্টার বা সার্চ চেষ্টা করুন।</string>
     <string name="search_hint">অ্যাপ খুঁজুন…</string>
     <string name="block">ব্লক</string>
     <string name="whitelist">হোয়াইটলিস্ট</string>

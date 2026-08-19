@@ -88,6 +88,8 @@
     <string name="filter_all">All</string>
     <string name="filter_blocked">Blocked</string>
     <string name="filter_whitelisted">Whitelisted</string>
+    <string name="app_empty_title">No apps match</string>
+    <string name="app_empty_sub">Try another filter or search.</string>
     <string name="search_hint">Search apps…</string>
     <string name="block">Block</string>
     <string name="whitelist">Whitelist</string>
