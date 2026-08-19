@@ -107,18 +107,24 @@ class PermissionsActivity : AppCompatActivity() {
         granted: Boolean,
         onFix: () -> Unit
     ) {
+        // Visual-only state styling per mocks/oneui8/permissions.html:
+        // GRANTED = accent-soft badge, FIX = tonal pill. No behavior change.
         if (granted) {
             icon.setImageResource(R.drawable.ic_check_circle)
-            icon.setColorFilter(getColor(R.color.success))
+            icon.setColorFilter(getColor(R.color.primary_dim))
             btn.text = getString(R.string.permission_granted)
-            btn.setTextColor(getColor(R.color.success))
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                getColor(R.color.accent_soft))
+            btn.setTextColor(getColor(R.color.primary_dim))
             row.setOnClickListener(null)
             row.isClickable = false
         } else {
             icon.setImageResource(R.drawable.ic_warning)
-            icon.setColorFilter(getColor(R.color.error))
+            icon.setColorFilter(getColor(R.color.error_bright))
             btn.text = getString(R.string.permission_fix)
-            btn.setTextColor(getColor(R.color.primary))
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                getColor(R.color.surface_highest))
+            btn.setTextColor(getColor(R.color.on_surface))
             row.setOnClickListener { onFix() }
         }
     }
