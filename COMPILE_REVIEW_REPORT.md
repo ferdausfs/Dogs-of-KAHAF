@@ -2290,15 +2290,20 @@ applicable to local function" until the brace was restored).
 
 XML well-formedness: **OK**. `verify_res.py`: **OK — 77 colors, 49 drawables, 37 styles**.
 
-### CI release gate
+### CI release gate — VERIFIED GREEN
 
-The `Build Release APK` workflow runs `./gradlew assembleRelease --no-daemon --stacktrace`
-on push to `main`. This bot cannot `workflow_dispatch` (HTTP 403) and cannot
-push to `main`. Green signed APK + GitHub Release publish when the PR merges.
-
-**Expected once merged:**
-- Tag: **`v3.3.0`**, Release: **Guardian Shield v3.3.0**
-- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.3.0/app-release.apk
+- PR #53 merged to `main` @ `20224567` (2026-08-19T12:01:40Z).
+- Actions run **[32250530268](https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32250530268)**
+  `Build Release APK` — **conclusion: success** (4m21s). Every step:
+  Checkout ✓ · JDK 17 ✓ · Decode keystore ✓ · **Build Release APK ✓** ·
+  **Verify APK signed ✓** · Upload Artifact ✓ · **Create GitHub Release ✓**.
+- Release: **[Guardian Shield v3.3.0](https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.3.0)**
+  published 2026-08-19T12:05:57Z.
+- **APK download (52,711,406 bytes):**
+  **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.3.0/app-release.apk**
+- Cache-save warnings on the run are GitHub cache-service 400s (infra), not
+  compile failures. Two `::error::` DIAG annotations say `BUILD SUCCEEDED (rc=0)`
+  / `GradleWrapperMain exited rc=0` — job conclusion is still **success**.
 
 ---
 
