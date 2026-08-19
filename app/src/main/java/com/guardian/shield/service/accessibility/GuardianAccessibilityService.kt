@@ -24,6 +24,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.material.button.MaterialButton
 import androidx.annotation.RequiresApi
 import com.guardian.shield.R
 import com.guardian.shield.admin.TamperLogger
@@ -44,6 +45,7 @@ import com.guardian.shield.ui.overlay.ReelReminderActivity
 import com.guardian.shield.util.AccessibilityHeartbeat
 import com.guardian.shield.util.AppClassifier
 import com.guardian.shield.util.GuardianConstants
+import com.guardian.shield.util.ReligiousReminders
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -309,7 +311,11 @@ class GuardianAccessibilityService : AccessibilityService() {
                     return
                 }
                 AiStrikeResult.Duplicate -> {
-                    Timber.d("AI strike duplicate for $pkg (3.5s dedup) — ignored")
+                    Timber.d("AI strike duplicate for $pkg (burst dedup) — ignored")
+                    return
+                }
+                AiStrikeResult.WarningCardVisible -> {
+                    Timber.d("AI strike deferred for $pkg — warning card still showing")
                     return
                 }
             }
@@ -356,6 +362,9 @@ class GuardianAccessibilityService : AccessibilityService() {
                 } else {
                     // Overlay permission not granted yet — keep the pre-2.5.2 Toast
                     // as a graceful fallback so the warning is never silently lost.
+                    // There is no card to acknowledge, so reopen the strike gate
+                    // (the 1s burst dedup still covers same-tick double counts).
+                    blockingEngine.setWarningCardShowing(false)
                     val message = getString(
                         R.string.ai_strike_warning_fmt,
                         strikeCount,
@@ -365,6 +374,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                 }
             } catch (t: Throwable) {
                 Timber.w(t, "Strike warning overlay failed — falling back to Toast")
+                blockingEngine.setWarningCardShowing(false)
                 runCatching {
                     Toast.makeText(
                         this,
@@ -380,20 +390,33 @@ class GuardianAccessibilityService : AccessibilityService() {
         }
     }
 
-    // ---- v2.5.2 strike-warning overlay card (approved mockup:
-    //      guardian-redesign/mocks/strike-warning-card.html) ----
+    // ---- v2.5.2 / v3.3.0 strike-warning overlay card ----
     // WindowManager TYPE_APPLICATION_OVERLAY card shown mid-upper screen.
     // Reuses the SYSTEM_ALERT_WINDOW overlay permission the app already declares
     // (AndroidManifest) and manages (PermissionManager / PermissionsActivity).
     // FLAG_NOT_FOCUSABLE + FLAG_NOT_TOUCH_MODAL: non-blocking — touches outside
-    // the card pass through to the app underneath; only the card area intercepts
-    // (tap to dismiss). Auto-dismisses after STRIKE_WARNING_AUTO_DISMISS_MS.
+    // the card pass through to the app underneath; only the card area intercepts.
+    //
+    // v3.3.0 dismiss contract:
+    //   • Primary: user taps "আমি বুঝেছি" (btnAcknowledge).
+    //   • Also: tap elsewhere on the card, or "Not sensitive" (which also
+    //     cancels the strike + learns the pattern — Bug B/E, unchanged).
+    //   • NO silent 3.5s auto-dismiss. A 40s SAFETY FALLBACK is the only
+    //     timer, and it logs Timber.w so testers can see if it fires.
+    //   • While the card is up, TempBlockManager.isWarningCardShowing gates
+    //     the next strike (Bug A redesigned off the old fixed-duration constant).
 
     private var strikeWarningView: View? = null
-    private val strikeWarningDismissRunnable = Runnable { dismissAiStrikeWarning() }
+    private val strikeWarningSafetyFallbackRunnable = Runnable {
+        Timber.w(
+            "Strike warning card SAFETY FALLBACK fired after %dms — auto-dismissing and reopening strike gate",
+            GuardianConstants.STRIKE_WARNING_SAFETY_FALLBACK_MS
+        )
+        dismissAiStrikeWarning("safety-fallback")
+    }
 
     private fun showStrikeWarningOverlay(pkg: String, strikeCount: Int) {
-        dismissAiStrikeWarning()
+        dismissAiStrikeWarning("replace", reopenGate = false)
 
         val card = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_GuardianShield))
             .inflate(R.layout.view_strike_warning, null)
@@ -405,6 +428,12 @@ class GuardianAccessibilityService : AccessibilityService() {
         )
         // kicker + body are static copy from the approved mockup (no strike number).
 
+        ReligiousReminders.bind(
+            card.findViewById(R.id.txtAyatArabic),
+            card.findViewById(R.id.txtAyatBengali),
+            card.findViewById(R.id.txtAyatCitation)
+        )
+
         // v2.5.4 — "Not sensitive" audit report (Bug B + Bug E). Own click target:
         // does NOT trigger the card's tap-to-dismiss listener below. Writes one
         // block_events row (reason=NOT_SENSITIVE), cancels the current strike, and
@@ -414,7 +443,13 @@ class GuardianAccessibilityService : AccessibilityService() {
         val notSensitiveBtn = card.findViewById<TextView>(R.id.btnNotSensitive)
         notSensitiveBtn.setOnClickListener {
             reportNotSensitive(pkg, strikeCount)
-            dismissAiStrikeWarning()
+            dismissAiStrikeWarning("not-sensitive")
+        }
+
+        val acknowledgeBtn = card.findViewById<MaterialButton>(R.id.btnAcknowledge)
+        acknowledgeBtn.setOnClickListener {
+            Timber.d("Strike warning acknowledged (আমি বুঝেছি) for $pkg strike=$strikeCount")
+            dismissAiStrikeWarning("acknowledge")
         }
 
         val metrics = resources.displayMetrics
@@ -431,28 +466,47 @@ class GuardianAccessibilityService : AccessibilityService() {
         params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         params.y = (metrics.heightPixels * 0.18f).toInt() // mid-upper screen (mockup)
 
-        card.setOnClickListener { dismissAiStrikeWarning() }
+        card.setOnClickListener { dismissAiStrikeWarning("tap-card") }
 
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         wm.addView(card, params)
         strikeWarningView = card
 
-        mainHandler.removeCallbacks(strikeWarningDismissRunnable)
+        // Gate the next strike until this card is acknowledged / dismissed.
+        blockingEngine.setWarningCardShowing(true)
+
+        mainHandler.removeCallbacks(strikeWarningSafetyFallbackRunnable)
         mainHandler.postDelayed(
-            strikeWarningDismissRunnable,
-            GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS
+            strikeWarningSafetyFallbackRunnable,
+            GuardianConstants.STRIKE_WARNING_SAFETY_FALLBACK_MS
         )
-        Timber.d("Strike %d/%d warning card shown", strikeCount, GuardianConstants.STRIKE_THRESHOLD)
+        Timber.d(
+            "Strike %d/%d warning card shown (user-dismiss; safety fallback %dms)",
+            strikeCount,
+            GuardianConstants.STRIKE_THRESHOLD,
+            GuardianConstants.STRIKE_WARNING_SAFETY_FALLBACK_MS
+        )
     }
 
-    private fun dismissAiStrikeWarning() {
-        mainHandler.removeCallbacks(strikeWarningDismissRunnable)
-        val view = strikeWarningView ?: return
+    private fun dismissAiStrikeWarning(reason: String = "dismiss", reopenGate: Boolean = true) {
+        mainHandler.removeCallbacks(strikeWarningSafetyFallbackRunnable)
+        val view = strikeWarningView
         strikeWarningView = null
-        try {
-            (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(view)
-        } catch (_: Throwable) {
-            // already removed — nothing to do
+        // reopenGate=false is used when replacing a card so the gate raised
+        // at StrikeCounted time is not briefly dropped before the new view
+        // is attached.
+        if (reopenGate) {
+            blockingEngine.setWarningCardShowing(false)
+        }
+        if (view != null) {
+            try {
+                (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(view)
+            } catch (_: Throwable) {
+                // already removed — nothing to do
+            }
+            Timber.d("Strike warning dismissed ($reason); strike gate reopened")
+        } else if (reason != "replace") {
+            Timber.d("Strike warning dismiss ($reason) with no view; strike gate reopened")
         }
     }
 
@@ -468,7 +522,7 @@ class GuardianAccessibilityService : AccessibilityService() {
      *      (via [BlockingEngine.cancelLastStrike]) so the current strike counter
      *      for [pkg] drops by one (floor 0) and the inter-strike timestamp is
      *      cleared — the user's next legitimate scan is not penalised by the
-     *      3.5s gap.
+     *      burst-dedup window.
      *   3. Pattern learning (Bug E, user-confirmed reversal of the earlier
      *      audit-only scope): takes the pending AI-detection candidate
      *      ([FalsePositiveMemory.takePendingCandidate]) and, if one is available,

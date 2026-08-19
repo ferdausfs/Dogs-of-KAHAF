@@ -34,13 +34,18 @@ object GuardianConstants {
     // If blocked 3 times within 2 hours → Block for the day.
     const val STRIKE_THRESHOLD = 3
 
-    // Strike-1/2 warning card auto-dismiss (the overlay timer reads this) AND
-    // the minimum inter-strike gap enforced by TempBlockManager.recordAiDetection
-    // (Bug A). Single source of truth so the backend strike gate always matches
-    // the warning card's own visible duration — a strike-1 or strike-2 warning
-    // is guaranteed its full ~3.5 s on screen before another strike can be
-    // evaluated/counted. Do NOT hardcode 3500L anywhere else.
-    const val STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L
+    // v3.3.0 — the strike-1/2 warning card is user-dismissed (acknowledge /
+    // tap-card / Not-sensitive). The old 3.5s auto-dismiss constant is gone:
+    // the inter-strike gate is now an explicit `isWarningCardShowing` flag on
+    // TempBlockManager, not a fixed duration. This safety fallback is ONLY a
+    // leak/stuck-card net (phone locked, view leak) — if it fires the card is
+    // auto-dismissed AND the strike gate reopens, logged with Timber.w.
+    const val STRIKE_WARNING_SAFETY_FALLBACK_MS = 40_000L
+
+    // Burst dedup after a counted strike so two concurrent scan paths
+    // (content-aware region + full-frame) cannot increment twice in the same
+    // tick. Independent of the warning-card visibility flag.
+    const val STRIKE_BURST_DEDUP_MS = 1_000L
     const val STRIKE_RESET_MS = 10 * 60 * 1_000L           // 10 min idle resets the counter
     const val DEFAULT_TEMP_BLOCK_MS = 15 * 60 * 1_000L    // 15 minutes
     const val ESCALATION_WINDOW_MS = 2 * 60 * 60 * 1_000L // 2 hours

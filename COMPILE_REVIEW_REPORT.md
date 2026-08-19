@@ -2047,3 +2047,271 @@ run before every push:
 > workflow while `v3.2.0` was already published — the fail-fast guard aborted that run exactly as
 > designed (run 32223813623: `failure` at configuration time, no overwrite of the immutable release).
 > Version bumped to **3.2.1 (26)** so the tree builds green again; `v3.2.1` probed free (404/404).
+
+
+---
+
+# Session 2026-08-19 — Rotating Qur'anic ayat + user-driven strike-card dismiss (arena/01a019cc-dogs-of-kahaf)
+
+**Base:** `main` @ `698f33a` (Merge PR #52, v3.2.1 / versionCode 26) → **v3.3.0 (27)**
+**Date:** 2026-08-19
+**Branch:** `arena/01a019cc-dogs-of-kahaf`
+**Scope:** Task A (ayat resource), Task B (layouts on strike-1/2 card + strike-3 overlay), Task C (redesign Bug A's inter-strike gate off the now-meaningless 3.5s auto-dismiss).
+
+**Not changed (verified):** `STRIKE_THRESHOLD = 3`, `STRIKE_RESET_MS = 10 min`, `ESCALATION_THRESHOLD = 3`, `ESCALATION_WINDOW_MS = 2 h`, strike-3 `handleBlockEscalation → applyTempBlock`, Bug B/E Not-sensitive cancel+learn, Bug D Mark-False unconditional unblock+relaunch, Stay Protected / Request Unlock wiring.
+
+---
+
+## 0) MOCKUP NOTE
+
+The brief named `guardian-redesign/mocks/reference-faith-overlays.html` as already on `main`. It is **not in this tree** (`git ls-tree -r HEAD` / `origin/main` have no `*faith*` file; `gh search` empty). Content/layout direction was taken from the task text + the shipped One UI 8 tokens (`colors.xml` r2, existing overlay/card chrome). The standalone mockup palette was **not** copied.
+
+---
+
+## 1) TASK A — Ayat resource (for the user to review / correct)
+
+New file: `app/src/main/java/com/guardian/shield/util/ReligiousReminders.kt`
+
+Structure (easy to edit — one `ReligiousReminder(...)` row per ayah):
+
+| # | Citation | Arabic (Uthmani) | Bengali (published) | Source |
+|---|---|---|---|---|
+| 1 | সূরা আল-ইসরা: ১৭:৩২ | وَلَا تَقْرَبُوا الزِّنَىٰ ۖ إِنَّهُ كَانَ فَاحِشَةً وَسَاءَ سَبِيلًا | আর যিনা-ব্যভিচারের কাছেও যেও না, তা হচ্ছে অশ্লীল কাজ আর অতি জঘন্য পথ। | Quran.com/bn/al-isra/32 |
+| 2 | সূরা আন-নূর: ২৪:৩০ | قُل لِّلْمُؤْمِنِينَ يَغُضُّوا مِنْ أَبْصَارِهِمْ وَيَحْفَظُوا فُرُوجَهُمْ ۚ ذَٰلِكَ أَزْكَىٰ لَهُمْ ۗ إِنَّ اللَّهَ خَبِيرٌ بِمَا يَصْنَعُونَ | মু’মিনদের বল তাদের দৃষ্টি অবনমিত করতে আর তাদের লজ্জাস্থান সংরক্ষণ করতে, এটাই তাদের জন্য বেশি পবিত্র, তারা যা কিছু করে সে সম্পর্কে আল্লাহ খুব ভালভাবেই অবগত। | Quran.com/bn/an-nur/30 |
+| 3 | সূরা আল-মুমিনুন: ২৩:৫ | وَالَّذِينَ هُمْ لِفُرُوجِهِمْ حَافِظُونَ | যারা নিজেদের যৌনাঙ্গকে সংরক্ষণ করে। | Quran.com/bn/al-muminun/5 — **NOTE:** ayah 23:5 is grammatically continued by 23:6–7; this is the complete published ayah 23:5 only. |
+| 4 | সূরা আল-আরাফ: ৭:২৬ | يَا بَنِي آدَمَ قَدْ أَنزَلْنَا عَلَيْكُمْ لِبَاسًا يُوَارِي سَوْآتِكُمْ وَرِيشًا ۖ وَلِبَاسُ التَّقْوَىٰ ذَٰلِكَ خَيْرٌ ۚ ذَٰلِكَ مِنْ آيَاتِ اللَّهِ لَعَلَّهُمْ يَذَّكَّرُونَ | হে আদাম সন্তান! আমি তোমাদেরকে পোষাক-পরিচ্ছদ দিয়েছি তোমাদের লজ্জাস্থান আবৃত করার জন্য এবং শোভা বর্ধনের জন্য। আর তাকওয়ার পোশাক হচ্ছে সর্বোত্তম পোশাক। ওটা আল্লাহর নিদর্শনসমূহের মধ্যে একটি যাতে তারা উপদেশ গ্রহণ করে। | Quran.com/bn/al-araf/26 |
+| 5 | সূরা আল-আরাফ: ৭:৩৩ | قُلْ إِنَّمَا حَرَّمَ رَبِّيَ الْفَوَاحِشَ مَا ظَهَرَ مِنْهَا وَمَا بَطَنَ وَالْإِثْمَ وَالْبَغْيَ بِغَيْرِ الْحَقِّ وَأَن تُشْرِكُوا بِاللَّهِ مَا لَمْ يُنَزِّلْ بِهِ سُلْطَانًا وَأَن تَقُولُوا عَلَى اللَّهِ مَا لَا تَعْلَمُونَ | বল, ‘আমার প্রতিপালক অবশ্যই প্রকাশ্য ও গোপন অশ্লীলতা, পাপ, অন্যায়, বিরোধিতা, আল্লাহর অংশীদার স্থির করা যে ব্যাপারে তিনি কোন প্রমাণ নাযিল করেননি, আর আল্লাহ সম্পর্কে তোমাদের অজ্ঞতাপ্রসূত কথাবার্তা নিষিদ্ধ করে দিয়েছেন। | Quran.com/bn/al-araf/33 |
+
+**⚠️ REVIEW FLAG:** I am not a scholar. Arabic is standard Uthmani (Tanzil / Quran.com). Bengali is the published BN translation hosted on Quran.com (Taisirul-family). **Please verify every line before relying on it.** No hadith was included — I could not independently verify a complete, standard published Bengali wording to the same bar.
+
+Display: `ReligiousReminders.pick()` / `bind(...)` chooses one entry uniformly at random on **every** strike-1/2 card show **and** every strike-3 overlay `onCreate`.
+
+---
+
+## 2) TASK B — Layouts (One UI 8 tokens, not mockup palette)
+
+**Strike-1/2 card** (`view_strike_warning.xml`):
+- Existing header (icon well + kicker/title/body) kept.
+- Below title/body: shared `include_ayat_block.xml` (Arabic RTL + `fontFamily=serif` + `textLocale=ar` so the system Noto Naskh Arabic fallback is used — this app ships **no** bundled Arabic font; Bengali LTR).
+- Divider (`border_subtle`) then reminder `মনে রাখো, আল্লাহ সবসময় দেখছেন` (`ai_strike_ayat_reminder`).
+- Compact primary `btnAcknowledge` ("আমি বুঝেছি", new `Widget.GuardianShield.Button.Compact` 36dp / 13sp / Galaxy Blue `#1A55CC`) **and** existing `btnNotSensitive` (Bug B/E unchanged).
+- Existing IDs preserved: `cardStrikeWarning txtStrikeKicker txtStrikeTitle txtStrikeBody btnNotSensitive`.
+
+**Strike-3 overlay** (`activity_block_overlay.xml` + `BlockOverlayActivity.kt`):
+- Same ayat include wrapped in a `Widget.GuardianShield.Card` sheet **below the reason sheet / stat cards, above the action stack**.
+- Reminder line included. No dismiss-timing change.
+- Stay Protected / Request Unlock / Mark False (Bug D) wiring **untouched**. Bound via `findViewById` so merge-include flattening cannot break `onCreate`.
+
+---
+
+## 3) TASK C — Dismiss / gate redesign (Bug A replacement)
+
+### What was wrong with leaving Bug A as-is
+
+`TempBlockManager.recordAiDetection` gated on
+`now - lastStrike < GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS` (3500L),
+assuming the card is always on screen for exactly 3.5s. After this task the
+card stays until the user taps **আমি বুঝেছি** (or tap-card / Not-sensitive).
+A 3.5s gate would either (a) count strike 2 while the card is still up, or
+(b) block a legitimate strike 2 after a long acknowledge. The constant is
+**removed** (grep: `STRIKE_WARNING_AUTO_DISMISS_MS` ABSENT).
+
+### New invariant
+
+> Don't count a new strike while the previous warning card is currently
+> visible / unacknowledged.
+
+Implemented as `TempBlockManager.warningCardShowing` (explicit flag),
+exposed via `BlockingEngine.setWarningCardShowing` /
+`isWarningCardShowing`.
+
+Raised:
+- immediately when `recordAiDetection` returns `StrikeCounted` (covers the
+  gap between count and `addView`);
+- again after a successful `addView` in `showStrikeWarningOverlay`.
+
+Cleared:
+- `btnAcknowledge` → `dismissAiStrikeWarning("acknowledge")`
+- tap elsewhere on card → `"tap-card"`
+- `btnNotSensitive` → report (Bug B/E) then `"not-sensitive"`
+- 40s safety fallback → `"safety-fallback"` + `Timber.w`
+- overlay-permission Toast fallback / inflate failure → flag cleared so
+  the gate cannot stick without a card
+- `onDestroy`
+
+`dismiss(..., reopenGate = false)` is used only when **replacing** a card
+so the gate raised at `StrikeCounted` is not briefly dropped.
+
+New result type `AiStrikeResult.WarningCardVisible` (distinct from
+`Duplicate`) so logs tell the two gates apart. `goHomeAndBlock` handles it
+like Duplicate (return, no HOME, no overlay).
+
+Secondary `STRIKE_BURST_DEDUP_MS = 1_000L` remains as same-tick
+concurrent-scan protection (content-aware region + full-frame),
+independent of the card flag.
+
+Safety net: `STRIKE_WARNING_SAFETY_FALLBACK_MS = 40_000L`. If it fires:
+
+```
+Timber.w("Strike warning card SAFETY FALLBACK fired after 40000ms — auto-dismissing and reopening strike gate")
+dismissAiStrikeWarning("safety-fallback")  // removes view + setWarningCardShowing(false)
+```
+
+This is **not** the primary UX.
+
+### Trace — happy path
+
+```
+t0  AI hit → goHomeAndBlock(AI_DETECTION)
+      evaluateAiStrike → recordAiDetection
+        warningCardShowing == false
+        burst ok
+        count = 1 < 3
+        warningCardShowing = true          ← gate closed
+        return StrikeCounted(1)
+      showAiStrikeWarning → showStrikeWarningOverlay
+        inflate view_strike_warning
+        ReligiousReminders.bind(...)       ← random ayah
+        btnAcknowledge / btnNotSensitive / tap-card wired
+        addView; postDelayed(safety, 40s)
+        Timber.d("Strike 1/3 warning card shown (user-dismiss; ...)")
+
+t0+1s  periodic scan → recordAiDetection
+        warningCardShowing == true
+        return WarningCardVisible          ← NOT counted
+      goHomeAndBlock: "AI strike deferred … warning card still showing"; return
+
+t_user  tap "আমি বুঝেছি"
+        dismissAiStrikeWarning("acknowledge")
+          removeCallbacks(safety)
+          removeView
+          setWarningCardShowing(false)     ← gate reopened
+        Timber.d("Strike warning dismissed (acknowledge); strike gate reopened")
+
+t_next  next qualifying AI hit → recordAiDetection
+        warningCardShowing == false
+        burst ok (lastStrike was t0, user waited)
+        count = 2 < 3
+        warningCardShowing = true
+        return StrikeCounted(2)            ← strike 2, new random ayah
+```
+
+### Trace — safety fallback
+
+```
+t0     StrikeCounted(1), card shown, safety posted +40s
+t0+40s strikeWarningSafetyFallbackRunnable
+         Timber.w("… SAFETY FALLBACK fired after 40000ms …")
+         dismiss("safety-fallback") → view gone, gate reopened
+t_next next qualifying detection can become strike 2
+```
+
+### Trace — Not-sensitive (Bug B/E unchanged)
+
+```
+tap btnNotSensitive
+  reportNotSensitive
+    cancelLastStrike(pkg)     // count 1→0, strikeTime cleared  (Bug B)
+    takePendingCandidate + addSignature if present              (Bug E)
+    insert NOT_SENSITIVE audit row
+    Toast confirmed
+  dismiss("not-sensitive")    // gate reopened
+```
+
+### Trace — strike 3 (unchanged)
+
+```
+after strike 2 is acknowledged and gate reopens:
+recordAiDetection count=3 ≥ STRIKE_THRESHOLD
+  strikes reset; handleBlockEscalation → applyTempBlock
+  return Blocked("temp_block:NNmin;ai")
+goHomeAndBlock → HOME + BlockingEngine.block → BlockOverlayActivity
+  ReligiousReminders.bind on overlay (content only)
+  Stay Protected / Unlock / Mark False (Bug D) unchanged
+```
+
+---
+
+## 4) REGRESSION CHECK
+
+| Constant / path | Status |
+|---|---|
+| `STRIKE_THRESHOLD = 3` (`Constants.kt`) | ✅ untouched |
+| `STRIKE_RESET_MS = 10 min` | ✅ untouched |
+| `ESCALATION_THRESHOLD = 3` / `ESCALATION_WINDOW_MS = 2 h` / `DAY_BLOCK_MS` / `DEFAULT_TEMP_BLOCK_MS` | ✅ untouched |
+| Strike-3 `handleBlockEscalation → applyTempBlock` | ✅ untouched |
+| Bug B `cancelLastStrike` | ✅ manager logic unchanged (KDoc only) |
+| Bug E Not-sensitive learn (`takePendingCandidate` + `addSignature`) | ✅ unchanged |
+| Bug D Mark-False unconditional `clearTempBlock` + `relaunchBlockedApp` | ✅ `BlockOverlayActivity` click handler unchanged; only ayat bind added |
+| Non-AI reasons (`APP_BLOCKED`, `SCHEDULE_BLOCKED`, `KEYWORD_MATCH`, `TAMPER_ATTEMPT`) | ✅ still take `else detail` and never hit the strike gate |
+| `STRIKE_WARNING_AUTO_DISMISS_MS` | ✅ **removed** (was the Bug A 3.5s gate) |
+
+---
+
+## 5) BUILD / VERSION
+
+- **Version:** `versionName "3.2.1" → "3.3.0"`, `versionCode 26 → 27`.
+  `v3.2.1` is already published (Latest, 2026-08-19T06:38:29Z). The fail-fast
+  release-tag guard would abort an assembleRelease on 3.2.1.
+- **`v3.3.0` tag probe** (same URLs the in-repo guard checks):
+  `…/releases/tag/v3.3.0` → **404**; `…/tree/v3.3.0` → **404**. Free.
+
+### Local compile evidence
+
+`./gradlew assembleRelease` cannot run here: Gradle wrapper cannot fetch
+`services.gradle.org` (`SSLHandshakeException` / peer EOF — reproduced).
+No Android SDK / Maven.
+
+Local Kotlin compile gate (JRE 25 via jdk4py + K2JVMCompiler 2.3.10-RC +
+real `android.jar` android-35, 14,488 entries via `gh api` from
+`Sable/android-platforms`):
+
+```
+$ kotlinc -jvm-target 17  Constants.kt ReligiousReminders.kt TempBlockManager.kt + timber/inject stubs
+EXIT:0
+emitted:
+  GuardianConstants.class
+  ReligiousReminder.class
+  ReligiousReminders.class
+  TempBlockManager.class
+  AiStrikeResult{, $StrikeCounted, $Duplicate, $WarningCardVisible, $GracePeriod, $Blocked}.class
+  TempBlock.class
+```
+
+Only warning: pre-existing `LinkedList.first` deprecation in
+`handleBlockEscalation` (untouched line). Zero errors on the changed core.
+
+A whole-app stub compile was also attempted; remaining errors are in
+unrelated ViewModels / incomplete androidx stubs (combine/stateIn), **not**
+in the edited strike/overlay files once the missing `}` on
+`dismissAiStrikeWarning` was fixed (that was a real syntax hole caught by
+the gate — `when` not exhaustive for `WarningCardVisible` + "private not
+applicable to local function" until the brace was restored).
+
+XML well-formedness: **OK**. `verify_res.py`: **OK — 77 colors, 49 drawables, 37 styles**.
+
+### CI release gate
+
+The `Build Release APK` workflow runs `./gradlew assembleRelease --no-daemon --stacktrace`
+on push to `main`. This bot cannot `workflow_dispatch` (HTTP 403) and cannot
+push to `main`. Green signed APK + GitHub Release publish when the PR merges.
+
+**Expected once merged:**
+- Tag: **`v3.3.0`**, Release: **Guardian Shield v3.3.0**
+- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.3.0/app-release.apk
+
+---
+
+## 6) COMPLIANCE CHECKLIST
+
+- [x] Rotating (not fixed) ayat on strike-1/2 card AND strike-3 overlay
+- [x] Resource is a clearly-commented Kotlin list the user can edit
+- [x] 17:32 included; 4 other on-topic published ayahs; no invented text
+- [x] Uncertain translations flagged (23:5 continuation note; no hadith)
+- [x] Arabic RTL + serif / `textLocale=ar`; Bengali LTR
+- [x] "আমি বুঝেছি" compact primary + "Not sensitive" coexist
+- [x] Reminder phrasing exactly `মনে রাখো, আল্লাহ সবসময় দেখছেন`
+- [x] No 3.5s auto-dismiss; user-driven + 40s Timber.w safety net
+- [x] Inter-strike gate is `isWarningCardShowing`, not a duration
+- [x] STRIKE_THRESHOLD / RESET / ESCALATION / strike-3 apply / Bug B/E / Bug D untouched
+- [x] Version bumped past published v3.2.1; v3.3.0 tag free

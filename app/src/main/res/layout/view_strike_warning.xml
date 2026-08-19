@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- ONE SHIELD (One UI 8, color rev r2) — Strike 1/2 warning card
      (WindowManager TYPE_APPLICATION_OVERLAY).
-     Was: WATCHTOWER V3 (ringed leading icon, 10sp kicker in warning r1).
-     Now matches guardian-redesign/mocks/oneui8/overlays.html ".card-float":
-     surface-highest float, 24dp radius, 44dp warning-container icon well with
-     warning-bright glyph, 11sp warning-bright kicker, r2 top-edge light +
-     soft warning glow border on the card chrome.
 
-     RE-SKIN ONLY — behavior contract untouched:
-       • auto-dismiss after STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L (code)
-       • tap card to dismiss; separate click target for btnNotSensitive
-       • "Not sensitive" writes an audit-only DB row + pattern learn (Bug E)
-         — never touches detection thresholds
+     v3.3.0: rotating Qur'anic ayat + Bengali translation, compact
+     "আমি বুঝেছি" acknowledge, user-driven dismiss (no 3.5s auto-dismiss).
 
-     Bindings preserved EXACTLY (same ids/types):
+     Bindings (ids/types that existing code already finds):
        cardStrikeWarning txtStrikeKicker txtStrikeTitle txtStrikeBody
-       btnNotSensitive -->
+       btnNotSensitive
+     New:
+       txtAyatArabic txtAyatBengali txtAyatCitation
+       txtAyatReminder btnAcknowledge -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -31,74 +26,121 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingVertical="16dp">
 
-        <!-- 44dp warning-container icon well (mock .iw) -->
-        <FrameLayout
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_icon_well"
-            android:backgroundTint="@color/warning_container">
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="center"
-                android:importantForAccessibility="no"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_shield_alert"
-                app:tint="@color/warning_amber"/>
-        </FrameLayout>
-
+        <!-- Header: 44dp warning-container icon well + title/body -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/txtStrikeKicker"
-                android:layout_width="wrap_content"
+            <FrameLayout
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_icon_well"
+                android:backgroundTint="@color/warning_container">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shield_alert"
+                    app:tint="@color/warning_amber"/>
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/ai_strike_warning_kicker"
-                android:textColor="@color/warning_amber"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.12"/>
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/txtStrikeTitle"
+                <TextView
+                    android:id="@+id/txtStrikeKicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ai_strike_warning_kicker"
+                    android:textColor="@color/warning_amber"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"/>
+
+                <TextView
+                    android:id="@+id/txtStrikeTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/on_surface"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="-0.01"
+                    android:layout_marginTop="4dp"/>
+
+                <TextView
+                    android:id="@+id/txtStrikeBody"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ai_strike_warning_body"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12.5sp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Ayat block: Arabic (RTL) + Bengali (LTR) + citation -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="14dp">
+            <include layout="@layout/include_ayat_block"/>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/border_subtle"/>
+
+        <TextView
+            android:id="@+id/txtAyatReminder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/ai_strike_ayat_reminder"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="12.5sp"
+            android:textStyle="bold"
+            android:lineSpacingMultiplier="1.35"/>
+
+        <!-- Actions: compact primary acknowledge + existing Not-sensitive -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAcknowledge"
+                style="@style/Widget.GuardianShield.Button.Compact"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/on_surface"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:letterSpacing="-0.01"
-                android:layout_marginTop="4dp"/>
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:text="@string/ai_strike_acknowledge"/>
 
-            <TextView
-                android:id="@+id/txtStrikeBody"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/ai_strike_warning_body"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="12.5sp"
-                android:lineSpacingMultiplier="1.4"
-                android:layout_marginTop="4dp"/>
-
-            <!-- v2.5.4 "Not sensitive" audit report action — own click target,
-                 handler + Toast + explicit dismiss + Bug E learn preserved in
-                 code (GuardianAccessibilityService.reportNotSensitive). -->
             <TextView
                 android:id="@+id/btnNotSensitive"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:minHeight="32dp"
+                android:layout_marginStart="14dp"
+                android:minHeight="36dp"
                 android:gravity="center_vertical"
                 android:paddingVertical="4dp"
                 android:text="@string/ai_strike_warning_not_sensitive"

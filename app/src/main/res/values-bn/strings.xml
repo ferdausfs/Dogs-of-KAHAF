@@ -63,6 +63,9 @@
     <!-- v2.5.4 — "Not sensitive" audit report action on the strike-1/2 card. -->
     <string name="ai_strike_warning_not_sensitive">সংবেদনশীল নয়</string>
     <string name="ai_strike_report_confirmed">রিপোর্ট করা হয়েছে</string>
+    <!-- v3.3.0 — user-driven dismiss + rotating ayat chrome. -->
+    <string name="ai_strike_acknowledge">আমি বুঝেছি</string>
+    <string name="ai_strike_ayat_reminder">মনে রাখো, আল্লাহ সবসময় দেখছেন</string>
     <string name="male">পুরুষ</string>
     <string name="female">মহিলা</string>
     <string name="disabled">বন্ধ</string>

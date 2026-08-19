@@ -9,6 +9,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.View
 import android.view.WindowManager
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +19,7 @@ import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.service.blocker.TempBlockManager
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
+import com.guardian.shield.util.ReligiousReminders
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
@@ -46,6 +48,16 @@ class BlockOverlayActivity : AppCompatActivity() {
         val detail = intent.getStringExtra(EXTRA_DETAIL).orEmpty()
 
         binding.txtPackage.text = pkg
+
+        // v3.3.0 — rotating Qur'anic ayat + Bengali translation. Pure content
+        // addition; Stay Protected / Unlock / Mark False flow is unchanged.
+        // findViewById (not generated binding fields) so a merge-<include>
+        // flattening difference across AGP versions cannot break onCreate.
+        ReligiousReminders.bind(
+            findViewById<TextView>(R.id.txtAyatArabic),
+            findViewById<TextView>(R.id.txtAyatBengali),
+            findViewById<TextView>(R.id.txtAyatCitation)
+        )
 
         // Temp-block branch (incl. TASK 3 — 24h hard lock formatting).
         // AI-originated temp blocks are tagged "temp_block:NNmin;ai" so we can
