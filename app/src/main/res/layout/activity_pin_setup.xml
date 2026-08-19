@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — PIN setup (approved: mocks/v3/pin.html frame D)
-     Bindings preserved: txtPrompt dot1-6 btn0-9 btnDel btnOk (same classes). -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — PIN setup.
+     Was: WATCHTOWER V3 (beacon halo + wide OK pill below the grid).
+     Now matches guardian-redesign/mocks/oneui8/pin.html: centered 34sp title,
+     14sp subtitle, 14dp dots, keypad in the lower third with the mock grid
+     order (1..9, backspace, 0, accent OK key).
+     Bindings preserved: txtPrompt dot1-6 btn0-9 btnDel btnOk (same classes;
+     btnOk moved into the grid as a PinDigit key). -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -10,27 +15,15 @@
     android:background="@color/bg_main"
     android:paddingHorizontal="34dp">
 
-    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.7"/>
-
-    <FrameLayout
-        android:layout_width="84dp"
-        android:layout_height="84dp"
-        android:background="@drawable/bg_halo_beacon">
-        <ImageView
-            android:layout_width="34dp" android:layout_height="34dp"
-            android:layout_gravity="center"
-            android:src="@drawable/ic_lock"
-            android:importantForAccessibility="no"
-            android:tint="@color/primary"/>
-    </FrameLayout>
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.55"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="26dp"
+        android:layout_marginTop="20dp"
         android:text="@string/pin_setup_title"
         android:textColor="@color/on_surface"
-        android:textSize="32sp" android:textStyle="bold" android:letterSpacing="-0.03"
+        android:textSize="34sp" android:textStyle="bold" android:letterSpacing="-0.03"
         android:gravity="center"/>
 
     <!-- step prompt -->
@@ -41,21 +34,23 @@
         android:layout_marginTop="6dp"
         android:text="@string/pin_enter"
         android:textColor="@color/on_surface_variant"
-        android:textSize="13sp"/>
+        android:textSize="14sp"/>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="30dp"
-        android:layout_marginBottom="36dp">
-        <View android:id="@+id/dot1" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot2" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot3" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot4" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot5" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
-        <View android:id="@+id/dot6" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="7dp" android:background="@drawable/dot_empty"/>
+        android:layout_marginTop="22dp"
+        android:layout_marginBottom="28dp">
+        <View android:id="@+id/dot1" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot2" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot3" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot4" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot5" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
+        <View android:id="@+id/dot6" android:layout_width="14dp" android:layout_height="14dp" android:layout_marginHorizontal="6dp" android:background="@drawable/dot_empty"/>
     </LinearLayout>
+
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.45"/>
 
     <GridLayout
         android:layout_width="wrap_content"
@@ -70,17 +65,10 @@
         <Button android:id="@+id/btn7" style="@style/PinDigit" android:text="7"/>
         <Button android:id="@+id/btn8" style="@style/PinDigit" android:text="8"/>
         <Button android:id="@+id/btn9" style="@style/PinDigit" android:text="9"/>
-        <View android:layout_width="84dp" android:layout_height="70dp" android:layout_margin="8dp"/>
-        <Button android:id="@+id/btn0" style="@style/PinDigit" android:text="0"/>
         <Button android:id="@+id/btnDel" style="@style/PinDigit.Ghost" android:text="⌫"/>
+        <Button android:id="@+id/btn0" style="@style/PinDigit" android:text="0"/>
+        <Button android:id="@+id/btnOk" style="@style/PinDigit.PremiumPrimary" android:text="@string/save"/>
     </GridLayout>
 
-    <Button
-        android:id="@+id/btnOk"
-        style="@style/PinDigit.PremiumPrimary.Wide"
-        android:layout_width="match_parent"
-        android:layout_marginTop="22dp"
-        android:text="@string/save"/>
-
-    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1"/>
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.35"/>
 </LinearLayout>
