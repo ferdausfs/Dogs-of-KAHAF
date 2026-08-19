@@ -230,6 +230,17 @@
         <item name="cornerRadius">999dp</item>
     </style>
 
+    <!-- Compact primary used on the strike-1/2 warning card ("আমি বুঝেছি").
+         Proportional to the floating card — not a full-width 52dp CTA. -->
+    <style name="Widget.GuardianShield.Button.Compact" parent="Widget.GuardianShield.Button">
+        <item name="android:minHeight">36dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">999dp</item>
+    </style>
+
     <!-- ============ Switch / slider / chips ============ -->
     <style name="Widget.GuardianShield.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
         <item name="thumbTint">@color/white</item>

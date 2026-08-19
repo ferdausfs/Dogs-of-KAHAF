@@ -194,6 +194,36 @@
             android:lineSpacingMultiplier="1.35"
             tools:text="AI ক্ষতিকারক বা অশ্লীল কন্টেন্ট খুঁজে পেয়েছে"/>
 
+        <!-- Rotating Qur'anic ayat (same block as the strike-1/2 card).
+             Placed below the reason sheet / stat cards, above the action
+             stack — content addition only; Stay Protected / Unlock /
+             Mark False flow is unchanged. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAyat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp">
+                <include layout="@layout/include_ayat_block"/>
+                <TextView
+                    android:id="@+id/txtAyatReminder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/ai_strike_ayat_reminder"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold"
+                    android:lineSpacingMultiplier="1.35"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.45"/>
 
         <!-- grouped actions -->

@@ -42,8 +42,8 @@ class BlockingEngine @Inject constructor(
      *     is the temp-block payload),
      *   - [AiStrikeResult.StrikeCounted] when a strike was counted below threshold — the caller
      *     MUST surface a visible warning but must NOT kick the user home,
-     *   - [AiStrikeResult.GracePeriod] / [AiStrikeResult.Duplicate] when nothing user-visible
-     *     should happen.
+     *   - [AiStrikeResult.GracePeriod] / [AiStrikeResult.Duplicate] /
+     *     [AiStrikeResult.WarningCardVisible] when nothing user-visible should happen.
      */
     fun evaluateAiStrike(pkg: String): AiStrikeResult {
         val durationMs = cachedTempBlockMins * 60 * 1_000L
@@ -98,6 +98,17 @@ class BlockingEngine @Inject constructor(
      * strike undo itself is pattern-agnostic either way.
      */
     fun cancelLastStrike(pkg: String): Unit = tempBlockManager.cancelLastStrike(pkg)
+
+    /**
+     * v3.3.0 — explicit inter-strike gate. While the strike-1/2 warning card is
+     * showing, [TempBlockManager.recordAiDetection] refuses to count another
+     * strike. The accessibility service sets this true on show and false on
+     * acknowledge / dismiss / safety-fallback.
+     */
+    fun setWarningCardShowing(showing: Boolean): Unit =
+        tempBlockManager.setWarningCardShowing(showing)
+
+    fun isWarningCardShowing(): Boolean = tempBlockManager.isWarningCardShowing()
 
     private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
         runCatching {

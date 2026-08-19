@@ -63,6 +63,10 @@
     <!-- v2.5.4 — "Not sensitive" audit report action on the strike-1/2 card. -->
     <string name="ai_strike_warning_not_sensitive">Not sensitive</string>
     <string name="ai_strike_report_confirmed">Reported</string>
+    <!-- v3.3.0 — user-driven dismiss + rotating ayat chrome (religious text
+         itself lives in ReligiousReminders.kt so it can be reviewed in one place). -->
+    <string name="ai_strike_acknowledge">আমি বুঝেছি</string>
+    <string name="ai_strike_ayat_reminder">মনে রাখো, আল্লাহ সবসময় দেখছেন</string>
     <string name="male">Male</string>
     <string name="female">Female</string>
     <string name="disabled">Disabled</string>

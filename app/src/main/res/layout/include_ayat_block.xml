@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared ayat block (Arabic + Bengali translation + citation).
+     Merged into the strike-1/2 warning card and the strike-3 overlay.
+     Arabic is RTL + serif so the system Noto Naskh Arabic fallback is used
+     (this app ships no bundled Arabic font). Bengali stays LTR. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/txtAyatArabic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:gravity="end"
+        android:textAlignment="viewEnd"
+        android:textDirection="rtl"
+        android:textLocale="ar"
+        android:textColor="@color/on_surface"
+        android:textSize="18sp"
+        android:lineSpacingMultiplier="1.55"
+        android:letterSpacing="0.02"
+        tools:text="وَلَا تَقْرَبُوا الزِّنَىٰ ۖ إِنَّهُ كَانَ فَاحِشَةً وَسَاءَ سَبِيلًا"/>
+
+    <TextView
+        android:id="@+id/txtAyatBengali"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="start"
+        android:textAlignment="viewStart"
+        android:textDirection="ltr"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="13sp"
+        android:lineSpacingMultiplier="1.5"
+        tools:text="আর যিনা-ব্যভিচারের কাছেও যেও না, তা হচ্ছে অশ্লীল কাজ আর অতি জঘন্য পথ।"/>
+
+    <TextView
+        android:id="@+id/txtAyatCitation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="start"
+        android:textDirection="ltr"
+        android:textColor="@color/primary_dim"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.02"
+        tools:text="সূরা আল-ইসরা: ১৭:৩২"/>
+</merge>

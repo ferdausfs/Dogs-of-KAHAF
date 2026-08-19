@@ -31,10 +31,18 @@ sealed class AiStrikeResult {
     data class StrikeCounted(val strikeCount: Int) : AiStrikeResult()
 
     /**
-     * Duplicate detection within the inter-strike gap
-     * ([GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]) — no user-visible action.
+     * Duplicate detection within the short burst window
+     * ([GuardianConstants.STRIKE_BURST_DEDUP_MS]) — no user-visible action.
      */
     data object Duplicate : AiStrikeResult()
+
+    /**
+     * The strike-1/2 warning card is currently on screen and unacknowledged.
+     * The next strike must not be counted until the user dismisses it (or the
+     * safety fallback fires). Distinct from [Duplicate] so logs can tell the
+     * two gates apart.
+     */
+    data object WarningCardVisible : AiStrikeResult()
 
     /** A recent temp block just expired; the user gets a grace period. */
     data object GracePeriod : AiStrikeResult()
@@ -59,6 +67,13 @@ class TempBlockManager @Inject constructor() {
     // unblocked. During the grace window, AI detection is ignored for the pkg.
     private val graceUntil = HashMap<String, Long>()
 
+    // v3.3.0 Bug-A redesign: the strike-1/2 warning card is user-dismissed, so
+    // the inter-strike gate is this explicit flag — NOT a fixed 3.5s window.
+    // Set true when the card is shown; cleared when the user acknowledges /
+    // dismisses it (or the safety fallback fires).
+    @Volatile
+    private var warningCardShowing: Boolean = false
+
     /**
      * TASK 3 — Record an AI-detection event.
      *
@@ -73,11 +88,15 @@ class TempBlockManager @Inject constructor() {
      *  • If blocked 3 times within 2 hours, escalate to a 24-hour lock.
      *  • If a temp block just expired, return [AiStrikeResult.GracePeriod] so the
      *    app stays unlocked for [GuardianConstants.POST_BLOCK_GRACE_MS].
-     *  • A second detection within [GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]
-     *    of the previous strike returns [AiStrikeResult.Duplicate] (dedup — no
-     *    strike counted, no warning). The gap is the same as the strike-1/2
-     *    warning card's visible duration so each warning gets its full on-screen
-     *    time before the next strike can land (Bug A).
+     *  • While the strike-1/2 warning card is on screen ([isWarningCardShowing])
+     *    a new detection returns [AiStrikeResult.WarningCardVisible] — no strike
+     *    counted. The gate reopens when the user acknowledges / dismisses the
+     *    card (or the [GuardianConstants.STRIKE_WARNING_SAFETY_FALLBACK_MS]
+     *    safety net fires). This replaced the old 3.5s fixed-duration gate
+     *    (Bug A) once dismiss became user-driven.
+     *  • A second detection within [GuardianConstants.STRIKE_BURST_DEDUP_MS]
+     *    of the previous strike returns [AiStrikeResult.Duplicate] (same-tick
+     *    concurrent-scan protection — independent of the card-visibility flag).
      *
      * @param pkg the offending package
      * @param blockDurationMs the user-configured temp-block duration
@@ -92,18 +111,21 @@ class TempBlockManager @Inject constructor() {
             return AiStrikeResult.GracePeriod
         }
 
+        // Don't count a new strike while the previous warning card is still
+        // visible / unacknowledged. Explicit state, not a fixed duration
+        // (v3.3.0 redesign of Bug A).
+        if (warningCardShowing) {
+            Timber.d("Ignoring AI strike for $pkg — warning card still showing/unacknowledged")
+            return AiStrikeResult.WarningCardVisible
+        }
+
         val lastStrike = strikeTime[pkg] ?: 0L
 
-        // Prevent another strike from being counted until the strike-1/2 warning
-        // card has had its full visible duration. This guarantees each warning
-        // (strike 1, then strike 2) is on screen for at least
-        // STRIKE_WARNING_AUTO_DISMISS_MS (~3.5s) before the next strike can be
-        // evaluated/counted (Bug A). Without this, the ~1s AI scan cadence could
-        // walk strike 1 -> strike 3 (full block) in ~2-3s, so the user never saw
-        // either warning for its full duration. Uses the same constant as the
-        // card's own auto-dismiss timer (single source of truth, GuardianConstants).
-        if (now - lastStrike < GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS) {
-            Timber.d("Ignoring duplicate AI strike for $pkg (too soon)")
+        // Short burst dedup: two concurrent scan paths (content-aware region +
+        // full-frame) must not increment twice in the same tick after the card
+        // has been dismissed.
+        if (now - lastStrike < GuardianConstants.STRIKE_BURST_DEDUP_MS) {
+            Timber.d("Ignoring duplicate AI strike for $pkg (burst dedup ${GuardianConstants.STRIKE_BURST_DEDUP_MS}ms)")
             return AiStrikeResult.Duplicate
         }
 
@@ -130,7 +152,10 @@ class TempBlockManager @Inject constructor() {
             AiStrikeResult.Blocked(detail)
         } else {
             // Below threshold — strike counted (carry the number for a warning),
-            // but do NOT show a block overlay.
+            // but do NOT show a block overlay. Raise the visibility gate
+            // immediately so a scan arriving before the card is attached
+            // cannot become strike N+1.
+            warningCardShowing = true
             AiStrikeResult.StrikeCounted(count)
         }
     }
@@ -205,9 +230,10 @@ class TempBlockManager @Inject constructor() {
     /**
      * Undo the most recent strike for [pkg] (Bug B — the strike-1/2 warning card's
      * "Not sensitive" report). Decrements the live strike counter by one (floor 0)
-     * and clears the inter-strike timestamp so the
-     * [com.guardian.shield.util.GuardianConstants.STRIKE_WARNING_AUTO_DISMISS_MS]
-     * gap does not impose a "waiting" penalty on the user's next legitimate scan.
+     * and clears the inter-strike timestamp so the burst-dedup window does not
+     * impose a "waiting" penalty on the user's next legitimate scan. The
+     * warning-card visibility flag is owned by the overlay (set/cleared from
+     * GuardianAccessibilityService) — this method does not touch it.
      *
      * This is a per-event undo ONLY — it never calls
      * [com.guardian.shield.service.detection.FalsePositiveMemory.addSignature] and
@@ -224,4 +250,17 @@ class TempBlockManager @Inject constructor() {
         strikeTime.remove(pkg)
         Timber.d("cancelLastStrike($pkg): strike count $before -> $after (timestamp cleared)")
     }
+
+    /**
+     * Mark the strike-1/2 warning card as currently on screen (or not).
+     * While true, [recordAiDetection] refuses to count another strike.
+     */
+    @Synchronized
+    fun setWarningCardShowing(showing: Boolean) {
+        warningCardShowing = showing
+        Timber.d("warningCardShowing=$showing")
+    }
+
+    @Synchronized
+    fun isWarningCardShowing(): Boolean = warningCardShowing
 }
