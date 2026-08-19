@@ -2031,3 +2031,14 @@ run before every push:
 - [x] Detection/blocking/strike/threshold/DAO logic untouched (0 changed Kotlin files outside the
       5 visual-only files listed in §3)
 - [x] Every implementation commit gate-green before push; release tag collision guard satisfied (v3.2.0)
+
+## 7) GREEN BUILD + RELEASE (verified post-merge)
+
+- **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/50 (14 commits, merged to `main`)
+- **CI run 32223471009 "Build Release APK" on main — conclusion: success**; steps verified via API:
+  `Build Release APK -> success` · `Verify APK signed -> success` · `Create GitHub Release -> success`
+- **Release:** **Guardian Shield v3.2.0** — https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.2.0
+- **APK download (verified asset, 52,708,898 bytes):**
+  **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.2.0/app-release.apk**
+- Release-tag guard history this session: `v3.2.0` probed 404/404 (free) before the first commit;
+  no collision fired; exactly one release published (per-screen tag churn avoided, as planned).
