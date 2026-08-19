@@ -280,6 +280,7 @@
     <string name="day_fri">Fri</string>
     <string name="day_sat">Sat</string>
     <string name="lock_choose_duration">Choose a duration · সময় নির্বাচন</string>
+    <string name="lock_confirm_note">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
     <string name="lock_choose_sub">একবার লক করলে লক শেষ না হওয়া পর্যন্ত খোলা যাবে না</string>
     <string name="lock_1day">1 day</string>
     <string name="lock_3day">3 days</string>
