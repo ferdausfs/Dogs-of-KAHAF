@@ -31,10 +31,10 @@ def composite_over(fg_hex, alpha, bg_hex='#000000'):
 # ---------- REVISED TOKENS (Phase 0) ----------
 T = {
  'bg':'#000000','bg_elev':'#0D0E12','inset':'#17181D',
- 'surface':'#212227','surface_high':'#2A2C33','surface_highest':'#35373F',
+ 'surface':'#26272C','surface_high':'#303138','surface_highest':'#3A3C44',
  'text':'#F5F5F5','text_sec':'#A8A8A8','text_ter':'#7A7A7A',
  'accent':'#1A55CC','accent_bright':'#8FBDFF','on_accent':'#FFFFFF',
- 'accent_container':'#0B2547','on_accent_container':'#D8E8FF','accent_soft':'#243A5E',
+ 'accent_container':'#0B2547','on_accent_container':'#D8E8FF','accent_soft':'#243B63',
  'error':'#C0353B','error_bright':'#FF9285','error_container':'#2E1315','on_error_container':'#FFD0CC',
  'warning':'#D6992A','warning_bright':'#FFC14D','warning_container':'#2F230C','on_warning_container':'#FFE2A8',
  'success':'#2E9B64','success_bright':'#6BCF97',
@@ -90,7 +90,12 @@ print('--- surface ladder perceptual steps (relative luminance) ---')
 for k in ['bg','bg_elev','inset','surface','surface_high','surface_highest']:
     print(f"  {k:18} old {lum(O[k]):.4f}  new {lum(T[k]):.4f}")
 print()
-print('--- badge alpha composites (over surface) ---')
-for alpha, name in [(0x38/255,'beacon_dim #38-accent'), (0x22,'accent_soft rgba .22')]:
-    c = composite_over(T['accent'], alpha, T['surface'])
-    print(f"  {name}: {c}  accent_bright on it: {ratio(T['accent_bright'], c):.2f}")
+print('--- CIE L* ladder (r1 -> r2) ---')
+def Lstar(y):
+    def g(t): return 116*(t**(1/3))-16 if t > 0.008856 else 903.3*t
+    return g(y)
+names=['bg','bg_elev','inset','surface','surface_high','surface_highest']
+for k in names:
+    print(f"  {k:16} L* {Lstar(lum(O[k])):5.1f} -> {Lstar(lum(T[k])):5.1f}")
+print()
+print('--- solid accent_soft (#243B63) badge: accent_bright on it: %.2f ---' % ratio(T['accent_bright'], T['accent_soft']))
