@@ -2042,3 +2042,8 @@ run before every push:
   **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.2.0/app-release.apk**
 - Release-tag guard history this session: `v3.2.0` probed 404/404 (free) before the first commit;
   no collision fired; exactly one release published (per-screen tag churn avoided, as planned).
+
+> **Note (release-tag guard):** the docs-only follow-up merge (PR #51) re-triggered the release
+> workflow while `v3.2.0` was already published — the fail-fast guard aborted that run exactly as
+> designed (run 32223813623: `failure` at configuration time, no overwrite of the immutable release).
+> Version bumped to **3.2.1 (26)** so the tree builds green again; `v3.2.1` probed free (404/404).
