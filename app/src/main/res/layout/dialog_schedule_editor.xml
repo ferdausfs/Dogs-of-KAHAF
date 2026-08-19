@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — schedule editor dialog. Bindings preserved: editPackage
-     txtStart txtEnd chipSun chipMon chipTue chipWed chipThu chipFri chipSat. -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — schedule editor dialog sheet
+     (MaterialAlertDialog host; Cancel/Save from ScheduleActivity, themed on
+     surface-highest). Matches guardian-redesign/mocks/oneui8/schedule.html:
+     20sp title, inset package field, Start/End as label-above-value
+     time-picker hosts (still TextViews), Sun–Sat chips.
+     Bindings preserved: editPackage txtStart txtEnd chipSun chipMon chipTue
+     chipWed chipThu chipFri chipSat. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -15,7 +20,7 @@
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="@string/add_schedule"
         android:textColor="@color/on_surface"
-        android:textSize="18sp" android:textStyle="bold" android:letterSpacing="-0.01"/>
+        android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
@@ -40,37 +45,51 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginTop="14dp">
-        <TextView
-            android:id="@+id/txtStart"
+        <LinearLayout
             android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="48dp"
-            android:layout_marginEnd="5dp"
-            android:gravity="center"
-            android:background="@drawable/bg_time_field"
-            android:textColor="@color/on_surface"
-            android:textSize="15sp" android:textStyle="bold"
-            android:fontFeatureSettings="tnum"
-            android:text="@string/start_time"/>
-        <TextView
-            android:id="@+id/txtEnd"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/start_time"
+                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+            <TextView
+                android:id="@+id/txtStart"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/on_surface"
+                android:textSize="16sp" android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
+                android:text="@string/start_time"/>
+        </LinearLayout>
+        <LinearLayout
             android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="48dp"
-            android:layout_marginStart="5dp"
-            android:gravity="center"
-            android:background="@drawable/bg_time_field"
-            android:textColor="@color/on_surface"
-            android:textSize="15sp" android:textStyle="bold"
-            android:fontFeatureSettings="tnum"
-            android:text="@string/end_time"/>
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/end_time"
+                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+            <TextView
+                android:id="@+id/txtEnd"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/on_surface"
+                android:textSize="16sp" android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
+                android:text="@string/end_time"/>
+        </LinearLayout>
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/days"
-        android:textColor="@color/on_surface_dim"
-        android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.1"
-        android:textAllCaps="true"/>
+        style="@style/TextAppearance.GuardianShield.SectionHeader"/>
 
     <com.google.android.material.chip.ChipGroup
         android:layout_width="match_parent"

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Schedule rules list. Bindings preserved: toolbar lockBanner
-     txtLockRemaining txtEmpty recycler fabAdd. -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — Schedule rules list.
+     Matches guardian-redesign/mocks/oneui8/schedule.html: rows inside ONE
+     sheet, designed empty state, accent FAB.
+     Bindings preserved: toolbar lockBanner txtLockRemaining txtEmpty recycler fabAdd. -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -78,30 +80,37 @@
                 android:orientation="vertical" android:gravity="center"
                 android:paddingVertical="44dp" android:paddingHorizontal="30dp">
                 <FrameLayout
-                    android:layout_width="76dp" android:layout_height="76dp"
-                    android:background="@drawable/bg_icon_well"
-                    android:backgroundTint="@color/badge_warn_bg">
-                    <ImageView android:layout_width="34dp" android:layout_height="34dp"
+                    android:layout_width="64dp" android:layout_height="64dp"
+                    android:background="@drawable/bg_icon_well">
+                    <ImageView android:layout_width="26dp" android:layout_height="26dp"
                         android:layout_gravity="center" android:src="@drawable/ic_clock"
-                        app:tint="@color/warning_amber" android:importantForAccessibility="no"/>
+                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
                 </FrameLayout>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp" android:text="@string/no_schedules_heading"
-                    android:textColor="@color/on_surface" android:textSize="16.5sp" android:textStyle="bold"/>
+                    android:layout_marginTop="16dp" android:text="@string/no_schedules_heading"
+                    android:textColor="@color/on_surface" android:textSize="17sp" android:textStyle="bold"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginTop="6dp" android:text="@string/no_schedules"
-                    android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
+                    android:textColor="@color/on_surface_variant" android:textSize="13.5sp"
+                    android:lineSpacingMultiplier="1.5" android:gravity="center"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingBottom="110dp"
-            android:clipToPadding="false"
-            android:overScrollMode="never"
-            tools:itemCount="4"/>
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp"
+            style="@style/Widget.GuardianShield.Card">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingBottom="110dp"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                tools:itemCount="4"/>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
