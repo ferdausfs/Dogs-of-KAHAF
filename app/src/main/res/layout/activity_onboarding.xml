@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — onboarding shell. Bindings preserved: btnSkip viewPager
-     indicatorContainer btnBack btnNext (ViewPager + 4 real pages). -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — onboarding shell (structure already
+     One UI 8: Skip text link top-right, dot indicators, square tonal back +
+     filled Next bottom bar; Skip hides on last page, Next becomes Get Started
+     in OnboardingActivity — unchanged).
+     Bindings preserved: btnSkip viewPager indicatorContainer btnBack btnNext. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

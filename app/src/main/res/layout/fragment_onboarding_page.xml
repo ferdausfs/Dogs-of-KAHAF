@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — onboarding page. Bindings preserved: iconFrame txtIcon
-     txtHighlight txtTitle txtBody (emoji glyph renders inside a beacon halo). -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — onboarding page (shared by 4 pages).
+     Was: WATCHTOWER V3 (104dp beacon halo + emoji glyph).
+     Now matches guardian-redesign/mocks/oneui8/onboarding.html: 88dp
+     accent-container well (28dp radius) with a 36dp outlined glyph, 12sp/700
+     uppercase tracking kicker in accent-bright, 28sp/800 title, 15sp body.
+     Bindings preserved: iconFrame txtIcon txtHighlight txtTitle txtBody.
+     txtIcon (emoji arg) stays bound but hidden; the emoji is mapped to an
+     outlined vector in OnboardingPageFragment (visual-only). -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,34 +19,45 @@
 
     <FrameLayout
         android:id="@+id/iconFrame"
-        android:layout_width="104dp"
-        android:layout_height="104dp"
-        android:background="@drawable/bg_halo_beacon">
+        android:layout_width="88dp"
+        android:layout_height="88dp"
+        android:background="@drawable/bg_icon_well"
+        android:backgroundTint="@color/primary_container">
+        <ImageView
+            android:id="@+id/imgPageIcon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_shield_check"
+            app:tint="@color/primary_dim"
+            android:importantForAccessibility="no"/>
         <TextView
             android:id="@+id/txtIcon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:textSize="40sp"/>
+            android:visibility="gone"
+            android:textSize="36sp"
+            tools:text="🛡️"/>
     </FrameLayout>
 
     <TextView
         android:id="@+id/txtHighlight"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="24dp"
         android:textColor="@color/primary_dim"
-        android:textSize="11.5sp" android:textStyle="bold"
-        android:letterSpacing="0.12" android:textAllCaps="true"
+        android:textSize="12sp" android:textStyle="bold"
+        android:letterSpacing="0.1" android:textAllCaps="true"
         android:gravity="center"/>
 
     <TextView
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:textColor="@color/on_surface"
-        android:textSize="26sp" android:textStyle="bold" android:letterSpacing="-0.02"
+        android:textSize="28sp" android:textStyle="bold" android:letterSpacing="-0.02"
         android:gravity="center"/>
 
     <TextView
@@ -47,6 +66,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
         android:textColor="@color/on_surface_variant"
-        android:textSize="14sp" android:lineSpacingMultiplier="1.65"
+        android:textSize="15sp" android:lineSpacingMultiplier="1.6"
         android:gravity="center"/>
 </LinearLayout>

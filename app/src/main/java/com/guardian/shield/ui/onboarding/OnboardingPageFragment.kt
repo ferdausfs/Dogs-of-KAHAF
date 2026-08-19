@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import com.guardian.shield.R
 import com.guardian.shield.databinding.FragmentOnboardingPageBinding
 
 /**
@@ -28,7 +29,19 @@ class OnboardingPageFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val args = arguments ?: return
-        binding.txtIcon.text = args.getString(ARG_ICON, "🛡️")
+        val emoji = args.getString(ARG_ICON, "🛡️")
+        // Visual-only reskin (mocks/oneui8/onboarding.html): emoji chrome ->
+        // outlined vector family. txtIcon stays bound (hidden) so the pager
+        // contract is unchanged; page count/copy/destinations untouched.
+        binding.imgPageIcon.setImageResource(
+            when (emoji) {
+                "✨" -> R.drawable.ic_ai_spark
+                "🔐" -> R.drawable.ic_access
+                "🔒" -> R.drawable.ic_lock
+                else -> R.drawable.ic_shield_check
+            }
+        )
+        binding.txtIcon.text = emoji
         binding.txtHighlight.text = args.getString(ARG_HIGHLIGHT, "")
         binding.txtTitle.text = args.getString(ARG_TITLE, "")
         binding.txtBody.text = args.getString(ARG_BODY, "")
