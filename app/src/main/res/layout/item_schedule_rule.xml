@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — schedule rule row. Bindings preserved: txtPackage txtSchedule btnEdit. -->
-<com.google.android.material.card.MaterialCardView
+<!-- ONE SHIELD (One UI 8, color rev r2) — schedule rule row inside a sheet.
+     Was: WATCHTOWER V3 separate Card.Row with icon+edit pencil.
+     Now matches guardian-redesign/mocks/oneui8/schedule.html: flat 64dp row,
+     18dp accent clock glyph, app name 16sp/600 + schedule line 13sp, accent
+     "Edit" text action, trailing hairline.
+     Bindings preserved: txtPackage txtSchedule btnEdit (ImageButton ->
+     TextView, same id; adapter only uses isEnabled + setOnClickListener). -->
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    style="@style/Widget.GuardianShield.Card.Row">
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp">
+        android:minHeight="64dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
 
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="18dp" android:layout_height="18dp"
             android:src="@drawable/ic_clock"
             app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
 
@@ -25,28 +32,38 @@
             android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginStart="12dp">
+            android:layout_marginStart="16dp">
             <TextView
                 android:id="@+id/txtPackage"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textColor="@color/on_surface" android:textSize="12.5sp"
-                android:textStyle="bold" android:fontFamily="monospace"
-                android:maxLines="1" android:ellipsize="middle"/>
+                android:textColor="@color/on_surface" android:textSize="16sp"
+                android:textStyle="bold" android:maxLines="1" android:ellipsize="middle"/>
             <TextView
                 android:id="@+id/txtSchedule"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/on_surface_variant" android:textSize="12sp"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/on_surface_variant" android:textSize="13sp"
                 android:fontFeatureSettings="tnum"
-                tools:text="22:00 – 06:00 · প্রতিদিন"/>
+                tools:text="22:00 – 06:00 · Mon–Fri"/>
         </LinearLayout>
 
-        <ImageButton
+        <TextView
             android:id="@+id/btnEdit"
-            android:layout_width="40dp" android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_edit"
-            app:tint="@color/on_surface_variant"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="10dp"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:text="@string/schedule_edit"
+            android:textColor="@color/primary_dim"
+            android:textSize="13sp" android:textStyle="bold"
+            android:background="?attr/selectableItemBackground"
             android:contentDescription="@string/edit_schedule"/>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_subtle"
+        android:layout_marginStart="50dp"/>
+</LinearLayout>

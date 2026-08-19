@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — add-keyword dialog sheet. Bindings preserved: editKeyword checkRegex. -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — add-keyword dialog sheet
+     (inflated into a MaterialAlertDialog; its buttons come from
+     KeywordActivity and are styled by Theme.GuardianShield.Dialog on
+     surface-highest). Matches guardian-redesign/mocks/oneui8/keywords.html
+     "Add Dialog": 20sp bold title, inset 20dp-radius field, Regex checkbox.
+     Bindings preserved: editKeyword checkRegex. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -14,7 +19,7 @@
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="@string/add_keyword"
         android:textColor="@color/on_surface"
-        android:textSize="18sp" android:textStyle="bold" android:letterSpacing="-0.01"/>
+        android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"

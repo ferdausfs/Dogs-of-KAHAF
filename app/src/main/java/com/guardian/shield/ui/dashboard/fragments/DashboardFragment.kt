@@ -109,7 +109,9 @@ class DashboardFragment : Fragment() {
                 binding.imgShield.setImageResource(R.drawable.ic_shield_off)
                 binding.btnToggle.text = getString(R.string.btn_enable)
                 binding.txtProtectionBadge.text = "○ ${getString(R.string.status_off_title)}"
-                binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.error))
+                binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.error_bright))
+                // r2 visual-only: badge chip tint per state (design-system badges)
+                binding.txtProtectionBadge.backgroundTintList = ColorStateList.valueOf(requireContext().getColor(R.color.badge_error_bg))
                 applyHeroState(HeroState.OFF)
                 stopShieldPulse()
             }
@@ -120,6 +122,7 @@ class DashboardFragment : Fragment() {
                 binding.btnToggle.text = getString(R.string.btn_resume)
                 binding.txtProtectionBadge.text = "○ ${getString(R.string.status_paused_title)}"
                 binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.warning_amber))
+                binding.txtProtectionBadge.backgroundTintList = ColorStateList.valueOf(requireContext().getColor(R.color.badge_warn_bg))
                 applyHeroState(HeroState.PAUSED)
                 stopShieldPulse()
             }
@@ -131,6 +134,7 @@ class DashboardFragment : Fragment() {
                 binding.btnToggle.text = getString(R.string.btn_pause)
                 binding.txtProtectionBadge.text = "● Protection Active • সক্রিয় • All Systems Active"
                 binding.txtProtectionBadge.setTextColor(requireContext().getColor(R.color.primary_dim))
+                binding.txtProtectionBadge.backgroundTintList = ColorStateList.valueOf(requireContext().getColor(R.color.accent_soft))
                 applyHeroState(HeroState.ON)
                 startShieldPulse()
             }
@@ -180,25 +184,26 @@ class DashboardFragment : Fragment() {
         binding.shieldGlow.alpha = 0.2f
     }
 
-    // ---- WATCHTOWER V3 visual-only hero state theming (mocks/v3/home.html).
-    //      Colors the hero card + CTA per protection state; no behavior change. ----
+    // ---- One UI 8 r2 visual-only hero state theming (mocks/oneui8/home.html
+    //      + design-system r2): deep hero gradient with top-edge light + soft
+    //      same-hue glow per state. No behavior change. ----
     private enum class HeroState { ON, PAUSED, OFF }
 
     private fun applyHeroState(state: HeroState) {
         val ctx = requireContext()
-        val (bg, stroke, textOn, btnBg, btnText) = when (state) {
+        val (heroRes, textOn, btnBg, btnText) = when (state) {
             HeroState.ON ->
-                Quint(ctx.getColor(R.color.primary_container), ctx.getColor(R.color.primary),
+                Quad(R.drawable.bg_hero_accent,
                     R.color.on_primary_container, R.color.primary, R.color.on_primary)
             HeroState.PAUSED ->
-                Quint(ctx.getColor(R.color.warning_container), ctx.getColor(R.color.warning_amber),
+                Quad(R.drawable.bg_hero_warning,
                     R.color.on_warning_container, R.color.primary, R.color.on_primary)
             HeroState.OFF ->
-                Quint(ctx.getColor(R.color.error_container), ctx.getColor(R.color.error),
+                Quad(R.drawable.bg_hero_error,
                     R.color.on_error_container, R.color.error, R.color.on_error)
         }
-        binding.statusCard.setCardBackgroundColor(bg)
-        binding.statusCard.setStrokeColor(stroke)
+        binding.statusCard.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+        binding.statusCard.background = androidx.core.content.ContextCompat.getDrawable(ctx, heroRes)
         binding.txtStatusTitle.setTextColor(ctx.getColor(textOn))
         binding.txtStatusSubtitle.setTextColor(ctx.getColor(textOn))
         binding.txtStatusSubtitle.alpha = 0.78f
@@ -206,7 +211,7 @@ class DashboardFragment : Fragment() {
         binding.btnToggle.setTextColor(ctx.getColor(btnText))
     }
 
-    private data class Quint(val bg: Int, val stroke: Int, val textOn: Int, val btnBg: Int, val btnText: Int)
+    private data class Quad(val heroRes: Int, val textOn: Int, val btnBg: Int, val btnText: Int)
 
     override fun onDestroyView() {
         super.onDestroyView()

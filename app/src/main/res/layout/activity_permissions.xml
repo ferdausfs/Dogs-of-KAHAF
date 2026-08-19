@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Permission Health (approved: mocks/v3/permissions-onboarding.html)
+<!-- ONE SHIELD (One UI 8, color rev r2) — Permission Health
+     (mocks/oneui8/permissions.html): five rows in ONE sheet, inline 20dp
+     glyph, GRANTED badge / FIX tonal pill, bottom-weighted Fix All.
      Bindings preserved: toolbar rowAccessibility iconAccessibility btnAccessibility
      rowUsageStats iconUsageStats btnUsageStats rowOverlay iconOverlay btnOverlay
      rowNotification iconNotification btnNotification rowBattery iconBattery
@@ -41,7 +43,8 @@
                 android:layout_height="wrap_content"
                 android:paddingBottom="12dp"
                 android:text="@string/permissions_title"
-                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+                android:textSize="34sp"
+                style="@style/TextAppearance.GuardianShield.Display"/>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -60,46 +63,41 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="15dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp"
+                        android:minHeight="64dp"
                         android:background="?attr/selectableItemBackground">
-                        <FrameLayout
-                            android:layout_width="42dp" android:layout_height="42dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_success_bg">
-                            <ImageView
+                        <ImageView
                                 android:id="@+id/iconAccessibility"
                                 android:layout_width="20dp" android:layout_height="20dp"
-                                android:layout_gravity="center"
                                 android:src="@drawable/ic_access"
-                                app:tint="@color/success"
+                                app:tint="@color/primary_dim"
                                 android:importantForAccessibility="no"/>
-                        </FrameLayout>
                         <LinearLayout
                             android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
+                            android:layout_marginStart="16dp">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/perm_accessibility" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
+                                android:textSize="16sp" android:textStyle="bold"/>
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp" android:text="@string/perm_accessibility_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                         </LinearLayout>
                         <TextView
                             android:id="@+id/btnAccessibility"
-                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
                             android:gravity="center"
                             android:background="@drawable/bg_badge"
                             android:backgroundTint="@color/badge_neutral_bg"
-                            android:paddingHorizontal="14dp"
-                            android:textSize="11sp" android:textStyle="bold"
+                            android:paddingHorizontal="16dp"
+                            android:textSize="12sp" android:textStyle="bold"
                             android:letterSpacing="0.04"
                             tools:text="FIX"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+                        android:layout_marginHorizontal="16dp" android:background="@color/border_subtle"/>
 
                     <!-- Usage stats -->
                     <LinearLayout
@@ -108,46 +106,41 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="15dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp"
+                        android:minHeight="64dp"
                         android:background="?attr/selectableItemBackground">
-                        <FrameLayout
-                            android:layout_width="42dp" android:layout_height="42dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_success_bg">
-                            <ImageView
+                        <ImageView
                                 android:id="@+id/iconUsageStats"
                                 android:layout_width="20dp" android:layout_height="20dp"
-                                android:layout_gravity="center"
                                 android:src="@drawable/ic_usage"
-                                app:tint="@color/success"
+                                app:tint="@color/primary_dim"
                                 android:importantForAccessibility="no"/>
-                        </FrameLayout>
                         <LinearLayout
                             android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
+                            android:layout_marginStart="16dp">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/perm_usage_stats" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
+                                android:textSize="16sp" android:textStyle="bold"/>
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp" android:text="@string/perm_usage_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                         </LinearLayout>
                         <TextView
                             android:id="@+id/btnUsageStats"
-                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
                             android:gravity="center"
                             android:background="@drawable/bg_badge"
                             android:backgroundTint="@color/badge_neutral_bg"
-                            android:paddingHorizontal="14dp"
-                            android:textSize="11sp" android:textStyle="bold"
+                            android:paddingHorizontal="16dp"
+                            android:textSize="12sp" android:textStyle="bold"
                             android:letterSpacing="0.04"
                             tools:text="FIX"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+                        android:layout_marginHorizontal="16dp" android:background="@color/border_subtle"/>
 
                     <!-- Overlay -->
                     <LinearLayout
@@ -156,46 +149,41 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="15dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp"
+                        android:minHeight="64dp"
                         android:background="?attr/selectableItemBackground">
-                        <FrameLayout
-                            android:layout_width="42dp" android:layout_height="42dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_error_bg">
-                            <ImageView
+                        <ImageView
                                 android:id="@+id/iconOverlay"
                                 android:layout_width="20dp" android:layout_height="20dp"
-                                android:layout_gravity="center"
                                 android:src="@drawable/ic_layers"
-                                app:tint="@color/error"
+                                app:tint="@color/primary_dim"
                                 android:importantForAccessibility="no"/>
-                        </FrameLayout>
                         <LinearLayout
                             android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
+                            android:layout_marginStart="16dp">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/perm_overlay" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
+                                android:textSize="16sp" android:textStyle="bold"/>
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp" android:text="@string/perm_overlay_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                         </LinearLayout>
                         <TextView
                             android:id="@+id/btnOverlay"
-                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
                             android:gravity="center"
                             android:background="@drawable/bg_badge"
                             android:backgroundTint="@color/badge_neutral_bg"
-                            android:paddingHorizontal="14dp"
-                            android:textSize="11sp" android:textStyle="bold"
+                            android:paddingHorizontal="16dp"
+                            android:textSize="12sp" android:textStyle="bold"
                             android:letterSpacing="0.04"
                             tools:text="FIX"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+                        android:layout_marginHorizontal="16dp" android:background="@color/border_subtle"/>
 
                     <!-- Notification -->
                     <LinearLayout
@@ -204,46 +192,41 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="15dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp"
+                        android:minHeight="64dp"
                         android:background="?attr/selectableItemBackground">
-                        <FrameLayout
-                            android:layout_width="42dp" android:layout_height="42dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_success_bg">
-                            <ImageView
+                        <ImageView
                                 android:id="@+id/iconNotification"
                                 android:layout_width="20dp" android:layout_height="20dp"
-                                android:layout_gravity="center"
                                 android:src="@drawable/ic_bell"
-                                app:tint="@color/success"
+                                app:tint="@color/primary_dim"
                                 android:importantForAccessibility="no"/>
-                        </FrameLayout>
                         <LinearLayout
                             android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
+                            android:layout_marginStart="16dp">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/perm_notification" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
+                                android:textSize="16sp" android:textStyle="bold"/>
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp" android:text="@string/perm_notification_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                         </LinearLayout>
                         <TextView
                             android:id="@+id/btnNotification"
-                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
                             android:gravity="center"
                             android:background="@drawable/bg_badge"
                             android:backgroundTint="@color/badge_neutral_bg"
-                            android:paddingHorizontal="14dp"
-                            android:textSize="11sp" android:textStyle="bold"
+                            android:paddingHorizontal="16dp"
+                            android:textSize="12sp" android:textStyle="bold"
                             android:letterSpacing="0.04"
                             tools:text="FIX"/>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:layout_marginHorizontal="12dp" android:background="@color/border_subtle"/>
+                        android:layout_marginHorizontal="16dp" android:background="@color/border_subtle"/>
 
                     <!-- Battery -->
                     <LinearLayout
@@ -252,40 +235,35 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="15dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp"
+                        android:minHeight="64dp"
                         android:background="?attr/selectableItemBackground">
-                        <FrameLayout
-                            android:layout_width="42dp" android:layout_height="42dp"
-                            android:background="@drawable/bg_icon_well"
-                            android:backgroundTint="@color/badge_warn_bg">
-                            <ImageView
+                        <ImageView
                                 android:id="@+id/iconBattery"
                                 android:layout_width="20dp" android:layout_height="20dp"
-                                android:layout_gravity="center"
                                 android:src="@drawable/ic_battery"
-                                app:tint="@color/warning_amber"
+                                app:tint="@color/primary_dim"
                                 android:importantForAccessibility="no"/>
-                        </FrameLayout>
                         <LinearLayout
                             android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
-                            android:layout_marginStart="14dp">
+                            android:layout_marginStart="16dp">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:text="@string/perm_battery" android:textColor="@color/on_surface"
-                                android:textSize="14.5sp" android:textStyle="bold"/>
+                                android:textSize="16sp" android:textStyle="bold"/>
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp" android:text="@string/perm_battery_sub"
-                                android:textColor="@color/on_surface_variant" android:textSize="11.5sp"/>
+                                android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                         </LinearLayout>
                         <TextView
                             android:id="@+id/btnBattery"
-                            android:layout_width="wrap_content" android:layout_height="34dp"
+                            android:layout_width="wrap_content" android:layout_height="36dp"
                             android:gravity="center"
                             android:background="@drawable/bg_badge"
                             android:backgroundTint="@color/badge_neutral_bg"
-                            android:paddingHorizontal="14dp"
-                            android:textSize="11sp" android:textStyle="bold"
+                            android:paddingHorizontal="16dp"
+                            android:textSize="12sp" android:textStyle="bold"
                             android:letterSpacing="0.04"
                             tools:text="FIX"/>
                     </LinearLayout>

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — urgent accessibility prompt (approved: mocks/v3/permissions-onboarding.html frame B)
-     Binding preserved: btnEnable (copy unchanged incl. the ⚠️ in title string). -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — urgent accessibility prompt.
+     Was: WATCHTOWER V3 (red halo + shield-off icon + danger CTA).
+     Now matches guardian-redesign/mocks/oneui8/accessibility.html: no halo,
+     the ⚠️ title IS the visual (copy verbatim incl. ⚠️), 15sp body, single
+     accent Enable action in the thumb zone, mono path note.
+     Binding preserved: btnEnable (destination unchanged). -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -16,43 +20,31 @@
         android:gravity="center_horizontal"
         android:paddingHorizontal="28dp">
 
-        <FrameLayout
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:background="@drawable/bg_halo_red">
-            <ImageView
-                android:layout_width="40dp" android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_shield_off"
-                app:tint="@color/error"
-                android:importantForAccessibility="no"/>
-        </FrameLayout>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
             android:text="@string/prompt_accessibility_title"
             android:textColor="@color/on_surface"
-            android:textSize="21sp" android:textStyle="bold" android:letterSpacing="-0.01"
-            android:gravity="center"/>
+            android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.02"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.25"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:maxWidth="300dp"
+            android:layout_marginTop="14dp"
+            android:maxWidth="310dp"
             android:text="@string/prompt_accessibility_body"
             android:textColor="@color/on_surface_variant"
-            android:textSize="13.5sp" android:lineSpacingMultiplier="1.6"
+            android:textSize="15sp" android:lineSpacingMultiplier="1.6"
             android:gravity="center"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEnable"
-            style="@style/Widget.GuardianShield.Button.Danger"
+            style="@style/Widget.GuardianShield.Button"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="26dp"
+            android:layout_marginTop="28dp"
             android:text="@string/prompt_accessibility_btn"/>
 
         <TextView

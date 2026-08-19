@@ -1,55 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — keyword row. Bindings preserved: txtKeyword badge btnDelete. -->
-<com.google.android.material.card.MaterialCardView
+<!-- ONE SHIELD (One UI 8, color rev r2) — keyword row inside a sheet.
+     Was: WATCHTOWER V3 separate Card.Row per keyword with uppercase badge.
+     Now matches guardian-redesign/mocks/oneui8/keywords.html: flat 64dp row,
+     18dp accent glyph, 16sp/600 title, PLAIN (neutral) / REGEX (accent-soft)
+     badge, trailing hairline aligned to the text — same pattern as the
+     approved item_block_event row. Swipe-to-delete still works.
+     Bindings preserved: txtKeyword badge btnDelete. -->
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    style="@style/Widget.GuardianShield.Card.Row">
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp">
+        android:minHeight="64dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
 
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="18dp" android:layout_height="18dp"
             android:src="@drawable/ic_keyword"
             app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/txtKeyword"
             android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginStart="12dp">
-            <TextView
-                android:id="@+id/txtKeyword"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textColor="@color/on_surface" android:textSize="16sp"
-                android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
-            <TextView
-                android:id="@+id/badge"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:background="@drawable/bg_badge"
-                android:backgroundTint="@color/badge_neutral_bg"
-                android:textColor="@color/on_surface_variant"
-                android:textSize="9.5sp" android:textStyle="bold"
-                android:letterSpacing="0.08" android:textAllCaps="true"
-                android:paddingHorizontal="8dp" android:paddingVertical="2dp"
-                tools:text="PLAIN"/>
-        </LinearLayout>
+            android:layout_marginStart="16dp"
+            android:textColor="@color/on_surface" android:textSize="16sp"
+            android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
 
+        <TextView
+            android:id="@+id/badge"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_badge"
+            android:backgroundTint="@color/badge_neutral_bg"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="11sp" android:textStyle="bold"
+            android:letterSpacing="0.04"
+            android:paddingHorizontal="9dp" android:paddingVertical="4dp"
+            tools:text="PLAIN"/>
+
+        <!-- swipe-to-delete exists; this explicit affordance is retained
+             (binding + handler preserved), quieted to dim -->
         <ImageButton
             android:id="@+id/btnDelete"
             android:layout_width="40dp" android:layout_height="40dp"
+            android:layout_marginStart="6dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_delete"
-            app:tint="@color/error"
+            app:tint="@color/on_surface_dim"
             android:contentDescription="@string/delete"/>
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_subtle"
+        android:layout_marginStart="50dp"/>
+</LinearLayout>

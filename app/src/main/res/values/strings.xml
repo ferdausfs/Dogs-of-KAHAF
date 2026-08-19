@@ -88,6 +88,8 @@
     <string name="filter_all">All</string>
     <string name="filter_blocked">Blocked</string>
     <string name="filter_whitelisted">Whitelisted</string>
+    <string name="app_empty_title">No apps match</string>
+    <string name="app_empty_sub">Try another filter or search.</string>
     <string name="search_hint">Search apps…</string>
     <string name="block">Block</string>
     <string name="whitelist">Whitelist</string>
@@ -101,6 +103,7 @@
     <string name="schedule_title">Schedule Rules</string>
     <string name="add_schedule">Add Schedule</string>
     <string name="edit_schedule">Edit Schedule</string>
+    <string name="schedule_edit">Edit</string>
     <string name="package_hint">Package name (e.g. com.instagram.android)</string>
     <string name="start_time">Start</string>
     <string name="end_time">End</string>
@@ -279,6 +282,7 @@
     <string name="day_fri">Fri</string>
     <string name="day_sat">Sat</string>
     <string name="lock_choose_duration">Choose a duration · সময় নির্বাচন</string>
+    <string name="lock_confirm_note">ট্যাপ করলেই নিশ্চিত করার ডায়ালগ আসবে · Tap a duration to confirm — ফেরানো যাবে না</string>
     <string name="lock_choose_sub">একবার লক করলে লক শেষ না হওয়া পর্যন্ত খোলা যাবে না</string>
     <string name="lock_1day">1 day</string>
     <string name="lock_3day">3 days</string>

@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Commitment Lock (approved: mocks/v3/rules.html frame D)
+<!-- ONE SHIELD (One UI 8, color rev r2) — Commitment Lock.
+     Was: WATCHTOWER V3 (96dp halos, 44sp countdown, chip picker).
+     Now matches guardian-redesign/mocks/oneui8/commitment.html:
+       · Locked  = amber hero (r2 gradient + top-edge light + soft glow),
+                   countdown 40sp/800 tabular, Request Unlock bottom-weighted
+       · Cooldown = same hero, cooldown note + countdown
+       · Unlocked = accent hero (r2) + duration list rows in ONE sheet
+     Durations + confirm flow unchanged (1/3/7/15/30 days, hardcoded Bengali
+     labels in TimeLockActivity confirmLock — untouched).
      Bindings preserved: toolbar groupLocked txtLockStatus txtLockLabel
      txtRemaining txtLockEnd txtCooldownNote btnRequestUnlock groupUnlocked
-     chip1day chip3day chip7day chip15day chip30day. -->
+     chip1day chip3day chip7day chip15day chip30day (chips -> rows, same ids,
+     only setOnClickListener used). -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -40,7 +49,8 @@
                 android:layout_height="wrap_content"
                 android:paddingBottom="12dp"
                 android:text="@string/btn_commitment_lock"
-                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+                android:textSize="34sp"
+                style="@style/TextAppearance.GuardianShield.Display"/>
 
             <!-- ======== LOCKED STATE ======== -->
             <LinearLayout
@@ -49,64 +59,64 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <com.google.android.material.card.MaterialCardView
+                <!-- r2 amber hero: gradient + top-edge light + soft glow -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    style="@style/Widget.GuardianShield.Card.Amber">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_hero_warning"
+                    android:paddingHorizontal="22dp"
+                    android:paddingVertical="28dp">
+
+                    <FrameLayout
+                        android:layout_width="52dp" android:layout_height="52dp"
+                        android:background="@drawable/bg_icon_well"
+                        android:backgroundTint="@color/warning_container">
+                        <ImageView
+                            android:layout_width="26dp" android:layout_height="26dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_time_lock"
+                            app:tint="@color/warning_amber"
+                            android:importantForAccessibility="no"/>
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/txtLockStatus"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:textColor="@color/on_warning_container"
+                        android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"
                         android:gravity="center"
-                        android:paddingHorizontal="22dp"
-                        android:paddingVertical="28dp">
+                        tools:text="Commitment Lock active"/>
 
-                        <FrameLayout
-                            android:layout_width="96dp" android:layout_height="96dp"
-                            android:background="@drawable/bg_halo_amber">
-                            <ImageView
-                                android:layout_width="38dp" android:layout_height="38dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_time_lock"
-                                app:tint="@color/warning_amber"
-                                android:importantForAccessibility="no"/>
-                        </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtLockLabel"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/on_warning_container"
+                        android:alpha="0.78" android:textSize="13.5sp"
+                        android:gravity="center"
+                        tools:text="সেটিংস পরিবর্তন বন্ধ"/>
 
-                        <TextView
-                            android:id="@+id/txtLockStatus"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:textColor="@color/on_warning_container"
-                            android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.01"
-                            tools:text="Commitment Lock active"/>
+                    <TextView
+                        android:id="@+id/txtRemaining"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/on_warning_container"
+                        android:textSize="40sp" android:textStyle="bold" android:letterSpacing="-0.03"
+                        android:fontFeatureSettings="tnum"
+                        tools:text="2d 14:05"/>
 
-                        <TextView
-                            android:id="@+id/txtLockLabel"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:textColor="@color/on_warning_container"
-                            android:alpha="0.75" android:textSize="12.5sp"
-                            tools:text="সেটিংস পরিবর্তন বন্ধ"/>
-
-                        <TextView
-                            android:id="@+id/txtRemaining"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:textColor="@color/on_warning_container"
-                            android:textSize="44sp" android:textStyle="bold" android:letterSpacing="-0.025"
-                            android:fontFeatureSettings="tnum"
-                            tools:text="2d 14:05"/>
-
-                        <TextView
-                            android:id="@+id/txtLockEnd"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:textColor="@color/on_warning_container"
-                            android:alpha="0.6" android:textSize="11sp"
-                            android:fontFeatureSettings="tnum"
-                            tools:text="ends Fri, Aug 21 · 09:41"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:id="@+id/txtLockEnd"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/on_warning_container"
+                        android:alpha="0.7" android:textSize="12sp"
+                        android:fontFeatureSettings="tnum"
+                        tools:text="ends Fri, Aug 21 · 09:41"/>
+                </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -120,13 +130,13 @@
                             android:id="@+id/txtCooldownNote"
                             android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:textColor="@color/on_surface_variant"
-                            android:textSize="12.5sp" android:lineSpacingMultiplier="1.5"
+                            android:textSize="13sp" android:lineSpacingMultiplier="1.5"
                             tools:text="Unlock requests are limited — cooldown applies."/>
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRequestUnlock"
                             style="@style/Widget.GuardianShield.Button.Tonal"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="52dp"
                             android:layout_marginTop="14dp"
                             android:text="@string/overlay_request_unlock"/>
                     </LinearLayout>
@@ -140,85 +150,151 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="gone">
 
+                <!-- r2 accent hero: gradient + top-edge light + soft glow -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_hero_accent"
+                    android:paddingHorizontal="22dp"
+                    android:paddingVertical="28dp">
+
+                    <FrameLayout
+                        android:layout_width="52dp" android:layout_height="52dp"
+                        android:background="@drawable/bg_icon_well"
+                        android:backgroundTint="@color/beacon_dim">
+                        <ImageView
+                            android:layout_width="26dp" android:layout_height="26dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_shield_on"
+                            app:tint="@color/primary_dim"
+                            android:importantForAccessibility="no"/>
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/lock_choose_duration"
+                        android:textColor="@color/on_primary_container"
+                        android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"
+                        android:gravity="center"/>
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/lock_choose_sub"
+                        android:textColor="@color/on_primary_container"
+                        android:alpha="0.78" android:textSize="13.5sp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+                <!-- duration list in ONE sheet (rows keep the chip ids) -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    style="@style/Widget.GuardianShield.Card.Beacon">
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.GuardianShield.Card">
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:paddingHorizontal="22dp"
-                        android:paddingVertical="28dp">
+                        android:orientation="vertical">
 
-                        <FrameLayout
-                            android:layout_width="96dp" android:layout_height="96dp"
-                            android:background="@drawable/bg_halo_beacon">
-                            <ImageView
-                                android:layout_width="38dp" android:layout_height="38dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_shield_on"
-                                android:importantForAccessibility="no"/>
-                        </FrameLayout>
+                        <LinearLayout
+                            android:id="@+id/chip1day"
+                            android:layout_width="match_parent" android:layout_height="64dp"
+                            android:orientation="horizontal" android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true" android:focusable="true">
+                            <TextView android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lock_1day"
+                                android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                        </LinearLayout>
+                        <View android:layout_width="match_parent" android:layout_height="1dp"
+                            android:background="@color/border_subtle"/>
 
-                        <TextView
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:text="@string/lock_choose_duration"
-                            android:textColor="@color/on_primary_container"
-                            android:textSize="20sp" android:textStyle="bold" android:letterSpacing="-0.01"/>
-                        <TextView
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:text="@string/lock_choose_sub"
-                            android:textColor="@color/on_primary_container"
-                            android:alpha="0.75" android:textSize="12.5sp"
-                            android:gravity="center"/>
+                        <LinearLayout
+                            android:id="@+id/chip3day"
+                            android:layout_width="match_parent" android:layout_height="64dp"
+                            android:orientation="horizontal" android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true" android:focusable="true">
+                            <TextView android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lock_3day"
+                                android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                        </LinearLayout>
+                        <View android:layout_width="match_parent" android:layout_height="1dp"
+                            android:background="@color/border_subtle"/>
+
+                        <LinearLayout
+                            android:id="@+id/chip7day"
+                            android:layout_width="match_parent" android:layout_height="64dp"
+                            android:orientation="horizontal" android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true" android:focusable="true">
+                            <TextView android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lock_7day"
+                                android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                        </LinearLayout>
+                        <View android:layout_width="match_parent" android:layout_height="1dp"
+                            android:background="@color/border_subtle"/>
+
+                        <LinearLayout
+                            android:id="@+id/chip15day"
+                            android:layout_width="match_parent" android:layout_height="64dp"
+                            android:orientation="horizontal" android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true" android:focusable="true">
+                            <TextView android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lock_15day"
+                                android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                        </LinearLayout>
+                        <View android:layout_width="match_parent" android:layout_height="1dp"
+                            android:background="@color/border_subtle"/>
+
+                        <LinearLayout
+                            android:id="@+id/chip30day"
+                            android:layout_width="match_parent" android:layout_height="64dp"
+                            android:orientation="horizontal" android:gravity="center_vertical"
+                            android:paddingHorizontal="16dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true" android:focusable="true">
+                            <TextView android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lock_30day"
+                                android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
+                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp" android:layout_marginBottom="12dp"
-                    android:text="@string/lock_choose_duration"
-                    style="@style/TextAppearance.GuardianShield.SectionHeader"/>
-
-                <com.google.android.material.chip.ChipGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:singleSelection="true" app:selectionRequired="true"
-                    app:chipSpacingHorizontal="8dp">
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip1day" style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/lock_1day" android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip3day" style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/lock_3day" android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip7day" style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/lock_7day" android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip15day" style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/lock_15day" android:checkable="true"/>
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip30day" style="@style/Widget.GuardianShield.Chip.Filter"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/lock_30day" android:checkable="true"/>
-                </com.google.android.material.chip.ChipGroup>
-
-                <TextView
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="@string/lock_tap_hint"
+                    android:gravity="center"
+                    android:text="@string/lock_confirm_note"
                     android:textColor="@color/on_surface_dim"
-                    android:textSize="11.5sp" android:lineSpacingMultiplier="1.4"/>
+                    android:textSize="12sp"
+                    android:lineSpacingMultiplier="1.4"/>
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

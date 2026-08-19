@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Strike-3 full block overlay (approved: mocks/v3/overlays.html frame B)
-     Bindings preserved: txtPackage cardTempBlock txtTempBanner txtReason
-     txtCategory btnHome btnUnlock btnMarkFalse.
-     btnHome -> goHome(), btnUnlock -> DelayUnlockActivity, btnMarkFalse ->
-     FalsePositiveMemory — behavior untouched. -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — Strike-3 full block overlay.
+     Was: WATCHTOWER V3 (96dp halo + 3 separate stat cards + uppercase kickers).
+     Now matches guardian-redesign/mocks/oneui8/overlays.html frame A:
+     centered 52dp error-container icon well, 24sp/800 title, package pill,
+     temp-block lock banner, ONE info sheet (label-above-value columns),
+     reason sheet with soft warning glow border, grouped bottom actions.
+
+     RESKIN ONLY — behavior contract untouched. Bindings preserved EXACTLY
+     (same ids, same view types): txtPackage cardTempBlock txtTempBanner
+     txtCategory txtReason btnHome btnUnlock btnMarkFalse.
+       btnHome     -> goHome()
+       btnUnlock   -> DelayUnlockActivity
+       btnMarkFalse-> FalsePositiveMemory (Bug D: unconditional
+                     clearTempBlock + relaunch; visibility still gated to AI
+                     blocks by BlockOverlayActivity.kt — unchanged)
+     The Mark-False action keeps the outlined amber secondary style decided in
+     PR #49 (deliberate refinement of the mock's ghost link — same colors r2). -->
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -25,26 +37,29 @@
 
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.55"/>
 
-        <!-- Hero halo -->
+        <!-- 52dp error-container icon well (mock: .iw in error-container) -->
         <FrameLayout
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:background="@drawable/bg_halo_red">
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_icon_well"
+            android:backgroundTint="@color/error_container">
             <ImageView
-                android:layout_width="42dp" android:layout_height="42dp"
+                android:layout_width="26dp" android:layout_height="26dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_shield_alert"
-                app:tint="@color/error"
+                app:tint="@color/error_bright"
                 android:importantForAccessibility="no"/>
         </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="16dp"
             android:text="@string/overlay_access_blocked"
             android:textColor="@color/on_surface"
-            android:textSize="26sp" android:textStyle="bold" android:letterSpacing="-0.025"
+            android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.02"
+            android:lineSpacingMultiplier="1.2"
             android:gravity="center"/>
 
         <TextView
@@ -62,13 +77,13 @@
             android:id="@+id/txtPackage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:background="@drawable/bg_badge"
             android:backgroundTint="@color/badge_neutral_bg"
             android:fontFamily="monospace"
             android:textColor="@color/on_surface_variant"
             android:textSize="11sp"
-            android:paddingHorizontal="14dp" android:paddingVertical="6dp"
+            android:paddingHorizontal="12dp" android:paddingVertical="6dp"
             tools:text="com.instagram.android"/>
 
         <!-- temp-block banner (temp-block case only) -->
@@ -82,7 +97,7 @@
             android:paddingHorizontal="14dp" android:paddingVertical="12dp"
             android:layout_marginTop="18dp"
             android:visibility="gone"
-            tools:visibility="visible">
+            tools:visibility="gone">
             <ImageView
                 android:layout_width="18dp" android:layout_height="18dp"
                 android:src="@drawable/ic_time_lock"
@@ -94,98 +109,85 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:textColor="@color/on_warning_container"
-                android:textSize="12.5sp" android:textStyle="bold"
+                android:textSize="13sp" android:textStyle="bold"
                 tools:text="🚫 Blocked for 15 minutes"/>
         </LinearLayout>
 
-        <!-- info grid -->
-        <LinearLayout
+        <!-- ONE info sheet: three label-above-value columns (mock frame A) -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="16dp"
+            style="@style/Widget.GuardianShield.Card">
             <LinearLayout
-                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="12dp"
-                android:layout_marginEnd="5dp">
-                <FrameLayout
-                    android:layout_width="34dp" android:layout_height="34dp"
-                    android:background="@drawable/bg_icon_well"
-                    android:backgroundTint="@color/badge_success_bg">
-                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
-                        android:layout_gravity="center" android:src="@drawable/ic_shield_check"
-                        app:tint="@color/success" android:importantForAccessibility="no"/>
-                </FrameLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:text="@string/overlay_protection"
-                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
-                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp" android:text="@string/overlay_protection_active"
-                    android:textColor="@color/success" android:textSize="13sp" android:textStyle="bold"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="12dp"
-                android:layout_marginHorizontal="5dp">
-                <FrameLayout
-                    android:layout_width="34dp" android:layout_height="34dp"
-                    android:background="@drawable/bg_icon_well"
-                    android:backgroundTint="@color/badge_ai_bg">
-                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
-                        android:layout_gravity="center" android:src="@drawable/ic_ai_spark"
-                        app:tint="@color/ai_accent" android:importantForAccessibility="no"/>
-                </FrameLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:text="@string/overlay_blocked_category"
-                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
-                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
-                <TextView
-                    android:id="@+id/txtCategory"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/ai_accent" android:textSize="13sp" android:textStyle="bold"
-                    tools:text="AI Detection"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="0dp" android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="12dp"
-                android:layout_marginStart="5dp">
-                <FrameLayout
-                    android:layout_width="34dp" android:layout_height="34dp"
-                    android:background="@drawable/bg_icon_well"
-                    android:backgroundTint="@color/badge_neutral_bg">
-                    <ImageView android:layout_width="17dp" android:layout_height="17dp"
-                        android:layout_gravity="center" android:src="@drawable/ic_clock"
-                        app:tint="@color/on_surface_variant" android:importantForAccessibility="no"/>
-                </FrameLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:text="@string/overlay_time"
-                    android:textColor="@color/on_surface_dim" android:textSize="9.5sp"
-                    android:textStyle="bold" android:letterSpacing="0.1" android:textAllCaps="true"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp" android:text="@string/overlay_time_now"
-                    android:textColor="@color/on_surface" android:textSize="13sp" android:textStyle="bold"/>
-            </LinearLayout>
-        </LinearLayout>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="8dp">
 
-        <!-- reason -->
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="8dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/overlay_protection"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/overlay_protection_active"
+                        android:textColor="@color/on_surface"
+                        android:textSize="15sp" android:textStyle="bold"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_weight="1.3"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="8dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/overlay_blocked_category"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:id="@+id/txtCategory"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/on_surface"
+                        android:textSize="14sp" android:textStyle="bold"
+                        android:maxLines="2" android:ellipsize="end"
+                        tools:text="AI Detection"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_weight="0.8"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="8dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/overlay_time"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/overlay_time_now"
+                        android:textColor="@color/on_surface"
+                        android:textSize="15sp" android:textStyle="bold"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- reason sheet with soft warning glow border (r2) -->
         <TextView
             android:id="@+id/txtReason"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@drawable/bg_stat_card"
-            android:padding="13dp"
+            android:background="@drawable/bg_reason_sheet"
+            android:padding="14dp"
             android:gravity="center"
             android:textColor="@color/warning_amber"
             android:textSize="13sp" android:textStyle="bold"
@@ -194,7 +196,7 @@
 
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.45"/>
 
-        <!-- actions -->
+        <!-- grouped actions -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHome"
             style="@style/Widget.GuardianShield.Button.Danger"

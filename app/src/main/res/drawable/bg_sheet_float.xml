@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- r2 depth: highest-elevation floating sheet (dialogs, strike warning card).
+     surface_highest fill + 1dp top-edge light so the card reads as lifted.
+     Replaces the flat surface_highest fill; no layout change. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface_highest"/>
+            <corners android:radius="24dp"/>
+        </shape>
+    </item>
+    <item android:gravity="top" android:height="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/edge_highlight"/>
+            <corners android:radius="24dp"/>
+        </shape>
+    </item>
+</layer-list>

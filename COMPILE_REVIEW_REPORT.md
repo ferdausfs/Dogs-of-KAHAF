@@ -1826,3 +1826,208 @@ new file: app/src/main/res/drawable/ic_flag.xml  (24dp flag vector, tint=warning
   uses the pattern.
 - [x] Version bumped past the already-published v3.1.1; release-tag guard confirms v3.1.2 free.
 - [x] Local Kotlin compile gate green (0 errors); CI `assembleRelease` runs on merge.
+
+---
+
+# Session 2026-08-19 — One UI 8 Full-App Polish: r2 Color Revision + WATCHTOWER V3 Drift Cleanup (arena/01a0186f-dogs-of-kahaf)
+
+**Base:** `main` @ `b760104` (Merge PR #49, v3.1.2 / versionCode 24) → **v3.2.0 (25)**
+**Scope:** Phase 0 mock-stage color revision → Phase 1 per-screen audit → Phase 2 implement the One UI 8
+design language on every remaining screen. **Visual-only** throughout: app name, detection/blocking/strike
+logic, Room DAOs, and all ViewModel/click/navigation contracts untouched.
+
+---
+
+## 0) PROCESS — mock gate honored
+
+1. **Phase 0 (mock stage first):** `guardian-redesign/mocks/oneui8/design-system.html` revised in place
+   (`:root` tokens + new "Color revision r2" before/after section + re-stated contrast table);
+   `overlays.html` re-tokened as the first applied example. **No production color changed before the
+   mocks carried the revision.** The other 16 screen mocks inherit r2 via the shared token block at
+   implementation time (per plan) — they were not separately re-colored.
+2. **Phase 1:** every real screen audited against its actual mock + actual layout XML (§2 table).
+   The pre-task suspicion was confirmed with hard evidence: **the strike-3 block overlay and the
+   strike-1/2 warning card were still the WATCHTOWER V3 implementation** — their layout headers
+   literally read `WATCHTOWER V3 … approved: mocks/v3/overlays.html` (see §2, screens 13 & 18).
+   The v3.1.0 session's report over-claimed the overlays conversion; code trace is the source of truth.
+3. **Phase 2:** one screen (or tightly-related group) per commit, gate green before each push (§5).
+
+## 1) PHASE 0 — r2 color revision (exact tokens + rationale)
+
+**Surfaces — cool-tinted "moonlit" ladder, wider steps.** The r1 ramp (#2A2A2A/#333/#3C3C3C) was
+neutral gray with ~4.2 L* steps between sheet layers — hard to perceive. r2 darkens the base of the
+ladder and adds a faint blue bias that grows with elevation, so depth reads instantly. The top of the
+ladder deliberately stays put: #3A3C44 vs #3C3C3C is within a hair because it is the **AA ceiling for
+`#A8A8A8` secondary text** (4.62:1) — richer color must not cost readability.
+
+| Layer | r1 | r2 | L* r1 → r2 |
+|---|---|---|---|
+| bg | `#000000` | `#000000` (AMOLED, unchanged) | 0 → 0 |
+| bg_elev | `#121212` | `#0D0E12` | 5.5 → 4.0 |
+| inset | `#1A1A1A` | `#17181D` | 9.3 → 8.3 |
+| surface | `#2A2A2A` | `#26272C` | 17.1 → 15.7 |
+| surface_high | `#333333` | `#303138` | 21.2 → 20.5 |
+| surface_highest | `#3C3C3C` | `#3A3C44` | 25.3 → 25.4 |
+
+Sheet-layer steps: **4.2/4.1 L* → 4.8/4.9 L*** (≈15–20 % wider) + hue cue (B channel rises with
+elevation) + a **1dp top-edge light** (`edge_highlight #1FFFFFFF`) on the highest-elevation surfaces.
+
+**Depth tokens (new, same hue families — no new hues):**
+`accent_soft #243B63` (solid, calibrated secondary-emphasis tint), `accent_press #123FB0`,
+`edge_highlight #1FFFFFFF`, `glow_accent #331A55CC`, `glow_error #4DC0353B`, `glow_warning #4DD6992A`.
+Outcome on the "gimmick?" question: a **restrained** edge-light + soft same-hue glow border on hero /
+floating cards only (protection hero, strike-1/2 card, strike-3 reason sheet, dialogs' L3 tone). No drop
+shadows on lists, no colored gradients below "hero" rank. It reads as depth, not decoration.
+
+**Accent — Galaxy Blue, deeper, two calibrated intensities (same hue ≈221–222°):**
+
+| Intensity | r1 | r2 | Used for |
+|---|---|---|---|
+| fill | `#1E64D8` (h219 s76 l48) | **`#1A55CC`** (h222 s81 l45) | primary CTAs (Pause/Enable/Save/Next/Open Quran/OK key), FABs, switch-ON, slider active |
+| on-dark | `#82B1FF` | **`#8FBDFF`** | links, "See all", active icons, kickers, chip-checked text, PIN dot-on |
+| container | `#0D2A52` → `#D4E5FF` | **`#0B2547`** → `#D8E8FF` (+ gradient `#10305E→#081A33`) | hero protection card, launcher well |
+| soft (secondary) | rgba(30,100,216,.22) | **`#243B63` solid** | REGEX badge, GRANTED badge, "Protection Active" badge chip, subtle highlights |
+
+**Warning / danger — deeper, saturation held, glow borders:**
+
+| Token | r1 | r2 | Used for |
+|---|---|---|---|
+| error fill | `#C44747` | **`#C0353B`** | "Stay Protected" danger CTA, delete affordances |
+| error_bright | `#FF8A80` | **`#FF9285`** | block-overlay glyphs/kickers on dark |
+| error_container | `#3A1A1A` | **`#2E1315`** (+ hero gradient `#331519→#240D10`) | block hero wells, hero-off |
+| warning fill | `#E0A12E` | **`#D6992A`** | borders/fills only (Mark-False outline, badge chips) |
+| warning_container | `#3A2C10` | **`#2F230C`** (+ hero gradient `#33290D→#231A07`) | strike-1/2 card well, lock banner, locked hero |
+| warning_bright | `#FFC14D` | `#FFC14D` (kept) | strike kicker, reason line, temp banner icon |
+| success | `#2E9B64`/`#6BCF97` | unchanged | granted-status only |
+
+**WCAG contrast (r1 → r2, computed by `guardian-redesign/tools/contrast_check.py`, committed):**
+
+| Pair | r1 | r2 | Grade |
+|---|---|---|---|
+| #F5F5F5 on #000000 | 19.26 | 19.26 | AAA |
+| #F5F5F5 on surface #26272C | 13.17 | 13.67 | AAA |
+| #F5F5F5 on surface_highest #3A3C44 | 10.12 | 10.09 | AAA |
+| #A8A8A8 on surface | 6.04 | 6.27 | AA |
+| #A8A8A8 on surface_high | 5.31 | 5.44 | AA |
+| #A8A8A8 on surface_highest | 4.64 | 4.62 | **AA (floor, held)** |
+| #7A7A7A on surface | 3.34 | 3.47 | AA-large (microcopy ≥12sp only) |
+| #FFFFFF on accent #1A55CC | 5.43 | 6.53 | AA |
+| #8FBDFF on surface | 6.62 | 7.73 | AAA |
+| #8FBDFF on surface_highest | 5.09 | 5.70 | AA |
+| #8FBDFF on accent_soft #243B63 | — | 5.79 | AA (new pair) |
+| #D8E8FF on #0B2547 | 11.19 | 12.34 | AAA |
+| #FFFFFF on error #C0353B | 4.84 | 5.51 | AA |
+| #FF9285 on #2E1315 | 6.85 | 7.95 | AAA |
+| #FFC14D on #2F230C | 8.39 | 9.50 | AAA |
+| #FFE2A8 on #2F230C | 10.79 | 12.22 | AAA |
+| #6BCF97 on surface | — | 7.80 | AAA |
+
+Every text/background pairing ≥ AA; the only AA-large value is documented microcopy (`on_surface_dim`,
+≥12sp, never body). **What was NOT changed:** corner radii (12–32dp + 999dp pills), spacing (4pt grid),
+type ramp, and every layout structure — Phase 0 was color/depth only.
+
+## 2) PHASE 1 — audit table (evidence per screen)
+
+| # | Screen | Current state at `b760104` (evidence) | Matches revised One UI 8? | Action needed → taken |
+|---|---|---|---|---|
+| 1 | Main shell (`activity_main.xml`) | "ONE SHIELD" header; BottomNav style + nav_item_color | Yes | none (r2 via tokens) |
+| 2 | Home/Dashboard (`fragment_dashboard.xml`) | "ONE SHIELD"; Display title, hero, stats/quick/recent sheets | Yes (r1 hero = flat container fill) | r2 hero drawables + badge chips (commit 50b3947) |
+| 3 | Activity Log (`activity_log.xml`) | "ONE SHIELD"; Display title, chips, sheet list, designed empty | Yes | none (r2 via tokens) |
+| 4 | Protection hub (`fragment_protection.xml`) | "ONE SHIELD"; Beacon hero + 5-row sheet | Yes (r1 hero) | r2 hero (50b3947) |
+| 5 | Settings (`activity_settings.xml`) | "ONE SHIELD"; grouped Card sheets, big switches | Yes | none (r2 via tokens) |
+| 6 | App Blocking (`activity_app_list.xml`+`item_app_rule.xml`) | "ONE SHIELD"; hero toggle, chips, search, rows in sheet | Yes — **but no loading/empty state** (v3.1.0 report's own follow-up) | skeleton + designed empty wired to existing `loading` flag (e50c463) |
+| 7 | Keywords (`activity_keyword.xml`+`item_keyword.xml`+dialog) | Header said "WATCHTOWER V3 … mocks/v3/rules.html"; V3 sky-blue empty well `#1F7EC8F0`; per-item cards, uppercase badges | **No** | full restyle (037ff5c) |
+| 8 | Schedule (+editor dialog) | "WATCHTOWER V3" header; Card.Row cards, pencil edit, uppercase DAYS kicker, boxed time fields | **No** | full restyle (3f373b) |
+| 9 | Commitment Lock (`activity_time_lock.xml`) | "WATCHTOWER V3"; 96dp `bg_halo_amber`/`bg_halo_beacon`, 44sp counter, chip picker | **No** | full restyle (a4c78c6) |
+| 10 | Permission Health (`activity_permissions.xml`) | "WATCHTOWER V3"; 42dp icon wells, 14.5/11.5sp rows, success/error text states; `item_permission_row.xml` unbound leftover | **No** | restyle + row file deleted (b627fda) |
+| 11 | Accessibility prompt (`activity_accessibility_prompt.xml`) | "WATCHTOWER V3 … frame B"; 96dp `bg_halo_red`, Danger CTA | **No** | restyle, copy verbatim incl. ⚠️ (b627fda) |
+| 12 | PIN setup (`activity_pin_setup.xml`) | "WATCHTOWER V3 … mocks/v3/pin.html frame D"; `bg_halo_beacon`, OK pill below grid | Partial (keypad already One UI keys) | restyle to mock (5d853d7) |
+| 13 | PIN verify (`activity_pin_verify.xml`) | same as 12 | Partial | restyle to mock (5d853d7) |
+| 14 | Delay Unlock (`activity_delay_unlock.xml`) | "WATCHTOWER V3 … frame D"; `bg_halo_amber`, 56sp counter | **No** | restyle to 72sp mock (314db9a) |
+| 15 | Blocked detail (`activity_blocked_detail.xml`) | "WATCHTOWER V3 … frame C"; red halo, 4 icon-well cards with uppercase kickers + `bg_spine` | **No** | full restyle (314db9a) |
+| 16 | Reel reminder (`activity_reel_reminder.xml`) | "WATCHTOWER V3"; emoji glyph, centered, text-link continue | **No** | restyle (e50c463) |
+| 17 | Onboarding (`activity_onboarding.xml`+`fragment_onboarding_page.xml`) | "WATCHTOWER V3"; 104dp `bg_halo_beacon` + emoji glyph, 26sp title | **No** (shell was already close) | page restyle + emoji→vector (73d97bb) |
+| 18 | **Strike-3 block overlay** (`activity_block_overlay.xml`) | Header comment: **"WATCHTOWER V3 — approved: mocks/v3/overlays.html frame B"**; 96dp `bg_halo_red`, THREE separate icon-well stat cards, 9.5sp uppercase kickers — **this is the drift this task predicted: built from the earlier WATCHTOWER V3 mock set, not One UI 8** | **No — confirmed drift** | full restyle to overlays.html frame A (c2e41a5) |
+| 19 | **Strike-1/2 warning card** (`view_strike_warning.xml`) | Header comment: "WATCHTOWER V3 — frame A"; ringed icon drawable, 10sp kicker in `warning`, card chrome otherwise near | **Partial drift** (V3-derived) | card-float r2 reskin (c2e41a5); 3.5s timing + tap-dismiss + Not-Sensitive learn untouched |
+| 20 | Dialogs (keyword/schedule editors + MaterialAlertDialogs) | V3 headers; 18sp titles, boxed fields, uppercase kickers | **No** | restyled with their screens; alert chrome themed on surface-highest (Theme.GuardianShield.Dialog) |
+| 21 | App icon (`mipmap-anydpi-v26` + fg/bg vectors) | Adaptive shield on black + monochrome mark — structure already matches icon.html | Yes | r2 hex alignment in the vector (21ab74a); no splash invented |
+
+Retired with the drift cleanup: **every** V3-only drawable (`bg_halo_*` ×3, `bg_spine`, `bg_bar_*`,
+`bg_card_glow`, `bg_shield_glow`, V3 `bg_hero_*`, `bg_time_field`, `bg_status_*`, `bg_numpad_button`,
+`bg_stat_card_v2`, `bg_item_block`) and the unbound `item_permission_row.xml`. Post-sweep evidence:
+`grep -rn "#7FE7C4|#B8A1FF|#7EC8F0|#FF7A76|1E64D8|82B1FF|C44747|FF8A80|0D2A52|D4E5FF|E0A12E|2A2A2A" app/src/main/res`
+→ **zero matches**.
+
+## 3) PHASE 2 — screen-by-screen before → after (13 commits, gate green each)
+
+| Commit | Screen(s) | Before → After |
+|---|---|---|
+| c572975 | **r2 tokens** | mock revision + colors.xml (values only, all names kept) + depth drawables (`bg_sheet_float`, `bg_hero_accent/error/warning`) + 12 dead V3 drawables deleted + contrast tool committed |
+| c2e41a5 | **Strike-3 overlay + strike-1/2 card** | 96dp halo + 3 stat cards + kickers → 52dp error-container well, 24sp/800 title, package pill, ONE info sheet (label-above-value), reason sheet w/ warning glow; card-float: 44dp warning well, 11sp amber kicker, glow stroke. Mark-False keeps PR #49's outlined style (deliberate refinement over the mock's ghost link). **Reskin only — BlockOverlayActivity.kt + GuardianAccessibilityService.kt byte-identical** |
+| 314db9a | **Delay Unlock + Blocked detail** | amber halo + 56sp → 72sp/800 tnum countdown, bottom-weighted cancel; red halo + spine cards → r2 hero-off + one 4-row info sheet + text rows w/ chevrons |
+| 037ff5c | **Keywords + dialog** | per-item cards → rows in ONE sheet (item_block_event pattern), PLAIN/REGEX badge states (visual-only adapter setters — flagged), inset-well empty state, 20sp dialog title |
+| 3f373b | **Schedule + editor** | same row treatment, "Edit" text action (ImageButton→TextView, same id — adapter only uses isEnabled/setOnClickListener), label-above-value time hosts, sentence-case DAYS header |
+| a4c78c6 | **Commitment Lock** | 96dp halos + chip picker → r2 warning/accent heroes, 40sp/800 countdown, duration LIST rows (chip ids kept on rows), mock's confirm-note footer; durations + Bengali confirm flow untouched |
+| 5d853d7 | **PIN setup + verify** | halos removed, mock keypad order (…⌫ 0 OK), OK in-grid accent key, dots surface-highest/accent-bright; shake/lockout untouched |
+| b627fda | **Permissions + Accessibility prompt** | 5 wells → inline glyphs, 16/13sp 64dp rows, GRANTED=accent-soft badge / FIX=tonal pill (visual-only setters in setupRow — flagged); prompt: halo removed, ⚠️ title is the visual, accent CTA; `item_permission_row.xml` deleted (never bound) |
+| 73d97bb | **Onboarding** | 104dp halo + emoji → 88dp accent-container well + outlined vectors (🛡️/✨/🔐/🔒 → shield/ai/access/lock in the fragment — visual-only; txtIcon stays bound, hidden); 4 pages, copy, Get-Started flow untouched |
+| e50c463 | **Reel reminder + App Blocking states** | 72dp quran well, 28sp title, bottom-weighted actions; **NEW: loading skeleton wired to the existing `AppListState.loading` flag + designed empty state** (state completeness only — noted addition) |
+| 50b3947 | **Home + Protection heroes** | flat container fills → r2 hero drawables (gradient + top-edge light + glow) per state; badge chips tinted per state (visual-only setters) |
+| 21ab74a | **App icon + V3 leftovers** | launcher vector r1→r2 hexes; last 3 V3 hero drawables deleted |
+
+**Kotlin files touched (visual-only, each flagged in its commit):**
+`KeywordAdapter` (badge chip colors), `PermissionsActivity.setupRow` (badge/pill colors),
+`OnboardingPageFragment` (emoji→vector mapping), `AppListActivity` collect block (skeleton/empty
+visibility), `DashboardFragment.applyHeroState` (r2 hero drawables + badge chips). Verified untouched
+(byte-identical to `main`): `TempBlockManager.kt`, `BlockingEngine.kt`, `service/detection/**`
+(AiDetector, FalsePositiveMemory, ReelScrollDetector, RulesEngine, TimeLockManager, PinManager,
+ModelImportManager), `GuardianAccessibilityService.kt` (incl. `STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L`,
+`reportNotSensitive`, strike counting), `BlockOverlayActivity.kt`, all Room DAO/entity/repository code,
+and every other ViewModel. `git diff main --name-only | grep '\.kt$'` → exactly the 5 files above.
+
+**New strings (mock copy only, EN+BN):** `schedule_edit`, `app_empty_title/sub`, `lock_confirm_note`.
+No copy changes to any detection, strike, or overlay behavioral text.
+
+## 4) Out of scope / not invented (with reasons)
+
+- **App icon redesign** — the adaptive + monochrome mark already matches icon.html; only token-aligned
+  hexes changed. No new asset tooling needed (nothing faked).
+- Biometric / Forgot-PIN control (note stays copy-only), standalone Whitelist screen, DNS/VPN/browser
+  modules, gender-filter panel, splash Activity, Day/Week/Month analytics (ids remain unbound chrome),
+  real protected-uptime clock — none exist and none were invented, per AUDIT-ONEUI8.md §3/§6.
+- Light theme — flagged out of scope since the One UI 8 baseline (dark-first AMOLED).
+
+## 5) BUILD VERIFICATION — gate green after every commit
+
+CI `assembleRelease` runs only on push to `main` (workflow `on:`), and this sandbox has no
+Gradle/Maven egress (dl.google.com / services.gradle.org / repo.maven.apache.org all unreachable —
+reproduced this session), so — exactly as in prior sessions — a real local compile gate was stood up and
+run before every push:
+
+- **Real toolchain:** JRE 25 (jdk4py) + real Kotlin K2 JVM compiler + **real `android.jar`
+  (android-35, 14,488 entries** fetched via `gh api` from `Sable/android-platforms`) + bundled
+  kotlinx-coroutines/kotlinx-serialization.
+- **Compiles the whole app:** all 65 app sources + generated `R` (77 colors / 49→56 drawables / 36
+  styles + menu ids) + all ViewBinding classes (regenerated from the live res tree each run) +
+  minimal androidx/material/hilt/room/work/datastore/tflite/timber stubs —
+  `K2JVMCompiler -jvm-target 17`, single invocation.
+- **Pre-checks in the same gate:** `guardian-redesign/tools/verify_res.py` (all `@color/@drawable/@style`
+  refs resolve) + XML well-formedness of every res file (this caught two `--`-in-comment XML errors
+  during the overlay commit — fixed before push).
+- **Result: `COMPILE OK — 550 classes`, 0 errors** on the final tree (552 before the unused
+  `item_permission_row` binding was deleted). Every commit's message records its gate result; every
+  pushed commit was gate-green first (13/13).
+- **CI release:** the fail-fast release-tag guard probed `v3.2.0` → release 404 + tree 404 (free) before
+  the first commit; version bumped 3.1.2 (24) → **3.2.0 (25)** once, up front (no per-screen tag churn).
+
+## 6) COMPLIANCE CHECKLIST
+
+- [x] App name **Guardian Shield** unchanged; no rebrand, no mascot, shield refined not replaced
+- [x] Phase 0 = color/depth only (radius/spacing/type/layout untouched — verified in diff)
+- [x] ONE accent hue (Galaxy Blue family, two intensities + solid soft tint); no new hues introduced
+- [x] Strike-3 overlay + strike-1/2 card: pure reskin — 3.5s auto-dismiss, tap-dismiss,
+      Not-Sensitive cancel+learn (Bug E), Mark-False unconditional unblock+relaunch (Bug D) untouched
+      (both Kotlin files byte-identical to main)
+- [x] Detection/blocking/strike/threshold/DAO logic untouched (0 changed Kotlin files outside the
+      5 visual-only files listed in §3)
+- [x] Every implementation commit gate-green before push; release tag collision guard satisfied (v3.2.0)

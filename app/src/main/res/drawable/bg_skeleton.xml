@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- r2: loading-skeleton bar (app-blocking.html loading frame) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/error_container"/>
+    <solid android:color="@color/surface_high"/>
     <corners android:radius="16dp"/>
 </shape>

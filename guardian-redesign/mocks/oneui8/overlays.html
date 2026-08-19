@@ -8,13 +8,19 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap");
 :root{
-  --bg:#000;--bg-elev:#121212;--surface:#2A2A2A;--surface-high:#333;--surface-highest:#3C3C3C;--inset:#1A1A1A;
+  /* One UI 8 — color revision r2 (2026-08-19): deeper surface ladder with a
+     faint cool tint, deepened Galaxy Blue accent + solid soft tint, deeper
+     red/amber with controlled saturation, top-edge light + soft glow on the
+     highest-elevation cards. Layout/radius/spacing identical to r1. */
+  --bg:#000;--bg-elev:#0D0E12;--surface:#26272C;--surface-high:#303138;--surface-highest:#3A3C44;--inset:#17181D;
+  --edge:rgba(255,255,255,.12);
   --text:#F5F5F5;--text-sec:#A8A8A8;--text-ter:#7A7A7A;
-  --accent:#1E64D8;--accent-press:#1854B8;--accent-bright:#82B1FF;--on-accent:#fff;
-  --accent-container:#0D2A52;--on-accent-container:#D4E5FF;--accent-soft:rgba(30,100,216,.22);
-  --error:#C44747;--error-bright:#FF8A80;--error-container:#3A1A1A;--on-error-container:#FFD0CC;
-  --warning:#E0A12E;--warning-bright:#FFC14D;--warning-container:#3A2C10;--on-warning-container:#FFE2A8;
+  --accent:#1A55CC;--accent-press:#123FB0;--accent-bright:#8FBDFF;--on-accent:#fff;
+  --accent-container:#0B2547;--on-accent-container:#D8E8FF;--accent-soft:#243B63;
+  --error:#C0353B;--error-bright:#FF9285;--error-container:#2E1315;--on-error-container:#FFD0CC;
+  --warning:#D6992A;--warning-bright:#FFC14D;--warning-container:#2F230C;--on-warning-container:#FFE2A8;
   --success:#2E9B64;--success-bright:#6BCF97;
+  --glow-accent:rgba(26,85,204,.20);--glow-error:rgba(192,53,59,.30);--glow-warning:rgba(214,153,42,.30);
   --hairline:rgba(255,255,255,.08);--r-lg:28px;--r-xl:32px;--r-pill:999px;
   --font:"Pretendard","Segoe UI",Roboto,"Noto Sans Bengali",ui-sans-serif,system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -77,19 +83,19 @@ a{color:var(--accent-bright);text-decoration:none}
 .badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:700}
 .badge .d{width:6px;height:6px;border-radius:50%;background:currentColor}
 .badge.ok{background:var(--accent-soft);color:var(--accent-bright)}
-.badge.warn{background:rgba(224,161,46,.18);color:var(--warning-bright)}
-.badge.err{background:rgba(196,71,71,.2);color:var(--error-bright)}
+.badge.warn{background:rgba(214,153,42,.20);color:var(--warning-bright)}
+.badge.err{background:rgba(192,53,59,.22);color:var(--error-bright)}
 .badge.neu{background:rgba(255,255,255,.08);color:var(--text-sec)}
 
-.hero{border-radius:32px;padding:22px 20px 18px;margin-bottom:18px}
-.hero.on{background:var(--accent-container);color:var(--on-accent-container)}
-.hero.pause{background:var(--warning-container);color:var(--on-warning-container)}
-.hero.off{background:var(--error-container);color:var(--on-error-container)}
+.hero{border-radius:32px;padding:22px 20px 18px;margin-bottom:18px;box-shadow:inset 0 1px 0 var(--edge)}
+.hero.on{background:linear-gradient(180deg,#10305E,#081A33);color:var(--on-accent-container);box-shadow:inset 0 1px 0 var(--edge),0 0 0 1px var(--glow-accent)}
+.hero.pause{background:linear-gradient(180deg,#33290D,#231A07);color:var(--on-warning-container);box-shadow:inset 0 1px 0 var(--edge),0 0 0 1px var(--glow-warning)}
+.hero.off{background:linear-gradient(180deg,#331519,#240D10);color:var(--on-error-container);box-shadow:inset 0 1px 0 var(--edge),0 0 0 1px var(--glow-error)}
 .hero h2{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
 .hero p{font-size:13.5px;opacity:.78;margin-top:4px;line-height:1.4}
-.iw{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin-bottom:14px;background:rgba(130,177,255,.14)}
+.iw{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin-bottom:14px;background:rgba(143,189,255,.14)}
 .hero.pause .iw{background:rgba(255,193,77,.14)}
-.hero.off .iw{background:rgba(255,138,128,.14)}
+.hero.off .iw{background:rgba(255,146,133,.14)}
 
 .nav{flex:0 0 auto;height:64px;background:var(--bg-elev);display:flex;border-top:1px solid var(--hairline)}
 .nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-ter);font-size:10.5px;font-weight:700}
@@ -128,7 +134,7 @@ a{color:var(--accent-bright);text-decoration:none}
 .lockban{background:var(--warning-container);border-radius:20px;padding:12px 14px;display:flex;gap:10px;align-items:center;margin-bottom:14px;color:var(--on-warning-container);font-size:13px;font-weight:700}
 
 .scrim{position:absolute;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:18px}
-.card-float{background:var(--surface-highest);border-radius:24px;padding:16px;width:100%;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+.card-float{background:var(--surface-highest);border-radius:24px;padding:16px;width:100%;box-shadow:0 18px 48px rgba(0,0,0,.5),inset 0 1px 0 var(--edge),0 0 0 1px var(--glow-warning)}
 
 .footlink{text-align:center;margin-top:28px;color:var(--text-ter);font-size:13px}
 .footlink a{margin:0 8px}
@@ -143,7 +149,7 @@ a{color:var(--accent-bright);text-decoration:none}
 </div>
 <div class="gallery">
 <div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div style="padding:20px 20px 8px;text-align:center">
-      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
+      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Sensitive Content Blocked</div>
       <p class="bn" style="color:var(--text-sec);margin:8px 0 12px;font-size:13.5px;line-height:1.45">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</p>
       <span class="badge neu mono">com.instagram.android</span>
@@ -156,14 +162,14 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="flex:1"><div class="s">Time</div><div class="t">Now</div></div>
         </div>
       </div>
-      <div class="sheet" style="padding:14px;text-align:center"><div class="s" style="color:var(--warning-bright);font-weight:700">AI detected unsafe content</div></div>
+      <div class="sheet" style="padding:14px;text-align:center;border:1px solid var(--glow-warning)"><div class="s" style="color:var(--warning-bright);font-weight:700">AI detected unsafe content</div></div>
       <div style="height:12px"></div>
       <button class="btn danger block">Stay Protected</button>
       <button class="btn tonal block" style="margin:10px 0">Request Unlock</button>
       <button class="btn ghost block">ভুল ব্লক হয়েছে? মনে রাখো, আর ব্লক হবে না</button>
       <p style="text-align:center;color:var(--text-ter);font-size:11px;letter-spacing:.12em;margin-top:16px">STAY STRONG 💪</p>
     </div></div><div class="gest"><i></i></div></div><div class="cap">Strike-3 · AI + Mark False</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div style="padding:20px 20px 8px;text-align:center">
-      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
+      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Sensitive Content Blocked</div>
       <p class="bn" style="color:var(--text-sec);margin:8px 0 12px;font-size:13.5px;line-height:1.45">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</p>
       <span class="badge neu mono">com.instagram.android</span>
@@ -176,14 +182,14 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="flex:1"><div class="s">Time</div><div class="t">Now</div></div>
         </div>
       </div>
-      <div class="sheet" style="padding:14px;text-align:center"><div class="s" style="color:var(--warning-bright);font-weight:700">Keyword matched: xxx</div></div>
+      <div class="sheet" style="padding:14px;text-align:center;border:1px solid var(--glow-warning)"><div class="s" style="color:var(--warning-bright);font-weight:700">Keyword matched: xxx</div></div>
       <div style="height:12px"></div>
       <button class="btn danger block">Stay Protected</button>
       <button class="btn tonal block" style="margin:10px 0">Request Unlock</button>
       
       <p style="text-align:center;color:var(--text-ter);font-size:11px;letter-spacing:.12em;margin-top:16px">STAY STRONG 💪</p>
     </div></div><div class="gest"><i></i></div></div><div class="cap">Keyword match</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div style="padding:20px 20px 8px;text-align:center">
-      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
+      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Sensitive Content Blocked</div>
       <p class="bn" style="color:var(--text-sec);margin:8px 0 12px;font-size:13.5px;line-height:1.45">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</p>
       <span class="badge neu mono">com.instagram.android</span>
@@ -196,14 +202,14 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="flex:1"><div class="s">Time</div><div class="t">Now</div></div>
         </div>
       </div>
-      <div class="sheet" style="padding:14px;text-align:center"><div class="s" style="color:var(--warning-bright);font-weight:700">⚠️ Tampering attempt detected! Changing settings is forbidden while a Commitment Lock is active.</div></div>
+      <div class="sheet" style="padding:14px;text-align:center;border:1px solid var(--glow-warning)"><div class="s" style="color:var(--warning-bright);font-weight:700">⚠️ Tampering attempt detected! Changing settings is forbidden while a Commitment Lock is active.</div></div>
       <div style="height:12px"></div>
       <button class="btn danger block">Stay Protected</button>
       
       
       <p style="text-align:center;color:var(--text-ter);font-size:11px;letter-spacing:.12em;margin-top:16px">STAY STRONG 💪</p>
     </div></div><div class="gest"><i></i></div></div><div class="cap">Tamper (no unlock)</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div style="padding:20px 20px 8px;text-align:center">
-      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
+      <div class="iw" style="margin:12px auto 16px;background:var(--error-container)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Sensitive Content Blocked</div>
       <p class="bn" style="color:var(--text-sec);margin:8px 0 12px;font-size:13.5px;line-height:1.45">এই কন্টেন্টটি আপনাকে সুরক্ষিত রাখতে ব্লক করা হয়েছে</p>
       <span class="badge neu mono">com.instagram.android</span>
@@ -216,7 +222,7 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="flex:1"><div class="s">Time</div><div class="t">Now</div></div>
         </div>
       </div>
-      <div class="sheet" style="padding:14px;text-align:center"><div class="s" style="color:var(--warning-bright);font-weight:700">Outside allowed schedule</div></div>
+      <div class="sheet" style="padding:14px;text-align:center;border:1px solid var(--glow-warning)"><div class="s" style="color:var(--warning-bright);font-weight:700">Outside allowed schedule</div></div>
       <div style="height:12px"></div>
       <button class="btn danger block">Stay Protected</button>
       <button class="btn tonal block" style="margin:10px 0">Request Unlock</button>
@@ -230,7 +236,7 @@ a{color:var(--accent-bright);text-decoration:none}
     <div class="pad" style="margin-top:40px"><button class="btn tonal block">Cancel</button></div></div><div class="gest"><i></i></div></div><div class="cap">Delay Unlock</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="topbar"><div class="back">‹</div><div style="font-weight:800">Blocked Content</div></div>
     <div class="pad">
       <div class="hero off" style="text-align:center">
-        <div class="iw" style="margin:0 auto 12px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
+        <div class="iw" style="margin:0 auto 12px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="M12 8.2v4.2"/><circle cx="12" cy="15.2" r="1" fill="currentColor" stroke="none"/></svg></div>
         <h2>Content Blocked</h2>
         <p>You are safe — Guardian Shield protected you</p>
       </div>
@@ -249,7 +255,7 @@ a{color:var(--accent-bright);text-decoration:none}
       <button class="btn danger block">Back to App</button>
       <button class="btn ghost block">Report This Content</button>
     </div></div><div class="gest"><i></i></div></div><div class="cap">Blocked detail</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="title">Home</div><div class="pad"><div class="hero on">
-          <div class="iw"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg></div>
+          <div class="iw"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg></div>
           <h2 class="bn">সুরক্ষা সক্রিয়</h2>
           <p>Monitoring 12 events today · We're actively blocking harmful content</p>
           <div style="margin:12px 0 16px"><span class="badge ok"><span class="d"></span>Protection Active · সক্রিয়</span></div>
@@ -261,17 +267,17 @@ a{color:var(--accent-bright);text-decoration:none}
       </div>
     </div></div><div class="subhead pad">Quick actions · দ্রুত পদক্ষেপ</div>
     <div class="pad"><div class="sheet">
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg><div style="flex:1"><div class="t">App Blocking</div><div class="s bn">১২টি ব্লক করা</div></div><span class="chev">›</span></div>
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg><div style="flex:1"><div class="t">Keywords</div><div class="s bn">৮টি কিওয়ার্ড</div></div><span class="chev">›</span></div>
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg><div style="flex:1"><div class="t">Whitelist</div><div class="s bn">৩টি অ্যাপ · filter in App list</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg><div style="flex:1"><div class="t">App Blocking</div><div class="s bn">১২টি ব্লক করা</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg><div style="flex:1"><div class="t">Keywords</div><div class="s bn">৮টি কিওয়ার্ড</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg><div style="flex:1"><div class="t">Whitelist</div><div class="s bn">৩টি অ্যাপ · filter in App list</div></div><span class="chev">›</span></div>
     </div></div><div class="pad" style="display:flex;justify-content:space-between;align-items:center"><div class="subhead" style="padding:0">Today’s activity · সাম্প্রতিক ব্লক</div><span style="color:var(--accent-bright);font-size:13px;font-weight:700">See all</span></div><div class="pad"><div class="sheet">
-          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 10.2 8.4l-5.2.3 4 3.5-1.3 5.1L12 14.6l4.3 2.7-1.3-5.1 4-3.5-5.2-.3z"/></svg></div>
+          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 10.2 8.4l-5.2.3 4 3.5-1.3 5.1L12 14.6l4.3 2.7-1.3-5.1 4-3.5-5.2-.3z"/></svg></div>
             <div style="flex:1"><div class="t">AI Detection</div><div class="s">Instagram · 14:21</div></div>
             <span class="badge err">AI Blocked</span></div>
           <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg></div>
             <div style="flex:1"><div class="t">Keyword</div><div class="s">Chrome · 13:08</div></div>
             <span class="badge neu">Keyword</span></div>
-          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg></div>
+          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg></div>
             <div style="flex:1"><div class="t">App Blocked</div><div class="s">TikTok · 11:44</div></div>
             <span class="badge err">Blocked</span></div>
         </div></div><div class="scrim" style="align-items:flex-start;padding-top:72px">
@@ -284,8 +290,8 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="margin-top:10px;color:var(--text-sec);font-size:12.5px;font-weight:700">Not sensitive</div>
         </div>
       </div>
-    </div></div><div class="nav"><a class="on" href="home.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.2 12 4l8 6.2V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/></svg>Home</a><a class="" href="activity.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6V12l3 1.8"/></svg>Activity</a><a class="" href="protection.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg>Protection</a><a class="" href="settings.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><path d="M12 4.6v1.6M12 17.8v1.6M4.6 12h1.6M17.8 12h1.6M6.6 6.6l1.2 1.2M16.2 16.2l1.2 1.2M17.4 6.6l-1.2 1.2M7.8 16.2l-1.2 1.2"/></svg>Settings</a></div><div class="gest"><i></i></div></div><div class="cap">Strike 1/3 + Not sensitive</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="title">Home</div><div class="pad"><div class="hero on">
-          <div class="iw"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg></div>
+    </div></div><div class="nav"><a class="on" href="home.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.2 12 4l8 6.2V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/></svg>Home</a><a class="" href="activity.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6V12l3 1.8"/></svg>Activity</a><a class="" href="protection.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg>Protection</a><a class="" href="settings.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><path d="M12 4.6v1.6M12 17.8v1.6M4.6 12h1.6M17.8 12h1.6M6.6 6.6l1.2 1.2M16.2 16.2l1.2 1.2M17.4 6.6l-1.2 1.2M7.8 16.2l-1.2 1.2"/></svg>Settings</a></div><div class="gest"><i></i></div></div><div class="cap">Strike 1/3 + Not sensitive</div></div><div class="block"><div class="phone "><div class="sb"><span>9:41</span><span class="ic">●●●  LTE  84%</span></div><div class="screen"><div class="title">Home</div><div class="pad"><div class="hero on">
+          <div class="iw"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg></div>
           <h2 class="bn">সুরক্ষা সক্রিয়</h2>
           <p>Monitoring 12 events today · We're actively blocking harmful content</p>
           <div style="margin:12px 0 16px"><span class="badge ok"><span class="d"></span>Protection Active · সক্রিয়</span></div>
@@ -297,17 +303,17 @@ a{color:var(--accent-bright);text-decoration:none}
       </div>
     </div></div><div class="subhead pad">Quick actions · দ্রুত পদক্ষেপ</div>
     <div class="pad"><div class="sheet">
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg><div style="flex:1"><div class="t">App Blocking</div><div class="s bn">১২টি ব্লক করা</div></div><span class="chev">›</span></div>
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg><div style="flex:1"><div class="t">Keywords</div><div class="s bn">৮টি কিওয়ার্ড</div></div><span class="chev">›</span></div>
-      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg><div style="flex:1"><div class="t">Whitelist</div><div class="s bn">৩টি অ্যাপ · filter in App list</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg><div style="flex:1"><div class="t">App Blocking</div><div class="s bn">১২টি ব্লক করা</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg><div style="flex:1"><div class="t">Keywords</div><div class="s bn">৮টি কিওয়ার্ড</div></div><span class="chev">›</span></div>
+      <div class="row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg><div style="flex:1"><div class="t">Whitelist</div><div class="s bn">৩টি অ্যাপ · filter in App list</div></div><span class="chev">›</span></div>
     </div></div><div class="pad" style="display:flex;justify-content:space-between;align-items:center"><div class="subhead" style="padding:0">Today’s activity · সাম্প্রতিক ব্লক</div><span style="color:var(--accent-bright);font-size:13px;font-weight:700">See all</span></div><div class="pad"><div class="sheet">
-          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 10.2 8.4l-5.2.3 4 3.5-1.3 5.1L12 14.6l4.3 2.7-1.3-5.1 4-3.5-5.2-.3z"/></svg></div>
+          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 10.2 8.4l-5.2.3 4 3.5-1.3 5.1L12 14.6l4.3 2.7-1.3-5.1 4-3.5-5.2-.3z"/></svg></div>
             <div style="flex:1"><div class="t">AI Detection</div><div class="s">Instagram · 14:21</div></div>
             <span class="badge err">AI Blocked</span></div>
           <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.2" cy="12" r="3.2"/><path d="M11.4 12h8M16.4 12v-2.4M19 12v2.2"/></svg></div>
             <div style="flex:1"><div class="t">Keyword</div><div class="s">Chrome · 13:08</div></div>
             <span class="badge neu">Keyword</span></div>
-          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8A80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg></div>
+          <div class="row"><div class="iw" style="width:40px;height:40px;margin:0;background:var(--inset)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9285" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.8"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.8"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.8"/></svg></div>
             <div style="flex:1"><div class="t">App Blocked</div><div class="s">TikTok · 11:44</div></div>
             <span class="badge err">Blocked</span></div>
         </div></div><div class="scrim" style="align-items:flex-start;padding-top:72px">
@@ -320,7 +326,7 @@ a{color:var(--accent-bright);text-decoration:none}
           <div style="margin-top:10px;color:var(--text-sec);font-size:12.5px;font-weight:700">Not sensitive</div>
         </div>
       </div>
-    </div></div><div class="nav"><a class="on" href="home.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#82B1FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.2 12 4l8 6.2V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/></svg>Home</a><a class="" href="activity.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6V12l3 1.8"/></svg>Activity</a><a class="" href="protection.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg>Protection</a><a class="" href="settings.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><path d="M12 4.6v1.6M12 17.8v1.6M4.6 12h1.6M17.8 12h1.6M6.6 6.6l1.2 1.2M16.2 16.2l1.2 1.2M17.4 6.6l-1.2 1.2M7.8 16.2l-1.2 1.2"/></svg>Settings</a></div><div class="gest"><i></i></div></div><div class="cap">Strike 2/3</div></div>
+    </div></div><div class="nav"><a class="on" href="home.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8FBDFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.2 12 4l8 6.2V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/></svg>Home</a><a class="" href="activity.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6V12l3 1.8"/></svg>Activity</a><a class="" href="protection.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6.2v5.6c0 4.6 3 8.8 7 10.2 4-1.4 7-5.6 7-10.2V6.2L12 3z"/><path d="m8.6 12.1 2.3 2.3 4.5-4.6"/></svg>Protection</a><a class="" href="settings.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A7A7A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.4"/><path d="M12 4.6v1.6M12 17.8v1.6M4.6 12h1.6M17.8 12h1.6M6.6 6.6l1.2 1.2M16.2 16.2l1.2 1.2M17.4 6.6l-1.2 1.2M7.8 16.2l-1.2 1.2"/></svg>Settings</a></div><div class="gest"><i></i></div></div><div class="cap">Strike 2/3</div></div>
 </div>
 <p class="footlink"><a href="index.html">← Gallery</a><a href="design-system.html">Design system</a></p>
 </body>

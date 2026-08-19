@@ -1,39 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Reel reminder (Islamic interstitial). Real copy kept verbatim.
-     Bindings preserved: imgIslamic txtTitle txtHadith txtSubtitle btnOpenQuran btnContinue. -->
+<!-- ONE SHIELD (One UI 8, color rev r2) — Reel reminder (Islamic interstitial).
+     Was: WATCHTOWER V3 (emoji glyph, centered column, text-link continue).
+     Now matches guardian-redesign/mocks/oneui8/reel.html: 72dp
+     accent-container well + outlined quran glyph, 28sp/800 title, hadith
+     14.5sp + subtitle 13.5sp up top, bottom-weighted filled Open Quran +
+     ghost Continue. Real copy kept verbatim.
+     Bindings preserved: imgIslamic txtTitle txtHadith txtSubtitle
+     btnOpenQuran btnContinue — destinations unchanged (known quran packages
+     -> Play search; Continue finishes). -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
     android:paddingHorizontal="26dp"
     android:background="@color/bg_main">
 
-    <TextView
-        android:id="@+id/imgIslamic"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="52sp"/>
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.3"/>
+
+    <FrameLayout
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_icon_well"
+        android:backgroundTint="@color/primary_container">
+        <ImageView
+            android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_quran"
+            app:tint="@color/primary_dim"
+            android:importantForAccessibility="no"/>
+        <TextView
+            android:id="@+id/imgIslamic"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:textSize="30sp"
+            tools:text="📖"/>
+    </FrameLayout>
 
     <TextView
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
         android:textColor="@color/on_surface"
-        android:textSize="21sp" android:textStyle="bold" android:letterSpacing="-0.015"/>
+        android:textSize="28sp" android:textStyle="bold" android:letterSpacing="-0.02"
+        android:gravity="center"/>
 
     <TextView
         android:id="@+id/txtHadith"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:maxWidth="310dp"
-        android:text="@string/reel_hadith"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="18dp"
+        android:maxWidth="320dp"
         android:textColor="@color/on_surface_variant"
-        android:textSize="13sp" android:lineSpacingMultiplier="1.7"
+        android:textSize="14.5sp" android:lineSpacingMultiplier="1.65"
         android:textStyle="italic"
         android:gravity="center"/>
 
@@ -41,18 +68,20 @@
         android:id="@+id/txtSubtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
         android:maxWidth="310dp"
         android:textColor="@color/on_surface_variant"
-        android:textSize="12.5sp" android:lineSpacingMultiplier="1.6"
+        android:textSize="13.5sp" android:lineSpacingMultiplier="1.55"
         android:gravity="center"/>
+
+    <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.7"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnOpenQuran"
         style="@style/Widget.GuardianShield.Button"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:layout_marginTop="30dp"
         app:icon="@drawable/ic_quran"
         app:iconTint="@color/on_primary"
         android:text="@string/reel_open_quran"/>
@@ -63,5 +92,6 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="8dp"
+        android:layout_marginBottom="24dp"
         android:text="@string/reel_continue"/>
 </LinearLayout>

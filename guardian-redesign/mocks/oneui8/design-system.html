@@ -13,41 +13,53 @@
    Copy this :root block into every screen mock. No external CSS files.
    ===================================================================== */
 :root {
-  /* Surfaces — AMOLED black canvas, gray “sheets” that float */
+  /* Surfaces — AMOLED black canvas, cool-tinted “moonlit” sheets that float.
+     r2: wider perceptible steps between layers + a faint blue bias that grows
+     with elevation; highest surfaces get a 1px top-edge light (see --edge). */
   --bg: #000000;
-  --bg-elev: #121212;
-  --surface: #2A2A2A;
-  --surface-high: #333333;
-  --surface-highest: #3C3C3C;
-  --inset: #1A1A1A;
+  --bg-elev: #0D0E12;
+  --surface: #26272C;
+  --surface-high: #303138;
+  --surface-highest: #3A3C44;
+  --inset: #17181D;
+  --edge: rgba(255,255,255,.12);      /* r2: 1px top-edge light on highest sheets */
 
   /* Text */
   --text: #F5F5F5;
   --text-sec: #A8A8A8;
   --text-ter: #7A7A7A;
 
-  /* ONE accent — Galaxy Blue. Fill vs on-dark are the same hue. */
-  --accent: #1E64D8;           /* fills: buttons, switch-on, slider */
-  --accent-press: #1854B8;
-  --accent-bright: #82B1FF;    /* text/icons on dark surfaces */
+  /* ONE accent — Galaxy Blue, deepened in r2. Fill vs on-dark are the same
+     hue; --accent-soft is now a SOLID desaturated tint of the same hue for
+     badges/subtle highlights (calibrated, not alpha over unknown surfaces). */
+  --accent: #1A55CC;           /* fills: buttons, switch-on, slider */
+  --accent-press: #123FB0;
+  --accent-bright: #8FBDFF;    /* text/icons on dark surfaces */
   --on-accent: #FFFFFF;
-  --accent-container: #0D2A52;
-  --on-accent-container: #D4E5FF;
-  --accent-soft: rgba(30,100,216,.22);
+  --accent-container: #0B2547;
+  --accent-container-start: #10305E;
+  --accent-container-end: #081A33;
+  --on-accent-container: #D8E8FF;
+  --accent-soft: #243B63;      /* solid secondary-emphasis tint, same hue */
 
-  /* Semantic — status only, never a second brand */
-  --error: #C44747;
-  --error-bright: #FF8A80;
-  --error-container: #3A1A1A;
+  /* Semantic — status only, never a second brand. r2: deeper fills with
+     controlled saturation + soft same-hue glow borders for the serious
+     surfaces (strike warning card, block overlay hero). */
+  --error: #C0353B;
+  --error-bright: #FF9285;
+  --error-container: #2E1315;
   --on-error-container: #FFD0CC;
-  --warning: #E0A12E;
+  --warning: #D6992A;
   --warning-bright: #FFC14D;
-  --warning-container: #3A2C10;
+  --warning-container: #2F230C;
   --on-warning-container: #FFE2A8;
   --success: #2E9B64;
   --success-bright: #6BCF97;
   --success-container: #123024;
   --on-success-container: #C6F0D8;
+  --glow-accent: rgba(26,85,204,.20);
+  --glow-error: rgba(192,53,59,.30);
+  --glow-warning: rgba(214,153,42,.30);
 
   /* Hairlines / scrim */
   --hairline: rgba(255,255,255,.08);
@@ -448,7 +460,7 @@ table.ct tr:last-child td { border-bottom: 0; }
     <div class="chiprow">
       <span class="tag">Replaces <em>Watchtower V3</em></span>
       <span class="tag">Dark-first · AMOLED</span>
-      <span class="tag">One accent <em>#1E64D8</em></span>
+      <span class="tag">One accent <em>#1A55CC</em> · color rev r2</span>
       <span class="tag">XML Views + ViewBinding</span>
       <span class="tag">Mockups first · no Kotlin yet</span>
     </div>
@@ -510,46 +522,77 @@ table.ct tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== COLOR ===================== -->
   <section class="sec" id="color">
-    <div class="sec-h"><h2>1 · Color</h2><span class="hint">one hue · surfaces do the work</span></div>
+    <div class="sec-h"><h2>1 · Color</h2><span class="hint">one hue · surfaces do the work · <b style="color:var(--accent-bright)">rev r2 below</b></span></div>
+
+    <div class="sheet" style="margin-bottom:16px;border:1px solid var(--hairline-strong)">
+      <div class="kicker" style="margin-bottom:10px">Color revision r2 — 2026-08-19 · deeper layers, one confident accent</div>
+      <p style="font-size:14px;color:var(--text-sec);line-height:1.6;margin-bottom:14px">
+        What changed and why (color/depth only — <b style="color:var(--text)">radius, spacing, type and every layout are untouched</b>):
+      </p>
+      <table class="ct" style="margin-top:0">
+        <tr><th>Token</th><th>r1 (approved)</th><th>r2</th><th>Rationale</th></tr>
+        <tr><td>bg-elev</td><td><span class="pairdot" style="background:#121212"></span>#121212</td><td><span class="pairdot" style="background:#0D0E12"></span><code>#0D0E12</code></td><td>Nav/app bars sit deeper; faint cool tint begins the "moonlit" ramp</td></tr>
+        <tr><td>inset</td><td><span class="pairdot" style="background:#1A1A1A"></span>#1A1A1A</td><td><span class="pairdot" style="background:#17181D"></span><code>#17181D</code></td><td>Wells recede further below sheets</td></tr>
+        <tr><td>surface</td><td><span class="pairdot" style="background:#2A2A2A"></span>#2A2A2A</td><td><span class="pairdot" style="background:#26272C"></span><code>#26272C</code></td><td rowspan="3">Ladder spread widened (L* steps 4.2/4.1 → 4.8/4.9 between sheet layers) and every layer leans a touch bluer as it rises, so depth reads instantly. Top of ladder stays put — it is the AA ceiling for #A8A8A8 secondary text</td></tr>
+        <tr><td>surface-high</td><td><span class="pairdot" style="background:#333333"></span>#333333</td><td><span class="pairdot" style="background:#303138"></span><code>#303138</code></td></tr>
+        <tr><td>surface-highest</td><td><span class="pairdot" style="background:#3C3C3C"></span>#3C3C3C</td><td><span class="pairdot" style="background:#3A3C44;box-shadow:inset 0 1px 0 var(--edge)"></span><code>#3A3C44</code> + edge</td></tr>
+        <tr><td>accent (fill)</td><td><span class="pairdot" style="background:#1E64D8"></span>#1E64D8</td><td><span class="pairdot" style="background:#1A55CC"></span><code>#1A55CC</code></td><td rowspan="3">Deeper, more saturated Galaxy Blue (h≈222°, s 76→81%, l 48→45%) for primary CTAs, switch-on, active status. Same hue, two calibrated intensities: strong fill + brighter on-dark stop, plus a solid desaturated tint for badges</td></tr>
+        <tr><td>accent-bright</td><td><span class="pairdot" style="background:#82B1FF"></span>#82B1FF</td><td><span class="pairdot" style="background:#8FBDFF"></span><code>#8FBDFF</code></td></tr>
+        <tr><td>accent-soft</td><td>rgba(30,100,216,.22)</td><td><span class="pairdot" style="background:#243B63"></span><code>#243B63</code> solid</td></tr>
+        <tr><td>error (fill)</td><td><span class="pairdot" style="background:#C44747"></span>#C44747</td><td><span class="pairdot" style="background:#C0353B"></span><code>#C0353B</code></td><td rowspan="2">Deeper crimson, saturation held — serious, not neon. Containers deepened; soft same-hue glow border replaces flat edges on the block hero</td></tr>
+        <tr><td>error-container</td><td><span class="pairdot" style="background:#3A1A1A"></span>#3A1A1A</td><td><span class="pairdot" style="background:#2E1315"></span><code>#2E1315</code></td></tr>
+        <tr><td>warning (fill)</td><td><span class="pairdot" style="background:#E0A12E"></span>#E0A12E</td><td><span class="pairdot" style="background:#D6992A"></span><code>#D6992A</code></td><td rowspan="2">Deeper amber for the strike 1–2 card + lock banner; glow border keeps the card feeling elevated over the scrim</td></tr>
+        <tr><td>warning-container</td><td><span class="pairdot" style="background:#3A2C10"></span>#3A2C10</td><td><span class="pairdot" style="background:#2F230C"></span><code>#2F230C</code></td></tr>
+        <tr><td>success</td><td colspan="2">#2E9B64 / #6BCF97 unchanged</td><td>Granted-only status; richer color was not needed here</td></tr>
+      </table>
+      <p class="note" style="margin-top:14px">
+        <strong>Depth cue.</strong> Highest-elevation surfaces (hero protection card, strike-1/2 card, block-overlay cards, dialogs) now carry a
+        1px top-edge light (<code>rgba(255,255,255,.12)</code>) and a soft same-hue glow border (<code>--glow-accent/-error/-warning</code>).
+        Deliberately restrained: no drop shadows on sheets, no colored gradients on lists — the edge light is the lift cue, and it stops there.
+        Corner radius, spacing, type ramp, and layout structure are <strong>byte-identical to r1</strong>.
+      </p>
+    </div>
     <div class="grid2">
       <div class="sheet">
         <div class="kicker" style="margin-bottom:6px">Surfaces</div>
         <div class="swrow"><div class="sw" style="background:#000"></div><div><div class="swname">background · L0</div><div class="swhex">#000000</div><div class="swuse">App canvas, status bar, nav bar. True AMOLED.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#121212"></div><div><div class="swname">bg-elev · L0.5</div><div class="swhex">#121212</div><div class="swuse">Bottom nav, sticky compact app bar.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#2A2A2A"></div><div><div class="swname">surface · L1</div><div class="swhex">#2A2A2A</div><div class="swuse">Settings sheets, cards, list groups.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#333"></div><div><div class="swname">surface-high · L2</div><div class="swhex">#333333</div><div class="swuse">Nested wells, selected chips, raised tiles.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#3C3C3C"></div><div><div class="swname">surface-highest · L3</div><div class="swhex">#3C3C3C</div><div class="swuse">Dialogs, keypad keys, menus, tonal buttons.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#1A1A1A"></div><div><div class="swname">inset</div><div class="swhex">#1A1A1A</div><div class="swuse">Search fields, slider tracks, segmented track.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#0D0E12"></div><div><div class="swname">bg-elev · L0.5</div><div class="swhex">#0D0E12</div><div class="swuse">Bottom nav, sticky compact app bar.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#26272C"></div><div><div class="swname">surface · L1</div><div class="swhex">#26272C</div><div class="swuse">Settings sheets, cards, list groups.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#303138"></div><div><div class="swname">surface-high · L2</div><div class="swhex">#303138</div><div class="swuse">Nested wells, selected chips, raised tiles.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#3A3C44;box-shadow:inset 0 1px 0 var(--edge)"></div><div><div class="swname">surface-highest · L3</div><div class="swhex">#3A3C44 + top edge</div><div class="swuse">Dialogs, keypad keys, menus, tonal buttons.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#17181D"></div><div><div class="swname">inset</div><div class="swhex">#17181D</div><div class="swuse">Search fields, slider tracks, segmented track.</div></div></div>
       </div>
       <div class="sheet">
         <div class="kicker" style="margin-bottom:6px">Accent + semantic</div>
-        <div class="swrow"><div class="sw" style="background:#1E64D8"></div><div><div class="swname">accent · Galaxy Blue fill</div><div class="swhex">#1E64D8 · on-accent #FFFFFF · 5.43:1 AA</div><div class="swuse">Filled buttons, switch-on, slider thumb ring, active key.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#82B1FF"></div><div><div class="swname">accent-bright · on dark</div><div class="swhex">#82B1FF</div><div class="swuse">Links, active icons, “on” labels, compact title accent.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#0D2A52"></div><div><div class="swname">accent-container</div><div class="swhex">#0D2A52 · on #D4E5FF · 11.19:1</div><div class="swuse">Hero “protected” well, selected module tint.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#C44747"></div><div><div class="swname">error · blocked</div><div class="swhex">fill #C44747 · bright #FF8A80 · container #3A1A1A</div><div class="swuse">Strike-3 overlay, blocked badge, danger CTA.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#E0A12E"></div><div><div class="swname">warning · paused / strike 1–2</div><div class="swhex">fill #E0A12E · bright #FFC14D · container #3A2C10</div><div class="swuse">Warning card, lock banner, paused state.</div></div></div>
-        <div class="swrow"><div class="sw" style="background:#2E9B64"></div><div><div class="swname">success · granted only</div><div class="swhex">#2E9B64 · bright #6BCF97</div><div class="swuse">Permission granted. Not a second brand. Protected = blue.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#1A55CC"></div><div><div class="swname">accent · Galaxy Blue fill</div><div class="swhex">#1A55CC · on-accent #FFFFFF · 6.53:1 AA</div><div class="swuse">Filled buttons, switch-on, slider thumb ring, active key.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#8FBDFF"></div><div><div class="swname">accent-bright · on dark</div><div class="swhex">#8FBDFF · 8.23:1 on surface</div><div class="swuse">Links, active icons, “on” labels, compact title accent.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#0B2547"></div><div><div class="swname">accent-container</div><div class="swhex">#0B2547 · on #D8E8FF · 12.34:1</div><div class="swuse">Hero “protected” well, selected module tint.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#C0353B;box-shadow:0 0 0 1px var(--glow-error)"></div><div><div class="swname">error · blocked</div><div class="swhex">fill #C0353B · bright #FF9285 · container #2E1315</div><div class="swuse">Strike-3 overlay, blocked badge, danger CTA.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#D6992A;box-shadow:0 0 0 1px var(--glow-warning)"></div><div><div class="swname">warning · paused / strike 1–2</div><div class="swhex">fill #D6992A · bright #FFC14D · container #2F230C</div><div class="swuse">Warning card, lock banner, paused state.</div></div></div>
+        <div class="swrow"><div class="sw" style="background:#2E9B64"></div><div><div class="swname">success · granted only</div><div class="swhex">#2E9B64 · bright #6BCF97 (unchanged)</div><div class="swuse">Permission granted. Not a second brand. Protected = blue.</div></div></div>
       </div>
     </div>
 
     <table class="ct">
-      <tr><th>Pair</th><th>Ratio</th><th>WCAG</th><th>Use</th></tr>
-      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #000000</td><td class="pass">19.26:1</td><td>AAA</td><td>Large titles, primary text on canvas</td></tr>
-      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #2A2A2A</td><td class="pass">13.17:1</td><td>AAA</td><td>Row titles, values on sheets</td></tr>
-      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #3C3C3C</td><td class="pass">10.12:1</td><td>AAA</td><td>Dialog / keypad labels</td></tr>
-      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #000000</td><td class="pass">8.83:1</td><td>AAA</td><td>Subtitles on canvas</td></tr>
-      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #2A2A2A</td><td class="pass">6.04:1</td><td>AA</td><td>Row supporting text</td></tr>
-      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #3C3C3C</td><td class="pass">4.64:1</td><td>AA</td><td>Secondary on L3 — floor</td></tr>
-      <tr><td><span class="pairdot" style="background:#7A7A7A"></span>#7A7A7A on #000000</td><td class="pass">4.89:1</td><td>AA</td><td>Microcopy on canvas only, ≥12sp</td></tr>
-      <tr><td><span class="pairdot" style="background:#7A7A7A"></span>#7A7A7A on #2A2A2A</td><td class="pass">3.34:1</td><td>AA large</td><td>Package names / axis labels ≥14sp bold — never body</td></tr>
-      <tr><td><span class="pairdot" style="background:#82B1FF"></span>#82B1FF on #2A2A2A</td><td class="pass">6.62:1</td><td>AA</td><td>Accent text / icons on sheets</td></tr>
-      <tr><td><span class="pairdot" style="background:#82B1FF"></span>#82B1FF on #3C3C3C</td><td class="pass">5.09:1</td><td>AA</td><td>Accent on L3</td></tr>
-      <tr><td><span class="pairdot" style="background:#fff"></span>#FFFFFF on #1E64D8</td><td class="pass">5.43:1</td><td>AA</td><td>Filled button labels</td></tr>
-      <tr><td><span class="pairdot" style="background:#D4E5FF"></span>#D4E5FF on #0D2A52</td><td class="pass">11.19:1</td><td>AAA</td><td>Hero on-container</td></tr>
-      <tr><td><span class="pairdot" style="background:#fff"></span>#FFFFFF on #C44747</td><td class="pass">4.84:1</td><td>AA</td><td>Danger button labels</td></tr>
-      <tr><td><span class="pairdot" style="background:#FF8A80"></span>#FF8A80 on #2A2A2A</td><td class="pass">6.29:1</td><td>AA</td><td>Blocked labels</td></tr>
-      <tr><td><span class="pairdot" style="background:#FFC14D"></span>#FFC14D on #2A2A2A</td><td class="pass">8.88:1</td><td>AAA</td><td>Warning labels</td></tr>
-      <tr><td><span class="pairdot" style="background:#6BCF97"></span>#6BCF97 on #2A2A2A</td><td class="pass">7.52:1</td><td>AAA</td><td>Granted only</td></tr>
+      <tr><th>Pair</th><th>r1</th><th>r2</th><th>WCAG</th><th>Use</th></tr>
+      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #000000</td><td>19.26:1</td><td class="pass">19.26:1</td><td>AAA</td><td>Large titles, primary text on canvas</td></tr>
+      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #26272C</td><td>13.17</td><td class="pass">14.56:1</td><td>AAA</td><td>Row titles, values on sheets</td></tr>
+      <tr><td><span class="pairdot" style="background:#F5F5F5"></span>#F5F5F5 on #3A3C44</td><td>10.12</td><td class="pass">10.09:1</td><td>AAA</td><td>Dialog / keypad labels</td></tr>
+      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #000000</td><td>8.83</td><td class="pass">8.83:1</td><td>AAA</td><td>Subtitles on canvas</td></tr>
+      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #26272C</td><td>6.04</td><td class="pass">6.27:1</td><td>AA</td><td>Row supporting text</td></tr>
+      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #303138</td><td>5.31</td><td class="pass">5.44:1</td><td>AA</td><td>Secondary on L2</td></tr>
+      <tr><td><span class="pairdot" style="background:#A8A8A8"></span>#A8A8A8 on #3A3C44</td><td>4.64</td><td class="pass">4.62:1</td><td>AA</td><td>Secondary on L3 — floor</td></tr>
+      <tr><td><span class="pairdot" style="background:#7A7A7A"></span>#7A7A7A on #26272C</td><td>3.34</td><td class="pass">3.47:1</td><td>AA large</td><td>Microcopy ≥12sp only — never body</td></tr>
+      <tr><td><span class="pairdot" style="background:#8FBDFF"></span>#8FBDFF on #26272C</td><td>6.62</td><td class="pass">8.23:1</td><td>AAA</td><td>Accent text / icons on sheets</td></tr>
+      <tr><td><span class="pairdot" style="background:#8FBDFF"></span>#8FBDFF on #3A3C44</td><td>5.09</td><td class="pass">5.70:1</td><td>AA</td><td>Accent on L3</td></tr>
+      <tr><td><span class="pairdot" style="background:#8FBDFF"></span>#8FBDFF on #243B63</td><td>—</td><td class="pass">5.79:1</td><td>AA</td><td>Badge text on accent-soft (r2)</td></tr>
+      <tr><td><span class="pairdot" style="background:#fff"></span>#FFFFFF on #1A55CC</td><td>5.43</td><td class="pass">6.53:1</td><td>AA</td><td>Filled button labels</td></tr>
+      <tr><td><span class="pairdot" style="background:#D8E8FF"></span>#D8E8FF on #0B2547</td><td>11.19</td><td class="pass">12.34:1</td><td>AAA</td><td>Hero protection card</td></tr>
+      <tr><td><span class="pairdot" style="background:#fff"></span>#FFFFFF on #C0353B</td><td>4.84</td><td class="pass">5.51:1</td><td>AA</td><td>“Stay Protected” danger CTA</td></tr>
+      <tr><td><span class="pairdot" style="background:#FF9285"></span>#FF9285 on #2E1315</td><td>6.85</td><td class="pass">7.95:1</td><td>AAA</td><td>Block overlay icon / kickers</td></tr>
+      <tr><td><span class="pairdot" style="background:#FFC14D"></span>#FFC14D on #2F230C</td><td>8.39</td><td class="pass">9.50:1</td><td>AAA</td><td>Strike 1–2 warning card kicker</td></tr>
+      <tr><td><span class="pairdot" style="background:#FFE2A8"></span>#FFE2A8 on #2F230C</td><td>10.79</td><td class="pass">12.22:1</td><td>AAA</td><td>Lock banner / paused hero text</td></tr>
+      <tr><td><span class="pairdot" style="background:#6BCF97"></span>#6BCF97 on #26272C</td><td>—</td><td class="pass">8.31:1</td><td>AAA</td><td>Permission granted text</td></tr>
     </table>
     <p class="note">
       <strong>Why two blues.</strong> No single mid-blue is AA both as white-on-fill <em>and</em> as text on #2A2A2A.

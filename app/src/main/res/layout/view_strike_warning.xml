@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WATCHTOWER V3 — Strike 1/2 warning card (WindowManager TYPE_APPLICATION_OVERLAY).
-     Approved mockup: guardian-redesign/mocks/v3/overlays.html frame A
+<!-- ONE SHIELD (One UI 8, color rev r2) — Strike 1/2 warning card
+     (WindowManager TYPE_APPLICATION_OVERLAY).
+     Was: WATCHTOWER V3 (ringed leading icon, 10sp kicker in warning r1).
+     Now matches guardian-redesign/mocks/oneui8/overlays.html ".card-float":
+     surface-highest float, 24dp radius, 44dp warning-container icon well with
+     warning-bright glyph, 11sp warning-bright kicker, r2 top-edge light +
+     soft warning glow border on the card chrome.
+
      RE-SKIN ONLY — behavior contract untouched:
        • auto-dismiss after STRIKE_WARNING_AUTO_DISMISS_MS = 3_500L (code)
        • tap card to dismiss; separate click target for btnNotSensitive
-       • "Not sensitive" writes an audit-only DB row (never touches detection)
-     Tokens: surface_highest card, warning stroke, ringed leading icon,
-     kicker/title/body scale per V3 type ramp. -->
+       • "Not sensitive" writes an audit-only DB row + pattern learn (Bug E)
+         — never touches detection thresholds
+
+     Bindings preserved EXACTLY (same ids/types):
+       cardStrikeWarning txtStrikeKicker txtStrikeTitle txtStrikeBody
+       btnNotSensitive -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -16,8 +25,8 @@
     app:cardBackgroundColor="@color/surface_highest"
     app:cardCornerRadius="24dp"
     app:cardElevation="16dp"
-    app:strokeColor="@color/warning_container"
-    app:strokeWidth="0dp">
+    app:strokeColor="@color/glow_warning"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,11 +36,12 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="16dp">
 
-        <!-- ringed leading icon (decorative ring echoes the 3.5s dismiss timer) -->
+        <!-- 44dp warning-container icon well (mock .iw) -->
         <FrameLayout
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/bg_strike_warning_icon">
+            android:background="@drawable/bg_icon_well"
+            android:backgroundTint="@color/warning_container">
 
             <ImageView
                 android:layout_width="20dp"
@@ -40,13 +50,13 @@
                 android:importantForAccessibility="no"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_shield_alert"
-                app:tint="@color/warning"/>
+                app:tint="@color/warning_amber"/>
         </FrameLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="12dp"
             android:orientation="vertical">
 
             <TextView
@@ -54,11 +64,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ai_strike_warning_kicker"
-                android:textColor="@color/warning"
-                android:textSize="10sp"
+                android:textColor="@color/warning_amber"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:textAllCaps="true"
-                android:letterSpacing="0.14"/>
+                android:letterSpacing="0.12"/>
 
             <TextView
                 android:id="@+id/txtStrikeTitle"
@@ -78,21 +88,22 @@
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12.5sp"
                 android:lineSpacingMultiplier="1.4"
-                android:layout_marginTop="5dp"/>
+                android:layout_marginTop="4dp"/>
 
             <!-- v2.5.4 "Not sensitive" audit report action — own click target,
-                 handler + Toast + explicit dismiss preserved in code. -->
+                 handler + Toast + explicit dismiss + Bug E learn preserved in
+                 code (GuardianAccessibilityService.reportNotSensitive). -->
             <TextView
                 android:id="@+id/btnNotSensitive"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:minHeight="30dp"
+                android:minHeight="32dp"
                 android:gravity="center_vertical"
-                android:paddingVertical="3dp"
+                android:paddingVertical="4dp"
                 android:text="@string/ai_strike_warning_not_sensitive"
                 android:textColor="@color/on_surface_variant"
-                android:textSize="11.5sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02"
                 android:background="@null"

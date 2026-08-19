@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- r2 depth: strike-3 block hero / off state. Deep error container + top-edge
+     light + soft red glow border. Serious, premium — not a generic alert. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270"
+                android:startColor="@color/red_hero_start"
+                android:endColor="@color/red_hero_end"/>
+            <corners android:radius="32dp"/>
+            <stroke android:width="1dp" android:color="@color/glow_error"/>
+        </shape>
+    </item>
+    <item android:gravity="top" android:height="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/edge_highlight"/>
+            <corners android:radius="32dp"/>
+        </shape>
+    </item>
+</layer-list>
