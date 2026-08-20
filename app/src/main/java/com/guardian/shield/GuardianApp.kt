@@ -15,8 +15,13 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.hilt.work.HiltWorkerFactory
 import com.guardian.shield.service.blocker.GuardianForegroundService
+import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.util.GuardianCrashHandler
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -28,6 +33,9 @@ class GuardianApp : Application(), Configuration.Provider {
 
     // PHASE 2 (v3.5.0) — accountability partner observer/notifier.
     @Inject lateinit var accountabilityNotifier: com.guardian.shield.accountability.AccountabilityNotifier
+
+    // v3.6.1 — re-enqueue cooling-off workers after process start / reboot.
+    @Inject lateinit var pendingReportManager: PendingReportManager
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -47,6 +55,13 @@ class GuardianApp : Application(), Configuration.Provider {
         // contact is optional; nothing happens until one is configured).
         runCatching { accountabilityNotifier.start() }
             .onFailure { Timber.e(it, "AccountabilityNotifier start failed") }
+        // WorkManager persists work across reboots, but an explicit
+        // reschedule covers unique-work loss after a custom
+        // Configuration.Provider and clock-skewed initialDelay.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            runCatching { pendingReportManager.rescheduleAllPending() }
+                .onFailure { Timber.e(it, "Failed to reschedule pending cooling-off reports") }
+        }
     }
 
     private fun createNotificationChannels() {

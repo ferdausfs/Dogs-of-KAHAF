@@ -421,6 +421,14 @@
     <string name="cooling_full_block_queued_fmt">রিপোর্ট গ্রহণ করা হয়েছে — আনব্লক %1$s এ কার্যকর হবে। ততক্ষণ ব্লক চালু থাকবে।</string>
     <string name="cooling_cancel">বাতিল</string>
     <string name="cooling_cancelled">বাতিল করা হয়েছে</string>
+    <string name="cooling_enqueue_failed">রিপোর্ট কিউ করা যায়নি — আবার চেষ্টা করুন</string>
+    <string name="cooling_applied_notif_title">ভুল-ব্লক রিপোর্ট কার্যকর হয়েছে</string>
+    <string name="cooling_applied_notif_text">কুলিং-অফ অপেক্ষা শেষ। %1$s-এর প্যাটার্ন মনে রাখা হয়েছে।</string>
+    <string name="overlay_category_ai">প্রাপ্তবয়স্ক কন্টেন্ট • AI ডিটেকশন</string>
+    <string name="overlay_category_keyword">কিওয়ার্ড • %1$s</string>
+    <string name="overlay_category_app">অ্যাপ ব্লক</string>
+    <string name="overlay_category_schedule">সময়সূচী • অনুমোদিত সময়ের বাইরে</string>
+    <string name="overlay_category_generic">ব্লক করা কন্টেন্ট</string>
 
     <!-- TASK B — Pending reports screen -->
     <string name="pending_reports_title">পেন্ডিং রিপোর্ট</string>

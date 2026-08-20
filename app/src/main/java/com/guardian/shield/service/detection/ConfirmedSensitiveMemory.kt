@@ -61,6 +61,7 @@ class ConfirmedSensitiveMemory @Inject constructor(
     private val lock = Any()
     private val signatures = ArrayList<IntArray>()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var persistEpoch = 0
 
     companion object {
         private const val FILE_NAME = "confirmed_sensitive_signatures.dat"
@@ -119,10 +120,15 @@ class ConfirmedSensitiveMemory @Inject constructor(
     fun size(): Int = synchronized(lock) { signatures.size }
 
     private fun save() {
-        // Same discipline as FalsePositiveMemory: snapshot under the lock,
-        // then write off the caller thread (callers are UI-thread tap handlers).
-        val snapshot = synchronized(lock) { ArrayList(signatures) }
+        // Same discipline as FalsePositiveMemory: snapshot at write time
+        // under an epoch so a later add cannot be overwritten by an earlier
+        // in-flight write.
+        val epoch = synchronized(lock) { ++persistEpoch; persistEpoch }
         ioScope.launch {
+            val snapshot = synchronized(lock) {
+                if (epoch != persistEpoch) return@launch
+                ArrayList(signatures)
+            }
             runCatching {
                 val f = File(context.filesDir, FILE_NAME)
                 DataOutputStream(FileOutputStream(f)).use { out ->

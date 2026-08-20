@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.guardian.shield.data.local.db.PendingReportDao
 import com.guardian.shield.data.local.db.PendingReportEntity
+import com.guardian.shield.service.detection.ImageSignature
 import com.guardian.shield.util.GuardianConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,8 @@ import javax.inject.Singleton
  *   2. A WorkManager one-time worker is scheduled for scheduledApplyAt.
  *   3. The user sees honest feedback showing when the action will take effect.
  *   4. The user can cancel pending entries before they apply.
+ *   5. The image signature is snapshotted into the row at enqueue time so
+ *      the worker learns the ORIGINAL pattern (v3.6.1).
  *
  * Escalating delay (rolling 24-hour window per package):
  *   delay(n) = min(BASE * 2^(n-1), MAX)
@@ -65,8 +68,10 @@ class PendingReportManager @Inject constructor(
      *   n=1 → 2h, n=2 → 4h, n=3 → 8h, n=4 → 16h, n=5+ → 24h
      */
     fun computeDelayMs(countInWindow: Int): Long {
-        val n = countInWindow.coerceAtLeast(1)
-        val multiplier = (1L shl (n - 1)).coerceAtLeast(1) // 2^(n-1)
+        // Cap n so `1L shl (n-1)` cannot overflow a Long (n=8 already
+        // overshoots the 24h MAX: 2h * 2^7 = 256h).
+        val n = countInWindow.coerceIn(1, 8)
+        val multiplier = 1L shl (n - 1) // 2^(n-1)
         return (GuardianConstants.COOLING_BASE_DELAY_MS * multiplier)
             .coerceAtMost(GuardianConstants.COOLING_MAX_DELAY_MS)
     }
@@ -79,12 +84,17 @@ class PendingReportManager @Inject constructor(
      * @param confidence the AI confidence score (>= threshold)
      * @param source WARNING_CARD or FULL_BLOCK
      * @param strikeCount the strike count at report time
+     * @param signature the image signature captured at report time (may be
+     *        null if the in-memory candidate did not survive). Persisted so
+     *        the worker can learn THIS pattern hours later instead of
+     *        whatever `pendingCandidate` happens to hold then.
      */
     suspend fun enqueue(
         pkg: String,
         confidence: Float,
         source: String,
-        strikeCount: Int
+        strikeCount: Int,
+        signature: IntArray? = null
     ): EnqueueResult = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val windowStart = now - GuardianConstants.COOLING_WINDOW_MS
@@ -102,7 +112,8 @@ class PendingReportManager @Inject constructor(
             source = source,
             status = Status.PENDING,
             strikeCount = strikeCount,
-            delayMs = delayMs
+            delayMs = delayMs,
+            signatureCsv = signature?.let { ImageSignature.toCsv(it) }.orEmpty()
         )
         val id = pendingReportDao.insert(entity)
         Timber.i(

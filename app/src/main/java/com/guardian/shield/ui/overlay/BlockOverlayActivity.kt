@@ -26,8 +26,11 @@ import com.guardian.shield.util.ReligiousReminders
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -86,11 +89,12 @@ class BlockOverlayActivity : AppCompatActivity() {
         // Premium redesign — additional optional views, safe to ignore if not in binding
         try {
             binding.txtCategory.text = when (reason) {
-                "AI_DETECTION" -> "Adult Content • AI Detection"
-                "KEYWORD_MATCH" -> "Keyword • ${detail.take(20)}"
-                "APP_BLOCKED" -> if (isAiBlock) "Adult Content • AI Detection" else "App Blocked"
-                "SCHEDULE_BLOCKED" -> "Schedule • Outside hours"
-                else -> "Blocked Content"
+                "AI_DETECTION" -> getString(R.string.overlay_category_ai)
+                "KEYWORD_MATCH" -> getString(R.string.overlay_category_keyword, detail.take(20))
+                "APP_BLOCKED" -> if (isAiBlock) getString(R.string.overlay_category_ai)
+                    else getString(R.string.overlay_category_app)
+                "SCHEDULE_BLOCKED" -> getString(R.string.overlay_category_schedule)
+                else -> getString(R.string.overlay_category_generic)
             }
         } catch (_: Throwable) {}
 
@@ -175,14 +179,23 @@ class BlockOverlayActivity : AppCompatActivity() {
                     binding.btnMarkFalse.isEnabled = false
                     binding.btnMarkFalse.text = getString(R.string.cooling_mark_false_queued)
 
+                    // Snapshot the candidate NOW so the worker learns THIS
+                    // pattern hours later, not whatever pendingCandidate holds
+                    // at apply time (and so we don't steal a later card's candidate).
+                    val sig = falsePositiveMemory.takePendingCandidate()
                     workerScope.launch {
                         try {
-                            val result = pendingReportManager.enqueue(
-                                pkg = pkg,
-                                confidence = confidence,
-                                source = PendingReportManager.Source.FULL_BLOCK,
-                                strikeCount = GuardianConstants.STRIKE_THRESHOLD
-                            )
+                            // NonCancellable: persist even if the overlay is
+                            // destroyed (Stay Protected) while enqueue is in flight.
+                            val result = withContext(NonCancellable) {
+                                pendingReportManager.enqueue(
+                                    pkg = pkg,
+                                    confidence = confidence,
+                                    source = PendingReportManager.Source.FULL_BLOCK,
+                                    strikeCount = GuardianConstants.STRIKE_THRESHOLD,
+                                    signature = sig
+                                )
+                            }
                             val applyTime = SimpleDateFormat("HH:mm", Locale.getDefault())
                                 .format(Date(result.scheduledApplyAt))
                             val msg = getString(R.string.cooling_full_block_queued_fmt, applyTime)
@@ -198,9 +211,11 @@ class BlockOverlayActivity : AppCompatActivity() {
                             Timber.i("Mark False HIGH-conf queued: pkg=$pkg delay=${result.delayMs / 60_000}min")
                         } catch (t: Throwable) {
                             Timber.e(t, "Failed to enqueue pending FULL_BLOCK for $pkg")
+                            if (sig != null) falsePositiveMemory.rememberCandidate(sig)
                             runOnUiThread {
                                 binding.btnMarkFalse.isEnabled = true
                                 binding.btnMarkFalse.text = getString(R.string.overlay_mark_false)
+                                Snackbar.make(binding.root, R.string.cooling_enqueue_failed, Snackbar.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -326,6 +341,11 @@ class BlockOverlayActivity : AppCompatActivity() {
                     ?.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
             }
         } catch (_: Throwable) {}
+    }
+
+    override fun onDestroy() {
+        workerScope.cancel()
+        super.onDestroy()
     }
 
     companion object {

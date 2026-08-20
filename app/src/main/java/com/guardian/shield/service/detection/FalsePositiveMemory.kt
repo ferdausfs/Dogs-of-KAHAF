@@ -47,6 +47,7 @@ class FalsePositiveMemory @Inject constructor(
     private val lock = Any()
     private val signatures = ArrayList<IntArray>()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var persistEpoch = 0
 
     // The most recent AI-block candidate (the image that actually caused the
     // block). The block overlay reads this when the user taps "this was wrong".
@@ -136,11 +137,14 @@ class FalsePositiveMemory @Inject constructor(
     fun size(): Int = synchronized(lock) { signatures.size }
 
     private fun save() {
-        // Snapshot under the lock, then write off the caller thread —
-        // addSignature() is invoked from the block overlay's main thread and a
-        // synchronous ~512 KB write there causes jank.
-        val snapshot = synchronized(lock) { ArrayList(signatures) }
+        // Snapshot at write time under an epoch so a later addSignature cannot
+        // have its file overwritten by an earlier in-flight write.
+        val epoch = synchronized(lock) { ++persistEpoch; persistEpoch }
         ioScope.launch {
+            val snapshot = synchronized(lock) {
+                if (epoch != persistEpoch) return@launch
+                ArrayList(signatures)
+            }
             runCatching {
                 val f = File(context.filesDir, FILE_NAME)
                 DataOutputStream(FileOutputStream(f)).use { out ->

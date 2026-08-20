@@ -424,6 +424,14 @@
     <string name="cooling_full_block_queued_fmt">Report accepted — unblock will apply at %1$s. Block stays active until then.</string>
     <string name="cooling_cancel">Cancel</string>
     <string name="cooling_cancelled">Cancelled</string>
+    <string name="cooling_enqueue_failed">Couldn\'t queue the report — try again</string>
+    <string name="cooling_applied_notif_title">False-block report applied</string>
+    <string name="cooling_applied_notif_text">The cooling-off wait ended. Pattern learned for %1$s.</string>
+    <string name="overlay_category_ai">Adult Content • AI Detection</string>
+    <string name="overlay_category_keyword">Keyword • %1$s</string>
+    <string name="overlay_category_app">App Blocked</string>
+    <string name="overlay_category_schedule">Schedule • Outside hours</string>
+    <string name="overlay_category_generic">Blocked Content</string>
 
     <!-- TASK B — Pending reports screen -->
     <string name="pending_reports_title">Pending Reports</string>
