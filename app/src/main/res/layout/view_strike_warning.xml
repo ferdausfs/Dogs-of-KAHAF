@@ -14,6 +14,7 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardStrikeWarning"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -91,6 +92,22 @@
                     android:lineSpacingMultiplier="1.4"
                     android:layout_marginTop="4dp"/>
             </LinearLayout>
+
+            <!-- TASK A — AI confidence badge (e.g. "AI • 0.87") -->
+            <TextView
+                android:id="@+id/txtConfidenceBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge"
+                android:backgroundTint="@color/badge_ai_bg"
+                android:textColor="@color/ai_accent"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:visibility="gone"
+                tools:text="AI • 0.87"
+                tools:visibility="visible"/>
         </LinearLayout>
 
         <!-- Ayat block: Arabic (RTL) + Bengali (LTR) + citation -->

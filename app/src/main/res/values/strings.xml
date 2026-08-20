@@ -322,4 +322,26 @@
     <string name="reel_subtitle">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</string>
     <string name="reel_open_quran">📖 কুরআন অ্যাপ খুলুন</string>
     <string name="reel_continue">এখন নয়, ফিরে যাই</string>
+
+    <!-- TASK A — AI confidence badge format (e.g. "AI • 0.87") -->
+    <string name="ai_confidence_badge_fmt">AI • %1$.2f</string>
+
+    <!-- TASK B — Cooling-off system messages (English fallback; primary is Bengali) -->
+    <string name="cooling_queued_fmt">Report accepted — will apply at %1$s. You can cancel before then.</string>
+    <string name="cooling_mark_false_queued">Queued — high confidence</string>
+    <string name="cooling_full_block_queued_fmt">Report accepted — unblock will apply at %1$s. Block stays active until then.</string>
+    <string name="cooling_cancel">Cancel</string>
+    <string name="cooling_cancelled">Cancelled</string>
+
+    <!-- TASK B — Pending reports screen -->
+    <string name="pending_reports_title">Pending Reports</string>
+    <string name="pending_reports_empty">No pending reports</string>
+    <string name="pending_reports_subtitle">High-confidence reports waiting for their cooling-off period to end</string>
+    <string name="pending_report_item_fmt">%1$s\nAI confidence: %2$.2f\nApplies at: %3$s\nRemaining: %4$s</string>
+    <string name="pending_report_source_warning">Warning card report</string>
+    <string name="pending_report_source_full">Full block report</string>
+    <string name="pending_report_cancel_btn">Cancel Report</string>
+    <string name="pending_report_cancelled_msg">Report cancelled — action will not apply</string>
+    <string name="pending_remaining_fmt">%1$d min remaining</string>
+    <string name="open_pending_reports">Pending Reports · %1$d</string>
 </resources>

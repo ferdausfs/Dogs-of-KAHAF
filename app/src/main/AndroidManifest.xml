@@ -132,6 +132,12 @@
             android:exported="false"
             android:parentActivityName=".ui.dashboard.MainActivity"/>
 
+        <!-- TASK B: Pending reports (cooling-off queue viewer) -->
+        <activity
+            android:name=".ui.pending.PendingReportsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
         <!-- TASK 2: Islamic reminder overlay for reel/short addiction -->
         <activity
             android:name=".ui.overlay.ReelReminderActivity"

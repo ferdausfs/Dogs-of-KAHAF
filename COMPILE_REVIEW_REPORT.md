@@ -2315,3 +2315,370 @@ push to `main`. Green signed APK + GitHub Release publish when the PR merges.
 - [x] Inter-strike gate is `isWarningCardShowing`, not a duration
 - [x] STRIKE_THRESHOLD / RESET / ESCALATION / strike-3 apply / Bug B/E / Bug D untouched
 - [x] Version bumped past published v3.2.1; v3.3.0 tag free
+
+---
+
+# 2026-08-20 Session — Task A (Confidence Threading) + Task B (Cooling-Off System)
+
+## 1) OBJECTIVE
+
+Thread the AI detection confidence score through the entire pipeline (currently
+computed in AiDetector but discarded after the threshold check) and add a
+confidence-based cooling-off gate to both "Not sensitive" (strike 1/2) and
+"Mark False" (strike 3) report handlers.
+
+**User need (commitment device):** Most "not sensitive" reports are genuine false
+positives (AI misfired on borderline content — low confidence), but sometimes the
+user reports impulsively to bypass a correct high-confidence block and regrets it.
+Use the AI confidence to distinguish: LOW confidence → act instantly (existing
+behavior); HIGH confidence → cooling-off delay with escalating duration.
+
+## 2) TASK A — CONFIDENCE THREADING (code trace)
+
+### 2.1) Score capture in AiDetector
+
+**File:** `AiDetector.kt` (line ~`@Volatile var lastDetectionScore`)
+**Change:** Added `lastDetectionScore: Float = -1f` field. Set inside `isUnsafe()`
+immediately after `extractGuardianScore(fullOut)` computes the value:
+
+```kotlin
+val fullScore = extractGuardianScore(fullOut)
+lastDetectionScore = fullScore  // ← TASK A: persist for callers
+```
+
+**Trace verification:**
+- `isUnsafe()` computes `fullScore` from raw model output via `extractGuardianScore()`
+- `fullScore` is the Guardian score (0..1) — the same value used for the threshold
+  check. Stored in `lastDetectionScore` before any early-return paths.
+- `-1f` sentinel = no inference ran (model not loaded, image too simple, etc.)
+
+### 2.2) Score capture at AI entry points in GuardianAccessibilityService
+
+**Entry point 1 — content-aware region scan** (~line 904):
+```kotlin
+if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
+    val conf = aiDetector.lastDetectionScore  // ← captured immediately
+    falsePositiveMemory.rememberCandidate(...)
+    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-legacy", conf)
+```
+
+**Entry point 2 — full-frame scan** (~line 977):
+```kotlin
+if (aiDetector.isUnsafe(b)) {
+    val conf = aiDetector.lastDetectionScore  // ← captured immediately
+    falsePositiveMemory.rememberCandidate(...)
+    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy", conf)
+```
+
+### 2.3) Threading through TempBlockManager → BlockingEngine → overlay
+
+**TempBlockManager.recordAiDetection()**: New `confidence: Float = -1f` parameter.
+Stores in `lastStrikeConfidence` (new `@Volatile` field). Existing strike logic
+untouched.
+
+**BlockingEngine.evaluateAiStrike()**: Passes confidence to
+`tempBlockManager.recordAiDetection()`.
+
+**BlockingEngine.block()**: New `confidence: Float = -1f` parameter. Passes to
+`launchOverlay()`.
+
+**BlockingEngine.launchOverlay()**: Adds `EXTRA_CONFIDENCE` float to the Intent
+that starts `BlockOverlayActivity`.
+
+### 2.4) Badge display
+
+**Strike-1/2 warning card** (`view_strike_warning.xml`): New `txtConfidenceBadge`
+TextView (hidden by default, shown when confidence >= 0). Format: "AI • 0.87"
+using existing `bg_badge` drawable + `badge_ai_bg` tint + `ai_accent` text color
+(matching the existing design token system).
+
+**Strike-3 full block** (`activity_block_overlay.xml`): New `txtConfidenceBadge`
+in a LinearLayout alongside the package pill. Same visual treatment.
+
+**GuardianAccessibilityService.showStrikeWarningOverlay()**: Reads confidence,
+sets badge text:
+```kotlin
+if (confidence >= 0f) {
+    badgeView.text = getString(R.string.ai_confidence_badge_fmt, confidence)
+    badgeView.visibility = View.VISIBLE
+}
+```
+
+**BlockOverlayActivity.onCreate()**: Same pattern, gated on `isAiBlock && confidence >= 0f`.
+
+### 2.5) Complete data flow trace
+
+```
+AiDetector.isUnsafe()
+  → fullScore = extractGuardianScore(rawOutput)
+  → lastDetectionScore = fullScore
+    ↓
+GuardianAccessibilityService (content-aware OR full-frame scan)
+  → conf = aiDetector.lastDetectionScore
+  → goHomeAndBlock(pkg, AI_DETECTION, detail, conf)
+    ├─→ blockingEngine.evaluateAiStrike(pkg, conf)
+    │     → tempBlockManager.recordAiDetection(pkg, duration, conf)
+    │       → lastStrikeConfidence = conf
+    │     → returns StrikeCounted(n) OR Blocked(detail)
+    │
+    ├─→ [StrikeCounted] → showAiStrikeWarning(pkg, n, conf)
+    │     → showStrikeWarningOverlay(pkg, n, conf)
+    │       → txtConfidenceBadge = "AI • 0.XX"  [TASK A badge on warning card]
+    │
+    └─→ [Blocked] → blockingEngine.block(pkg, AI_DETECTION, detail, conf)
+          → launchOverlay(pkg, reason, detail, conf)
+            → Intent.putExtra(EXTRA_CONFIDENCE, conf)
+              → BlockOverlayActivity.onCreate()
+                → txtConfidenceBadge = "AI • 0.XX"  [TASK A badge on full block]
+```
+
+## 3) TASK B — COOLING-OFF SYSTEM
+
+### 3.1) Threshold and constants
+
+**File:** `GuardianConstants.kt`
+```kotlin
+const val CONFIDENCE_THRESHOLD = 0.82f        // HIGH vs LOW boundary
+const val COOLING_BASE_DELAY_MS = 2L * 60 * 60 * 1000    // 2 hours (1st report)
+const val COOLING_MAX_DELAY_MS = 24L * 60 * 60 * 1000    // 24 hours (cap)
+const val COOLING_WINDOW_MS = 24L * 60 * 60 * 1000       // rolling window
+```
+
+**Escalation formula:** `delay(n) = min(BASE × 2^(n−1), MAX)`
+- n=1 → 2h, n=2 → 4h, n=3 → 8h, n=4 → 16h, n=5+ → 24h (capped)
+
+**Design choice:** Rolling 24-hour window **per package**. Rationale: the
+suspicious pattern ("I keep reporting high-confidence blocks as not sensitive")
+is app-specific — the user might legitimately report a different app's
+high-confidence block while being impulsive about one specific app.
+
+### 3.2) Persistence layer
+
+**New Room entity** (`Entities.kt`): `PendingReportEntity`
+- `id` (PK, auto-increment)
+- `packageName: String`
+- `timestampCreated: Long`
+- `scheduledApplyAt: Long`
+- `confidence: Float`
+- `source: String` ("WARNING_CARD" or "FULL_BLOCK")
+- `status: String` ("PENDING", "APPLIED", "CANCELLED")
+- `strikeCount: Int`
+- `delayMs: Long`
+
+**New DAO** (`Daos.kt`): `PendingReportDao`
+- `observePending()`: Flow of PENDING rows
+- `countHighConfSince(pkg, since)`: for escalation computation
+- `insert()`, `updateStatus()`, `cancel()`, `purgeOld()`
+
+**Database migration** (`GuardianDatabase.kt`): Version 2→3, creates
+`pending_reports` table. DI module updated with `MIGRATION_2_3`.
+
+### 3.3) PendingReportManager
+
+**File:** `PendingReportManager.kt` (new, `@Singleton`, `@Inject`)
+
+Key methods:
+- `isHighConfidence(confidence)`: returns `confidence >= CONFIDENCE_THRESHOLD`
+- `computeDelayMs(countInWindow)`: implements the escalation formula
+- `enqueue(pkg, confidence, source, strikeCount)`: computes delay, inserts
+  PENDING row, schedules WorkManager one-time work
+- `cancel(id)`: marks CANCELLED + cancels WorkManager work
+- `markApplied(id)`: marks APPLIED (called by worker)
+- `observePending()`: Flow for the UI
+
+### 3.4) ApplyPendingReportWorker
+
+**File:** `ApplyPendingReportWorker.kt` (new, `@HiltWorker`, `CoroutineWorker`)
+
+Fires at `scheduledApplyAt`. Reads the PENDING row, applies the deferred action:
+- `WARNING_CARD` → `cancelLastStrike()` + `addSignature()` (same as LOW-conf instant path)
+- `FULL_BLOCK` → `clearTempBlock()` + `addSignature()` + relaunch app
+  (Bug D's guarantee preserved: clearTempBlock runs unconditionally)
+
+Marks the row as APPLIED.
+
+### 3.5) Branching in report handlers
+
+**"Not sensitive" handler** (`GuardianAccessibilityService.reportNotSensitive()`):
+```kotlin
+if (pendingReportManager.isHighConfidence(confidence)) {
+    // HIGH → defer via cooling-off queue
+    ioScope.launch {
+        val result = pendingReportManager.enqueue(pkg, confidence, WARNING_CARD, strikeCount)
+        // Show Toast: "রিপোর্ট গ্রহণ করা হয়েছে — HH:MM এ কার্যকর হবে"
+    }
+    // Strike NOT cancelled yet; card dismissed; gate reopened
+} else {
+    // LOW → apply immediately (existing behavior)
+    blockingEngine.cancelLastStrike(pkg)
+    falsePositiveMemory.addSignature(sig)  // best-effort learning
+}
+```
+
+**"Mark False" handler** (`BlockOverlayActivity.onCreate()`):
+```kotlin
+if (pendingReportManager.isHighConfidence(confidence)) {
+    // HIGH → defer; block screen stays; show cooling status text
+    pendingReportManager.enqueue(pkg, confidence, FULL_BLOCK, strikeCount)
+    binding.txtCoolingStatus.text = "রিপোর্ট গ্রহণ করা হয়েছে — আনব্লক HH:MM এ কার্যকর হবে"
+    binding.txtCoolingStatus.visibility = View.VISIBLE
+    binding.btnMarkFalse.isEnabled = false
+    // App stays blocked until delay expires or user cancels
+} else {
+    // LOW → apply immediately (existing Bug D behavior preserved)
+    tempBlockManager.clearTempBlock(pkg)
+    falsePositiveMemory.addSignature(sig)  // best-effort
+    relaunchBlockedApp(pkg)
+}
+```
+
+### 3.6) Cancellation UI
+
+**New activity:** `PendingReportsActivity` (`ui/pending/PendingReportsActivity.kt`)
+- RecyclerView of pending entries
+- Each row shows: package name, source badge, confidence badge, remaining time
+- Cancel button → `pendingReportManager.cancel(id)` → marks CANCELLED +
+  cancels WorkManager work → prevents the deferred action from firing
+- Empty state when no pending entries
+
+**Launched from:** Settings screen → new "Pending Reports" button
+(`btnPendingReports` in `activity_settings.xml`)
+
+### 3.7) Four flow traces
+
+**LOW-confidence "Not sensitive"** (strike 1/2):
+```
+reportNotSensitive(pkg, strikeCount, conf=0.5)
+  → isHighConfidence(0.5) = false
+  → cancelLastStrike(pkg) ← IMMEDIATE
+  → addSignature(sig) ← IMMEDIATE
+  → Toast "Reported" ← existing behavior unchanged
+```
+
+**HIGH-confidence "Not sensitive"** (strike 1/2):
+```
+reportNotSensitive(pkg, strikeCount, conf=0.91)
+  → isHighConfidence(0.91) = true
+  → pendingReportManager.enqueue(pkg, 0.91, WARNING_CARD, strikeCount)
+    → computeDelayMs(1) = 2h (1st in window)
+    → INSERT pending_reports (status=PENDING, scheduledApplyAt=now+2h)
+    → WorkManager.schedule(applyAt=now+2h)
+  → Toast "Report accepted — will apply at HH:MM"
+  → Strike NOT cancelled yet (will be when worker fires)
+  → Card dismissed, gate reopened
+```
+
+**LOW-confidence "Mark False"** (strike 3):
+```
+Mark False click (conf=0.45)
+  → isHighConfidence(0.45) = false
+  → clearTempBlock(pkg) ← IMMEDIATE (Bug D preserved)
+  → addSignature(sig) ← IMMEDIATE
+  → relaunchBlockedApp(pkg) ← IMMEDIATE
+  → existing behavior completely unchanged
+```
+
+**HIGH-confidence "Mark False"** (strike 3):
+```
+Mark False click (conf=0.93)
+  → isHighConfidence(0.93) = true
+  → pendingReportManager.enqueue(pkg, 0.93, FULL_BLOCK, threshold)
+    → computeDelayMs(1) = 2h (1st in window for this pkg)
+    → INSERT pending_reports (status=PENDING)
+    → WorkManager.schedule(applyAt=now+2h)
+  → btnMarkFalse disabled, text = "Queued — high confidence"
+  → txtCoolingStatus shown: "Report accepted — unblock will apply at HH:MM"
+  → Block screen stays visible; app stays blocked
+  → At HH:MM, worker fires → clearTempBlock + addSignature + relaunch
+```
+
+### 3.8) Escalation verification
+
+```
+Package: com.instagram.android
+Rolling 24h window:
+  Report 1 (10:00): countInWindow=0 → n=1 → delay = min(2h × 2^0, 24h) = 2h  → apply at 12:00
+  Report 2 (11:00): countInWindow=1 → n=2 → delay = min(2h × 2^1, 24h) = 4h  → apply at 15:00
+  Report 3 (12:30): countInWindow=2 → n=3 → delay = min(2h × 2^2, 24h) = 8h  → apply at 20:30
+  Report 4 (14:00): countInWindow=3 → n=4 → delay = min(2h × 2^3, 24h) = 16h → apply at 06:00+1
+  Report 5 (15:00): countInWindow=4 → n=5 → delay = min(2h × 2^4, 24h) = 24h → apply at 15:00+1
+  Report 6 (16:00): countInWindow=5 → n=6 → delay = min(2h × 2^5, 24h) = 24h → apply at 16:00+1
+```
+
+Monotonically increasing ✓, capped at 24h ✓, per-package rolling window ✓.
+
+## 4) FILES CHANGED
+
+| File | Change |
+|------|--------|
+| `AiDetector.kt` | Added `lastDetectionScore` field; set in `isUnsafe()` |
+| `GuardianAccessibilityService.kt` | Read score at 2 AI entry points; thread through `goHomeAndBlock` → `showAiStrikeWarning` → `showStrikeWarningOverlay`; `reportNotSensitive()` confidence branching; inject `PendingReportManager` |
+| `TempBlockManager.kt` | Added `lastStrikeConfidence` field; `recordAiDetection()` accepts confidence |
+| `BlockingEngine.kt` | Thread confidence through `evaluateAiStrike()`, `block()`, `launchOverlay()`; add `EXTRA_CONFIDENCE` to overlay Intent |
+| `BlockOverlayActivity.kt` | Read `EXTRA_CONFIDENCE`; display badge; Task B branching on "Mark False" |
+| `GuardianConstants.kt` | Added `CONFIDENCE_THRESHOLD`, `COOLING_BASE_DELAY_MS`, `COOLING_MAX_DELAY_MS`, `COOLING_WINDOW_MS` |
+| `Entities.kt` | Added `PendingReportEntity` |
+| `Daos.kt` | Added `PendingReportDao` |
+| `GuardianDatabase.kt` | Version 2→3; `MIGRATION_2_3`; add `pendingReportDao()` |
+| `AppModule.kt` (DI) | Add `MIGRATION_2_3`; provide `pendingReportDao` |
+| `GuardianApp.kt` | Implement `Configuration.Provider` for `HiltWorkerFactory` |
+| `build.gradle.kts` | Add `hilt-work` + `hilt-compiler`; version bump 3.3.0→3.4.0 (v27→v28) |
+| `AndroidManifest.xml` | Declare `PendingReportsActivity` |
+| `view_strike_warning.xml` | Add `txtConfidenceBadge` |
+| `activity_block_overlay.xml` | Add `txtConfidenceBadge` + `txtCoolingStatus` |
+| `activity_settings.xml` | Add `btnPendingReports` |
+| `SettingsActivity.kt` | Wire `btnPendingReports` click |
+| `strings.xml` + `values-bn/strings.xml` | New strings for badges, cooling messages, pending reports UI |
+| **NEW** `PendingReportManager.kt` | Cooling-off queue logic |
+| **NEW** `ApplyPendingReportWorker.kt` | Deferred action applier (HiltWorker) |
+| **NEW** `PendingReportsActivity.kt` | Pending reports viewer + adapter |
+| **NEW** `activity_pending_reports.xml` | Layout for pending reports screen |
+| **NEW** `item_pending_report.xml` | Layout for pending report row |
+
+## 5) UNTOUCHED CORE LOGIC (verification)
+
+- `STRIKE_THRESHOLD = 3` — **unchanged** ✓
+- `STRIKE_RESET_MS = 10 min` — **unchanged** ✓
+- `ESCALATION_WINDOW_MS = 2h`, `ESCALATION_THRESHOLD = 3`, `DAY_BLOCK_MS = 24h` — **unchanged** ✓
+- `AiDetector.isUnsafe()` threshold/grid logic — **unchanged** (only added `lastDetectionScore = fullScore` after the existing score computation) ✓
+- `TempBlockManager.recordAiDetection()` strike counting — **unchanged** (only added `lastStrikeConfidence = confidence` at entry) ✓
+- Bug D (unconditional `clearTempBlock` + `relaunchBlockedApp` on LOW-confidence "Mark False") — **preserved** ✓
+- Bug B (`cancelLastStrike` on "Not sensitive") — **preserved for LOW confidence** ✓
+- Bug E (`addSignature` on "Not sensitive") — **preserved for LOW confidence** ✓
+- Strike-1/2 warning card dismiss contract (user-driven + 40s safety fallback) — **unchanged** ✓
+- Post-block grace period — **unchanged** ✓
+
+## 6) BUILD STATUS
+
+**Note:** Java/Android SDK not available in the sandbox environment. The code has
+been verified through:
+- Brace/paren balance checks on all modified Kotlin files (all balanced)
+- Import verification (all new types imported where used)
+- Layout XML structure review
+- Database migration SQL correctness
+- Hilt dependency graph consistency (@Singleton → @Inject chain)
+
+**CI will build** on push to the branch. Expected:
+- Tag: **`v3.4.0`**, Release: **Guardian Shield v3.4.0**
+- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.4.0/app-release.apk
+
+## 7) COMPLIANCE CHECKLIST
+
+- [x] Confidence score captured at the moment of detection (not reconstructed)
+- [x] Score threaded through TempBlockManager (not an untracked side variable)
+- [x] Score passed via Intent extras to BlockOverlayActivity
+- [x] Score displayed as badge on BOTH strike-1/2 card and strike-3 full block
+- [x] 0.82 threshold is a named constant (not magic number)
+- [x] 2-hour base delay is a named constant (not magic number)
+- [x] Escalating delay: monotonically increasing, capped at 24h
+- [x] Both "Not sensitive" and "Mark False" are gated
+- [x] LOW confidence: instant behavior unchanged for both handlers
+- [x] HIGH confidence: honest user feedback (not silent no-op)
+- [x] Bug D preserved: LOW-conf "Mark False" → unconditional clearTempBlock + relaunch
+- [x] Strike-3 HIGH-conf "Mark False": block screen shows delay messaging, stays blocked
+- [x] PendingReportEntity persists across process death (Room, not in-memory)
+- [x] WorkManager scheduling survives app restart
+- [x] Cancellation UI exists and prevents scheduled action
+- [x] STRIKE_THRESHOLD / STRIKE_RESET_MS / ESCALATION_* untouched
+- [x] AI detection/strike-counting core logic untouched
+- [x] Version bumped to 3.4.0 (v28) past published v3.3.0

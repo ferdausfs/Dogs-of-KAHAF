@@ -72,19 +72,41 @@
             android:textSize="13.5sp" android:lineSpacingMultiplier="1.45"
             android:gravity="center"/>
 
-        <!-- package pill -->
-        <TextView
-            android:id="@+id/txtPackage"
+        <!-- package pill + TASK A confidence badge -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_badge"
-            android:backgroundTint="@color/badge_neutral_bg"
-            android:fontFamily="monospace"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="11sp"
-            android:paddingHorizontal="12dp" android:paddingVertical="6dp"
-            tools:text="com.instagram.android"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="14dp">
+            <TextView
+                android:id="@+id/txtPackage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge"
+                android:backgroundTint="@color/badge_neutral_bg"
+                android:fontFamily="monospace"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="11sp"
+                android:paddingHorizontal="12dp" android:paddingVertical="6dp"
+                tools:text="com.instagram.android"/>
+            <!-- TASK A — AI confidence badge (e.g. "AI • 0.87") -->
+            <TextView
+                android:id="@+id/txtConfidenceBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_badge"
+                android:backgroundTint="@color/badge_ai_bg"
+                android:textColor="@color/ai_accent"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:visibility="gone"
+                tools:text="AI • 0.87"
+                tools:visibility="visible"/>
+        </LinearLayout>
 
         <!-- temp-block banner (temp-block case only) -->
         <LinearLayout
@@ -244,6 +266,23 @@
             android:layout_height="54dp"
             android:layout_marginTop="10dp"
             android:text="@string/overlay_request_unlock"/>
+
+        <!-- TASK B — cooling-off status message shown when "Mark False" is deferred -->
+        <TextView
+            android:id="@+id/txtCoolingStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_reason_sheet"
+            android:padding="12dp"
+            android:gravity="center"
+            android:textColor="@color/warning_amber"
+            android:textSize="12.5sp"
+            android:textStyle="bold"
+            android:lineSpacingMultiplier="1.35"
+            android:visibility="gone"
+            tools:text="রিপোর্ট গ্রহণ করা হয়েছে — 14:30 এ কার্যকর হবে"
+            tools:visibility="gone"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMarkFalse"

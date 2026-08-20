@@ -41,3 +41,28 @@ data class ScheduleRuleEntity(
     val enabled: Boolean,
     val createdAt: Long
 )
+
+// TASK B — Pending reports for the confidence-based cooling-off system.
+// When a HIGH-confidence AI detection (>= CONFIDENCE_THRESHOLD) is reported as
+// "Not sensitive" (strike 1/2) or "Mark False" (strike 3 full-block), the
+// unblock action is NOT applied immediately. Instead a PENDING row is inserted
+// here with a scheduledApplyAt timestamp. A WorkManager worker fires at that
+// time and applies the deferred action (cancelLastStrike + addSignature for
+// WARNING_CARD; clearTempBlock + addSignature + relaunch for FULL_BLOCK).
+// The user can view and cancel pending entries before they apply.
+@Entity(tableName = "pending_reports")
+data class PendingReportEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val packageName: String,
+    val timestampCreated: Long,
+    val scheduledApplyAt: Long,
+    val confidence: Float,
+    // "WARNING_CARD" (strike 1/2 "Not sensitive") or "FULL_BLOCK" (strike 3 "Mark False")
+    val source: String,
+    // "PENDING", "APPLIED", "CANCELLED"
+    val status: String,
+    // Strike count at the time of the report (for logging/display)
+    val strikeCount: Int = 0,
+    // Delay in ms that was computed for this report (for display)
+    val delayMs: Long = 0
+)
