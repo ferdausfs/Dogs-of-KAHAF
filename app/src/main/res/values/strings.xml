@@ -192,6 +192,9 @@
     <string name="reason_tamper">Tamper Attempt</string>
     <string name="tamper_notif_title">⚠️ Tampering Detected</string>
     <string name="tamper_notif_text">Attempt: %1$s</string>
+    <!-- v3.5.0 Phase 1a — device-admin revocation re-request -->
+    <string name="admin_revoked_notif_title">🛡️ Device Admin turned off</string>
+    <string name="admin_revoked_notif_text">Guardian Shield এর সুরক্ষা দুর্বল হয়ে গেছে — Tap করুন আবার চালু করতে</string>
     <string name="overlay_reason_tamper">⚠️ Tampering attempt detected! Changing settings is forbidden while a Commitment Lock is active.</string>
     <string name="overlay_temp_block_fmt">🚫 Blocked for %1$s</string>
     <string name="overlay_dur_short">a short while</string>
@@ -297,7 +300,48 @@
     <!-- WATCHTOWER V3 PIN copy -->
     <string name="pin_unlock">Unlock · আনলক</string>
     <string name="pin_lock_sub">পিন দিন · Guardian Shield is locked</string>
-    <string name="pin_forgot_note">Forgot PIN? Reinstall is required to reset</string>
+    <string name="pin_forgot_note">Forgot PIN? See recovery options</string>
+
+    <!-- PHASE 1c (v3.5.0) — PIN recovery (deliberately non-trivial) -->
+    <string name="recovery_title">PIN Recovery</string>
+    <string name="recovery_subtitle">There is deliberately no instant reset — this is a commitment device. Two paths exist, both intentionally slow.</string>
+    <string name="recovery_code_section">Path 1 — Recovery code</string>
+    <string name="recovery_code_hint">XXXX-XXXX-XXXX</string>
+    <string name="recovery_code_btn">Verify code and reset</string>
+    <string name="recovery_reset_section">Path 2 — Time-delayed reset (48 hours)</string>
+    <string name="recovery_reset_start">Start the 48-hour reset</string>
+    <string name="recovery_reset_complete">Reset PIN now</string>
+    <string name="recovery_reset_cancel">Cancel reset (requires PIN)</string>
+    <string name="recovery_back">Back</string>
+    <string name="recovery_warning_banner">⚠️ Your PIN can be reset without reinstalling — but never instantly. Recovery is slow on purpose: that slowness is what makes the commitment work.</string>
+    <string name="recovery_code_wrong_fmt">Wrong code — %1$d attempts left</string>
+    <string name="recovery_code_wrong_generic">Wrong code</string>
+    <string name="recovery_code_locked_fmt">Too many attempts — try again in %1$d minutes</string>
+    <string name="recovery_code_not_set">No recovery code is set — use the time-delayed reset</string>
+    <string name="recovery_reset_idle">No reset is running</string>
+    <string name="recovery_reset_idle_detail">Once started, you must wait the full 48 hours. A persistent warning notification stays visible the whole time.</string>
+    <string name="recovery_reset_running_fmt">Reset running — %1$s left</string>
+    <string name="recovery_reset_running_detail">When the wait ends you can reset here. If you remember your PIN, cancel with it below.</string>
+    <string name="recovery_reset_ready">48 hours over — reset is ready</string>
+    <string name="recovery_reset_ready_detail">The waiting period has elapsed. You can now clear the old PIN and set a new one.</string>
+    <string name="recovery_reset_cancelled">Time-delayed reset cancelled</string>
+    <string name="recovery_reset_confirm_title">Start the 48-hour reset?</string>
+    <string name="recovery_reset_confirm_msg">Once started, resetting your PIN takes the full 48 hours. A persistent warning notification stays visible the whole time, and cancelling requires your PIN.</string>
+    <string name="recovery_reset_confirm_yes">Yes, start it</string>
+    <string name="recovery_reset_finish_title">Confirm PIN reset</string>
+    <string name="recovery_reset_finish_msg">The old PIN and the old recovery code will be erased. You will then set a new PIN and receive a new recovery code.</string>
+    <string name="recovery_reveal_title">Save your recovery code</string>
+    <string name="recovery_reveal_body">If you ever forget your PIN, this code is the fast way back in. It is shown exactly once and is NOT stored searchable inside the app — write it down and keep it somewhere safe.</string>
+    <string name="recovery_reveal_hint">Do not screenshot — write it on paper</string>
+    <string name="recovery_copy">Copy code</string>
+    <string name="recovery_code_copied">Code copied — store it somewhere safe now</string>
+    <string name="recovery_saved_confirm">I wrote the code down somewhere safe</string>
+    <string name="recovery_continue">Continue</string>
+    <string name="recovery_save_first_warning">⚠️ Without the saved code, a future reset takes 48 hours — save the code first</string>
+    <string name="pin_reset_pending_notif_title">🕒 PIN reset countdown running</string>
+    <string name="pin_reset_pending_notif_text">Reset becomes possible: %1$s — tap to cancel (PIN required)</string>
+    <string name="pin_reset_ready_notif_title">⏰ PIN reset is ready</string>
+    <string name="pin_reset_ready_notif_text">The 48-hour wait is over — tap to finish the reset</string>
     <!-- WATCHTOWER V3 permissions + onboarding copy -->
     <string name="perm_accessibility_sub">core engine · এক্সেসিবিলিটি সার্ভিস</string>
     <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>

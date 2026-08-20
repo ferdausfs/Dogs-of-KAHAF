@@ -110,6 +110,11 @@
             android:name=".ui.setup.PinVerifyActivity"
             android:exported="false"/>
 
+        <!-- PHASE 1c (v3.5.0): deliberately non-trivial PIN recovery -->
+        <activity
+            android:name=".ui.setup.PinRecoveryActivity"
+            android:exported="false"/>
+
         <activity
             android:name=".ui.unlock.DelayUnlockActivity"
             android:exported="false"

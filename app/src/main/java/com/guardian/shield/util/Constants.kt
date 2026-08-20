@@ -27,6 +27,14 @@ object GuardianConstants {
     const val AI_DETECTOR_CLOSE_TIMEOUT_MS = 2_000L
     const val PIN_MAX_ATTEMPTS = 5
     const val PIN_LOCKOUT_MS = 30_000L
+
+    // PHASE 1c (v3.5.0) — PIN recovery. This is a commitment device, so
+    // recovery is deliberately non-trivial (same spirit as the cooling-off
+    // system): (a) a one-time recovery code captured outside the app, or
+    // (b) a long time-delayed reset with a persistent warning notification.
+    const val PIN_RESET_DELAY_MS = 48L * 60 * 60 * 1_000L   // 48 hours
+    const val PIN_RECOVERY_MAX_ATTEMPTS = 5
+    const val PIN_RECOVERY_LOCKOUT_MS = 30L * 60 * 1_000L   // 30 minutes
     const val MAX_NODES_BFS = 250
 
     // TASK 3 — AI detection strike rules
@@ -58,6 +66,11 @@ object GuardianConstants {
     const val POST_BLOCK_GRACE_MS = 3 * 60 * 1_000L       // 3 minutes
 
     const val ACCESSIBILITY_WATCHDOG_MS = 5_000L
+
+    // PHASE 1a (v3.5.0) — device-admin revocation watch. While the admin stays
+    // revoked the re-grant notification re-fires at most this often (state
+    // transitions always notify immediately).
+    const val DEVICE_ADMIN_RECHECK_MS = 2L * 60 * 60 * 1_000L  // 2 hours
 
     // Liveness heartbeat from the accessibility service (produced) read by the
     // foreground service watchdog (consumed). If no beat for this long the

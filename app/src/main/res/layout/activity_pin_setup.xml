@@ -1,19 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- ONE SHIELD (One UI 8, color rev r2) — PIN setup.
      Was: WATCHTOWER V3 (beacon halo + wide OK pill below the grid).
-     Now matches guardian-redesign/mocks/oneui8/pin.html: centered 34sp title,
+     Matches guardian-redesign/mocks/oneui8/pin.html: centered 34sp title,
      14sp subtitle, 14dp dots, keypad in the lower third with the mock grid
      order (1..9, backspace, 0, accent OK key).
+     v3.5.0 Phase 1c: after a successful set the one-time recovery code is
+     revealed in recoveryPanel (mock pin-recovery.html frame A) — the panel
+     that must be confirmed ("I wrote it down") before the screen closes.
      Bindings preserved: txtPrompt dot1-6 btn0-9 btnDel btnOk (same classes;
      btnOk moved into the grid as a PinDigit key). -->
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:background="@color/bg_main"
-    android:paddingHorizontal="34dp">
+    android:background="@color/bg_main">
+
+    <LinearLayout
+        android:id="@+id/setupPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="34dp">
 
     <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.55"/>
 
@@ -71,4 +80,114 @@
     </GridLayout>
 
     <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.35"/>
-</LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== v3.5.0 Phase 1c — recovery-code reveal (mock frame A) ===== -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/recoveryPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:overScrollMode="never"
+        android:background="@color/bg_main">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="48dp"
+            android:paddingBottom="32dp">
+
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_icon_well"
+                android:backgroundTint="@color/warning_container">
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_lock"
+                    app:tint="@color/warning_amber"
+                    android:contentDescription="@null"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/recovery_reveal_title"
+                android:textColor="@color/on_surface"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:gravity="center"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxWidth="300dp"
+                android:text="@string/recovery_reveal_body"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13.5sp"
+                android:lineSpacingMultiplier="1.5"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/txtRecoveryCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_badge"
+                android:backgroundTint="@color/warning_container"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="12dp"
+                android:fontFamily="monospace"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14"
+                android:textColor="@color/warning_amber"
+                android:textIsSelectable="true"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/recovery_reveal_hint"
+                android:textColor="@color/on_surface_dim"
+                android:textSize="12sp"
+                android:gravity="center"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopyCode"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="20dp"
+                android:text="@string/recovery_copy"
+                app:icon="@drawable/ic_export"
+                app:iconTint="@color/on_surface"
+                style="@style/Widget.GuardianShield.Button.Tonal"/>
+
+            <CheckBox
+                android:id="@+id/chkCodeSaved"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:paddingStart="4dp"
+                android:text="@string/recovery_saved_confirm"
+                android:textColor="@color/on_surface"
+                android:textSize="14sp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRecoveryContinue"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/recovery_continue"
+                android:enabled="false"
+                style="@style/Widget.GuardianShield.Button"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</FrameLayout>

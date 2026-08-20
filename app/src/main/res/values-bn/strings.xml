@@ -189,6 +189,9 @@
     <string name="reason_tamper">ট্যাম্পারিং চেষ্টা</string>
     <string name="tamper_notif_title">⚠️ ট্যাম্পারিং সনাক্ত হয়েছে</string>
     <string name="tamper_notif_text">চেষ্টা: %1$s</string>
+    <!-- v3.5.0 Phase 1a — device-admin revocation re-request -->
+    <string name="admin_revoked_notif_title">🛡️ Device Admin বন্ধ হয়ে গেছে</string>
+    <string name="admin_revoked_notif_text">Guardian Shield এর সুরক্ষা দুর্বল হয়ে গেছে — আবার চালু করতে ট্যাপ করুন</string>
     <string name="overlay_reason_tamper">⚠️ ট্যাম্পারিং চেষ্টা সনাক্ত করা হয়েছে! কমিটেড লক থাকা অবস্থায় সেটিংস পরিবর্তন করা নিষেধ।</string>
     <string name="overlay_temp_block_fmt">🚫 %1$s এর জন্য ব্লক করা হয়েছে</string>
     <string name="overlay_dur_short">কিছুক্ষণ</string>
@@ -294,7 +297,48 @@
     <!-- WATCHTOWER V3 PIN copy -->
     <string name="pin_unlock">আনলক · Unlock</string>
     <string name="pin_lock_sub">পিন দিন · Guardian Shield locked</string>
-    <string name="pin_forgot_note">পিন ভুলে গেছেন? রিসেট করতে রিইনস্টল করতে হবে</string>
+    <string name="pin_forgot_note">পিন ভুলে গেছেন? রিকভারি অপশন দেখুন</string>
+
+    <!-- PHASE 1c (v3.5.0) — পিন রিকভারি (ইচ্ছাকৃতভাবে ধীর) -->
+    <string name="recovery_title">পিন রিকভারি</string>
+    <string name="recovery_subtitle">তাৎক্ষণিক রিসেট ইচ্ছাকৃতভাবে নেই — এটি একটি কমিটমেন্ট ডিভাইস। দুটি পথ আছে, দুটোই ইচ্ছাকৃতভাবে ধীর।</string>
+    <string name="recovery_code_section">পথ ১ — রিকভারি কোড</string>
+    <string name="recovery_code_hint">XXXX-XXXX-XXXX</string>
+    <string name="recovery_code_btn">কোড যাচাই করে রিসেট করুন</string>
+    <string name="recovery_reset_section">পথ ২ — টাইম-ডিলে রিসেট (৪৮ ঘণ্টা)</string>
+    <string name="recovery_reset_start">৪৮ ঘণ্টার রিসেট শুরু করুন</string>
+    <string name="recovery_reset_complete">এখনই পিন রিসেট করুন</string>
+    <string name="recovery_reset_cancel">পিন দিয়ে রিসেট বাতিল করুন</string>
+    <string name="recovery_back">ফিরে যান</string>
+    <string name="recovery_warning_banner">⚠️ রিইনস্টল ছাড়াই পিন রিসেট করা যায় — কিন্তু কখনোই তাৎক্ষণিক নয়। রিকভারির এই ধীরগতির কারণেই কমিটমেন্ট কাজ করে।</string>
+    <string name="recovery_code_wrong_fmt">ভুল কোড — আরও %1$d বার চেষ্টা করতে পারবেন</string>
+    <string name="recovery_code_wrong_generic">ভুল কোড</string>
+    <string name="recovery_code_locked_fmt">অতিরিক্ত চেষ্টা — %1$d মিনিট পরে আবার চেষ্টা করুন</string>
+    <string name="recovery_code_not_set">কোনো রিকভারি কোড সেট করা নেই — টাইম-ডিলে রিসেট ব্যবহার করুন</string>
+    <string name="recovery_reset_idle">কোনো রিসেট চলছে না</string>
+    <string name="recovery_reset_idle_detail">শুরু করলে পুরো ৪৮ ঘণ্টা অপেক্ষা করতে হবে। এই সময়ে একটি স্থায়ী সতর্ক নোটিফিকেশন দেখা যাবে।</string>
+    <string name="recovery_reset_running_fmt">রিসেট চলছে — %1$s বাকি</string>
+    <string name="recovery_reset_running_detail">সময় শেষ হলে এখান থেকে রিসেট করা যাবে। পিন মনে পড়ে গেলে পিন দিয়ে বাতিল করতে পারবেন।</string>
+    <string name="recovery_reset_ready">৪৮ ঘণ্টা শেষ — রিসেট প্রস্তুত</string>
+    <string name="recovery_reset_ready_detail">অপেক্ষার সময় শেষ হয়েছে। এখন পুরনো পিন মুছে নতুন পিন সেট করতে পারবেন।</string>
+    <string name="recovery_reset_cancelled">টাইম-ডিলে রিসেট বাতিল হয়েছে</string>
+    <string name="recovery_reset_confirm_title">৪৮ ঘণ্টার রিসেট শুরু করবেন?</string>
+    <string name="recovery_reset_confirm_msg">এটি শুরু করলে পিন রিসেট করতে পুরো ৪৮ ঘণ্টা অপেক্ষা করতে হবে। এই সময়ে স্ক্রিনে স্থায়ী সতর্ক নোটিফিকেশন দেখা যাবে, এবং বাতিল করতে হলে আপনার পিন লাগবে।</string>
+    <string name="recovery_reset_confirm_yes">হ্যাঁ, শুরু করুন</string>
+    <string name="recovery_reset_finish_title">পিন রিসেট নিশ্চিত করুন</string>
+    <string name="recovery_reset_finish_msg">পুরনো পিন ও পুরনো রিকভারি কোড মুছে যাবে। এরপর নতুন পিন সেট করে নতুন রিকভারি কোড পাবেন।</string>
+    <string name="recovery_reveal_title">রিকভারি কোড সংরক্ষণ করুন</string>
+    <string name="recovery_reveal_body">পিন ভুলে গেলে এই কোড দিয়েই রিসেট করা যাবে। এটি একবারই দেখানো হবে — অ্যাপের ভিতরে খুঁজে পাওয়া যাবে না। কাগজে লিখে নিরাপদে রাখুন।</string>
+    <string name="recovery_reveal_hint">স্ক্রিনশট নেবেন না — কাগজে লিখে রাখুন</string>
+    <string name="recovery_copy">কোড কপি করুন</string>
+    <string name="recovery_code_copied">কোড কপি হয়েছে — এখনই নিরাপদ জায়গায় রাখুন</string>
+    <string name="recovery_saved_confirm">আমি কোডটি লিখে নিরাপদে সংরক্ষণ করেছি</string>
+    <string name="recovery_continue">চালিয়ে যান</string>
+    <string name="recovery_save_first_warning">⚠️ কোডটি না রাখলে পরে পিন রিসেটে ৪৮ ঘণ্টা অপেক্ষা করতে হবে — আগে কোডটি সংরক্ষণ করুন</string>
+    <string name="pin_reset_pending_notif_title">🕒 পিন রিসেট কাউন্টডাউন চলছে</string>
+    <string name="pin_reset_pending_notif_text">রিসেট কার্যকর হবে: %1$s — বাতিল করতে ট্যাপ করুন (পিন লাগবে)</string>
+    <string name="pin_reset_ready_notif_title">⏰ পিন রিসেট প্রস্তুত</string>
+    <string name="pin_reset_ready_notif_text">৪৮ ঘণ্টার অপেক্ষা শেষ — ট্যাপ করে রিসেট সম্পন্ন করুন</string>
     <!-- WATCHTOWER V3 permissions + onboarding copy -->
     <string name="perm_accessibility_sub">মূল ইঞ্জিন · Accessibility</string>
     <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>

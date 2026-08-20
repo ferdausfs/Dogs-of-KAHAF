@@ -15,6 +15,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.hilt.work.HiltWorkerFactory
 import com.guardian.shield.service.blocker.GuardianForegroundService
+import com.guardian.shield.util.GuardianCrashHandler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -34,6 +35,9 @@ class GuardianApp : Application(), Configuration.Provider {
         super.onCreate()
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+        // PHASE 1b (v3.5.0) — crash reporting: local log always; Crashlytics
+        // only when google-services.json was present at build time.
+        GuardianCrashHandler.install(this)
         createNotificationChannels()
         scheduleWatchdog()
     }

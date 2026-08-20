@@ -74,10 +74,16 @@
     <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.35"/>
 
     <TextView
+        android:id="@+id/txtForgot"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
         android:text="@string/pin_forgot_note"
-        android:textColor="@color/on_surface_dim"
-        android:textSize="12sp"/>
+        android:textColor="@color/primary_dim"
+        android:textSize="13sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackgroundBorderless"/>
 </LinearLayout>
