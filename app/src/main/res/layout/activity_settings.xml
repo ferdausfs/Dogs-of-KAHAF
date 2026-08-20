@@ -152,6 +152,18 @@
                             <com.google.android.material.chip.Chip android:id="@+id/chipVote3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_3" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
                             <com.google.android.material.chip.Chip android:id="@+id/chipVote4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vote_4" android:checkable="true" style="@style/Widget.GuardianShield.Chip.Filter"/>
                         </com.google.android.material.chip.ChipGroup>
+
+                        <!-- v3.6.0 — ConfirmedSensitiveMemory visibility (Task D).
+                             Read-only count: the store is deliberately one-way
+                             (no browse/remove UI). -->
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="14dp" android:background="@color/border_subtle"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="12dp">
+                            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/confirmed_count_label" android:textColor="@color/on_surface" android:textSize="14sp" android:textStyle="bold"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/confirmed_count_sub" android:textColor="@color/on_surface_variant" android:textSize="11.5sp" android:lineSpacingMultiplier="1.3" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <TextView android:id="@+id/txtConfirmedCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_badge" android:backgroundTint="@color/badge_success_bg" android:textColor="@color/success_legacy" android:fontFeatureSettings="tnum" android:textSize="13sp" android:textStyle="bold" android:paddingHorizontal="10dp" android:paddingVertical="4dp" tools:text="0"/>
+                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

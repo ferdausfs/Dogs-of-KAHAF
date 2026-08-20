@@ -5,12 +5,19 @@
      v3.3.0: rotating Qur'anic ayat + Bengali translation, compact
      "আমি বুঝেছি" acknowledge, user-driven dismiss (no 3.5s auto-dismiss).
 
+     v3.6.0: three-button layout — primary "আমি বুঝেছি" (row 1) + two
+     opposite-intent secondary actions side by side (row 2):
+       • "সংবেদনশীল নয়" (btnNotSensitive, flag icon) — existing behavior
+         (confidence-based cooling-off report path, unchanged).
+       • "সংরক্ষণ করো" (btnProtect, shield icon) — NEW: permanently saves the
+         current pattern into ConfirmedSensitiveMemory (protect flow).
+
      Bindings (ids/types that existing code already finds):
        cardStrikeWarning txtStrikeKicker txtStrikeTitle txtStrikeBody
-       btnNotSensitive
+       btnNotSensitive btnAcknowledge
      New:
        txtAyatArabic txtAyatBengali txtAyatCitation
-       txtAyatReminder btnAcknowledge -->
+       txtAyatReminder btnProtect -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -136,7 +143,15 @@
             android:textStyle="bold"
             android:lineSpacingMultiplier="1.35"/>
 
-        <!-- Actions: compact primary acknowledge + existing Not-sensitive -->
+        <!-- Actions: compact primary acknowledge (row 1) + two secondary
+             opposite-intent actions side by side (row 2).
+             v3.6.0: btnNotSensitive ("সংবেদনশীল নয়", flag/report icon) and
+             btnProtect ("সংরক্ষণ করো", shield icon) are visually distinct so
+             their opposite intents cannot be confused:
+               • btnNotSensitive = warning-amber flag → reports the block as
+                 wrong (may whitelist via the confidence-based cooling-off).
+               • btnProtect = success-green shield → saves the pattern as
+                 PERMANENTLY confirmed-sensitive (the opposite memory). -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -151,15 +166,26 @@
                 android:layout_height="36dp"
                 android:minWidth="0dp"
                 android:text="@string/ai_strike_acknowledge"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:id="@+id/btnNotSensitive"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
                 android:minHeight="36dp"
-                android:gravity="center_vertical"
+                android:gravity="center"
                 android:paddingVertical="4dp"
+                android:drawableStart="@drawable/ic_flag"
+                android:drawablePadding="6dp"
+                android:drawableTint="@color/warning_amber"
                 android:text="@string/ai_strike_warning_not_sensitive"
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12.5sp"
@@ -167,6 +193,25 @@
                 android:letterSpacing="0.02"
                 android:background="@null"
                 android:contentDescription="@string/ai_strike_warning_not_sensitive"/>
+
+            <TextView
+                android:id="@+id/btnProtect"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:minHeight="36dp"
+                android:gravity="center"
+                android:paddingVertical="4dp"
+                android:drawableStart="@drawable/ic_shield_check"
+                android:drawablePadding="6dp"
+                android:drawableTint="@color/success_legacy"
+                android:text="@string/ai_strike_protect"
+                android:textColor="@color/success_legacy"
+                android:textSize="12.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02"
+                android:background="@null"
+                android:contentDescription="@string/ai_strike_protect"/>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

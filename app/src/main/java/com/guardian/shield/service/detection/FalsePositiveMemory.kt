@@ -25,11 +25,19 @@ import javax.inject.Singleton
  * longer blocked — this is how the app gradually "learns" the harmless patterns
  * a given feed/user keeps showing.
  *
- * The signature is a colour code: the image is downscaled to an 8x8 grid and for
- * each cell we keep the average colour. Two images are considered "the same
- * pattern" when most cells agree within a small per-channel tolerance, so it is
- * robust to minor rendering / compression differences but still strict enough
- * that a genuinely different image is not skipped.
+ * The signature math lives in [ImageSignature] (shared with
+ * [ConfirmedSensitiveMemory], the opposite-direction store, so the two can
+ * never drift apart). Storage: `false_positive_signatures.dat` in filesDir,
+ * the same format since v2.4.2.
+ *
+ * v3.6.0 additions (pure API surface, no behaviour change to the existing
+ * methods):
+ *  - [peekPendingCandidate]: read the pending candidate WITHOUT consuming it —
+ *    used by the report handlers to run the ConfirmedSensitiveMemory refusal
+ *    check before deciding whether to let a report proceed.
+ *  - [removeSignature]: remove every stored entry matching [sig] — used by the
+ *    "Protect" flow so a newly confirmed-sensitive pattern can never remain
+ *    simultaneously whitelisted here.
  */
 @Singleton
 class FalsePositiveMemory @Inject constructor(
@@ -46,13 +54,6 @@ class FalsePositiveMemory @Inject constructor(
 
     companion object {
         private const val FILE_NAME = "false_positive_signatures.dat"
-        private const val GRID = 8
-        private const val CELLS = GRID * GRID
-
-        // A cell matches when every channel differs by at most this (0..255).
-        private const val CHANNEL_TOLERANCE = 48
-        // How many cells must agree for two images to count as the same pattern.
-        private const val MATCH_RATIO = 0.62f
         private const val MAX_SIGNATURES = 2000
     }
 
@@ -61,21 +62,7 @@ class FalsePositiveMemory @Inject constructor(
     }
 
     /** Colour-code signature of [bitmap]: 8x8 grid of average colours. */
-    fun computeSignature(bitmap: Bitmap): IntArray {
-        val scaled = if (bitmap.width != GRID || bitmap.height != GRID) {
-            Bitmap.createScaledBitmap(bitmap, GRID, GRID, true)
-        } else bitmap
-        val pixels = IntArray(CELLS)
-        scaled.getPixels(pixels, 0, GRID, 0, 0, GRID, GRID)
-        if (scaled !== bitmap) scaled.recycle()
-
-        val sig = IntArray(CELLS)
-        for (i in 0 until CELLS) {
-            val c = pixels[i]
-            sig[i] = ((c shr 16) and 0xFF shl 16) or ((c shr 8) and 0xFF shl 8) or (c and 0xFF)
-        }
-        return sig
-    }
+    fun computeSignature(bitmap: Bitmap): IntArray = ImageSignature.compute(bitmap)
 
     /** Remember a false-positive pattern (from a bitmap). */
     fun add(bitmap: Bitmap) {
@@ -85,9 +72,9 @@ class FalsePositiveMemory @Inject constructor(
 
     /** Remember a false-positive pattern from an already-computed signature. */
     fun addSignature(sig: IntArray) {
-        if (sig.size != CELLS) return
+        if (sig.size != ImageSignature.CELLS) return
         synchronized(lock) {
-            if (signatures.any { isMatch(it, sig) }) {
+            if (signatures.any { ImageSignature.matches(it, sig) }) {
                 Timber.d("False-positive pattern already known")
                 return
             }
@@ -102,7 +89,7 @@ class FalsePositiveMemory @Inject constructor(
     fun isKnown(bitmap: Bitmap): Boolean {
         val sig = computeSignature(bitmap)
         synchronized(lock) {
-            return signatures.any { isMatch(it, sig) }
+            return signatures.any { ImageSignature.matches(it, sig) }
         }
     }
 
@@ -118,25 +105,35 @@ class FalsePositiveMemory @Inject constructor(
         return s
     }
 
-    fun size(): Int = synchronized(lock) { signatures.size }
+    /**
+     * v3.6.0 — read the pending candidate WITHOUT clearing it. The
+     * "Not sensitive" / "Mark False" report handlers peek here first so the
+     * ConfirmedSensitiveMemory refusal check can run without destroying the
+     * candidate the user may still want to act on (e.g. tap "Protect" next).
+     */
+    fun peekPendingCandidate(): IntArray? = pendingCandidate
 
-    private fun isMatch(a: IntArray, b: IntArray): Boolean {
-        if (a.size != CELLS || b.size != CELLS) return false
-        var match = 0
-        for (i in 0 until CELLS) {
-            val ar = (a[i] shr 16) and 0xFF
-            val ag = (a[i] shr 8) and 0xFF
-            val ab = a[i] and 0xFF
-            val br = (b[i] shr 16) and 0xFF
-            val bg = (b[i] shr 8) and 0xFF
-            val bb = b[i] and 0xFF
-            if (Math.abs(ar - br) <= CHANNEL_TOLERANCE &&
-                Math.abs(ag - bg) <= CHANNEL_TOLERANCE &&
-                Math.abs(ab - bb) <= CHANNEL_TOLERANCE
-            ) match++
+    /**
+     * v3.6.0 — remove every whitelist entry matching [sig] (near-duplicates
+     * included). Used only by the "Protect" flow: a pattern that is now
+     * confirmed-sensitive must not stay whitelisted as a false positive at
+     * the same time. Returns the number of entries removed (0 = was not here).
+     */
+    fun removeSignature(sig: IntArray): Int {
+        if (sig.size != ImageSignature.CELLS) return 0
+        synchronized(lock) {
+            val before = signatures.size
+            signatures.removeAll { ImageSignature.matches(it, sig) }
+            val removed = before - signatures.size
+            if (removed > 0) {
+                Timber.i("Removed $removed false-positive pattern(s) overridden by confirmed-sensitive protect")
+                save()
+            }
+            return removed
         }
-        return (match.toFloat() / CELLS) >= MATCH_RATIO
     }
+
+    fun size(): Int = synchronized(lock) { signatures.size }
 
     private fun save() {
         // Snapshot under the lock, then write off the caller thread —
@@ -162,8 +159,8 @@ class FalsePositiveMemory @Inject constructor(
                 val n = input.readInt().coerceIn(0, MAX_SIGNATURES)
                 signatures.clear()
                 repeat(n) {
-                    val sig = IntArray(CELLS)
-                    for (i in 0 until CELLS) sig[i] = input.readInt()
+                    val sig = IntArray(ImageSignature.CELLS)
+                    for (i in 0 until ImageSignature.CELLS) sig[i] = input.readInt()
                     signatures.add(sig)
                 }
             }

@@ -66,6 +66,15 @@
     <!-- v3.3.0 — user-driven dismiss + rotating ayat chrome. -->
     <string name="ai_strike_acknowledge">আমি বুঝেছি</string>
     <string name="ai_strike_ayat_reminder">মনে রাখো, আল্লাহ সবসময় দেখছেন</string>
+    <!-- v3.6.0 — তৃতীয় অ্যাকশন: "সংরক্ষণ করো" (স্থায়ী নিশ্চিত-সংবেদনশীল মেমোরি,
+         "সংবেদনশীল নয়"-এর বিপরীত)। -->
+    <string name="ai_strike_protect">সংরক্ষণ করো</string>
+    <string name="ai_strike_protected_confirmed">সংরক্ষণ করা হয়েছে</string>
+    <string name="ai_strike_protect_unavailable">প্যাটার্ন সংরক্ষণ করা যায়নি — পরের সতর্কতায় আবার চেষ্টা করো</string>
+    <string name="ai_strike_report_refused_confirmed">এই প্যাটার্ন নিশ্চিত সংবেদনশীল হিসেবে সংরক্ষিত — রিপোর্ট করা যাবে না</string>
+    <string name="overlay_report_refused_confirmed">এই কনটেন্ট নিশ্চিত সংবেদনশীল হিসেবে সংরক্ষিত — ভুল ব্লক হিসেবে চিহ্নিত করা যাবে না</string>
+    <string name="confirmed_count_label">নিশ্চিত সংবেদনশীল প্যাটার্ন</string>
+    <string name="confirmed_count_sub">সংরক্ষিত প্যাটার্ন স্থায়ী — এগুলো কখনো রিপোর্ট করা যাবে না</string>
     <string name="male">পুরুষ</string>
     <string name="female">মহিলা</string>
     <string name="disabled">বন্ধ</string>

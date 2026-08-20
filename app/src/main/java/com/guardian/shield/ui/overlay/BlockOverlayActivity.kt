@@ -19,6 +19,7 @@ import com.guardian.shield.databinding.ActivityBlockOverlayBinding
 import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.service.blocker.TempBlockManager
 import com.guardian.shield.util.GuardianConstants
+import com.guardian.shield.service.detection.ConfirmedSensitiveMemory
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import com.guardian.shield.util.ReligiousReminders
@@ -39,6 +40,8 @@ class BlockOverlayActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBlockOverlayBinding
 
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
+
+    @Inject lateinit var confirmedSensitiveMemory: ConfirmedSensitiveMemory
 
     @Inject lateinit var tempBlockManager: TempBlockManager
 
@@ -142,6 +145,29 @@ class BlockOverlayActivity : AppCompatActivity() {
         if (isAiBlock) {
             binding.btnMarkFalse.visibility = View.VISIBLE
             binding.btnMarkFalse.setOnClickListener {
+                // v3.6.0 — CONFIRMED-SENSITIVE REFUSAL OVERRIDE. Runs BEFORE the
+                // confidence-based cooling-off branching and takes priority over
+                // everything else in the report flow (including the 0.82
+                // threshold and the escalating-delay queue): if the current
+                // candidate pattern is protected, the report is refused
+                // outright — no clearTempBlock, no cooling-off enqueue, no
+                // addSignature — regardless of the live confidence score. The
+                // block stays active and the user sees honest feedback. The
+                // candidate is PEEKED (not consumed) so a repeated tap shows
+                // the same refusal instead of silently falling through on a
+                // null candidate.
+                val candidate = falsePositiveMemory.peekPendingCandidate()
+                if (candidate != null && confirmedSensitiveMemory.isConfirmedSignature(candidate)) {
+                    Timber.w("Mark False REFUSED for $pkg — pattern is confirmed-sensitive (protected)")
+                    try {
+                        binding.txtCoolingStatus.text = getString(R.string.overlay_report_refused_confirmed)
+                        binding.txtCoolingStatus.setTextColor(getColor(R.color.error))
+                        binding.txtCoolingStatus.visibility = View.VISIBLE
+                    } catch (_: Throwable) {}
+                    Snackbar.make(binding.root, R.string.overlay_report_refused_confirmed, Snackbar.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+
                 // Task B — confidence-based branching for the full-block "Mark False".
                 if (pendingReportManager.isHighConfidence(confidence)) {
                     // HIGH confidence → defer the unblock via cooling-off queue.
