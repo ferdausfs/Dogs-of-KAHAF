@@ -3417,10 +3417,10 @@ classify(bitmap):
 - Sandbox: no JDK, Maven blocked, `workflow_dispatch` 403 — same as every
   prior session. CI `./gradlew assembleRelease --no-daemon --stacktrace` runs
   on merge of PR #59 to `main`.
-- **Expected after merge:**
-  - Tag **v3.6.1**, release **Guardian Shield v3.6.1**
-  - APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.1/app-release.apk
-  - Actions: push-to-main `Build Release APK` (will be linked here once the run exists)
+- First CI run on PR #59 merge ([32363767017](https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32363767017)) failed `compileReleaseKotlin` (two real errors: `classify()` still returned `Boolean` on the try/catch tail; `rescheduleAllPending` was missing). Fixed in PR #60.
+- **Final green run:** [32364118164](https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32364118164) — `Build Release APK` ✓, `Verify APK signed` ✓, `Upload Artifact` ✓, `Create GitHub Release` ✓. Annotation: `DIAG BUILD SUCCEEDED (rc=0)`.
+- **Release:** [Guardian Shield v3.6.1](https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.6.1) (published 2026-08-20T11:34:38Z)
+- **APK (52,061,524 bytes):** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.1/app-release.apk
 
 Static checks this session: EN/BN key parity 437=437; Kotlin brace balance 0
 on every edited file; `STRIKE_WARNING_AUTO_DISMISS_MS` still absent.
