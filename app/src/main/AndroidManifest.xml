@@ -110,6 +110,11 @@
             android:name=".ui.setup.PinVerifyActivity"
             android:exported="false"/>
 
+        <!-- PHASE 1c (v3.5.0): deliberately non-trivial PIN recovery -->
+        <activity
+            android:name=".ui.setup.PinRecoveryActivity"
+            android:exported="false"/>
+
         <activity
             android:name=".ui.unlock.DelayUnlockActivity"
             android:exported="false"
@@ -146,6 +151,12 @@
             android:exported="false"
             android:parentActivityName=".ui.settings.SettingsActivity"/>
 
+        <!-- PHASE 4b (v3.5.0): static Help & FAQ -->
+        <activity
+            android:name=".ui.help.HelpActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
         <!-- TASK 2: Islamic reminder overlay for reel/short addiction -->
         <activity
             android:name=".ui.overlay.ReelReminderActivity"
@@ -176,6 +187,19 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="content_blocker"/>
+        </service>
+
+        <!-- PHASE 4c (v3.5.0): opt-in notification shade shield. Only the
+             system can bind (BIND_NOTIFICATION_LISTENER_SERVICE); the feature
+             additionally requires the in-app toggle (default OFF). -->
+        <service
+            android:name=".service.shield.NotificationShieldService"
+            android:exported="true"
+            android:label="@string/notif_shield_service_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
         </service>
 
         <receiver

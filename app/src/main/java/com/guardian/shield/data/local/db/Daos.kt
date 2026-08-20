@@ -38,6 +38,10 @@ interface KeywordDao {
     @Query("SELECT * FROM keyword_rules ORDER BY id DESC")
     fun observeAll(): Flow<List<KeywordRuleEntity>>
 
+    // PHASE 4a (v3.5.0) — full list (incl. disabled) for settings backup.
+    @Query("SELECT * FROM keyword_rules")
+    suspend fun getAll(): List<KeywordRuleEntity>
+
     @Query("SELECT * FROM keyword_rules WHERE enabled = 1")
     suspend fun getEnabled(): List<KeywordRuleEntity>
 
@@ -58,6 +62,15 @@ interface BlockEventDao {
 
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC")
     suspend fun getAll(): List<BlockEventEntity>
+
+    // PHASE 2/3 (v3.5.0) — accountability weekly digest + clean-streak
+    // computation. One bounded window query; bucketing happens in Kotlin.
+    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
+    suspend fun eventsSince(since: Long): List<BlockEventEntity>
+
+    // PHASE 3 (v3.5.0) — reactive variant for the dashboard streak card.
+    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
+    fun observeSince(since: Long): Flow<List<BlockEventEntity>>
 
     @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
     fun countSinceFlow(since: Long): Flow<Int>

@@ -192,6 +192,9 @@
     <string name="reason_tamper">Tamper Attempt</string>
     <string name="tamper_notif_title">⚠️ Tampering Detected</string>
     <string name="tamper_notif_text">Attempt: %1$s</string>
+    <!-- v3.5.0 Phase 1a — device-admin revocation re-request -->
+    <string name="admin_revoked_notif_title">🛡️ Device Admin turned off</string>
+    <string name="admin_revoked_notif_text">Guardian Shield এর সুরক্ষা দুর্বল হয়ে গেছে — Tap করুন আবার চালু করতে</string>
     <string name="overlay_reason_tamper">⚠️ Tampering attempt detected! Changing settings is forbidden while a Commitment Lock is active.</string>
     <string name="overlay_temp_block_fmt">🚫 Blocked for %1$s</string>
     <string name="overlay_dur_short">a short while</string>
@@ -297,7 +300,87 @@
     <!-- WATCHTOWER V3 PIN copy -->
     <string name="pin_unlock">Unlock · আনলক</string>
     <string name="pin_lock_sub">পিন দিন · Guardian Shield is locked</string>
-    <string name="pin_forgot_note">Forgot PIN? Reinstall is required to reset</string>
+    <string name="pin_forgot_note">Forgot PIN? See recovery options</string>
+
+    <!-- PHASE 1c (v3.5.0) — PIN recovery (deliberately non-trivial) -->
+    <string name="recovery_title">PIN Recovery</string>
+    <string name="recovery_subtitle">There is deliberately no instant reset — this is a commitment device. Two paths exist, both intentionally slow.</string>
+    <string name="recovery_code_section">Path 1 — Recovery code</string>
+    <string name="recovery_code_hint">XXXX-XXXX-XXXX</string>
+    <string name="recovery_code_btn">Verify code and reset</string>
+    <string name="recovery_reset_section">Path 2 — Time-delayed reset (48 hours)</string>
+    <string name="recovery_reset_start">Start the 48-hour reset</string>
+    <string name="recovery_reset_complete">Reset PIN now</string>
+    <string name="recovery_reset_cancel">Cancel reset (requires PIN)</string>
+    <string name="recovery_back">Back</string>
+    <string name="recovery_warning_banner">⚠️ Your PIN can be reset without reinstalling — but never instantly. Recovery is slow on purpose: that slowness is what makes the commitment work.</string>
+    <string name="recovery_code_wrong_fmt">Wrong code — %1$d attempts left</string>
+    <string name="recovery_code_wrong_generic">Wrong code</string>
+    <string name="recovery_code_locked_fmt">Too many attempts — try again in %1$d minutes</string>
+    <string name="recovery_code_not_set">No recovery code is set — use the time-delayed reset</string>
+    <string name="recovery_reset_idle">No reset is running</string>
+    <string name="recovery_reset_idle_detail">Once started, you must wait the full 48 hours. A persistent warning notification stays visible the whole time.</string>
+    <string name="recovery_reset_running_fmt">Reset running — %1$s left</string>
+    <string name="recovery_reset_running_detail">When the wait ends you can reset here. If you remember your PIN, cancel with it below.</string>
+    <string name="recovery_reset_ready">48 hours over — reset is ready</string>
+    <string name="recovery_reset_ready_detail">The waiting period has elapsed. You can now clear the old PIN and set a new one.</string>
+    <string name="recovery_reset_cancelled">Time-delayed reset cancelled</string>
+    <string name="recovery_reset_confirm_title">Start the 48-hour reset?</string>
+    <string name="recovery_reset_confirm_msg">Once started, resetting your PIN takes the full 48 hours. A persistent warning notification stays visible the whole time, and cancelling requires your PIN.</string>
+    <string name="recovery_reset_confirm_yes">Yes, start it</string>
+    <string name="recovery_reset_finish_title">Confirm PIN reset</string>
+    <string name="recovery_reset_finish_msg">The old PIN and the old recovery code will be erased. You will then set a new PIN and receive a new recovery code.</string>
+    <string name="recovery_reveal_title">Save your recovery code</string>
+    <string name="recovery_reveal_body">If you ever forget your PIN, this code is the fast way back in. It is shown exactly once and is NOT stored searchable inside the app — write it down and keep it somewhere safe.</string>
+    <string name="recovery_reveal_hint">Do not screenshot — write it on paper</string>
+    <string name="recovery_copy">Copy code</string>
+    <string name="recovery_code_copied">Code copied — store it somewhere safe now</string>
+    <string name="recovery_saved_confirm">I wrote the code down somewhere safe</string>
+    <string name="recovery_continue">Continue</string>
+    <string name="recovery_save_first_warning">⚠️ Without the saved code, a future reset takes 48 hours — save the code first</string>
+    <string name="pin_reset_pending_notif_title">🕒 PIN reset countdown running</string>
+    <string name="pin_reset_pending_notif_text">Reset becomes possible: %1$s — tap to cancel (PIN required)</string>
+    <string name="pin_reset_ready_notif_title">⏰ PIN reset is ready</string>
+    <string name="pin_reset_ready_notif_text">The 48-hour wait is over — tap to finish the reset</string>
+    <string name="btn_recovery_code">Recovery code · রিকভারি কোড</string>
+    <string name="recovery_regen_title">New recovery code?</string>
+    <string name="recovery_regen_msg">A fresh code replaces the old one immediately — the old code stops working. The app stores only the code\'s salted hash; the code itself is shown once and never saved inside the app.</string>
+    <string name="recovery_regen_yes">Generate new code</string>
+
+    <!-- PHASE 2 (v3.5.0) — accountability partner -->
+    <string name="section_accountability">ACCOUNTABILITY · অ্যাকাউন্টেবিলিটি</string>
+    <string name="btn_partner">Accountability Partner · অ্যাকাউন্টেবিলিটি পার্টনার</string>
+    <string name="btn_partner_summary">Send weekly summary · সাপ্তাহিক সারসংক্ষেপ পাঠান</string>
+    <string name="partner_status_none">No partner set. Alerts appear here as notifications; you send them on with one tap — nothing is sent silently.</string>
+    <string name="partner_status_set_fmt">Partner: %1$s (%2$s). Tap an alert\'s email action to notify them.</string>
+    <string name="partner_dialog_title">Accountability Partner</string>
+    <string name="partner_name_hint">Trusted person\'s name</string>
+    <string name="partner_email_hint">Their email address</string>
+    <string name="partner_dialog_note">Saved on this device only. When protection is paused, a tamper attempt is logged, or a high-confidence report enters cooling-off, you get a notification whose email/share action lets you tell them in one tap. This app has no backend and cannot send email silently.</string>
+    <string name="partner_email_invalid">That email address does not look valid</string>
+    <string name="partner_saved">Partner saved</string>
+    <string name="partner_removed">Partner removed</string>
+    <string name="partner_remove">Remove</string>
+    <string name="partner_notif_action_email">📧 Email</string>
+    <string name="partner_notif_action_share">📤 Share</string>
+    <string name="partner_notif_pause_title">⚠️ Protection paused</string>
+    <string name="partner_notif_pause_body">Guardian Shield protection was just paused. Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_notif_tamper_title">⚠️ Tamper attempt</string>
+    <string name="partner_notif_tamper_body">A tamper attempt was logged (%2$s). Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_notif_report_title">⏳ High-confidence report queued</string>
+    <string name="partner_notif_report_body">A high-confidence \"not sensitive\" report entered cooling-off (%2$s). Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_summary_subject">Guardian Shield weekly summary — %1$s</string>
+    <string name="partner_summary_greeting">Hi %1$s — here is my Guardian Shield weekly accountability summary.</string>
+    <string name="partner_summary_this_week_fmt">Content blocks this week: %1$d</string>
+    <string name="partner_summary_last_week_fmt">Content blocks last week: %1$d</string>
+    <string name="partner_summary_less">less</string>
+    <string name="partner_summary_more">more</string>
+    <string name="partner_summary_delta_fmt">That is %1$d%% %2$s than last week</string>
+    <string name="partner_summary_tamper_fmt">Tamper attempts this week: %1$d</string>
+    <string name="partner_summary_top_app_fmt">Most blocked app: %1$s</string>
+    <string name="partner_summary_footer">— sent from Guardian Shield (on-device summary; no data was uploaded anywhere)</string>
+    <string name="partner_summary_how_title">Send the weekly summary</string>
+    <string name="partner_summary_how_msg">Choose how to send it. Email opens your mail app pre-filled to your partner — one more tap sends it. Nothing is sent silently by this app.</string>
     <!-- WATCHTOWER V3 permissions + onboarding copy -->
     <string name="perm_accessibility_sub">core engine · এক্সেসিবিলিটি সার্ভিস</string>
     <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>
@@ -344,4 +427,76 @@
     <string name="pending_report_cancelled_msg">Report cancelled — action will not apply</string>
     <string name="pending_remaining_fmt">%1$d min remaining</string>
     <string name="open_pending_reports">Pending Reports · %1$d</string>
+
+    <!-- PHASE 3 (v3.5.0) — clean streak + weekly comparison (Home card).
+         Supportive "স্টে স্ট্রং" voice: celebrate improvement, never shame a setback. -->
+    <string name="streak_card_title">Clean streak · Keep it up</string>
+    <string name="streak_days_caption">days clean</string>
+    <string name="streak_newcomer">Your journey starts today — every clean day is a win ✨</string>
+    <string name="streak_all_clean">Zero blocks this week — beautiful. স্টে স্ট্রং ✨</string>
+    <string name="streak_compare_less_fmt">%1$d blocks this week · %2$d%% fewer than last week 💪</string>
+    <string name="streak_compare_more_fmt">%1$d blocks this week · %2$d%% more than last week — the shield still caught every one</string>
+    <string name="streak_compare_same_fmt">%1$d blocks this week · same as last week — steady counts too</string>
+    <string name="streak_compare_new_fmt">%1$d blocks this week — first week on record</string>
+    <string name="streak_fresh_start">Today reset the streak — that’s okay. A fresh one starts now 💪</string>
+
+    <!-- PHASE 4a (v3.5.0) — local backup/restore (JSON via SAF, no cloud) -->
+    <string name="section_backup">BACKUP · ব্যাকআপ</string>
+    <string name="btn_backup_export">Export settings backup</string>
+    <string name="btn_backup_import">Restore from backup</string>
+    <string name="backup_status_hint">One JSON file with your rules and settings — kept by you, never uploaded. Export again after big changes; reinstall then Restore to get everything back.</string>
+    <string name="backup_export_done">Backup saved ✅ Keep the file somewhere safe outside this app.</string>
+    <string name="backup_export_failed">Backup failed — could not write the file</string>
+    <string name="backup_import_confirm_title">Restore this backup?</string>
+    <string name="backup_import_confirm_msg">Keywords and settings will be replaced by the backup; app and schedule rules will be merged in. Block history, PIN, recovery code and any Time-Lock are never touched.</string>
+    <string name="backup_import_confirm_btn">Restore</string>
+    <string name="backup_import_done_fmt">Restored ✅ %1$d app rules, %2$d keywords, %3$d schedules</string>
+    <string name="backup_import_invalid">That file isn’t a Guardian Shield backup (or it’s damaged)</string>
+
+    <!-- PHASE 4b (v3.5.0) — Help & FAQ. Every answer below is written against
+         the shipped engine constants — if the code changes, change these. -->
+    <string name="section_help">HELP · সাহায্য</string>
+    <string name="btn_help">Help &amp; FAQ</string>
+    <string name="help_screen_title">Help &amp; FAQ · সাহায্য</string>
+    <string name="help_intro">How Guardian Shield protects you — straight answers, no marketing.</string>
+
+    <string name="help_q1">How does the AI blocking work?</string>
+    <string name="help_a1">Guardian Shield reads on-screen content through the Accessibility service and checks it with an AI model (TensorFlow Lite) that runs entirely on your phone. Each check splits the screen into sections that vote; when harmful content scores above your adjustable threshold (default 0.72), the shield acts. No image or text ever leaves the device.</string>
+
+    <string name="help_q2">What are strikes and temp blocks?</string>
+    <string name="help_a2">The first and second AI detection of an app show a warning card. A third detection applies a temporary full block — 15, 30 or 60 minutes, your choice in Settings. Stay away for 10 minutes and the strike counter resets. Three full blocks within 2 hours escalate to a 24-hour day block, and after any block expires a 3-minute grace period passes before AI blocking resumes.</string>
+
+    <string name="help_q3">What are “Not Sensitive” reports and the cooling-off queue?</string>
+    <string name="help_a3">Telling the app a detection was wrong fixes low-confidence mistakes immediately. But when the AI was highly confident (0.82 or more), your report joins a deliberate delay queue instead of applying instantly — 2h for the first recent report, then 4h, 8h, 16h, up to 24h. Settings → Pending Reports shows everything queued and lets you cancel before it applies. The delay is the feature: it keeps a craving from silently retraining the shield.</string>
+
+    <string name="help_q4">What is the Time-Lock (commitment lock)?</string>
+    <string name="help_a4">Time-Lock locks your settings for a period you choose. While it’s active, settings can’t be edited, the dashboard toggle is frozen, and uninstall protection is at its strictest. Turn it on while you’re motivated, so a future weak moment can’t quietly switch the shield off.</string>
+
+    <string name="help_q5">I forgot my PIN. What now?</string>
+    <string name="help_a5">Two recovery paths, both deliberately slow: (1) the recovery code you wrote down at PIN setup — enter it on the PIN Recovery screen (5 tries, then a 30-minute wait); (2) a timed reset — request it, wait 48 hours, then set a new PIN. Neither path wipes your rules or history, and there is no instant reset — that’s the point.</string>
+
+    <string name="help_q6">What does the accountability partner do?</string>
+    <string name="help_a6">Add a trusted person’s name and email in Settings → Accountability. When protection is paused, a tamper attempt is logged, or a high-confidence report is queued, you get a notification with Email and Share actions. Tapping opens your mail app or share sheet pre-addressed and pre-written — the final send is always yours. Nothing is sent silently; the app has no server and no automatic sending.</string>
+
+    <string name="help_q7">Backups — what’s included, what never is?</string>
+    <string name="help_a7">Settings → Backup writes one JSON file, kept by you: app rules, keywords, schedules, settings and your partner contact. It never contains block history, your PIN, the recovery code or any Time-Lock state. After a reinstall, Restore from that file to bring your setup back.</string>
+
+    <string name="help_q8">Is my privacy safe?</string>
+    <string name="help_a8">Yes. Detection runs fully on-device, and the app doesn’t even declare the internet permission — it physically cannot send your screen content or history anywhere. Tamper and crash logs are stored locally on the phone for you to read or share yourself. (An optional Firebase Crashlytics hook exists in the source, but it only activates in a build where the developer adds their own google-services.json — the public release build has none.)</string>
+
+    <string name="help_q9">Can protection be bypassed? The honest answer.</string>
+    <string name="help_a9">Yes, partly — and we won’t pretend otherwise. Safe Mode, a force-stop from system Settings, or a computer with USB debugging can weaken or remove protection; no app on unrooted Android can fully prevent those. What Guardian Shield does: bounce the risky Settings screens whenever the service is alive, detect and log tampering, re-request Device Admin the moment a revocation is noticed, and alert you (and your partner, if set). The design goal is friction plus visibility — not an unbreakable cage.</string>
+
+    <!-- PHASE 4c (v3.5.0) — notification shade shield -->
+    <string name="notif_shield_service_label">Guardian Shield — notification shield</string>
+    <string name="notif_shield_title">Notification shade shield</string>
+    <string name="notif_shield_sub_off">Off — blocked apps can still flash previews in the shade</string>
+    <string name="notif_shield_sub_on">Active — previews from blocked apps, and flagged keywords anywhere, are cancelled</string>
+    <string name="notif_shield_sub_need_perm">Almost there — grant “Notification access” in system settings to finish</string>
+    <string name="notif_shield_perm_title">Notification access needed</string>
+    <string name="notif_shield_perm_msg">Android needs your explicit OK before any app may dismiss another app’s notifications. On the next screen, switch on Guardian Shield.\n\nWhat this lets the shield do: cancel shade previews from apps you’ve blocked (list, schedule or AI temp block), and — when your keyword filter is on — hide notifications whose visible text matches your keywords. Everything is processed on-device; the app has no internet permission, so nothing can be uploaded. Revoke any time in the same system screen. A preview can still flash for a split second before it’s cancelled — no app can avoid that on unrooted Android.</string>
+    <string name="notif_shield_perm_cta">Open system settings</string>
+
+    <string name="help_q10">Do blocked apps still show notification previews?</string>
+    <string name="help_a10">By default, yes — Android posts a blocked app’s notifications to the shade, preview included. Turn on Settings → Notification shade shield and grant “Notification access”: previews from blocked apps (list, schedule or temp block) are then cancelled, and with your keyword filter on, any notification whose visible text matches your keywords is hidden too. One honest limit: a preview can flash for a split second before cancellation — unrooted Android gives no way to prevent that.</string>
 </resources>

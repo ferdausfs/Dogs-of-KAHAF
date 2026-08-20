@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIN recovery — Guardian Shield · One UI 8</title>
+<style>
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap");
+:root{
+  --bg:#000;--bg-elev:#0D0E12;--surface:#26272C;--surface-high:#303138;--surface-highest:#3A3C44;--inset:#17181D;
+  --text:#F5F5F5;--text-sec:#A8A8A8;--text-ter:#7A7A7A;
+  --accent:#1A55CC;--accent-press:#123FB0;--accent-bright:#8FBDFF;--on-accent:#fff;
+  --accent-container:#0B2547;--on-accent-container:#D8E8FF;--accent-soft:#243B63;
+  --error:#C0353B;--error-bright:#FF9285;--error-container:#2E1315;--on-error-container:#FFD0CC;
+  --warning:#D6992A;--warning-bright:#FFC14D;--warning-container:#2F230C;--on-warning-container:#FFE2A8;
+  --success:#2E9B64;--success-bright:#6BCF97;
+  --hairline:rgba(255,255,255,.08);--r-lg:28px;--r-xl:32px;--r-pill:999px;
+  --font:"Pretendard","Segoe UI",Roboto,"Noto Sans Bengali",ui-sans-serif,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0a0a0a;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{padding:28px 18px 80px}
+.page-h{max-width:1100px;margin:0 auto 22px}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px}
+.page-h h1{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.page-h p{color:var(--text-sec);font-size:15px;margin-top:8px;max-width:760px;line-height:1.5}
+.note{margin-top:10px;padding:12px 14px;background:#161616;border-radius:16px;color:var(--text-sec);font-size:13px;line-height:1.5;max-width:760px}
+.note b{color:var(--text)}
+.gallery{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;max-width:1400px;margin:0 auto}
+.block{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cap{font-size:12px;font-weight:700;color:var(--text-sec);letter-spacing:.04em;max-width:360px;text-align:center}
+.cap em{font-style:normal;color:var(--text-ter);font-weight:500}
+
+.phone{width:360px;height:780px;background:var(--bg);border-radius:38px;border:10px solid #1c1c1c;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.sb{height:28px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 3px;font-size:11px;font-weight:700;flex:0 0 auto}
+.screen{flex:1;overflow:auto;padding:0 0 16px;position:relative}
+.screen::-webkit-scrollbar{display:none}
+.title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.08;padding:8px 20px 12px}
+.bn{font-family:"Noto Sans Bengali",var(--font)}
+.mono{font-family:var(--mono)}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:22px 24px}
+.well{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--accent-container);border:1px solid rgba(143,189,255,.14)}
+.well.warn{background:var(--warning-container);border-color:rgba(255,193,77,.16)}
+.well.err{background:var(--error-container);border-color:rgba(255,146,133,.16)}
+.hero .h{font-size:20px;font-weight:800;margin-top:12px;letter-spacing:-.01em}
+.hero .p{font-size:13px;color:var(--text-sec);line-height:1.55;margin-top:6px;max-width:290px}
+.sheet{background:var(--surface);border-radius:var(--r-lg);overflow:hidden;margin:0 20px 16px}
+.row{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 16px;border-bottom:1px solid var(--hairline)}
+.row:last-child{border-bottom:0}
+.row .t{font-size:16px;font-weight:600}
+.row .s{font-size:13px;color:var(--text-sec);margin-top:2px;line-height:1.4}
+.chev{color:var(--text-ter);font-size:22px;font-weight:300;margin-left:auto}
+.codebox{margin:0 20px 16px;background:var(--inset);border:1px dashed rgba(255,193,77,.4);border-radius:20px;padding:18px;text-align:center}
+.codebox .code{font-family:var(--mono);font-size:26px;letter-spacing:.16em;font-weight:700;color:var(--warning-bright)}
+.codebox .hint{font-size:12px;color:var(--text-sec);margin-top:8px;line-height:1.5}
+.btn{display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;font-size:15px;font-weight:700;margin:0 20px 10px}
+.btn.accent{background:var(--accent);color:var(--on-accent)}
+.btn.tonal{background:var(--surface-high);color:var(--text)}
+.btn.text{background:none;color:var(--accent-bright);height:44px;font-size:14px}
+.field{margin:0 20px 14px;background:var(--inset);border:1px solid var(--hairline);border-radius:18px;padding:14px 16px;font-family:var(--mono);font-size:18px;letter-spacing:.14em;color:var(--text);text-align:center}
+.banner{margin:0 20px 14px;background:var(--warning-container);border-radius:18px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--on-warning-container)}
+.count{font-size:40px;font-weight:800;letter-spacing:-.02em;text-align:center;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.countsub{font-size:12px;color:var(--text-sec);text-align:center;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="page-h">
+  <div class="kicker">Guardian Shield · One UI 8 · v3.5.0 Phase 1c</div>
+  <h1>PIN recovery — deliberately non-trivial</h1>
+  <p>Two honest paths, both with real friction. <b>Path A:</b> the recovery code shown once at PIN setup (stored only as a salted hash — never searchable in the app). <b>Path B:</b> a 48-hour time-delayed reset with a persistent warning notification — same spirit as the cooling-off system. No instant “forgot PIN → reset” shortcut exists by design.</p>
+  <div class="note"><b>Scope:</b> mock only — sets layout/tokens. Full gate (verify hashes, WorkManager 48h clock) lands in code in the same phase.</div>
+</div>
+
+<div class="gallery">
+
+  <!-- Frame 1: recovery-code reveal right after PIN setup -->
+  <div class="block">
+    <div class="phone">
+      <div class="sb"><span>9:41</span><span>🔋</span></div>
+      <div class="screen">
+        <div class="hero">
+          <div class="well warn">🔑</div>
+          <div class="h bn">রিকভারি কোড সংরক্ষণ করুন</div>
+          <p class="p bn">পিন ভুলে গেলে এই কোড দিয়েই রিসেট করা যাবে। এটি <b>একবারই</b> দেখানো হবে — কোথাও লিখে নিরাপদে রাখুন। অ্যাপের ভিতরে এটি খুঁজে পাওয়া যাবে না।</p>
+        </div>
+        <div class="codebox">
+          <div class="code mono">7K4M-9QX2-TFD8</div>
+          <div class="hint bn">স্ক্রিনশট নেবেন না — কাগজে লিখে রাখুন</div>
+        </div>
+        <div class="btn tonal bn">📋 কপি করুন</div>
+        <div class="btn accent bn">লিখে ফেলেছি — চালিয়ে যান</div>
+        <div class="btn text bn">পরে দেখব (সাজেশন নয়)</div>
+      </div>
+    </div>
+    <div class="cap">Frame A — Recovery-code reveal <em>(fires right after PIN setup / change; hash stored, plaintext never)</em></div>
+  </div>
+
+  <!-- Frame 2: recovery chooser from "পিন ভুলে গেছেন?" -->
+  <div class="block">
+    <div class="phone">
+      <div class="sb"><span>9:41</span><span>🔋</span></div>
+      <div class="screen">
+        <div class="title bn">পিন রিকভারি</div>
+        <div class="sheet">
+          <div class="row">
+            <div class="well" style="width:44px;height:44px;font-size:20px;flex:0 0 auto">🔑</div>
+            <div>
+              <div class="t bn">রিকভারি কোড দিন</div>
+              <div class="s bn">পিন সেটআপের সময় দেওয়া ১২-অক্ষরের কোড — সাথে সাথে নতুন পিন সেট করা যাবে</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+          <div class="row">
+            <div class="well warn" style="width:44px;height:44px;font-size:20px;flex:0 0 auto">⏳</div>
+            <div>
+              <div class="t bn">টাইম-ডিলে রিসেট (৪৮ ঘণ্টা)</div>
+              <div class="s bn">কোড নেই? ৪৮ ঘণ্টা অপেক্ষা করুন — পুরো সময় স্ক্রিনে সতর্কতা দেখাবে। এটি ইচ্ছাকৃতভাবে ধীর।</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="banner bn">⚠️ রিকভারি ইচ্ছাকৃতভাবে কঠিন — তাৎক্ষণিক রিসেট থাকলে কমিটমেন্ট-ডিভাইসের মূল্যই থাকত না।</div>
+      </div>
+    </div>
+    <div class="cap">Frame B — Recovery chooser <em>(opened from “পিন ভুলে গেছেন?” on the verify screen)</em></div>
+  </div>
+
+  <!-- Frame 3: timed reset pending -->
+  <div class="block">
+    <div class="phone">
+      <div class="sb"><span>9:41</span><span>🔋</span></div>
+      <div class="screen">
+        <div class="title bn">টাইম-ডিলে রিসেট</div>
+        <div class="hero">
+          <div class="well err">🕒</div>
+          <div class="count">৪৬ঘ ১২মি</div>
+          <div class="countsub bn">রিসেট কার্যকর হতে বাকি</div>
+        </div>
+        <div class="banner bn">এই সময়ের মধ্যে একটি স্থায়ী নোটিফিকেশন দেখা যাবে। পিন মনে পড়ে গেলে এখান থেকে বাতিল করতে পারবেন — তবে বাতিল করতে লাগবে আপনার পিন।</div>
+        <div class="btn tonal bn">পিন দিয়ে বাতিল করুন</div>
+        <div class="btn text bn">ফিরে যান</div>
+      </div>
+    </div>
+    <div class="cap">Frame C — Timed reset pending <em>(48h clock; cancel requires the PIN itself)</em></div>
+  </div>
+
+</div>
+</body>
+</html>

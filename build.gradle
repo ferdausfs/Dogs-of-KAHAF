@@ -5,6 +5,13 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
     id 'com.google.dagger.hilt.android' version '2.52' apply false
     id 'com.google.devtools.ksp' version '1.9.24-1.0.20' apply false
+    // PHASE 1b (v3.5.0) — Crashlytics build plugins are declared here with
+    // `apply false`; the app module applies them ONLY when app/google-services.json
+    // exists (that file is owner-supplied from the Firebase console and is not
+    // committed). Without the file the plugins never apply and the build is
+    // byte-for-byte identical to before.
+    id 'com.google.gms.google-services' version '4.4.2' apply false
+    id 'com.google.firebase.crashlytics' version '3.0.2' apply false
 }
 
 tasks.register('clean', Delete) {

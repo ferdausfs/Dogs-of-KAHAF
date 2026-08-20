@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ONE SHIELD (One UI 8, color rev r2) — PIN recovery.
+     Mock: guardian-redesign/mocks/oneui8/pin-recovery.html (frames B & C).
+     Deliberately non-trivial: recovery-code entry OR a 48h time-delayed
+     reset. No instant reset exists by design. -->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:overScrollMode="never"
+    android:background="@color/bg_main">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="32dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="10dp"
+            android:text="@string/recovery_title"
+            android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+
+        <!-- hero -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="8dp">
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_icon_well"
+                android:backgroundTint="@color/warning_container">
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_lock"
+                    app:tint="@color/warning_amber"
+                    android:contentDescription="@null"/>
+            </FrameLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/recovery_subtitle"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13.5sp"
+                android:lineSpacingMultiplier="1.45"
+                android:gravity="center"/>
+        </LinearLayout>
+
+        <!-- Path A — recovery code -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="8dp"
+            android:text="@string/recovery_code_section"
+            style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.GuardianShield.SearchBox"
+                    android:hint="@string/recovery_code_hint">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editRecoveryCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textSize="17sp"
+                        android:letterSpacing="0.14"
+                        android:gravity="center"
+                        android:inputType="textCapCharacters|textNoSuggestions"
+                        android:maxLength="14"
+                        android:textColor="@color/on_surface"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/txtRecoveryError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/error_bright"
+                    android:textSize="12.5sp"
+                    android:gravity="center"
+                    android:visibility="gone"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVerifyCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/recovery_code_btn"
+                    style="@style/Widget.GuardianShield.Button"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Path B — time-delayed reset -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="8dp"
+            android:text="@string/recovery_reset_section"
+            style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/txtResetStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:gravity="center"/>
+
+                <TextView
+                    android:id="@+id/txtResetDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:gravity="center"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStartReset"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/recovery_reset_start"
+                    style="@style/Widget.GuardianShield.Button.Tonal"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCompleteReset"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/recovery_reset_complete"
+                    style="@style/Widget.GuardianShield.Button.Danger"
+                    android:visibility="gone"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelReset"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/recovery_reset_cancel"
+                    style="@style/Widget.GuardianShield.Button.Text"
+                    android:visibility="gone"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- honesty banner -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_lock_banner"
+            android:padding="14dp"
+            android:text="@string/recovery_warning_banner"
+            android:textColor="@color/on_warning_container"
+            android:textSize="12.5sp"
+            android:lineSpacingMultiplier="1.5"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="14dp"
+            android:text="@string/recovery_back"
+            style="@style/Widget.GuardianShield.Button.Text"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

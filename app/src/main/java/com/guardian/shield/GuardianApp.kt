@@ -15,6 +15,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.hilt.work.HiltWorkerFactory
 import com.guardian.shield.service.blocker.GuardianForegroundService
+import com.guardian.shield.util.GuardianCrashHandler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -25,6 +26,9 @@ class GuardianApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
+    // PHASE 2 (v3.5.0) — accountability partner observer/notifier.
+    @Inject lateinit var accountabilityNotifier: com.guardian.shield.accountability.AccountabilityNotifier
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -34,8 +38,15 @@ class GuardianApp : Application(), Configuration.Provider {
         super.onCreate()
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+        // PHASE 1b (v3.5.0) — crash reporting: local log always; Crashlytics
+        // only when google-services.json was present at build time.
+        GuardianCrashHandler.install(this)
         createNotificationChannels()
         scheduleWatchdog()
+        // PHASE 2 (v3.5.0) — begin observing accountability events (partner
+        // contact is optional; nothing happens until one is configured).
+        runCatching { accountabilityNotifier.start() }
+            .onFailure { Timber.e(it, "AccountabilityNotifier start failed") }
     }
 
     private fun createNotificationChannels() {

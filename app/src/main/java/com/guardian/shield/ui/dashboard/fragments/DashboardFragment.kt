@@ -72,7 +72,8 @@ class DashboardFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { render(it) }
+                launch { viewModel.uiState.collect { render(it) } }
+                launch { viewModel.streakInfo.collect { renderStreak(it) } }
             }
         }
     }
@@ -154,6 +155,39 @@ class DashboardFragment : Fragment() {
         binding.txtStatTime.text = protectedTimeText
         // Keep keyword label but show keyword count in accessibility? Use subtitle already shows
         adapter.submitList(state.recent)
+    }
+
+    // ---- PHASE 3 (v3.5.0) streak card — supportive tone only. When the
+    //      streak broke today we lead with a fresh-start message instead of a
+    //      comparison; when the week improved we tint it with the success
+    //      token. Nothing here logs or writes anything. ----
+    private fun renderStreak(info: com.guardian.shield.util.StreakCalculator.StreakInfo) {
+        binding.txtStreakDays.text = info.streakDays.toString()
+        val ctx = requireContext()
+        val delta = info.deltaPct
+        var colorRes = R.color.on_surface_variant
+        val subtitle = when {
+            info.fullBlockToday ->
+                getString(R.string.streak_fresh_start)
+            !info.hasAnyBlocks ->
+                getString(R.string.streak_newcomer)
+            info.thisWeekBlocks == 0 && info.lastWeekBlocks == 0 -> {
+                colorRes = R.color.success_legacy
+                getString(R.string.streak_all_clean)
+            }
+            delta == null ->
+                getString(R.string.streak_compare_new_fmt, info.thisWeekBlocks)
+            delta < 0 -> {
+                colorRes = R.color.success_legacy
+                getString(R.string.streak_compare_less_fmt, info.thisWeekBlocks, kotlin.math.abs(delta))
+            }
+            delta > 0 ->
+                getString(R.string.streak_compare_more_fmt, info.thisWeekBlocks, delta)
+            else ->
+                getString(R.string.streak_compare_same_fmt, info.thisWeekBlocks)
+        }
+        binding.txtWeeklyCompare.text = subtitle
+        binding.txtWeeklyCompare.setTextColor(ctx.getColor(colorRes))
     }
 
     private fun startShieldPulse() {

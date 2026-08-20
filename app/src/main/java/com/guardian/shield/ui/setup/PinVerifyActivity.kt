@@ -41,6 +41,12 @@ class PinVerifyActivity : AppCompatActivity() {
                 refreshDots()
             }
         }
+        // PHASE 1c (v3.5.0) — "পিন ভুলে গেছেন?" opens the deliberately
+        // non-trivial recovery flow (recovery code OR a 48h timed reset).
+        binding.txtForgot.setOnClickListener {
+            startActivity(android.content.Intent(this, PinRecoveryActivity::class.java))
+        }
+
         binding.btnOk.setOnClickListener {
             when (val r = viewModel.verifyPin(buffer.toString())) {
                 PinManager.VerifyResult.Success -> {

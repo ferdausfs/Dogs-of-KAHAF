@@ -12,6 +12,26 @@ plugins {
 import java.net.HttpURLConnection
 import java.net.URI
 
+// PHASE 1b (v3.5.0) — Firebase Crashlytics gate.
+// A real Firebase project cannot be created from CI/anon tooling, and a
+// google-services.json must never be fabricated. The owner drops their
+// console-generated file at app/google-services.json (see README/report);
+// when present we apply the google-services + crashlytics Gradle plugins and
+// crash reporting goes to Firebase. When absent the plugins are NOT applied,
+// firebase_app_id is never injected, the Crashlytics SDK auto-init no-ops at
+// runtime, and BuildConfig.CRASHLYTICS_CONFIGURED stays false (the in-app
+// local crash log still works — see util/GuardianCrashHandler.kt).
+val guardianHasGoogleServicesJson = file("google-services.json").exists()
+logger.lifecycle(
+    "::warning file=crashlytics-gate,line=1::google-services.json " +
+        (if (guardianHasGoogleServicesJson) "FOUND — Crashlytics plugins will be applied"
+         else "NOT present — Crashlytics plugins skipped (local crash log only)")
+)
+if (guardianHasGoogleServicesJson) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 android {
     namespace = "com.guardian.shield"
     compileSdk = 35
@@ -20,10 +40,15 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "3.4.0"
+        versionCode = 29
+        versionName = "3.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+        buildConfigField(
+            "boolean",
+            "CRASHLYTICS_CONFIGURED",
+            guardianHasGoogleServicesJson.toString()
+        )
     }
 
     signingConfigs {
@@ -110,6 +135,14 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.4")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("com.jakewharton.timber:timber:5.0.1")
+    // PHASE 1b (v3.5.0) — Firebase Crashlytics. The SDK artifact is always on
+    // the classpath (so code compiles either way), but it *initializes* only
+    // when the google-services plugin injected a firebase_app_id (i.e. the
+    // owner committed app/google-services.json). Without it, runtime auto-init
+    // no-ops — see GuardianApp / GuardianCrashHandler. Analytics is deliberately
+    // NOT added (crash data only; no PII beyond Crashlytics defaults).
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-crashlytics")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")

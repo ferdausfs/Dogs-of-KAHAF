@@ -73,5 +73,11 @@ class SecureStorage @Inject constructor(
         const val KEY_PIN_HASH = "pin_hash"
         const val KEY_PIN_ATTEMPTS = "pin_attempts"
         const val KEY_PIN_LOCKOUT_UNTIL = "pin_lockout_until"
+        // PHASE 1c (v3.5.0) — PIN recovery. The recovery code itself is NEVER
+        // stored — only its salted PBKDF2 hash (not searchable, not readable).
+        const val KEY_RECOVERY_HASH = "recovery_hash"
+        const val KEY_RECOVERY_ATTEMPTS = "recovery_attempts"
+        const val KEY_RECOVERY_LOCKOUT_UNTIL = "recovery_lockout_until"
+        const val KEY_PIN_RESET_REQUESTED_AT = "pin_reset_requested_at"
     }
 }
