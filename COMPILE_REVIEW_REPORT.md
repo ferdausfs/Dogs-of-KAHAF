@@ -1807,6 +1807,24 @@ new file: app/src/main/res/drawable/ic_flag.xml  (24dp flag vector, tint=warning
   - Direct APK download: **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.1.2/app-release.apk**
   (Link resolves after the post-merge Actions run completes; the tag is free per the §5 probe.)
 
+### CI RESULT (post-merge, same day 07:53 UTC+0)
+
+- PR #56 merged to `main` (merge commit `a368614`); `Build Release APK` run
+  **32345718593 → conclusion: success** (all steps green; only benign
+  annotations: setup-java v4 deprecation, gradle cache-restore 400).
+- Release **Guardian Shield v3.5.0** published with **app-release.apk
+  (50 MB)** — verified asset URL returns 302 to the signed download:
+  `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.5.0/app-release.apk`
+- No fix iterations were needed: the local gate's EXIT=0 set covered 100% of
+  changed .kt files (verified by diff-set comparison before merge).
+- Note for future merges: the release-tag guard now (correctly) rejects
+  release builds while v3.5.0 exists — the next merge to main must bump
+  versionName/versionCode first, by design.
+- CI workflow unchanged: a `pull_request` build trigger could not be added —
+  GitHub rejected the workflow push (app token lacks `workflows` permission).
+  That change remains desirable for pre-merge verification; a human with
+  Actions permission can add 3 lines to `.github/workflows/build.yml`.
+
 ## 7) COMPLIANCE CHECKLIST
 
 - [x] `btnMarkFalse` is now a proper **outlined** secondary button (Material3
