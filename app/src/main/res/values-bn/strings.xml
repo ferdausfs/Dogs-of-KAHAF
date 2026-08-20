@@ -339,6 +339,45 @@
     <string name="pin_reset_pending_notif_text">রিসেট কার্যকর হবে: %1$s — বাতিল করতে ট্যাপ করুন (পিন লাগবে)</string>
     <string name="pin_reset_ready_notif_title">⏰ পিন রিসেট প্রস্তুত</string>
     <string name="pin_reset_ready_notif_text">৪৮ ঘণ্টার অপেক্ষা শেষ — ট্যাপ করে রিসেট সম্পন্ন করুন</string>
+    <string name="btn_recovery_code">রিকভারি কোড · Recovery code</string>
+    <string name="recovery_regen_title">নতুন রিকভারি কোড বানাবেন?</string>
+    <string name="recovery_regen_msg">নতুন কোড বানালেই পুরনোটি অকার্যকর হয়ে যাবে। অ্যাপে কোডের শুধু সল্টেড হ্যাশ সংরক্ষিত থাকে; আসল কোড একবারই দেখানো হয়, অ্যাপের ভিতরে সংরক্ষিত হয় না।</string>
+    <string name="recovery_regen_yes">নতুন কোড বানান</string>
+
+    <!-- PHASE 2 (v3.5.0) — অ্যাকাউন্টেবিলিটি পার্টনার -->
+    <string name="section_accountability">অ্যাকাউন্টেবিলিটি · ACCOUNTABILITY</string>
+    <string name="btn_partner">অ্যাকাউন্টেবিলিটি পার্টনার · Accountability Partner</string>
+    <string name="btn_partner_summary">সাপ্তাহিক সারসংক্ষেপ পাঠান · Send weekly summary</string>
+    <string name="partner_status_none">কোনো পার্টনার সেট করা নেই। অ্যালার্ট এখানে নোটিফিকেশন হিসেবে আসবে; এক ট্যাপে পাঠাতে পারবেন — চুপচাপ কিছুই পাঠানো হয় না।</string>
+    <string name="partner_status_set_fmt">পার্টনার: %1$s (%2$s). অ্যালার্টের ইমেইল অ্যাকশন ট্যাপ করে তাঁকে জানান।</string>
+    <string name="partner_dialog_title">অ্যাকাউন্টেবিলিটি পার্টনার</string>
+    <string name="partner_name_hint">বিশ্বস্ত ব্যক্তির নাম</string>
+    <string name="partner_email_hint">তাঁর ইমেইল ঠিকানা</string>
+    <string name="partner_dialog_note">শুধু এই ডিভাইসেই সংরক্ষিত। সুরক্ষা পজ হলে, ট্যাম্পার চেষ্টা হলে, বা উচ্চ-আত্মবিশ্বাসের রিপোর্ট কুলিং-অফে গেলে আপনি নোটিফিকেশন পাবেন — এর ইমেইল/শেয়ার অ্যাকশনে এক ট্যাপে তাঁকে জানাতে পারবেন। এই অ্যাপের কোনো ব্যাকএন্ড নেই, চুপচাপ ইমেইল পাঠানোর ক্ষমতাও নেই।</string>
+    <string name="partner_email_invalid">ইমেইল ঠিকানাটি সঠিক মনে হচ্ছে না</string>
+    <string name="partner_saved">পার্টনার সংরক্ষণ হয়েছে</string>
+    <string name="partner_removed">পার্টনার সরানো হয়েছে</string>
+    <string name="partner_remove">সরান</string>
+    <string name="partner_notif_action_email">📧 ইমেইল</string>
+    <string name="partner_notif_action_share">📤 শেয়ার</string>
+    <string name="partner_notif_pause_title">⚠️ সুরক্ষা পজ হয়েছে</string>
+    <string name="partner_notif_pause_body">Guardian Shield সুরক্ষা এইমাত্র পজ করা হয়েছে। 📧 ট্যাপ করে এক ট্যাপে %1$s-কে জানান।</string>
+    <string name="partner_notif_tamper_title">⚠️ ট্যাম্পার চেষ্টা</string>
+    <string name="partner_notif_tamper_body"> একটি ট্যাম্পার চেষ্টা লগ হয়েছে (%2$s)। 📧 ট্যাপ করে এক ট্যাপে %1$s-কে জানান।</string>
+    <string name="partner_notif_report_title">⏳ উচ্চ-আত্মবিশ্বাসের রিপোর্ট কিউ হয়েছে</string>
+    <string name="partner_notif_report_body">একটি উচ্চ-আত্মবিশ্বাসের "সংবেদনশীল নয়" রিপোর্ট কুলিং-অফে গেছে (%2$s)। 📧 ট্যাপ করে এক ট্যাপে %1$s-কে জানান।</string>
+    <string name="partner_summary_subject">Guardian Shield সাপ্তাহিক সারসংক্ষেপ — %1$s</string>
+    <string name="partner_summary_greeting">প্রিয় %1$s — এটা আমার Guardian Shield সাপ্তাহিক অ্যাকাউন্টেবিলিটি সারসংক্ষেপ।</string>
+    <string name="partner_summary_this_week_fmt">এই সপ্তাহে কনটেন্ট ব্লক: %1$d বার</string>
+    <string name="partner_summary_last_week_fmt">গত সপ্তাহে কনটেন্ট ব্লক: %1$d বার</string>
+    <string name="partner_summary_less">কম</string>
+    <string name="partner_summary_more">বেশি</string>
+    <string name="partner_summary_delta_fmt">গত সপ্তাহের চেয়ে %1$d%% %2$s</string>
+    <string name="partner_summary_tamper_fmt">এই সপ্তাহে ট্যাম্পার চেষ্টা: %1$d বার</string>
+    <string name="partner_summary_top_app_fmt">সবচেয়ে বেশি ব্লক হওয়া অ্যাপ: %1$s</string>
+    <string name="partner_summary_footer">— Guardian Shield থেকে পাঠানো (অন-ডিভাইস সারসংক্ষেপ; কোনো ডেটা কোথাও আপলোড হয়নি)</string>
+    <string name="partner_summary_how_title">সাপ্তাহিক সারসংক্ষেপ পাঠান</string>
+    <string name="partner_summary_how_msg">কীভাবে পাঠাবেন বেছে নিন। ইমেইল বেছে নিলে আপনার মেইল অ্যাপ আগে থেকে পূরণ করা অবস্থায় খুলবে — পাঠাতে আরেক ট্যাপ লাগবে। এই অ্যাপ চুপচাপ কিছুই পাঠায় না।</string>
     <!-- WATCHTOWER V3 permissions + onboarding copy -->
     <string name="perm_accessibility_sub">মূল ইঞ্জিন · Accessibility</string>
     <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>

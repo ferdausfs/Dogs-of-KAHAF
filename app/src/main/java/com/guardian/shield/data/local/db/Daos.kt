@@ -59,6 +59,11 @@ interface BlockEventDao {
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC")
     suspend fun getAll(): List<BlockEventEntity>
 
+    // PHASE 2/3 (v3.5.0) — accountability weekly digest + clean-streak
+    // computation. One bounded window query; bucketing happens in Kotlin.
+    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
+    suspend fun eventsSince(since: Long): List<BlockEventEntity>
+
     @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
     fun countSinceFlow(since: Long): Flow<Int>
 

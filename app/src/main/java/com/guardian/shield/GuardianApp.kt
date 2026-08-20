@@ -26,6 +26,9 @@ class GuardianApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
+    // PHASE 2 (v3.5.0) — accountability partner observer/notifier.
+    @Inject lateinit var accountabilityNotifier: com.guardian.shield.accountability.AccountabilityNotifier
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -40,6 +43,10 @@ class GuardianApp : Application(), Configuration.Provider {
         GuardianCrashHandler.install(this)
         createNotificationChannels()
         scheduleWatchdog()
+        // PHASE 2 (v3.5.0) — begin observing accountability events (partner
+        // contact is optional; nothing happens until one is configured).
+        runCatching { accountabilityNotifier.start() }
+            .onFailure { Timber.e(it, "AccountabilityNotifier start failed") }
     }
 
     private fun createNotificationChannels() {

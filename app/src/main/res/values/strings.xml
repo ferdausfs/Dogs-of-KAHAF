@@ -342,6 +342,45 @@
     <string name="pin_reset_pending_notif_text">Reset becomes possible: %1$s — tap to cancel (PIN required)</string>
     <string name="pin_reset_ready_notif_title">⏰ PIN reset is ready</string>
     <string name="pin_reset_ready_notif_text">The 48-hour wait is over — tap to finish the reset</string>
+    <string name="btn_recovery_code">Recovery code · রিকভারি কোড</string>
+    <string name="recovery_regen_title">New recovery code?</string>
+    <string name="recovery_regen_msg">A fresh code replaces the old one immediately — the old code stops working. The app stores only the code\'s salted hash; the code itself is shown once and never saved inside the app.</string>
+    <string name="recovery_regen_yes">Generate new code</string>
+
+    <!-- PHASE 2 (v3.5.0) — accountability partner -->
+    <string name="section_accountability">ACCOUNTABILITY · অ্যাকাউন্টেবিলিটি</string>
+    <string name="btn_partner">Accountability Partner · অ্যাকাউন্টেবিলিটি পার্টনার</string>
+    <string name="btn_partner_summary">Send weekly summary · সাপ্তাহিক সারসংক্ষেপ পাঠান</string>
+    <string name="partner_status_none">No partner set. Alerts appear here as notifications; you send them on with one tap — nothing is sent silently.</string>
+    <string name="partner_status_set_fmt">Partner: %1$s (%2$s). Tap an alert\'s email action to notify them.</string>
+    <string name="partner_dialog_title">Accountability Partner</string>
+    <string name="partner_name_hint">Trusted person\'s name</string>
+    <string name="partner_email_hint">Their email address</string>
+    <string name="partner_dialog_note">Saved on this device only. When protection is paused, a tamper attempt is logged, or a high-confidence report enters cooling-off, you get a notification whose email/share action lets you tell them in one tap. This app has no backend and cannot send email silently.</string>
+    <string name="partner_email_invalid">That email address does not look valid</string>
+    <string name="partner_saved">Partner saved</string>
+    <string name="partner_removed">Partner removed</string>
+    <string name="partner_remove">Remove</string>
+    <string name="partner_notif_action_email">📧 Email</string>
+    <string name="partner_notif_action_share">📤 Share</string>
+    <string name="partner_notif_pause_title">⚠️ Protection paused</string>
+    <string name="partner_notif_pause_body">Guardian Shield protection was just paused. Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_notif_tamper_title">⚠️ Tamper attempt</string>
+    <string name="partner_notif_tamper_body">A tamper attempt was logged (%2$s). Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_notif_report_title">⏳ High-confidence report queued</string>
+    <string name="partner_notif_report_body">A high-confidence \"not sensitive\" report entered cooling-off (%2$s). Tap 📧 to let %1$s know with one tap.</string>
+    <string name="partner_summary_subject">Guardian Shield weekly summary — %1$s</string>
+    <string name="partner_summary_greeting">Hi %1$s — here is my Guardian Shield weekly accountability summary.</string>
+    <string name="partner_summary_this_week_fmt">Content blocks this week: %1$d</string>
+    <string name="partner_summary_last_week_fmt">Content blocks last week: %1$d</string>
+    <string name="partner_summary_less">less</string>
+    <string name="partner_summary_more">more</string>
+    <string name="partner_summary_delta_fmt">That is %1$d%% %2$s than last week</string>
+    <string name="partner_summary_tamper_fmt">Tamper attempts this week: %1$d</string>
+    <string name="partner_summary_top_app_fmt">Most blocked app: %1$s</string>
+    <string name="partner_summary_footer">— sent from Guardian Shield (on-device summary; no data was uploaded anywhere)</string>
+    <string name="partner_summary_how_title">Send the weekly summary</string>
+    <string name="partner_summary_how_msg">Choose how to send it. Email opens your mail app pre-filled to your partner — one more tap sends it. Nothing is sent silently by this app.</string>
     <!-- WATCHTOWER V3 permissions + onboarding copy -->
     <string name="perm_accessibility_sub">core engine · এক্সেসিবিলিটি সার্ভিস</string>
     <string name="perm_usage_sub">ইউসেজ স্ট্যাটস</string>

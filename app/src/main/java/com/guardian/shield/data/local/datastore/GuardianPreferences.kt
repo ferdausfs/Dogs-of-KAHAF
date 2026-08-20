@@ -33,6 +33,11 @@ class GuardianPreferences @Inject constructor(
         // AI Threshold — DataStore এ
         val AI_THRESHOLD = floatPreferencesKey("ai_threshold")
         val GRID_VOTE_COUNT = intPreferencesKey("grid_vote_count")
+
+        // PHASE 2 (v3.5.0) — accountability partner (contact is stored locally
+        // only; nothing is transmitted by the app itself).
+        val PARTNER_NAME = stringPreferencesKey("partner_name")
+        val PARTNER_EMAIL = stringPreferencesKey("partner_email")
     }
 
     // Flows
@@ -48,6 +53,10 @@ class GuardianPreferences @Inject constructor(
     val aiThreshold: Flow<Float> = ds.data.map { it[Keys.AI_THRESHOLD] ?: 0.72f }
     val gridVoteCount: Flow<Int> = ds.data.map { it[Keys.GRID_VOTE_COUNT] ?: 2 }
 
+    // PHASE 2 (v3.5.0) — accountability partner
+    val partnerName: Flow<String> = ds.data.map { it[Keys.PARTNER_NAME] ?: "" }
+    val partnerEmail: Flow<String> = ds.data.map { it[Keys.PARTNER_EMAIL] ?: "" }
+
     // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
     suspend fun setAiDetection(v: Boolean) { ds.edit { it[Keys.AI_DETECTION] = v } }
@@ -60,4 +69,13 @@ class GuardianPreferences @Inject constructor(
     suspend fun bumpRulesVersion() {
         ds.edit { it[Keys.RULES_VERSION] = (it[Keys.RULES_VERSION] ?: 0) + 1 }
     }
+
+    // PHASE 2 (v3.5.0) — accountability partner. Blank email = no partner set.
+    suspend fun setPartner(name: String, email: String) {
+        ds.edit {
+            it[Keys.PARTNER_NAME] = name.trim()
+            it[Keys.PARTNER_EMAIL] = email.trim()
+        }
+    }
+    suspend fun clearPartner() = setPartner("", "")
 }

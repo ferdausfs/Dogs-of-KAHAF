@@ -26,6 +26,15 @@ object TamperLogger {
     fun log(context: Context, attemptType: String) {
         Timber.w("Tamper attempt: $attemptType")
         persist(context, attemptType)
+        // PHASE 2 (v3.5.0) — observe-only emit for the accountability partner.
+        // Runs AFTER the durable write above; a listener failure cannot break
+        // the tamper log (emit swallows listener errors by contract).
+        runCatching {
+            com.guardian.shield.accountability.AccountabilityEvents.emit(
+                com.guardian.shield.accountability.AccountabilityEvents.Kind.TAMPER_DETECTED,
+                attemptType
+            )
+        }
         try {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
                 as? NotificationManager ?: return

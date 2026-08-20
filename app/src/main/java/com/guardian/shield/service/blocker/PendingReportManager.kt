@@ -113,6 +113,17 @@ class PendingReportManager @Inject constructor(
         // Schedule the WorkManager worker.
         scheduleApplyWork(id, scheduledAt)
 
+        // PHASE 2 (v3.5.0) — observe-only accountability hook. The row is
+        // already inserted and the worker scheduled above; this emit comes
+        // strictly AFTER the cooling-off decision and cannot change it
+        // (emit swallows listener errors).
+        runCatching {
+            com.guardian.shield.accountability.AccountabilityEvents.emit(
+                com.guardian.shield.accountability.AccountabilityEvents.Kind.HIGH_CONFIDENCE_REPORT,
+                "pkg=$pkg conf=${"%.2f".format(confidence)} src=$source delayMin=${delayMs / 60_000}"
+            )
+        }
+
         EnqueueResult(id = id, delayMs = delayMs, scheduledApplyAt = scheduledAt)
     }
 
