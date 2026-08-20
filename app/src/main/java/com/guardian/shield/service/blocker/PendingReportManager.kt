@@ -164,6 +164,24 @@ class PendingReportManager @Inject constructor(
 
     fun observePending() = pendingReportDao.observePending()
 
+    /**
+     * Re-enqueue WorkManager work for every PENDING row. WorkManager persists
+     * work across reboots on its own, but an explicit reschedule on process
+     * start covers unique-work loss after a custom Configuration.Provider
+     * swap and clock-skewed initialDelay. REPLACE is idempotent.
+     */
+    suspend fun rescheduleAllPending() = withContext(Dispatchers.IO) {
+        val pending = pendingReportDao.getPending()
+        val now = System.currentTimeMillis()
+        for (row in pending) {
+            val applyAt = if (row.scheduledApplyAt <= now) now else row.scheduledApplyAt
+            scheduleApplyWork(row.id, applyAt)
+        }
+        if (pending.isNotEmpty()) {
+            Timber.i("Rescheduled ${pending.size} pending cooling-off report(s)")
+        }
+    }
+
     // --- private helpers ---
 
     private fun workName(id: Long) = "pending_report_apply_$id"
