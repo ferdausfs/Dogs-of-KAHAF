@@ -2922,7 +2922,7 @@ reads + notifications only.
 # 2026-08-20 Session — Confirmed-Sensitive Memory: "সংরক্ষণ করো" (Protect) + never-undoable report refusal (arena/01a01e76-dogs-of-kahaf)
 
 **Base:** `main` @ `a368614` (v3.5.0 / vc29, published). **Target:** v3.6.0 / vc30.
-**Commit:** `46387d6` · **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/57
+**Commit:** `46387d6` (code) + report updates · **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/57 — **MERGED** 2026-08-20T10:24:40Z, CI green, v3.6.0 released.
 
 ## 0) OBJECTIVE
 
@@ -3172,15 +3172,29 @@ the (tested) signature math. The AiDetector check ORDER is compile-verified +
 traced in §3.1; the report-path refusal predicate itself
 (`isConfirmedSignature`) IS behavior-tested above.
 
-**Gate 4 — CI release build:** the workflow `Build Release APK` runs
-`./gradlew assembleRelease --no-daemon --stacktrace` on push to `main` (i.e.
-after PR #57 merges; `workflow_dispatch` is HTTP 403 for this bot — same
-restriction as every prior session, re-verified). Release-tag guard passes
-(v3.6.0 free). PR #57 is OPEN and MERGEABLE against `main`.
+**Gate 4 — CI release build: ACTUAL GREEN RUN** (PR #57 merged
+2026-08-20T10:24:40Z; CI runs on push to `main` — `workflow_dispatch` is HTTP
+403 for this bot, same restriction as every prior session, re-verified):
 
-**Expected after merge:**
-- Tag **v3.6.0**, release **Guardian Shield v3.6.0**
-- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.0/app-release.apk
+- Run: https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32358802906 —
+  **conclusion: success**, all 14 steps green: Checkout → JDK 17 → Read app
+  version → Setup Gradle → Decode keystore → **Build Release APK** (real
+  `./gradlew assembleRelease --no-daemon --stacktrace`) → **Verify APK
+  signed** → **Upload Artifact** → **Create GitHub Release** → post steps.
+- Release: **Guardian Shield v3.6.0**, tag **v3.6.0**, published
+  2026-08-20T10:29:15Z, targetCommitish `main` (verified via releases API).
+  The in-repo release-tag guard passed in-run (v3.6.0 was free at build time).
+- APK asset: `app-release.apk`, **53,040,644 bytes** —
+  https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.0/app-release.apk
+  (asset URL verified via the releases API; the download URL serves a 302 to
+  objects.githubusercontent.com with
+  `content-disposition: attachment; filename=app-release.apk` — a direct
+  download from THIS sandbox is blocked by its network policy, not by the
+  release).
+
+**No fixes were needed** — the CI build went green on the first run after
+merge; the local compile gate, resource verifier and 27 behavior tests had
+already caught everything.
 
 ## 7) RE-VERIFICATION TRACES (task sequence item 4)
 
@@ -3242,4 +3256,4 @@ and the 27 behavior tests cover the new store's independence).
 - [x] Settings shows only a count — no browse/remove UI (one-way by design).
 - [x] Version bumped past published v3.5.0; v3.6.0 tag probe 404/404.
 - [x] Compile gate 0 errors (full source set) · verify_res OK · behavior tests 27/27.
-- [x] PR #57 open + mergeable; release link documented (CI runs post-merge on main).
+- [x] CI GREEN on `main` (run 32358802906, 14/14 steps success, no fixes needed); v3.6.0 release + signed APK (53,040,644 B) published and linked.
