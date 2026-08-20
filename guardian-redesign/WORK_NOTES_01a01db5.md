@@ -11,12 +11,12 @@ Verification stack available in THIS sandbox (verified 2026-08-20):
 - Release gate: GitHub Actions `Build Release APK` on push to main (after PR merge).
 
 Phase checklist:
-1a tamper trace + fixes (device-admin watchdog + a11y-disabled tamper log)    [ ]
-1b Crashlytics (conditional google-services) + local GuardianCrashHandler     [ ]
-1c PIN recovery: mock + recovery code + 48h timed reset                       [ ]
-2  accountability partner (observe tamper/protection-pause/high-conf enqueue) [ ]
-3  clean streak + weekly comparison card on dashboard                         [ ]
-4a backup/restore JSON (SAF)                                                  [ ]
-4b Help/FAQ screen                                                            [ ]
-4c notification content-leak: NotificationShieldService                        [ ]
-FINAL version bump 3.5.0/29 + compile gate + push + PR + report section        [ ]
+1a tamper trace + fixes (device-admin watchdog + a11y-disabled tamper log)    [x]
+1b Crashlytics (conditional google-services) + local GuardianCrashHandler     [x]
+1c PIN recovery: mock + recovery code + 48h timed reset                       [x]
+2  accountability partner (observe tamper/protection-pause/high-conf enqueue) [x]
+3  clean streak + weekly comparison card on dashboard                         [x]
+4a backup/restore JSON (SAF)                                                  [x]
+4b Help/FAQ screen                                                            [x]
+4c notification content-leak: NotificationShieldService                        [x]
+FINAL version bump 3.5.0/29 + compile gate + push + PR + report section        [x]

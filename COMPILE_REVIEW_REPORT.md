@@ -2682,3 +2682,237 @@ been verified through:
 - [x] STRIKE_THRESHOLD / STRIKE_RESET_MS / ESCALATION_* untouched
 - [x] AI detection/strike-counting core logic untouched
 - [x] Version bumped to 3.4.0 (v28) past published v3.3.0
+
+
+---
+
+# 2026-08-20 Session — Multi-Phase Completeness Pass: Reliability · Accountability · Motivation · Polish (arena/01a01db5-dogs-of-kahaf)
+
+**Base:** `main` @ `738d0db` (v3.4.0 / vc28, published). **Target:** v3.5.0 / vc29.
+**Commits:** `43adfbc` (Phase 1) · `b7e5974` (Phase 2) · `c735575` (Phase 3) · `e05c86a` (Phase 4a) · `d021879` (Phase 4b) · `9146250` (Phase 4c).
+
+## 0) METHOD — WHAT "BUILD GREEN" MEANS IN THIS SESSION
+
+The sandbox has **no JDK/Android SDK** and `dl.google.com` + Maven Central are
+network-blocked, so `./gradlew assembleRelease` cannot run locally (verified
+2026-08-20). Instead of shipping unverified code, a local compile gate was built:
+
+- **JDK 25** (jdk4py via PyPI) + **K2JVMCompiler Kotlin 2.3.10-RC** (kotlin-jupyter-kernel fat jar) + **real `android.jar` android-35** (Sable/android-platforms, fetched via `gh api` raw).
+- Repo resource generator (`gen_res.py`) produces `R.kt` + ViewBinding classes from the *actual* res tree, so wrong ids/colors/string names fail compilation.
+- Hand-written stubs for androidx/Hilt/coroutines/Material; heavy unrelated app classes shadowed.
+- `guardian-redesign/tools/verify_res.py` (in-repo) passes after every phase: **77 colors, 51 drawables, 37 styles**.
+
+**Gate result per phase:** `EXIT=0` (zero errors) with an expanding compile set —
+final set compiles DashboardViewModel/DashboardFragment/SettingsActivity/
+RulesEngine/TempBlockManager/RulesRepositoryImpl/BackupRestoreManager/
+NotificationShieldService/HelpActivity + all Phase-1/2 files (linear set ≈ 34 files,
+0 errors; remaining output is pre-existing style warnings such as
+annotation-target and deprecation notices).
+
+**Behavior test (JVM, real compiled classes):** StreakCalculator — 7/7 PASS, incl.
+the task's own example (7 blocks this week vs 10 last week → −30%), strike-3
+break semantics, NOT_SENSITIVE exclusion, install-day floor for newcomers.
+
+**Final green build:** CI `Build Release APK` runs only on push to `main`, i.e.
+after this PR merges (same pattern as earlier sessions). Release-tag-collision
+guard probed live before opening the PR: `releases/tag/v3.5.0 → 404`,
+`tree/v3.5.0 → 404` → guard passes. Expected artifact after merge+CI:
+`https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.5.0/app-release.apk`
+
+## 1) PHASE 1 — HARDENING + RELIABILITY
+
+### 1a) Tamper-protection trace — what IS / ISN'T protected (honest table)
+
+End-to-end traced: `GuardianDeviceAdminReceiver` → `UninstallProtection`
+(a11y watcher) → `TamperLogger` → `AccessibilityHeartbeat` + FGS watchdog →
+`BootReceiver` → `MainActivity.checkDeviceAdmin`.
+
+| Attack surface | Protected? | Mechanism / honest limit |
+|---|---|---|
+| Settings→Apps page: **uninstall / force-stop / clear-data** buttons | ✅ while a11y alive | `UninstallProtection` bounces home when our app-info page + dangerous button texts appear (EN/BN/ES/ZH strings); `TamperLogger.log` + strict `goHomeAndBlock(TAMPER_ATTEMPT)` under commitment lock. All three actions sit on that same bounced page. |
+| In-app protection toggle | ✅ | `DashboardViewModel.toggleProtection()` is the ONLY writer of `protection_enabled`; gated by Time-Lock + cooldown. |
+| **Device Admin revoked** in system settings | ✅ (NEW) | FGS 5s watchdog now samples admin state, logs `device-admin-revoked` to TamperLogger + posts a high-priority re-grant notification (tap → `ACTION_ADD_DEVICE_ADMIN`), re-prompt ≤ once/2h (`DEVICE_ADMIN_RECHECK_MS`). |
+| **Accessibility service disabled/killed** | ✅ | 2s heartbeat; 3 consecutive stale reads (15s window) → full-screen `AccessibilityPromptActivity`; now ALSO `TamperLogger.log("accessibility-disabled")`. |
+| Reboot / app update / swipe-from-recents | ✅ | `BootReceiver` (BOOT + LOCKED_BOOT + MY_PACKAGE_REPLACED); FGS `stopWithTask=false` + `onTaskRemoved` restart + 15-min `ServiceWatchdogWorker`. |
+| **Force-stop succeeding** (a11y dead) | ❌ hard limit | A force-stopped process cannot run its own watchdog/WorkManager; nothing executes until user relaunch. Mitigation is the page bounce + visible prompts — stated plainly, no recovery fiction. |
+| **Safe Mode** | ❌ cannot fix | Downloaded apps never run in Safe Mode; no non-root app can hook this. Said so, not worked around. |
+| **ADB / USB debugging** | ⚠️ partial | While Device Admin is active, plain `pm uninstall` fails; but `adb shell dpm remove-active-admin` + uninstall succeeds from a PC. Undetectable from the device. Documented. |
+| Second user / factory reset | ❌ out of scope | — |
+
+Fixable in-app gaps fixed this phase: device-admin re-request + tamper log on
+revocation; accessibility-disabled now enters the durable tamper log.
+
+### 1b) Crashlytics — conditional integration (no fabricated credentials)
+
+- No Firebase dependency existed. Cannot create a Firebase project or a real
+  `google-services.json` from this sandbox — inventing one would actively break
+  builds for everyone else.
+- Integration is **gated**: root declares `com.google.gms.google-services` 4.4.2 +
+  `com.google.firebase.crashlytics` 3.0.2 (`apply false`); the app module applies
+  both plugins and adds `firebase-bom:33.5.1` + `firebase-crashlytics`
+  (**no analytics**) ONLY when `app/google-services.json` exists
+  (`guardianHasGoogleServicesJson` → `BuildConfig.CRASHLYTICS_CONFIGURED`).
+- Always-on local `GuardianCrashHandler`: chains to the previous default handler,
+  appends crash (thread, stack, app version, timestamp) to on-device
+  `filesDir/crash_log.txt` (capped at 30 records), shareable via
+  `buildShareIntent`. Works in every build, no network.
+- **Data statement:** when Crashlytics is configured by a maintainer's own json,
+  it collects its DEFAULT set only (device model, OS version, app version,
+  crash stack, installation UUID) — no custom keys, no user content, no PII
+  logging added. When not configured (any CI/release build from this repo):
+  nothing crash-related leaves the device — which the manifest guarantees anyway
+  (**no `android.permission.INTERNET`**, verified).
+
+### 1c) PIN recovery — deliberately non-trivial (commitment-device design)
+
+Traced pre-state: **no recovery path existed** — the PIN screen literally told
+users to reinstall. New flow (mocked first at
+`guardian-redesign/mocks/oneui8/pin-recovery.html`, frames A/B/C, then implemented):
+
+- **Path A — recovery code:** 12-char unambiguous alphabet
+  (no 0/O/I/L/1), displayed ONCE after PIN setup behind a mandatory
+  "I wrote it down" checkbox (+ copy button + back-press warning). Only a salted
+  PBKDF2-HMAC-SHA256 hash (`recovery_hash` in EncryptedSharedPreferences) is
+  stored — the code is not searchable in-app. Verify: 5 tries → 30-min lockout.
+  Regenerate via Settings → Security; changing PIN re-issues a fresh code.
+- **Path B — timed reset:** request → **48 h wait** (`PIN_RESET_DELAY_MS`) with an
+  ongoing countdown notification (fixed deadline text) → ready-notification via
+  WorkManager at deadline → set new PIN. Cancel requires passing PIN verify
+  first. Rules/history untouched by both paths.
+- Fail-closed preserved: when SecureStorage is in its InMemory fallback, recovery
+  is disabled exactly like verification.
+- `PinVerifyActivity` note is now a live link to `PinRecoveryActivity`;
+  `clearPin` existed but had no safe UI path — now gated through both flows.
+
+## 2) PHASE 2 — ACCOUNTABILITY PARTNER (mechanism stated exactly)
+
+- **Storage:** name+email in DataStore only (`partner_name`/`partner_email`).
+- **Observed triggers (observe-only, never modify the decision):**
+  protectionEnabled true→false (first emission skipped), `TamperLogger.log(...)`,
+  `PendingReportManager.enqueue(...)` — see §5 for the diff-level proof that
+  these are two post-hoc emit calls and nothing else.
+- **What "notify" does — precisely:** the app posts a local high-priority
+  notification with EMAIL (`mailto:` pre-addressed + pre-written body) and SHARE
+  (chooser) actions. A human tap sends it. **Nothing is sent automatically**: no
+  backend, no SMTP, no credentials — and structurally impossible to send silently
+  because the manifest has **no INTERNET permission**. Weekly digest
+  (per-reason 7-day counts + tamper count from `tamper_log.txt`) is available on
+  demand in Settings through the same intents. All copy in-app and in the FAQ
+  says this plainly.
+- UI: Settings → ACCOUNTABILITY card (partner row + status line + digest row) +
+  `dialog_partner.xml` with `Patterns.EMAIL_ADDRESS` validation; all One UI 8
+  tokens; both rows join the Time-Lock disable list.
+
+## 3) PHASE 3 — CLEAN STREAK + WEEKLY COMPARISON
+
+- **Data source: zero new logging.** Reuses `block_events`; a strike-3 full block
+  is `reason=AI_DETECTION AND matchedTerm LIKE 'temp_block:%'` — re-verified in
+  `BlockingEngine.block()/logEvent()` (strike-1/2 warnings never reach
+  `logEvent`; `NOT_SENSITIVE` rows are reports and are excluded everywhere).
+- **Streak:** consecutive local calendar days back from today (inclusive while
+  today is clean) with zero full blocks; Calendar arithmetic (DST-safe); floor =
+  app first-install day (new users read "days since install", never an unbounded
+  number); 400-day load window; 10,000-day paranoia bound.
+- **Weekly comparison:** trailing-7d vs previous-7d over all non-report block
+  events; `deltaPct=(this−last)×100/last`; null baseline → "first week on record".
+- **UI:** dashboard streak card (`Widget.GuardianShield.Card`, `bg_icon_well`,
+  `primary_dim`/`success_legacy` tokens): big count + compare line. Tone: fewer →
+  success tint + 💪; today broke it → fresh-start message (never shaming);
+  newcomer → journey greeting; clean week → praise. Spec example shipped
+  verbatim: "এই সপ্তাহে ব্লক হয়েছে %1$d বার, গত সপ্তাহের চেয়ে %2$d%% কম" —
+  consistent with the "স্টে স্ট্রং" voice. EN+BN strings.
+- **JVM behavior tests: 7/7 PASS** (newcomer floor=5d, today-break=0+
+  fullBlockToday, 3-day streak, 7v10=−30%, NOT_SENSITIVE exclusion, non-temp
+  AI row keeps streak, +100% rise) — run against the gate-compiled classes.
+
+## 4) PHASE 4 — POLISH
+
+### 4a) Local settings backup/restore (`BackupRestoreManager`, SAF JSON)
+
+| Included | Excluded (never exported) |
+|---|---|
+| app rules, keyword rules, schedule rules | block_events / pending_reports (history ≠ settings) |
+| settings: keyword filter, AI detection, unlock delay, temp-block duration, AI threshold, grid votes, master toggle | PIN + recovery code, Time-Lock state (commitment devices) |
+| accountability partner contact | learned false-positive signatures (detection data) |
+
+Import: strict validation (file tag + `format_version`), keywords+settings
+REPLACED to match backup, app/schedule rules MERGED (upsert — a partial backup
+never wipes unknown rules), keyword ids regenerated, all values clamped to the
+same bounds the UI sliders enforce, unknown keys ignored. UI: Settings → BACKUP
+section (SettingsRow + new `ic_import` stroke icon), confirm dialog that spells
+out exactly what changes and what is never touched. No cloud anywhere.
+
+### 4b) Help & FAQ (real copy)
+
+New `HelpActivity` — 10 static Q/A cards (offline, no placeholders): on-device AI
+detection (0.72 default threshold, grid vote), strike system (15/30/60m, 10-min
+reset, 3-in-2h→24h day block, 3-min grace), cooling-off queue (0.82 gate, 2→4→8
+→16→24h, Pending Reports + cancel), Time-Lock, both PIN-recovery paths, the
+tap-to-send accountability mechanism, backup scope, privacy (no INTERNET
+permission), **honest bypass limits**, and the shade-shield. Every number was
+re-read from `GuardianConstants`/`TempBlockManager`/`PendingReportManager` while
+writing; the strings file carries a comment requiring copy updates with code.
+Deliberately NOT in the Time-Lock edit-disable list — information must stay
+reachable while locked.
+
+### 4c) Notification content-leak — traced, real, fixed with stated limits
+
+**Trace result (pre-fix):** no `NotificationListenerService` existed anywhere —
+blocked apps' notifications posted to the shade with full preview content while
+the app itself was blocked. A genuine leak of exactly what blocking exists to
+hide. Fixed:
+
+- `NotificationShieldService` (opt-in, default OFF): cancels a shade
+  notification when the sender is currently blocked — evaluated through the
+  SHARED read-only predicates the blocking path itself uses
+  (`RulesEngine.evaluatePackage` covers list+schedule windows incl. whitelist/IME
+  exclusion; `TempBlockManager.isTempBlocked` covers AI temp blocks) — and, when
+  the keyword filter is on, when the notification's visible text matches user
+  keywords (shared `RulesEngine.evaluateText`). Own-app notifications never
+  touched; additive-only (no writes to strikes/blocks/events/settings).
+- **Honest limits (in code KDoc, FAQ q10 and here):** requires the user's
+  explicit system "Notification access" grant; a preview can flash for a split
+  second before cancellation — no unrooted app can prevent that; MessagingStyle
+  per-line bundles aren't expanded (title/body/bigText/subText are scanned);
+  the rules snapshot is refreshed when the listener (re)connects.
+- Settings switch never lies: enabling without system access reverts the switch
+  and deep-links to the grant screen with an explainer.
+
+## 5) UNTOUCHED CORE LOGIC — diff-level verification
+
+`git diff main..HEAD --name-only` proves **byte-identical**: `TempBlockManager`,
+`BlockingEngine`, `GuardianAccessibilityService`, `BlockOverlayActivity`,
+`AiDetector`, `FalsePositiveMemory`, all of `service/detection/**` strike/lock
+machine code. Strike constants (`STRIKE_THRESHOLD/RESET/ESCALATION/GRACE`),
+confidence gate, cooling-off ladder — untouched.
+
+Two sanctioned observe-only additions (shown above in full diff): one
+`AccountabilityEvents.emit` AFTER the durable write in `TamperLogger.log`, one
+AFTER insert+schedule in `PendingReportManager.enqueue`; both wrapped in
+`runCatching`, neither influences the decision. `PinManager` + `Constants`:
+**0 removed lines** (pure API additions). `GuardianForegroundService`: watchdog
+reads + notifications only.
+
+## 6) BUILD STATUS
+
+- Local gate: **EXIT=0 (0 errors)** after every phase; resources verifier OK.
+- Behavior tests: 7/7 PASS (Phase 3).
+- CI release build runs post-merge on `main` (workflow restriction), same as
+  prior sessions; tag probe for v3.5.0 = 404/404 → guard passes.
+- **Release link (post-merge):**
+  `https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.5.0/app-release.apk`
+
+## 7) COMPLIANCE CHECKLIST
+
+- [x] App name "Guardian Shield" unchanged (label/resources untouched).
+- [x] Core detection/blocking LOGIC untouched (diff-proven, §5); accountability observes events without changing how they're decided.
+- [x] New UI reuses One UI 8 tokens/styles only (Card/SettingsRow/SectionHeader, existing colors; 2 new icons match repo stroke style).
+- [x] Build verified green after EACH phase (gate EXIT=0 + verify_res OK ×6 commits); version bumped past published (3.5.0/29), tag probe clean.
+- [x] Phase 1a honest-limits table (Safe Mode/ADB/force-stop NOT overclaimed).
+- [x] Crashlytics: standard conditional setup, no PII beyond defaults, documented; no fabricated google-services.json.
+- [x] PIN recovery is deliberately non-trivial (one-time code + 48h timed reset), mocked before implementation.
+- [x] Accountability "notify" mechanism disclosed exactly (tap-to-send; silent send structurally impossible without INTERNET permission).
+- [x] Streak reuses BlockEventEntity (no duplicate logging); definition + tests documented.
+- [x] Backup exports rules/settings only — no detection data/logs; local JSON only.
+- [x] FAQ copy is real and cross-checked against shipped constants.
+- [x] Notification leak traced → fixed → limits stated (flash, MessagingStyle, grant requirement).
