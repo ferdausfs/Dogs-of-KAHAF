@@ -291,7 +291,7 @@ class AiDetector @Inject constructor(
                     }
 
                     Timber.d("Grid vote: $triggeredCount/$voteNeeded needed")
-                    triggeredCount >= voteNeeded
+                    ClassifyResult(triggeredCount >= voteNeeded, fullScore)
                 } finally {
                     for (region in regions) {
                         if (!region.isRecycled) {
@@ -302,7 +302,7 @@ class AiDetector @Inject constructor(
 
             } catch (t: Throwable) {
                 Timber.e(t, "isUnsafe failed")
-                false
+                ClassifyResult(false, -1f)
             }
         }
     }
