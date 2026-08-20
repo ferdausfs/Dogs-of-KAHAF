@@ -225,6 +225,11 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnPendingReports.setOnClickListener {
             startActivity(Intent(this, com.guardian.shield.ui.pending.PendingReportsActivity::class.java))
         }
+        // PHASE 4b (v3.5.0) — Help & FAQ (read-only; deliberately NOT gated by
+        // the Time-Lock edit list — information must stay reachable while locked).
+        binding.btnHelp.setOnClickListener {
+            startActivity(Intent(this, com.guardian.shield.ui.help.HelpActivity::class.java))
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

@@ -186,6 +186,15 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- PHASE 4b (v3.5.0) — Help & FAQ. Read-only: stays usable even
+                     during a Time-Lock, so it is NOT in the lock-disable list. -->
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_help" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnHelp" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_help" app:icon="@drawable/ic_help" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:text="@string/settings_footer" android:textColor="@color/on_surface_dim" android:textSize="11sp" android:letterSpacing="0.08"/>
             </LinearLayout>
         </LinearLayout>

@@ -452,4 +452,38 @@
     <string name="backup_import_confirm_btn">Restore</string>
     <string name="backup_import_done_fmt">Restored ✅ %1$d app rules, %2$d keywords, %3$d schedules</string>
     <string name="backup_import_invalid">That file isn’t a Guardian Shield backup (or it’s damaged)</string>
+
+    <!-- PHASE 4b (v3.5.0) — Help & FAQ. Every answer below is written against
+         the shipped engine constants — if the code changes, change these. -->
+    <string name="section_help">HELP · সাহায্য</string>
+    <string name="btn_help">Help &amp; FAQ</string>
+    <string name="help_screen_title">Help &amp; FAQ · সাহায্য</string>
+    <string name="help_intro">How Guardian Shield protects you — straight answers, no marketing.</string>
+
+    <string name="help_q1">How does the AI blocking work?</string>
+    <string name="help_a1">Guardian Shield reads on-screen content through the Accessibility service and checks it with an AI model (TensorFlow Lite) that runs entirely on your phone. Each check splits the screen into sections that vote; when harmful content scores above your adjustable threshold (default 0.72), the shield acts. No image or text ever leaves the device.</string>
+
+    <string name="help_q2">What are strikes and temp blocks?</string>
+    <string name="help_a2">The first and second AI detection of an app show a warning card. A third detection applies a temporary full block — 15, 30 or 60 minutes, your choice in Settings. Stay away for 10 minutes and the strike counter resets. Three full blocks within 2 hours escalate to a 24-hour day block, and after any block expires a 3-minute grace period passes before AI blocking resumes.</string>
+
+    <string name="help_q3">What are “Not Sensitive” reports and the cooling-off queue?</string>
+    <string name="help_a3">Telling the app a detection was wrong fixes low-confidence mistakes immediately. But when the AI was highly confident (0.82 or more), your report joins a deliberate delay queue instead of applying instantly — 2h for the first recent report, then 4h, 8h, 16h, up to 24h. Settings → Pending Reports shows everything queued and lets you cancel before it applies. The delay is the feature: it keeps a craving from silently retraining the shield.</string>
+
+    <string name="help_q4">What is the Time-Lock (commitment lock)?</string>
+    <string name="help_a4">Time-Lock locks your settings for a period you choose. While it’s active, settings can’t be edited, the dashboard toggle is frozen, and uninstall protection is at its strictest. Turn it on while you’re motivated, so a future weak moment can’t quietly switch the shield off.</string>
+
+    <string name="help_q5">I forgot my PIN. What now?</string>
+    <string name="help_a5">Two recovery paths, both deliberately slow: (1) the recovery code you wrote down at PIN setup — enter it on the PIN Recovery screen (5 tries, then a 30-minute wait); (2) a timed reset — request it, wait 48 hours, then set a new PIN. Neither path wipes your rules or history, and there is no instant reset — that’s the point.</string>
+
+    <string name="help_q6">What does the accountability partner do?</string>
+    <string name="help_a6">Add a trusted person’s name and email in Settings → Accountability. When protection is paused, a tamper attempt is logged, or a high-confidence report is queued, you get a notification with Email and Share actions. Tapping opens your mail app or share sheet pre-addressed and pre-written — the final send is always yours. Nothing is sent silently; the app has no server and no automatic sending.</string>
+
+    <string name="help_q7">Backups — what’s included, what never is?</string>
+    <string name="help_a7">Settings → Backup writes one JSON file, kept by you: app rules, keywords, schedules, settings and your partner contact. It never contains block history, your PIN, the recovery code or any Time-Lock state. After a reinstall, Restore from that file to bring your setup back.</string>
+
+    <string name="help_q8">Is my privacy safe?</string>
+    <string name="help_a8">Yes. Detection runs fully on-device, and the app doesn’t even declare the internet permission — it physically cannot send your screen content or history anywhere. Tamper and crash logs are stored locally on the phone for you to read or share yourself. (An optional Firebase Crashlytics hook exists in the source, but it only activates in a build where the developer adds their own google-services.json — the public release build has none.)</string>
+
+    <string name="help_q9">Can protection be bypassed? The honest answer.</string>
+    <string name="help_a9">Yes, partly — and we won’t pretend otherwise. Safe Mode, a force-stop from system Settings, or a computer with USB debugging can weaken or remove protection; no app on unrooted Android can fully prevent those. What Guardian Shield does: bounce the risky Settings screens whenever the service is alive, detect and log tampering, re-request Device Admin the moment a revocation is noticed, and alert you (and your partner, if set). The design goal is friction plus visibility — not an unbreakable cage.</string>
 </resources>
