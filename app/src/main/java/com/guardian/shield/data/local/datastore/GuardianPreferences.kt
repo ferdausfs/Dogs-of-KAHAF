@@ -38,6 +38,10 @@ class GuardianPreferences @Inject constructor(
         // only; nothing is transmitted by the app itself).
         val PARTNER_NAME = stringPreferencesKey("partner_name")
         val PARTNER_EMAIL = stringPreferencesKey("partner_email")
+
+        // PHASE 4c (v3.5.0) — notification shade shield. OFF by default; only
+        // takes effect after the user ALSO grants system Notification access.
+        val NOTIF_SHIELD_ENABLED = booleanPreferencesKey("notif_shield_enabled")
     }
 
     // Flows
@@ -56,6 +60,9 @@ class GuardianPreferences @Inject constructor(
     // PHASE 2 (v3.5.0) — accountability partner
     val partnerName: Flow<String> = ds.data.map { it[Keys.PARTNER_NAME] ?: "" }
     val partnerEmail: Flow<String> = ds.data.map { it[Keys.PARTNER_EMAIL] ?: "" }
+
+    // PHASE 4c (v3.5.0) — notification shade shield (default OFF)
+    val notifShieldEnabled: Flow<Boolean> = ds.data.map { it[Keys.NOTIF_SHIELD_ENABLED] ?: false }
 
     // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
@@ -78,4 +85,7 @@ class GuardianPreferences @Inject constructor(
         }
     }
     suspend fun clearPartner() = setPartner("", "")
+
+    // PHASE 4c (v3.5.0) — notification shade shield toggle.
+    suspend fun setNotifShieldEnabled(v: Boolean) { ds.edit { it[Keys.NOTIF_SHIELD_ENABLED] = v } }
 }

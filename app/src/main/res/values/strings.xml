@@ -486,4 +486,17 @@
 
     <string name="help_q9">Can protection be bypassed? The honest answer.</string>
     <string name="help_a9">Yes, partly — and we won’t pretend otherwise. Safe Mode, a force-stop from system Settings, or a computer with USB debugging can weaken or remove protection; no app on unrooted Android can fully prevent those. What Guardian Shield does: bounce the risky Settings screens whenever the service is alive, detect and log tampering, re-request Device Admin the moment a revocation is noticed, and alert you (and your partner, if set). The design goal is friction plus visibility — not an unbreakable cage.</string>
+
+    <!-- PHASE 4c (v3.5.0) — notification shade shield -->
+    <string name="notif_shield_service_label">Guardian Shield — notification shield</string>
+    <string name="notif_shield_title">Notification shade shield</string>
+    <string name="notif_shield_sub_off">Off — blocked apps can still flash previews in the shade</string>
+    <string name="notif_shield_sub_on">Active — previews from blocked apps, and flagged keywords anywhere, are cancelled</string>
+    <string name="notif_shield_sub_need_perm">Almost there — grant “Notification access” in system settings to finish</string>
+    <string name="notif_shield_perm_title">Notification access needed</string>
+    <string name="notif_shield_perm_msg">Android needs your explicit OK before any app may dismiss another app’s notifications. On the next screen, switch on Guardian Shield.\n\nWhat this lets the shield do: cancel shade previews from apps you’ve blocked (list, schedule or AI temp block), and — when your keyword filter is on — hide notifications whose visible text matches your keywords. Everything is processed on-device; the app has no internet permission, so nothing can be uploaded. Revoke any time in the same system screen. A preview can still flash for a split second before it’s cancelled — no app can avoid that on unrooted Android.</string>
+    <string name="notif_shield_perm_cta">Open system settings</string>
+
+    <string name="help_q10">Do blocked apps still show notification previews?</string>
+    <string name="help_a10">By default, yes — Android posts a blocked app’s notifications to the shade, preview included. Turn on Settings → Notification shade shield and grant “Notification access”: previews from blocked apps (list, schedule or temp block) are then cancelled, and with your keyword filter on, any notification whose visible text matches your keywords is hidden too. One honest limit: a preview can flash for a split second before cancellation — unrooted Android gives no way to prevent that.</string>
 </resources>

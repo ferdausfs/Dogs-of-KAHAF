@@ -112,7 +112,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // ✅ Enable/disable all controls based on lock state
         listOf(
-            binding.switchKeyword, binding.switchAi,
+            binding.switchKeyword, binding.switchAi, binding.switchNotifShield,
             binding.sliderGuardianThreshold, binding.sliderDelay,
             binding.chip15min, binding.chip30min, binding.chip60min,
             binding.chipVote1, binding.chipVote2, binding.chipVote3, binding.chipVote4,
@@ -229,6 +229,26 @@ class SettingsActivity : AppCompatActivity() {
         // the Time-Lock edit list — information must stay reachable while locked).
         binding.btnHelp.setOnClickListener {
             startActivity(Intent(this, com.guardian.shield.ui.help.HelpActivity::class.java))
+        }
+
+        // PHASE 4c (v3.5.0) — notification shade shield row. Enabling the
+        // switch without system Notification access pops the honest explainer
+        // and deep-links to the system grant screen instead of lying "on".
+        binding.switchNotifShield.setOnClickListener {
+            val target = binding.switchNotifShield.isChecked
+            if (target && !com.guardian.shield.service.shield.NotificationShieldService
+                    .isAccessGranted(this)
+            ) {
+                binding.switchNotifShield.isChecked = false
+                showNotifShieldDialog()
+            } else {
+                lifecycleScope.launch { guardianPrefs.setNotifShieldEnabled(target) }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                guardianPrefs.notifShieldEnabled.collect { updateNotifShieldRow(it) }
+            }
         }
 
         lifecycleScope.launch {
@@ -405,6 +425,46 @@ class SettingsActivity : AppCompatActivity() {
                 .setNeutralButton(R.string.cancel, null)
                 .show()
         }
+    }
+
+    // ---- PHASE 4c (v3.5.0) — notification shade shield ----
+
+    override fun onResume() {
+        super.onResume()
+        // Access can change in system settings while we were paused — refresh
+        // the status line against the persisted toggle.
+        lifecycleScope.launch {
+            updateNotifShieldRow(
+                runCatching { guardianPrefs.notifShieldEnabled.first() }.getOrDefault(false)
+            )
+        }
+    }
+
+    private fun updateNotifShieldRow(enabled: Boolean) {
+        binding.switchNotifShield.isChecked = enabled
+        val granted = com.guardian.shield.service.shield.NotificationShieldService
+            .isAccessGranted(this)
+        binding.txtNotifShieldSub.text = when {
+            enabled && granted -> getString(R.string.notif_shield_sub_on)
+            enabled -> getString(R.string.notif_shield_sub_need_perm)
+            else -> getString(R.string.notif_shield_sub_off)
+        }
+    }
+
+    private fun showNotifShieldDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.notif_shield_perm_title)
+            .setMessage(R.string.notif_shield_perm_msg)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.notif_shield_perm_cta) { _, _ ->
+                runCatching {
+                    startActivity(
+                        com.guardian.shield.service.shield.NotificationShieldService
+                            .accessSettingsIntent()
+                    )
+                }
+            }
+            .show()
     }
 
     // ---- PHASE 4a (v3.5.0) — local backup/restore runners ----
