@@ -439,4 +439,17 @@
     <string name="streak_compare_same_fmt">%1$d blocks this week · same as last week — steady counts too</string>
     <string name="streak_compare_new_fmt">%1$d blocks this week — first week on record</string>
     <string name="streak_fresh_start">Today reset the streak — that’s okay. A fresh one starts now 💪</string>
+
+    <!-- PHASE 4a (v3.5.0) — local backup/restore (JSON via SAF, no cloud) -->
+    <string name="section_backup">BACKUP · ব্যাকআপ</string>
+    <string name="btn_backup_export">Export settings backup</string>
+    <string name="btn_backup_import">Restore from backup</string>
+    <string name="backup_status_hint">One JSON file with your rules and settings — kept by you, never uploaded. Export again after big changes; reinstall then Restore to get everything back.</string>
+    <string name="backup_export_done">Backup saved ✅ Keep the file somewhere safe outside this app.</string>
+    <string name="backup_export_failed">Backup failed — could not write the file</string>
+    <string name="backup_import_confirm_title">Restore this backup?</string>
+    <string name="backup_import_confirm_msg">Keywords and settings will be replaced by the backup; app and schedule rules will be merged in. Block history, PIN, recovery code and any Time-Lock are never touched.</string>
+    <string name="backup_import_confirm_btn">Restore</string>
+    <string name="backup_import_done_fmt">Restored ✅ %1$d app rules, %2$d keywords, %3$d schedules</string>
+    <string name="backup_import_invalid">That file isn’t a Guardian Shield backup (or it’s damaged)</string>
 </resources>

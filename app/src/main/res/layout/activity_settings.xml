@@ -175,6 +175,17 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- PHASE 4a (v3.5.0) — local backup/restore (rules + settings only;
+                     PIN/time-lock/detection history are never exported). -->
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_backup" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnBackupExport" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_backup_export" app:icon="@drawable/ic_export" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnBackupImport" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_backup_import" app:icon="@drawable/ic_import" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <TextView android:id="@+id/txtBackupStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingHorizontal="16dp" android:paddingBottom="10dp" android:text="@string/backup_status_hint" android:textColor="@color/on_surface_dim" android:textSize="12sp" android:lineSpacingMultiplier="1.35"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:text="@string/settings_footer" android:textColor="@color/on_surface_dim" android:textSize="11sp" android:letterSpacing="0.08"/>
             </LinearLayout>
         </LinearLayout>

@@ -435,4 +435,17 @@
     <string name="streak_compare_same_fmt">এই সপ্তাহে %1$d বার ব্লক — গত সপ্তাহের সমান, স্থির থাকাও এগিয়ে যাওয়া</string>
     <string name="streak_compare_new_fmt">এই সপ্তাহে %1$d বার ব্লক হয়েছে — হিসাবের প্রথম সপ্তাহ</string>
     <string name="streak_fresh_start">আজ স্ট্রিক ভেঙেছে — ঠিক আছে। নতুন স্ট্রিক এখন থেকেই শুরু 💪</string>
+
+    <!-- PHASE 4a (v3.5.0) — লোকাল ব্যাকআপ/রিস্টোর (JSON, কোনো ক্লাউড নেই) -->
+    <string name="section_backup">ব্যাকআপ · BACKUP</string>
+    <string name="btn_backup_export">সেটিংস ব্যাকআপ এক্সপোর্ট</string>
+    <string name="btn_backup_import">ব্যাকআপ থেকে রিস্টোর</string>
+    <string name="backup_status_hint">আপনার রুল আর সেটিংসের একটা JSON ফাইল — আপনার কাছেই থাকবে, কোথাও আপলোড হয় না। বড় পরিবর্তনের পর আবার এক্সপোর্ট করুন; রিইনস্টলের পর রিস্টোর করলেই সব ফিরে পাবেন।</string>
+    <string name="backup_export_done">ব্যাকআপ সেভ হয়েছে ✅ ফাইলটা অ্যাপের বাইরে নিরাপদ জায়গায় রাখুন।</string>
+    <string name="backup_export_failed">ব্যাকআপ ব্যর্থ — ফাইল লেখা যায়নি</string>
+    <string name="backup_import_confirm_title">এই ব্যাকআপ রিস্টোর করবেন?</string>
+    <string name="backup_import_confirm_msg">কিওয়ার্ড আর সেটিংস ব্যাকআপ অনুযায়ী বদলে যাবে; অ্যাপ আর শিডিউল রুল মার্জ হবে। ব্লক হিস্টরি, পিন, রিকভারি কোড আর টাইম-লক — কিছুই বদলাবে না।</string>
+    <string name="backup_import_confirm_btn">রিস্টোর</string>
+    <string name="backup_import_done_fmt">রিস্টোর হয়েছে ✅ %1$dটা অ্যাপ রুল, %2$dটা কিওয়ার্ড, %3$dটা শিডিউল</string>
+    <string name="backup_import_invalid">এটা গার্ডিয়ান শিল্ডের ব্যাকআপ ফাইল না (অথবা ফাইলটা নষ্ট)</string>
 </resources>

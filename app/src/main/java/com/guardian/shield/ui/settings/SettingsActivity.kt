@@ -16,6 +16,7 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.accountability.AccountabilityNotifier
+import com.guardian.shield.backup.BackupRestoreManager
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivitySettingsBinding
 import com.guardian.shield.databinding.DialogPartnerBinding
@@ -30,6 +31,9 @@ import com.guardian.shield.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -48,6 +52,9 @@ class SettingsActivity : AppCompatActivity() {
     @Inject lateinit var guardianPrefs: GuardianPreferences
     @Inject lateinit var accountabilityNotifier: AccountabilityNotifier
 
+    // PHASE 4a (v3.5.0) — local settings backup/restore.
+    @Inject lateinit var backupManager: BackupRestoreManager
+
     private val pinLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -61,6 +68,15 @@ class SettingsActivity : AppCompatActivity() {
         if (uri != null && name != null) viewModel.importModel(uri, name)
         pendingModelName = null
     }
+
+    // PHASE 4a (v3.5.0) — SAF launchers for backup/restore.
+    private val backupExportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(BackupRestoreManager.SUGGESTED_MIME)
+    ) { uri: Uri? -> if (uri != null) runBackupExport(uri) }
+
+    private val backupImportLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? -> if (uri != null) confirmBackupImport(uri) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,7 +119,8 @@ class SettingsActivity : AppCompatActivity() {
             binding.btnImportLegacy,
             binding.btnRemoveLegacy,
             binding.btnChangePin, binding.btnRecoveryInfo,
-            binding.btnPartner, binding.btnPartnerSummary
+            binding.btnPartner, binding.btnPartnerSummary,
+            binding.btnBackupExport, binding.btnBackupImport
         ).forEach { it.isEnabled = editEnabled }
 
         // PHASE 1c/2 (v3.5.0) — security & accountability rows (always wired;
@@ -111,6 +128,19 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnRecoveryInfo.setOnClickListener { showRecoveryCodeDialog() }
         binding.btnPartner.setOnClickListener { if (editEnabled) showPartnerDialog() }
         binding.btnPartnerSummary.setOnClickListener { if (editEnabled) sendWeeklySummary() }
+
+        // PHASE 4a (v3.5.0) — backup/restore rows.
+        binding.btnBackupExport.setOnClickListener {
+            if (!editEnabled) return@setOnClickListener
+            val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            backupExportLauncher.launch("guardian_shield_backup_$stamp.json")
+        }
+        binding.btnBackupImport.setOnClickListener {
+            if (!editEnabled) return@setOnClickListener
+            // Same broad picker pattern as the model import above — the file
+            // itself is validated strictly in BackupRestoreManager.
+            backupImportLauncher.launch(arrayOf("*/*"))
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 guardianPrefs.partnerEmail.collect { email ->
@@ -369,6 +399,49 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .setNeutralButton(R.string.cancel, null)
                 .show()
+        }
+    }
+
+    // ---- PHASE 4a (v3.5.0) — local backup/restore runners ----
+
+    private fun runBackupExport(uri: Uri) {
+        lifecycleScope.launch {
+            val ok = runCatching {
+                backupManager.exportTo(uri, com.guardian.shield.BuildConfig.VERSION_NAME)
+            }.isSuccess
+            if (ok) {
+                binding.txtBackupStatus.text = getString(R.string.backup_export_done)
+                snack(getString(R.string.backup_export_done))
+            } else {
+                snack(getString(R.string.backup_export_failed))
+            }
+        }
+    }
+
+    /** Import is state-changing, so confirm first — the message spells out
+     *  exactly what is replaced/merged and what is never touched. */
+    private fun confirmBackupImport(uri: Uri) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.backup_import_confirm_title)
+            .setMessage(R.string.backup_import_confirm_msg)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.backup_import_confirm_btn) { _, _ -> runBackupImport(uri) }
+            .show()
+    }
+
+    private fun runBackupImport(uri: Uri) {
+        lifecycleScope.launch {
+            val result = runCatching { backupManager.importFrom(uri) }.getOrNull()
+            if (result != null) {
+                val msg = getString(
+                    R.string.backup_import_done_fmt,
+                    result.apps, result.keywords, result.schedules
+                )
+                binding.txtBackupStatus.text = msg
+                snack(msg)
+            } else {
+                snack(getString(R.string.backup_import_invalid))
+            }
         }
     }
 }

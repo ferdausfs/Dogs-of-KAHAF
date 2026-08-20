@@ -38,6 +38,10 @@ interface KeywordDao {
     @Query("SELECT * FROM keyword_rules ORDER BY id DESC")
     fun observeAll(): Flow<List<KeywordRuleEntity>>
 
+    // PHASE 4a (v3.5.0) — full list (incl. disabled) for settings backup.
+    @Query("SELECT * FROM keyword_rules")
+    suspend fun getAll(): List<KeywordRuleEntity>
+
     @Query("SELECT * FROM keyword_rules WHERE enabled = 1")
     suspend fun getEnabled(): List<KeywordRuleEntity>
 
