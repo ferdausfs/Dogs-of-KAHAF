@@ -37,6 +37,9 @@ class RulesRepositoryImpl @Inject constructor(
     override fun observeSchedules(): Flow<List<ScheduleRule>> =
         scheduleDao.observeAll().map { list -> list.map { it.toDomain() } }
 
+    override fun observeEventsSince(since: Long): Flow<List<BlockEvent>> =
+        eventDao.observeSince(since).map { list -> list.map { it.toDomain() } }
+
     override fun countSinceFlow(since: Long): Flow<Int> = eventDao.countSinceFlow(since)
     override fun countByReasonFlow(since: Long, reason: BlockReason): Flow<Int> =
         eventDao.countByReasonFlow(since, reason.name)

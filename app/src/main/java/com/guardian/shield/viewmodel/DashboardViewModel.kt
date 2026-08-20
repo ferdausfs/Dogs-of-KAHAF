@@ -1,12 +1,15 @@
 package com.guardian.shield.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.repository.RulesRepository
+import com.guardian.shield.util.StreakCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,7 +42,8 @@ data class DashboardUiState(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val repo: RulesRepository,
-    private val prefs: GuardianPreferences
+    private val prefs: GuardianPreferences,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _protectionActive = MutableStateFlow(false)
@@ -75,6 +80,30 @@ class DashboardViewModel @Inject constructor(
             stats = BlockStats(count, ai, kw, top)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
+
+    // PHASE 3 (v3.5.0) — clean-streak + weekly comparison, computed read-only
+    // from the existing block_events history. The 400-day load window is a
+    // pragmatic cap: a streak only miscounts if the user's most recent strike-3
+    // full block is >400 days old (i.e. a 400+ day streak, which then simply
+    // keeps counting — direction stays correct). The install-day floor keeps a
+    // zero-block user's streak bounded to "days since install".
+    private val streakWindowStart: Long =
+        System.currentTimeMillis() - 400L * 24 * 60 * 60 * 1_000L
+
+    private val installDayStart: Long = StreakCalculator.localDayStart(
+        runCatching {
+            appContext.packageManager.getPackageInfo(appContext.packageName, 0).firstInstallTime
+        }.getOrDefault(0L)
+    )
+
+    val streakInfo: StateFlow<StreakCalculator.StreakInfo> =
+        repo.observeEventsSince(streakWindowStart)
+            .map { StreakCalculator.compute(it, floorDayStart = installDayStart) }
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                StreakCalculator.StreakInfo()
+            )
 
     fun setProtectionActive(active: Boolean) { _protectionActive.value = active }
 

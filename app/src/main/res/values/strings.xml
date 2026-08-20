@@ -427,4 +427,16 @@
     <string name="pending_report_cancelled_msg">Report cancelled — action will not apply</string>
     <string name="pending_remaining_fmt">%1$d min remaining</string>
     <string name="open_pending_reports">Pending Reports · %1$d</string>
+
+    <!-- PHASE 3 (v3.5.0) — clean streak + weekly comparison (Home card).
+         Supportive "স্টে স্ট্রং" voice: celebrate improvement, never shame a setback. -->
+    <string name="streak_card_title">Clean streak · Keep it up</string>
+    <string name="streak_days_caption">days clean</string>
+    <string name="streak_newcomer">Your journey starts today — every clean day is a win ✨</string>
+    <string name="streak_all_clean">Zero blocks this week — beautiful. স্টে স্ট্রং ✨</string>
+    <string name="streak_compare_less_fmt">%1$d blocks this week · %2$d%% fewer than last week 💪</string>
+    <string name="streak_compare_more_fmt">%1$d blocks this week · %2$d%% more than last week — the shield still caught every one</string>
+    <string name="streak_compare_same_fmt">%1$d blocks this week · same as last week — steady counts too</string>
+    <string name="streak_compare_new_fmt">%1$d blocks this week — first week on record</string>
+    <string name="streak_fresh_start">Today reset the streak — that’s okay. A fresh one starts now 💪</string>
 </resources>

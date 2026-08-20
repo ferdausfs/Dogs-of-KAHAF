@@ -13,6 +13,10 @@ interface RulesRepository {
     fun observeEvents(limit: Int = 50): Flow<List<BlockEvent>>
     fun observeSchedules(): Flow<List<ScheduleRule>>
 
+    // PHASE 3 (v3.5.0) — windowed reactive history for the streak card
+    // (read-only; no new logging anywhere).
+    fun observeEventsSince(since: Long): Flow<List<BlockEvent>>
+
     fun countSinceFlow(since: Long): Flow<Int>
     fun countByReasonFlow(since: Long, reason: BlockReason): Flow<Int>
     fun topPackageFlow(since: Long): Flow<String?>

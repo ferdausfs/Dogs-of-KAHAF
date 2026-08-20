@@ -424,4 +424,15 @@
     <string name="pending_report_cancelled_msg">রিপোর্ট বাতিল — আর কার্যকর হবে না</string>
     <string name="pending_remaining_fmt">%1$d মিনিট বাকি</string>
     <string name="open_pending_reports">পেন্ডিং রিপোর্ট · %1$d</string>
+
+    <!-- PHASE 3 (v3.5.0) — পরিষ্কার স্ট্রিক + সাপ্তাহিক তুলনা (হোম কার্ড) -->
+    <string name="streak_card_title">পরিষ্কার স্ট্রিক · স্টে স্ট্রং</string>
+    <string name="streak_days_caption">দিন পরিষ্কার</string>
+    <string name="streak_newcomer">আপনার যাত্রা আজ থেকে শুরু — প্রতিটি পরিষ্কার দিনই জয় ✨</string>
+    <string name="streak_all_clean">এই সপ্তাহে একটিও ব্লক নেই — দারুণ! স্টে স্ট্রং ✨</string>
+    <string name="streak_compare_less_fmt">এই সপ্তাহে ব্লক হয়েছে %1$d বার, গত সপ্তাহের চেয়ে %2$d%% কম 💪</string>
+    <string name="streak_compare_more_fmt">এই সপ্তাহে ব্লক হয়েছে %1$d বার, গত সপ্তাহের চেয়ে %2$d%% বেশি — শিল্ড তবু প্রতিটিই ধরেছে</string>
+    <string name="streak_compare_same_fmt">এই সপ্তাহে %1$d বার ব্লক — গত সপ্তাহের সমান, স্থির থাকাও এগিয়ে যাওয়া</string>
+    <string name="streak_compare_new_fmt">এই সপ্তাহে %1$d বার ব্লক হয়েছে — হিসাবের প্রথম সপ্তাহ</string>
+    <string name="streak_fresh_start">আজ স্ট্রিক ভেঙেছে — ঠিক আছে। নতুন স্ট্রিক এখন থেকেই শুরু 💪</string>
 </resources>

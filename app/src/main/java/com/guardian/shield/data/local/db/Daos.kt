@@ -64,6 +64,10 @@ interface BlockEventDao {
     @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
     suspend fun eventsSince(since: Long): List<BlockEventEntity>
 
+    // PHASE 3 (v3.5.0) — reactive variant for the dashboard streak card.
+    @Query("SELECT * FROM block_events WHERE timestamp >= :since ORDER BY timestamp DESC")
+    fun observeSince(since: Long): Flow<List<BlockEventEntity>>
+
     @Query("SELECT COUNT(*) FROM block_events WHERE timestamp >= :since")
     fun countSinceFlow(since: Long): Flow<Int>
 
