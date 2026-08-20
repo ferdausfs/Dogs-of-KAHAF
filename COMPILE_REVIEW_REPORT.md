@@ -3082,7 +3082,7 @@ and before the confidence-based cooling-off branch (655). On a match:
   repeated tap shows the same honest refusal (the candidate was peeked, not
   consumed — no silent fall-through on a null candidate).
 - Priority trace: refusal check (159) → confidence branch (172) → low-conf
-  instant path (clearTempBlock+relaunch, Bug D preserved at 216–240). The
+  instant path (clearTempBlock at line 221, relaunchBlockedApp right after — Bug D preserved). The
   0.82 threshold and the escalating-delay queue are only reachable when the
   candidate is NOT confirmed.
 
