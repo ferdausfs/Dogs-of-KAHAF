@@ -52,6 +52,15 @@ class AiDetector @Inject constructor(
     @Volatile var cachedGridVoteCount: Int = 2
         private set
 
+    // TASK A — confidence score from the most recent isUnsafe() call.
+    // -1f = no inference has run yet (e.g. model not loaded, image too simple).
+    // Set to the full-frame Guardian score (0..1) on every successful inference,
+    // regardless of whether the detection ultimately triggered a block. Callers
+    // (GuardianAccessibilityService) read this after isUnsafe() returns true to
+    // thread the value through to the overlay and the cooling-off gate.
+    @Volatile var lastDetectionScore: Float = -1f
+        private set
+
     fun startPrefsCache(scope: CoroutineScope) {
         scope.launch {
             while (isActive) {
@@ -196,6 +205,10 @@ class AiDetector @Inject constructor(
                 // can be traced to the exact class scores (send us one line).
                 Timber.d("Guardian out[${fullOut.size}] = ${fullOut.joinToString(" ")}")
                 val fullScore = extractGuardianScore(fullOut)
+                // TASK A — persist the raw confidence so callers (the
+                // accessibility service) can thread it into the overlay badge
+                // and the confidence-based cooling-off gate.
+                lastDetectionScore = fullScore
                 Timber.d("Guardian full: $fullScore / $threshold")
 
                 // PRECISION-FIRST (v2.4.2): a frame counts as unsafe only when the

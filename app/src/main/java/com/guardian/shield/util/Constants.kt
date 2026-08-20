@@ -71,4 +71,18 @@ object GuardianConstants {
     const val GENERAL_SESSION_MS = 15 * 60_000L
     const val SCROLL_COOLDOWN_MS = 30 * 60_000L
     const val SCROLL_GAP_RESET_MS = 30_000L
+
+    // TASK B — Confidence-based cooling-off system.
+    // AI detections with confidence >= this threshold are routed into a
+    // cooling-off queue instead of applying the user's "Not sensitive" / "Mark
+    // False" report immediately. Low-confidence (< threshold) detections apply
+    // instantly (preserving the existing instant behaviour).
+    const val CONFIDENCE_THRESHOLD = 0.82f
+
+    // Escalating delay: rolling 24-hour window per package.
+    // 1st high-confidence report → 2 h delay; 2nd → 4 h; 3rd → 8 h; 4th → 16 h;
+    // 5th+ → capped at 24 h. Formula: min(BASE * 2^(n-1), MAX).
+    const val COOLING_BASE_DELAY_MS = 2L * 60 * 60 * 1000    // 2 hours
+    const val COOLING_MAX_DELAY_MS = 24L * 60 * 60 * 1000    // 24 hours
+    const val COOLING_WINDOW_MS = 24L * 60 * 60 * 1000       // 24-hour rolling window
 }

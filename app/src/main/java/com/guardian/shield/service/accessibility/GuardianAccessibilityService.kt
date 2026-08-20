@@ -36,6 +36,7 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.service.blocker.AiStrikeResult
 import com.guardian.shield.service.blocker.BlockingEngine
+import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.service.detection.ReelScrollDetector
@@ -71,6 +72,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var timeLockManager: TimeLockManager
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
     @Inject lateinit var blockEventDao: BlockEventDao
+    @Inject lateinit var pendingReportManager: PendingReportManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -282,7 +284,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         packageName, pkg, rulesEngine.current().inputMethods, homePkg
     )
 
-    private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String) {
+    private fun goHomeAndBlock(pkg: String, reason: BlockReason, detail: String, confidence: Float = -1f) {
         // POST-BLOCK GRACE — right after an AI temp block expires we let the user
         // back in instead of instantly re-blocking on the next scan. This is what
         // makes a "15 min block → then unlocked" actually hold in practice.
@@ -296,13 +298,13 @@ class GuardianAccessibilityService : AccessibilityService() {
         // the app (no HOME, no overlay) but show a visible styled warning card
         // (v2.5.2) so the eventual 3rd-strike block never feels unannounced.
         val overlayDetail = if (reason == BlockReason.AI_DETECTION) {
-            when (val result = blockingEngine.evaluateAiStrike(pkg)) {
+            when (val result = blockingEngine.evaluateAiStrike(pkg, confidence)) {
                 is AiStrikeResult.Blocked -> result.detail
                 is AiStrikeResult.StrikeCounted -> {
-                    showAiStrikeWarning(pkg, result.strikeCount)
+                    showAiStrikeWarning(pkg, result.strikeCount, confidence)
                     Timber.d(
                         "AI strike ${result.strikeCount}/${GuardianConstants.STRIKE_THRESHOLD} " +
-                            "for $pkg — warning shown, staying in app"
+                            "for $pkg — warning shown, staying in app (conf=$confidence)"
                     )
                     return
                 }
@@ -327,7 +329,7 @@ class GuardianAccessibilityService : AccessibilityService() {
             // the app with a silent 15-minute lock.
             if (reason == BlockReason.AI_DETECTION) {
                 Timber.d("Block flag busy; delivering AI overlay anyway for $pkg")
-                try { blockingEngine.block(pkg, reason, overlayDetail) }
+                try { blockingEngine.block(pkg, reason, overlayDetail, confidence) }
                 catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
             } else {
                 Timber.d("Block in progress, skip: $pkg")
@@ -338,7 +340,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         currentPackage = null
         performGlobalAction(GLOBAL_ACTION_HOME)
         mainHandler.postDelayed({
-            try { blockingEngine.block(pkg, reason, overlayDetail) }
+            try { blockingEngine.block(pkg, reason, overlayDetail, confidence) }
             catch (t: Throwable) { Timber.e(t, "blockingEngine.block failed") }
         }, 120)
     }
@@ -348,7 +350,7 @@ class GuardianAccessibilityService : AccessibilityService() {
      * Shown for strikes 1 and 2 only; never for strike 3 (that path returns a
      * [AiStrikeResult.Blocked] and gets the full overlay instead).
      */
-    private fun showAiStrikeWarning(pkg: String, strikeCount: Int) {
+    private fun showAiStrikeWarning(pkg: String, strikeCount: Int, confidence: Float = -1f) {
         // Strikes 1 & 2 only — styled mid-screen overlay card (v2.5.2 redesign of
         // the old plain Toast). Strike counting, the STRIKE_THRESHOLD gate and the
         // strike-3 BlockOverlayActivity path are untouched.
@@ -358,7 +360,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         mainHandler.post {
             try {
                 if (Settings.canDrawOverlays(this)) {
-                    showStrikeWarningOverlay(pkg, strikeCount)
+                    showStrikeWarningOverlay(pkg, strikeCount, confidence)
                 } else {
                     // Overlay permission not granted yet — keep the pre-2.5.2 Toast
                     // as a graceful fallback so the warning is never silently lost.
@@ -415,7 +417,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         dismissAiStrikeWarning("safety-fallback")
     }
 
-    private fun showStrikeWarningOverlay(pkg: String, strikeCount: Int) {
+    private fun showStrikeWarningOverlay(pkg: String, strikeCount: Int, confidence: Float = -1f) {
         dismissAiStrikeWarning("replace", reopenGate = false)
 
         val card = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_GuardianShield))
@@ -427,6 +429,16 @@ class GuardianAccessibilityService : AccessibilityService() {
             GuardianConstants.STRIKE_THRESHOLD
         )
         // kicker + body are static copy from the approved mockup (no strike number).
+
+        // TASK A — display the real AI confidence score as a small badge on the
+        // strike-1/2 warning card. Only shown when a real score is available.
+        if (confidence >= 0f) {
+            val badgeView = card.findViewById<TextView>(R.id.txtConfidenceBadge)
+            badgeView?.let {
+                it.text = getString(R.string.ai_confidence_badge_fmt, confidence)
+                it.visibility = View.VISIBLE
+            }
+        }
 
         ReligiousReminders.bind(
             card.findViewById(R.id.txtAyatArabic),
@@ -442,7 +454,7 @@ class GuardianAccessibilityService : AccessibilityService() {
         // future, then dismisses the card.
         val notSensitiveBtn = card.findViewById<TextView>(R.id.btnNotSensitive)
         notSensitiveBtn.setOnClickListener {
-            reportNotSensitive(pkg, strikeCount)
+            reportNotSensitive(pkg, strikeCount, confidence)
             dismissAiStrikeWarning("not-sensitive")
         }
 
@@ -538,22 +550,19 @@ class GuardianAccessibilityService : AccessibilityService() {
      * The DB write runs on [ioScope] (off the main thread); the confirmation Toast
      * is shown immediately from the click handler's (main) thread.
      */
-    private fun reportNotSensitive(pkg: String, strikeCount: Int) {
-        // Bug B — undo this specific strike before (or alongside) the log.
-        blockingEngine.cancelLastStrike(pkg)
-
-        // Bug E — also learn the offending pattern so the same content is skipped
-        // by AiDetector in the future (same mechanism as the strike-3 Mark False
-        // button). Best-effort: the candidate may be absent (process restarted
-        // between detection and tap) — the undo above still applies.
-        val sig = falsePositiveMemory.takePendingCandidate()
-        if (sig != null) {
-            falsePositiveMemory.addSignature(sig)
-        } else {
-            Timber.w("Not-sensitive report: no pending candidate signature to learn from for $pkg")
-        }
-
-        val matched = "strike=$strikeCount"
+    /**
+     * "Not sensitive" report for a strike-1/2 warning (Bug B + Bug E + Task B).
+     *
+     * Task B branching:
+     *   LOW confidence (< 0.82) → apply immediately (existing instant behavior):
+     *     cancelLastStrike() + addSignature() + dismiss card.
+     *   HIGH confidence (>= 0.82) → defer via cooling-off queue:
+     *     Insert a PENDING row, schedule WorkManager, show delay messaging.
+     *     The strike is NOT cancelled yet — it applies when the delay expires.
+     */
+    private fun reportNotSensitive(pkg: String, strikeCount: Int, confidence: Float = -1f) {
+        // Audit log always fires regardless of confidence.
+        val matched = "strike=$strikeCount conf=${"%.2f".format(confidence.coerceAtLeast(0f))}"
         ioScope.launch {
             runCatching {
                 blockEventDao.insert(
@@ -566,9 +575,50 @@ class GuardianAccessibilityService : AccessibilityService() {
                 )
             }.onFailure { Timber.e(it, "Failed to log not-sensitive report for $pkg ($matched)") }
         }
-        runCatching {
-            Toast.makeText(this, R.string.ai_strike_report_confirmed, Toast.LENGTH_SHORT).show()
-        }.onFailure { Timber.w(it, "Not-sensitive report Toast failed") }
+
+        // Task B — confidence-based branching.
+        if (pendingReportManager.isHighConfidence(confidence)) {
+            // HIGH confidence → defer the action.
+            ioScope.launch {
+                try {
+                    val result = pendingReportManager.enqueue(
+                        pkg = pkg,
+                        confidence = confidence,
+                        source = PendingReportManager.Source.WARNING_CARD,
+                        strikeCount = strikeCount
+                    )
+                    val delayMin = result.delayMs / 60_000
+                    val applyTime = java.text.SimpleDateFormat(
+                        "HH:mm", java.util.Locale.getDefault()
+                    ).format(java.util.Date(result.scheduledApplyAt))
+                    val msg = getString(R.string.cooling_queued_fmt, applyTime)
+                    mainHandler.post {
+                        runCatching {
+                            Toast.makeText(this@GuardianAccessibilityService, msg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    Timber.i("Not-sensitive HIGH-conf queued: pkg=$pkg delay=${delayMin}min applyAt=$applyTime")
+                } catch (t: Throwable) {
+                    Timber.e(t, "Failed to enqueue pending report for $pkg")
+                }
+            }
+        } else {
+            // LOW confidence → apply immediately (existing behavior).
+            // Bug B — undo this specific strike.
+            blockingEngine.cancelLastStrike(pkg)
+
+            // Bug E — also learn the offending pattern.
+            val sig = falsePositiveMemory.takePendingCandidate()
+            if (sig != null) {
+                falsePositiveMemory.addSignature(sig)
+            } else {
+                Timber.w("Not-sensitive report: no pending candidate signature to learn from for $pkg")
+            }
+
+            runCatching {
+                Toast.makeText(this, R.string.ai_strike_report_confirmed, Toast.LENGTH_SHORT).show()
+            }.onFailure { Timber.w(it, "Not-sensitive report Toast failed") }
+        }
     }
 
     private fun handleWindowChange(pkg: String) {
@@ -855,13 +905,16 @@ class GuardianAccessibilityService : AccessibilityService() {
                 regionBmp = Bitmap.createBitmap(fullBitmap, left, top, width, height)
                 if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
                     if (currentPackage == pkg) {
+                        // TASK A — capture the confidence score immediately after
+                        // inference, before it can be overwritten by the next scan.
+                        val conf = aiDetector.lastDetectionScore
                         // LEARNING MEMORY — keep the offending region so the overlay
                         // can offer "this was a false block" and never block it again.
                         falsePositiveMemory.rememberCandidate(
                             falsePositiveMemory.computeSignature(regionBmp)
                         )
                         withContext(Dispatchers.Main) {
-                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-legacy")
+                            goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "content-aware-legacy", conf)
                         }
                         return true
                     }
@@ -925,6 +978,8 @@ class GuardianAccessibilityService : AccessibilityService() {
                                 if (!blocked) {
                                     if (aiDetector.isLegacyAvailable()) {
                                         if (aiDetector.isUnsafe(b)) {
+                                            // TASK A — capture confidence immediately after inference.
+                                            val conf = aiDetector.lastDetectionScore
                                             // ✅ Final sanity check before blocking
                                             if (currentPackage == pkg) {
                                                 // LEARNING MEMORY — keep the frame so the
@@ -933,7 +988,7 @@ class GuardianAccessibilityService : AccessibilityService() {
                                                     falsePositiveMemory.computeSignature(b)
                                                 )
                                                 withContext(Dispatchers.Main) {
-                                                    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy")
+                                                    goHomeAndBlock(pkg, BlockReason.AI_DETECTION, "legacy", conf)
                                                 }
                                                 blocked = true
                                             }

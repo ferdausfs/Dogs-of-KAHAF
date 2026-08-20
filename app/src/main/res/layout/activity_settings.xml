@@ -120,6 +120,8 @@
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnSchedule" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_schedule" app:icon="@drawable/ic_clock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnPermissions" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_permissions" app:icon="@drawable/ic_access" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnCommitmentLock" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_commitment_lock" app:icon="@drawable/ic_time_lock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
+                        <!-- TASK B — pending reports (cooling-off queue viewer) -->
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btnPendingReports" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/pending_reports_title" app:icon="@drawable/ic_flag" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

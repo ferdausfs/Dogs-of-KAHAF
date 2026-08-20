@@ -44,13 +44,20 @@ class BlockingEngine @Inject constructor(
      *     MUST surface a visible warning but must NOT kick the user home,
      *   - [AiStrikeResult.GracePeriod] / [AiStrikeResult.Duplicate] /
      *     [AiStrikeResult.WarningCardVisible] when nothing user-visible should happen.
+     *
+     * @param confidence the AI detection confidence score (0..1), or -1f if unavailable.
+     *        Threaded through to TempBlockManager.lastStrikeConfidence for the
+     *        overlay badge and the cooling-off gate (Task A / Task B).
      */
-    fun evaluateAiStrike(pkg: String): AiStrikeResult {
+    fun evaluateAiStrike(pkg: String, confidence: Float = -1f): AiStrikeResult {
         val durationMs = cachedTempBlockMins * 60 * 1_000L
-        return tempBlockManager.recordAiDetection(pkg, durationMs)
+        return tempBlockManager.recordAiDetection(pkg, durationMs, confidence)
     }
 
-    fun block(pkg: String, reason: BlockReason, detail: String) {
+    /** Read the confidence score stored by the most recent [evaluateAiStrike] call. */
+    fun getLastStrikeConfidence(): Float = tempBlockManager.lastStrikeConfidence
+
+    fun block(pkg: String, reason: BlockReason, detail: String, confidence: Float = -1f) {
         val now = System.currentTimeMillis()
         val throttleMs = when (reason) {
             BlockReason.APP_BLOCKED,
@@ -73,13 +80,13 @@ class BlockingEngine @Inject constructor(
         val finalDetail = if (reason == BlockReason.AI_DETECTION &&
             !detail.startsWith("temp_block:")
         ) {
-            when (val result = evaluateAiStrike(pkg)) {
+            when (val result = evaluateAiStrike(pkg, confidence)) {
                 is AiStrikeResult.Blocked -> result.detail
                 else -> return
             }
         } else detail
 
-        launchOverlay(pkg, reason, finalDetail)
+        launchOverlay(pkg, reason, finalDetail, confidence)
         logEvent(pkg, reason, finalDetail)
     }
 
@@ -110,7 +117,7 @@ class BlockingEngine @Inject constructor(
 
     fun isWarningCardShowing(): Boolean = tempBlockManager.isWarningCardShowing()
 
-    private fun launchOverlay(pkg: String, reason: BlockReason, detail: String) {
+    private fun launchOverlay(pkg: String, reason: BlockReason, detail: String, confidence: Float = -1f) {
         runCatching {
             context.startActivity(
                 Intent(context, BlockOverlayActivity::class.java).apply {
@@ -118,6 +125,8 @@ class BlockingEngine @Inject constructor(
                     putExtra(BlockOverlayActivity.EXTRA_PACKAGE, pkg)
                     putExtra(BlockOverlayActivity.EXTRA_REASON, reason.name)
                     putExtra(BlockOverlayActivity.EXTRA_DETAIL, detail)
+                    // TASK A — thread the AI confidence to the overlay badge.
+                    putExtra(BlockOverlayActivity.EXTRA_CONFIDENCE, confidence)
                 }
             )
         }

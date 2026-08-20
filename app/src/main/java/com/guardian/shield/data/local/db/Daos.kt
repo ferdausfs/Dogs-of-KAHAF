@@ -78,6 +78,36 @@ interface BlockEventDao {
     suspend fun clear()
 }
 
+// TASK B — DAO for the confidence-based cooling-off queue.
+@Dao
+interface PendingReportDao {
+    @Query("SELECT * FROM pending_reports WHERE status = 'PENDING' ORDER BY scheduledApplyAt ASC")
+    fun observePending(): Flow<List<PendingReportEntity>>
+
+    @Query("SELECT * FROM pending_reports WHERE status = 'PENDING' ORDER BY scheduledApplyAt ASC")
+    suspend fun getPending(): List<PendingReportEntity>
+
+    @Query("SELECT * FROM pending_reports WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): PendingReportEntity?
+
+    // Count HIGH-confidence reports for a given package within the trailing window
+    // (used for escalating delay computation).
+    @Query("SELECT COUNT(*) FROM pending_reports WHERE packageName = :pkg AND timestampCreated >= :since")
+    suspend fun countHighConfSince(pkg: String, since: Long): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(report: PendingReportEntity): Long
+
+    @Query("UPDATE pending_reports SET status = :status WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: String)
+
+    @Query("UPDATE pending_reports SET status = 'CANCELLED' WHERE id = :id AND status = 'PENDING'")
+    suspend fun cancel(id: Long)
+
+    @Query("DELETE FROM pending_reports WHERE status != 'PENDING' AND timestampCreated < :before")
+    suspend fun purgeOld(before: Long)
+}
+
 @Dao
 interface ScheduleRuleDao {
     @Query("SELECT * FROM schedule_rules ORDER BY packageName ASC")

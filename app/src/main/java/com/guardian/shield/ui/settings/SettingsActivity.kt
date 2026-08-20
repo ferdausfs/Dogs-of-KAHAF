@@ -162,6 +162,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnCommitmentLock.setOnClickListener {
             startActivity(Intent(this, TimeLockActivity::class.java))
         }
+        // TASK B — launch the pending reports (cooling-off queue) viewer.
+        binding.btnPendingReports.setOnClickListener {
+            startActivity(Intent(this, com.guardian.shield.ui.pending.PendingReportsActivity::class.java))
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

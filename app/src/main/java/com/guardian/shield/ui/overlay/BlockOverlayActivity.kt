@@ -16,12 +16,21 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityBlockOverlayBinding
+import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.service.blocker.TempBlockManager
+import com.guardian.shield.util.GuardianConstants
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.ui.unlock.DelayUnlockActivity
 import com.guardian.shield.util.ReligiousReminders
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -32,6 +41,10 @@ class BlockOverlayActivity : AppCompatActivity() {
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
 
     @Inject lateinit var tempBlockManager: TempBlockManager
+
+    @Inject lateinit var pendingReportManager: PendingReportManager
+
+    private val workerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +59,8 @@ class BlockOverlayActivity : AppCompatActivity() {
         val pkg = intent.getStringExtra(EXTRA_PACKAGE).orEmpty()
         val reason = intent.getStringExtra(EXTRA_REASON).orEmpty()
         val detail = intent.getStringExtra(EXTRA_DETAIL).orEmpty()
+        // TASK A — read the AI confidence score threaded from the detection.
+        val confidence = intent.getFloatExtra(EXTRA_CONFIDENCE, -1f)
 
         binding.txtPackage.text = pkg
 
@@ -75,6 +90,15 @@ class BlockOverlayActivity : AppCompatActivity() {
                 else -> "Blocked Content"
             }
         } catch (_: Throwable) {}
+
+        // TASK A — display real AI confidence score as a small badge on the
+        // full-block screen. Only shown for AI blocks with a real score.
+        if (isAiBlock && confidence >= 0f) {
+            try {
+                binding.txtConfidenceBadge.text = getString(R.string.ai_confidence_badge_fmt, confidence)
+                binding.txtConfidenceBadge.visibility = View.VISIBLE
+            } catch (_: Throwable) {}
+        }
 
         if (isTempBlock) {
             val raw = detail.removePrefix("temp_block:")
@@ -118,34 +142,73 @@ class BlockOverlayActivity : AppCompatActivity() {
         if (isAiBlock) {
             binding.btnMarkFalse.visibility = View.VISIBLE
             binding.btnMarkFalse.setOnClickListener {
-                // BUG D — the unblock (clearTempBlock + relaunch) runs
-                // UNCONDITIONALLY on every tap and must NEVER depend on whether a
-                // pattern signature happened to survive in memory. The old code
-                // gated clearTempBlock + relaunch behind `sig != null`, so when
-                // takePendingCandidate() came back null the button did nothing
-                // but show an "unavailable" Snackbar and the user stayed blocked
-                // ("ব্লক হবার পর ভুল ব্লক ক্লিক করলে কাজ করে না"). That null case
-                // is real: pendingCandidate is a plain @Volatile in-memory field
-                // of a @Singleton, so it is lost on process death/restart between
-                // the detection and the tap (the overlay activity can be recreated
-                // from its persisted intent extras with a freshly-initialised,
-                // candidate-less FalsePositiveMemory).
-                tempBlockManager.clearTempBlock(pkg)
-                binding.btnMarkFalse.isEnabled = false
-                binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
-                Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
+                // Task B — confidence-based branching for the full-block "Mark False".
+                if (pendingReportManager.isHighConfidence(confidence)) {
+                    // HIGH confidence → defer the unblock via cooling-off queue.
+                    // The block screen stays visible; the user sees delay messaging.
+                    binding.btnMarkFalse.isEnabled = false
+                    binding.btnMarkFalse.text = getString(R.string.cooling_mark_false_queued)
 
-                // Learning the pattern is best-effort and fully independent of the
-                // unblock above: if no candidate survived we simply don't learn,
-                // and the user is still unblocked either way.
-                val sig = falsePositiveMemory.takePendingCandidate()
-                if (sig != null) {
-                    falsePositiveMemory.addSignature(sig)
+                    workerScope.launch {
+                        try {
+                            val result = pendingReportManager.enqueue(
+                                pkg = pkg,
+                                confidence = confidence,
+                                source = PendingReportManager.Source.FULL_BLOCK,
+                                strikeCount = GuardianConstants.STRIKE_THRESHOLD
+                            )
+                            val applyTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+                                .format(Date(result.scheduledApplyAt))
+                            val msg = getString(R.string.cooling_full_block_queued_fmt, applyTime)
+                            runOnUiThread {
+                                // Show the delay messaging on the block screen so the user
+                                // understands why tapping didn't unblock them.
+                                try {
+                                    binding.txtCoolingStatus.text = msg
+                                    binding.txtCoolingStatus.visibility = View.VISIBLE
+                                } catch (_: Throwable) {}
+                                Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                            }
+                            Timber.i("Mark False HIGH-conf queued: pkg=$pkg delay=${result.delayMs / 60_000}min")
+                        } catch (t: Throwable) {
+                            Timber.e(t, "Failed to enqueue pending FULL_BLOCK for $pkg")
+                            runOnUiThread {
+                                binding.btnMarkFalse.isEnabled = true
+                                binding.btnMarkFalse.text = getString(R.string.overlay_mark_false)
+                            }
+                        }
+                    }
                 } else {
-                    Timber.w("Mark False: no pending candidate signature to learn from (unblock still applied)")
-                }
+                    // LOW confidence → apply immediately (existing behavior).
+                    // BUG D — the unblock (clearTempBlock + relaunch) runs
+                    // UNCONDITIONALLY on every tap and must NEVER depend on whether a
+                    // pattern signature happened to survive in memory. The old code
+                    // gated clearTempBlock + relaunch behind `sig != null`, so when
+                    // takePendingCandidate() came back null the button did nothing
+                    // but show an "unavailable" Snackbar and the user stayed blocked
+                    // ("ব্লক হবার পর ভুল ব্লক ক্লিক করলে কাজ করে না"). That null case
+                    // is real: pendingCandidate is a plain @Volatile in-memory field
+                    // of a @Singleton, so it is lost on process death/restart between
+                    // the detection and the tap (the overlay activity can be recreated
+                    // from its persisted intent extras with a freshly-initialised,
+                    // candidate-less FalsePositiveMemory).
+                    tempBlockManager.clearTempBlock(pkg)
+                    binding.btnMarkFalse.isEnabled = false
+                    binding.btnMarkFalse.text = getString(R.string.overlay_mark_false_done)
+                    Snackbar.make(binding.root, R.string.overlay_mark_false_done, Snackbar.LENGTH_LONG).show()
 
-                relaunchBlockedApp(pkg)
+                    // Learning the pattern is best-effort and fully independent of the
+                    // unblock above: if no candidate survived we simply don't learn,
+                    // and the user is still unblocked either way.
+                    val sig = falsePositiveMemory.takePendingCandidate()
+                    if (sig != null) {
+                        falsePositiveMemory.addSignature(sig)
+                    } else {
+                        Timber.w("Mark False: no pending candidate signature to learn from (unblock still applied)")
+                    }
+
+                    relaunchBlockedApp(pkg)
+                }
             }
         }
 
@@ -243,5 +306,8 @@ class BlockOverlayActivity : AppCompatActivity() {
         const val EXTRA_PACKAGE = "extra_package"
         const val EXTRA_REASON = "extra_reason"
         const val EXTRA_DETAIL = "extra_detail"
+        // TASK A — AI detection confidence score (0..1 float) threaded from the
+        // detection to the overlay for badge display and Task B gating.
+        const val EXTRA_CONFIDENCE = "extra_confidence"
     }
 }

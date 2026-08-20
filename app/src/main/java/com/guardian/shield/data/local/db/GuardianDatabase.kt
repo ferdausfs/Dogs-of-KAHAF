@@ -10,9 +10,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AppRuleEntity::class,
         KeywordRuleEntity::class,
         BlockEventEntity::class,
-        ScheduleRuleEntity::class
+        ScheduleRuleEntity::class,
+        PendingReportEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -20,6 +21,7 @@ abstract class GuardianDatabase : RoomDatabase() {
     abstract fun keywordDao(): KeywordDao
     abstract fun blockEventDao(): BlockEventDao
     abstract fun scheduleRuleDao(): ScheduleRuleDao
+    abstract fun pendingReportDao(): PendingReportDao
 
     companion object {
         const val DB_NAME = "guardian.db"
@@ -38,6 +40,27 @@ abstract class GuardianDatabase : RoomDatabase() {
                         `enabled` INTEGER NOT NULL,
                         `createdAt` INTEGER NOT NULL,
                         PRIMARY KEY(`packageName`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // TASK B — cooling-off queue table.
+        val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `pending_reports` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `packageName` TEXT NOT NULL,
+                        `timestampCreated` INTEGER NOT NULL,
+                        `scheduledApplyAt` INTEGER NOT NULL,
+                        `confidence` REAL NOT NULL,
+                        `source` TEXT NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `strikeCount` INTEGER NOT NULL DEFAULT 0,
+                        `delayMs` INTEGER NOT NULL DEFAULT 0
                     )
                     """.trimIndent()
                 )

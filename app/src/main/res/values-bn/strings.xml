@@ -319,4 +319,26 @@
     <string name="reel_subtitle">তুমি অনেকক্ষণ ধরে রিলস দেখছো। এই মূল্যবান সময়টা কুরআন বা হাদীসে ব্যয় করো।</string>
     <string name="reel_open_quran">📖 কুরআন অ্যাপ খুলুন</string>
     <string name="reel_continue">এখন নয়, ফিরে যাই</string>
+
+    <!-- TASK A — AI confidence badge format -->
+    <string name="ai_confidence_badge_fmt">AI • %1$.2f</string>
+
+    <!-- TASK B — Cooling-off system messages (Bengali primary) -->
+    <string name="cooling_queued_fmt">রিপোর্ট গ্রহণ করা হয়েছে — %1$s এ কার্যকর হবে, ততক্ষণ চাইলে বাতিল করতে পারবে</string>
+    <string name="cooling_mark_false_queued">কিউতে আছে — উচ্চ আত্মবিশ্বাস</string>
+    <string name="cooling_full_block_queued_fmt">রিপোর্ট গ্রহণ করা হয়েছে — আনব্লক %1$s এ কার্যকর হবে। ততক্ষণ ব্লক চালু থাকবে।</string>
+    <string name="cooling_cancel">বাতিল</string>
+    <string name="cooling_cancelled">বাতিল করা হয়েছে</string>
+
+    <!-- TASK B — Pending reports screen -->
+    <string name="pending_reports_title">পেন্ডিং রিপোর্ট</string>
+    <string name="pending_reports_empty">কোনো পেন্ডিং রিপোর্ট নেই</string>
+    <string name="pending_reports_subtitle">উচ্চ আত্মবিশ্বাসের রিপোর্ট কুলিং-অফ সময়ের অপেক্ষায়</string>
+    <string name="pending_report_item_fmt">%1$s\nAI কনফিডেন্স: %2$.2f\nকার্যকর হবে: %3$s\nবাকি: %4$s</string>
+    <string name="pending_report_source_warning">ওয়ার্নিং কার্ড রিপোর্ট</string>
+    <string name="pending_report_source_full">ফুল ব্লক রিপোর্ট</string>
+    <string name="pending_report_cancel_btn">রিপোর্ট বাতিল করুন</string>
+    <string name="pending_report_cancelled_msg">রিপোর্ট বাতিল — আর কার্যকর হবে না</string>
+    <string name="pending_remaining_fmt">%1$d মিনিট বাকি</string>
+    <string name="open_pending_reports">পেন্ডিং রিপোর্ট · %1$d</string>
 </resources>

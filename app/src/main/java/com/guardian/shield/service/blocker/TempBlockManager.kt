@@ -74,6 +74,14 @@ class TempBlockManager @Inject constructor() {
     @Volatile
     private var warningCardShowing: Boolean = false
 
+    // TASK A — confidence score from the most recent AI detection that triggered
+    // a strike. Read by the "Not sensitive" / "Mark False" handler to decide
+    // whether to apply immediately (LOW confidence) or queue for cooling-off
+    // (HIGH confidence). Set by recordAiDetection(); -1f = no score available.
+    @Volatile
+    var lastStrikeConfidence: Float = -1f
+        private set
+
     /**
      * TASK 3 — Record an AI-detection event.
      *
@@ -100,10 +108,16 @@ class TempBlockManager @Inject constructor() {
      *
      * @param pkg the offending package
      * @param blockDurationMs the user-configured temp-block duration
+     * @param confidence the AI detection confidence score (0..1) from the model.
+     *        -1f if unavailable. Stored in [lastStrikeConfidence] for the overlay
+     *        and the cooling-off gate to read.
      */
     @Synchronized
-    fun recordAiDetection(pkg: String, blockDurationMs: Long): AiStrikeResult {
+    fun recordAiDetection(pkg: String, blockDurationMs: Long, confidence: Float = -1f): AiStrikeResult {
         val now = System.currentTimeMillis()
+        // TASK A — persist the confidence for the overlay badge and the
+        // confidence-based cooling-off gate.
+        lastStrikeConfidence = confidence
 
         // Grace period after a block expiry — don't count strikes or block.
         if (now < (graceUntil[pkg] ?: 0L)) {
