@@ -30,7 +30,11 @@ import javax.inject.Singleton
 class AiDetector @Inject constructor(
     @ApplicationContext private val context: Context,
     private val prefs: GuardianPreferences,
-    private val falsePositiveMemory: FalsePositiveMemory
+    private val falsePositiveMemory: FalsePositiveMemory,
+    // v3.6.0 — permanent confirmed-sensitive blacklist (opposite of
+    // FalsePositiveMemory). Checked FIRST in isUnsafe(); a match forces
+    // unsafe=true before the false-positive whitelist and before inference.
+    private val confirmedSensitiveMemory: ConfirmedSensitiveMemory
 ) {
     private val inferenceLock = Mutex()
     private var legacyInterpreter: Interpreter? = null
@@ -58,6 +62,8 @@ class AiDetector @Inject constructor(
     // regardless of whether the detection ultimately triggered a block. Callers
     // (GuardianAccessibilityService) read this after isUnsafe() returns true to
     // thread the value through to the overlay and the cooling-off gate.
+    // v3.6.0 — also set to 1.0f when the confirmed-sensitive memory matches
+    // (guaranteed-sensitive override: no inference runs in that path).
     @Volatile var lastDetectionScore: Float = -1f
         private set
 
@@ -184,6 +190,22 @@ class AiDetector @Inject constructor(
         val interp = legacyInterpreter ?: return false
         return inferenceLock.withLock {
             try {
+                // v3.6.0 — CONFIRMED-SENSITIVE OVERRIDE (checked FIRST, before
+                // the complexity gate and before the false-positive whitelist):
+                // a pattern the user protected ("সংরক্ষণ করো") is guaranteed
+                // sensitive. No inference runs, so no live model score can
+                // under-score it again, and the check is deliberately ordered
+                // BEFORE falsePositiveMemory.isKnown() so that a defensive
+                // double-listing (same pattern whitelisted AND confirmed) can
+                // never suppress it. lastDetectionScore is set to 1.0f so the
+                // confidence threaded to the warning card / overlay reflects
+                // the guarantee instead of a stale value from an earlier scan.
+                if (confirmedSensitiveMemory.isConfirmedSensitive(bitmap)) {
+                    lastDetectionScore = 1.0f
+                    Timber.i("Confirmed-sensitive pattern matched — forced unsafe (user-protected)")
+                    return@withLock true
+                }
+
                 if (!isImageComplex(bitmap)) return@withLock false
 
                 // LEARNING MEMORY — if this exact pattern was already marked as a

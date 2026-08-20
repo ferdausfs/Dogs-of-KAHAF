@@ -67,6 +67,15 @@
          itself lives in ReligiousReminders.kt so it can be reviewed in one place). -->
     <string name="ai_strike_acknowledge">আমি বুঝেছি</string>
     <string name="ai_strike_ayat_reminder">মনে রাখো, আল্লাহ সবসময় দেখছেন</string>
+    <!-- v3.6.0 — third strike-card action: "Protect" (permanent confirmed-sensitive
+         memory, the opposite of "Not sensitive"). -->
+    <string name="ai_strike_protect">Protect</string>
+    <string name="ai_strike_protected_confirmed">Protected</string>
+    <string name="ai_strike_protect_unavailable">Couldn\'t save pattern — try again on the next warning</string>
+    <string name="ai_strike_report_refused_confirmed">This pattern is protected as confirmed sensitive — it can\'t be reported</string>
+    <string name="overlay_report_refused_confirmed">This content is protected as confirmed sensitive — it can\'t be marked as a false block</string>
+    <string name="confirmed_count_label">Confirmed sensitive patterns</string>
+    <string name="confirmed_count_sub">Protected patterns are permanent and can never be reported</string>
     <string name="male">Male</string>
     <string name="female">Female</string>
     <string name="disabled">Disabled</string>

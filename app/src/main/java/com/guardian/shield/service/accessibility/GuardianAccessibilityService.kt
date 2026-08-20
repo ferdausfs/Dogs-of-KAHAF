@@ -38,6 +38,7 @@ import com.guardian.shield.service.blocker.AiStrikeResult
 import com.guardian.shield.service.blocker.BlockingEngine
 import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.service.detection.AiDetector
+import com.guardian.shield.service.detection.ConfirmedSensitiveMemory
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
@@ -71,6 +72,7 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var reelScrollDetector: ReelScrollDetector
     @Inject lateinit var timeLockManager: TimeLockManager
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
+    @Inject lateinit var confirmedSensitiveMemory: ConfirmedSensitiveMemory
     @Inject lateinit var blockEventDao: BlockEventDao
     @Inject lateinit var pendingReportManager: PendingReportManager
 
@@ -452,10 +454,43 @@ class GuardianAccessibilityService : AccessibilityService() {
         // (Bug E, v3.1.1) learns the pending AI-detection candidate via
         // FalsePositiveMemory.addSignature so the same pattern is skipped in the
         // future, then dismisses the card.
+        // v3.6.0 — the report is REFUSED inside reportNotSensitive() when the
+        // pending candidate is confirmed-sensitive (protected) — no strike
+        // cancel, no learning, no cooling-off enqueue.
         val notSensitiveBtn = card.findViewById<TextView>(R.id.btnNotSensitive)
         notSensitiveBtn.setOnClickListener {
             reportNotSensitive(pkg, strikeCount, confidence)
             dismissAiStrikeWarning("not-sensitive")
+        }
+
+        // v3.6.0 — "সংরক্ষণ করো" (Protect): the user confirms THIS content is
+        // genuinely sensitive even though the AI under-scored it. The pending
+        // candidate signature is taken (same capture as "Not sensitive",
+        // Bug E) and stored PERMANENTLY in ConfirmedSensitiveMemory. Any
+        // matching false-positive whitelist entry is removed (defensive
+        // override — Protect always wins). Per the user's explicit
+        // confirmation, the current warning/strike is NOT escalated: this only
+        // affects FUTURE detections of the same/similar pattern.
+        val protectBtn = card.findViewById<TextView>(R.id.btnProtect)
+        protectBtn.setOnClickListener {
+            val sig = falsePositiveMemory.takePendingCandidate()
+            if (sig != null) {
+                confirmedSensitiveMemory.addConfirmedSignature(sig)
+                // Defensive override: if this exact pattern had somehow been
+                // whitelisted before, "Protect" removes it so the blacklist and
+                // the whitelist can never both contain the same pattern.
+                falsePositiveMemory.removeSignature(sig)
+                Timber.i("Protected confirmed-sensitive pattern for $pkg (strike=$strikeCount)")
+                runCatching {
+                    Toast.makeText(this, R.string.ai_strike_protected_confirmed, Toast.LENGTH_SHORT).show()
+                }.onFailure { Timber.w(it, "Protect confirmation Toast failed") }
+            } else {
+                Timber.w("Protect: no pending candidate signature to store for $pkg")
+                runCatching {
+                    Toast.makeText(this, R.string.ai_strike_protect_unavailable, Toast.LENGTH_SHORT).show()
+                }.onFailure { Timber.w(it, "Protect unavailable Toast failed") }
+            }
+            dismissAiStrikeWarning("protect")
         }
 
         val acknowledgeBtn = card.findViewById<MaterialButton>(R.id.btnAcknowledge)
@@ -551,9 +586,14 @@ class GuardianAccessibilityService : AccessibilityService() {
      * is shown immediately from the click handler's (main) thread.
      */
     /**
-     * "Not sensitive" report for a strike-1/2 warning (Bug B + Bug E + Task B).
+     * "Not sensitive" report for a strike-1/2 warning (Bug B + Bug E + Task B + v3.6.0).
      *
-     * Task B branching:
+     * v3.6.0 refusal override (checked FIRST, before everything below): if the
+     * pending candidate matches ConfirmedSensitiveMemory, the report is
+     * REFUSED — no strike cancel, no learning, no cooling-off enqueue — with
+     * honest feedback, regardless of the live confidence score.
+     *
+     * Task B branching (unchanged, reached only when NOT refused):
      *   LOW confidence (< 0.82) → apply immediately (existing instant behavior):
      *     cancelLastStrike() + addSignature() + dismiss card.
      *   HIGH confidence (>= 0.82) → defer via cooling-off queue:
@@ -561,6 +601,41 @@ class GuardianAccessibilityService : AccessibilityService() {
      *     The strike is NOT cancelled yet — it applies when the delay expires.
      */
     private fun reportNotSensitive(pkg: String, strikeCount: Int, confidence: Float = -1f) {
+        // v3.6.0 — CONFIRMED-SENSITIVE REFUSAL OVERRIDE. Runs BEFORE the audit
+        // log and BEFORE the confidence-based cooling-off branching, and takes
+        // priority over EVERYTHING else in this flow (including the 0.82
+        // threshold and the escalating-delay queue): if the current candidate
+        // pattern is protected, the report is refused outright — no strike
+        // cancel (Bug B), no addSignature learning (Bug E), no cooling-off
+        // enqueue (Task B), regardless of the live confidence score. The
+        // candidate is PEEKED (not consumed) so the user can still tap
+        // "Protect" afterwards; a null candidate (e.g. process restart) falls
+        // through to the normal flow, which remains protected by the
+        // confidence gate.
+        val candidate = falsePositiveMemory.peekPendingCandidate()
+        if (candidate != null && confirmedSensitiveMemory.isConfirmedSignature(candidate)) {
+            Timber.w("Not-sensitive report REFUSED for $pkg — pattern is confirmed-sensitive (protected)")
+            // Audit row for the refusal (reason=NOT_SENSITIVE, distinct
+            // matchedTerm) so the attempt stays visible in the evidence trail.
+            val matched = "refused:confirmed-sensitive strike=$strikeCount conf=${"%.2f".format(confidence.coerceAtLeast(0f))}"
+            ioScope.launch {
+                runCatching {
+                    blockEventDao.insert(
+                        BlockEventEntity(
+                            packageName = pkg,
+                            reason = BlockReason.NOT_SENSITIVE.name,
+                            matchedTerm = matched,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                }.onFailure { Timber.e(it, "Failed to log refused not-sensitive report for $pkg") }
+            }
+            runCatching {
+                Toast.makeText(this, R.string.ai_strike_report_refused_confirmed, Toast.LENGTH_LONG).show()
+            }.onFailure { Timber.w(it, "Refused-report Toast failed") }
+            return
+        }
+
         // Audit log always fires regardless of confidence.
         val matched = "strike=$strikeCount conf=${"%.2f".format(confidence.coerceAtLeast(0f))}"
         ioScope.launch {

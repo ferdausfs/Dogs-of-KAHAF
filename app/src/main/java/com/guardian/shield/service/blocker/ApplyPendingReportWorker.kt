@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.guardian.shield.data.local.db.PendingReportDao
+import com.guardian.shield.service.detection.ConfirmedSensitiveMemory
 import com.guardian.shield.service.detection.FalsePositiveMemory
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -29,7 +30,11 @@ class ApplyPendingReportWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val pendingReportDao: PendingReportDao,
     private val tempBlockManager: TempBlockManager,
-    private val falsePositiveMemory: FalsePositiveMemory
+    private val falsePositiveMemory: FalsePositiveMemory,
+    // v3.6.0 — a queued report is re-checked against the confirmed-sensitive
+    // memory at APPLY time (defense in depth: the pattern may have been
+    // protected between enqueue and expiry).
+    private val confirmedSensitiveMemory: ConfirmedSensitiveMemory
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -57,6 +62,19 @@ class ApplyPendingReportWorker @AssistedInject constructor(
 
         // Take the pending candidate signature (best-effort learning).
         val sig = falsePositiveMemory.takePendingCandidate()
+
+        // v3.6.0 — confirmed-sensitive refusal override at APPLY time (defense
+        // in depth). The pattern may have been protected after this report was
+        // enqueued; if so the deferred action is refused entirely — no strike
+        // cancel, no temp-block clear, no addSignature, no relaunch. The row is
+        // marked CANCELLED so the refusal is visible in Pending Reports.
+        if (sig != null && confirmedSensitiveMemory.isConfirmedSignature(sig)) {
+            Timber.w(
+                "ApplyPendingReportWorker: report $reportId REFUSED — pattern became confirmed-sensitive (protected)"
+            )
+            pendingReportDao.updateStatus(reportId, PendingReportManager.Status.CANCELLED)
+            return Result.success()
+        }
 
         when (report.source) {
             PendingReportManager.Source.WARNING_CARD -> {

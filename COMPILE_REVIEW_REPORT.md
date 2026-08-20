@@ -2916,3 +2916,330 @@ reads + notifications only.
 - [x] Backup exports rules/settings only — no detection data/logs; local JSON only.
 - [x] FAQ copy is real and cross-checked against shipped constants.
 - [x] Notification leak traced → fixed → limits stated (flash, MessagingStyle, grant requirement).
+
+---
+
+# 2026-08-20 Session — Confirmed-Sensitive Memory: "সংরক্ষণ করো" (Protect) + never-undoable report refusal (arena/01a01e76-dogs-of-kahaf)
+
+**Base:** `main` @ `a368614` (v3.5.0 / vc29, published). **Target:** v3.6.0 / vc30.
+**Commit:** `46387d6` · **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/57
+
+## 0) OBJECTIVE
+
+Borderline detections (roughly 0.50–0.82, below the HIGH-confidence cooling-off
+threshold) sometimes ARE genuinely severe content the AI under-scored. Today, a
+"Not sensitive" report on such content is LOW-confidence → instantly whitelisted,
+and there was no way to say "no, this specific content is definitely bad,
+remember permanently, and never let a future report undo it". This session adds
+that missing opposite-direction memory: a permanent confirmed-sensitive
+blacklist, a third "Protect" button on the strike-1/2 card, a detection
+override in AiDetector, and a report-refusal override in every report path.
+
+## 1) TASK A — Three-button strike-1/2 warning card
+
+**File:** `app/src/main/res/layout/view_strike_warning.xml` (lines 145–213)
+
+- Row 1: `btnAcknowledge` (line 163) — the existing compact primary
+  `Widget.GuardianShield.Button.Compact` "আমি বুঝেছি". **Behavior and label
+  untouched** (the task text calls this button "ওকে"; the shipped label is
+  "আমি বুঝেছি" — deliberately not renamed, per "do not alter this").
+- Row 2: two half-width secondary actions side by side, visually
+  distinguishable by icon AND tint so their opposite intents can't be confused:
+  - `btnNotSensitive` (line 179) — `drawableStart=@drawable/ic_flag` tinted
+    `@color/warning_amber` (existing "report" semantics), text
+    `@string/ai_strike_warning_not_sensitive`. Behavior unchanged.
+  - NEW `btnProtect` (line 198) — `drawableStart=@drawable/ic_shield_check`
+    tinted `@color/success_legacy`, green text, `@string/ai_strike_protect`
+    ("সংরক্ষণ করো" / "Protect").
+- No new button styles invented: acknowledge reuses the existing Compact
+  style; the two secondaries reuse the card's existing TextView-action
+  treatment (same as the pre-existing `btnNotSensitive`), only with icons.
+
+**Wire-up** (`GuardianAccessibilityService.showStrikeWarningOverlay()`,
+lines 474–494): `btnProtect` click →
+`falsePositiveMemory.takePendingCandidate()` (same capture as Bug E —
+**reused, not re-captured**) → if present:
+`confirmedSensitiveMemory.addConfirmedSignature(sig)` +
+defensive `falsePositiveMemory.removeSignature(sig)` + Toast
+"সংরক্ষণ করা হয়েছে" (`ai_strike_protected_confirmed`) → dismiss card via
+`dismissAiStrikeWarning("protect")`. If the candidate is null (process death),
+an honest "couldn't save" Toast is shown and the card still dismisses.
+
+**Per the user's explicit confirmation: no immediate escalation** — the handler
+does NOT call `goHomeAndBlock`, `applyTempBlock`, `cancelLastStrike` or any
+strike mutation; the current warning stays exactly as-is and the normal strike
+system continues. The action only affects FUTURE detections.
+
+## 2) TASK B — ConfirmedSensitiveMemory (permanent blacklist)
+
+**New files:**
+- `service/detection/ImageSignature.kt` — the 8×8 average-colour signature
+  logic **extracted verbatim** from FalsePositiveMemory (GRID=8, CELLS=64,
+  CHANNEL_TOLERANCE=48, MATCH_RATIO=0.62f). Extraction = shared, not
+  reimplemented: `FalsePositiveMemory.computeSignature()` now delegates to
+  `ImageSignature.compute()`, and its internal `isMatch()` to
+  `ImageSignature.matches()`. Behavior-test-proven byte-equivalent (see §6).
+- `service/detection/ConfirmedSensitiveMemory.kt` — structurally parallel to
+  FalsePositiveMemory, opposite purpose:
+  - `addConfirmedSignature(sig)` — dedupes near-duplicates, persists.
+  - `isConfirmedSensitive(bitmap)` — Bitmap → signature → match (used by
+    AiDetector).
+  - `isConfirmedSignature(sig)` — pre-computed signature match (used by the
+    report handlers, which hold the candidate signature, not a Bitmap).
+  - `size()` — for Settings.
+  - Storage mirrors FalsePositiveMemory exactly (verified same mechanism:
+    FalsePositiveMemory uses a binary file in `filesDir`, not Room):
+    `confirmed_sensitive_signatures.dat` — count (Int) + 64 Ints per
+    signature, async save, `runCatching { load() }` in `init`. Max 2000
+    entries (~512 KB), same as the whitelist.
+
+**PERMANENCE CONTRACT — verified, not just claimed:**
+- No timestamps are stored; no auto-expiry exists; no reset hooks into
+  `STRIKE_RESET_MS`, the cooling-off window, `clearTempBlock`, or any other
+  time-based system.
+- The ONLY removal path is capacity trimming (`size > 2000 → removeAt(0)`),
+  identical file-size discipline to FalsePositiveMemory — capacity-based,
+  never time-based.
+- Whole-repo grep for `confirmed_sensitive` / `ConfirmedSensitiveMemory`:
+  only the 5 intended sites (AiDetector, service, overlay, worker, settings)
+  + documentation. Grep for `deleteRecursively` / `.delete()`: only
+  `ModelImportManager` (model files only), `TamperLogger` (own log),
+  `GuardianCrashHandler` (own log). Nothing clears
+  `confirmed_sensitive_signatures.dat`.
+- `BackupRestoreManager` exports rules/settings only and explicitly excludes
+  detection data — the confirmed store is not exported and not restored
+  (restore cannot wipe it either). (An OS-level "Clear data" would wipe
+  filesDir; that is outside any app code path, same as FalsePositiveMemory.)
+
+**FalsePositiveMemory additions (pure API, no behavior change):**
+- `peekPendingCandidate()` (line 104) — read candidate WITHOUT consuming, so
+  the refusal check can run without destroying the candidate the user may
+  still want to Protect.
+- `removeSignature(sig)` (line 119) — removes every whitelist entry matching
+  `sig` (near-duplicates included), persists the change, returns removed
+  count. Used only by Protect so the same pattern can never sit in BOTH
+  stores; "Protect" always wins.
+
+## 3) TASK C — Wiring: detection override + report refusal
+
+### 3.1) AiDetector check order (the part that makes under-scoring impossible)
+
+`AiDetector.isUnsafe()` (`AiDetector.kt` lines 183–290) — exact order:
+
+```
+183  suspend fun isUnsafe(bitmap) {
+       interp = legacyInterpreter ?: return false      // no model → no AI path
+203    if (confirmedSensitiveMemory.isConfirmedSensitive(bitmap)) {   ← FIRST
+204        lastDetectionScore = 1.0f
+205        return TRUE (no inference runs)
+209    if (!isImageComplex(bitmap)) return false         // existing noise gate
+213    if (falsePositiveMemory.isKnown(bitmap)) return false  // existing whitelist
+       … inference → fullScore → lastDetectionScore = fullScore …
+       … hard floor / user threshold / small-crop guard / grid vote …
+```
+
+Why this order (traced, not assumed):
+1. The confirmed check is FIRST so no early-return can skip it — including
+   `isImageComplex` (a confirmed pattern in a small crop is still confirmed
+   content) and, critically, `falsePositiveMemory.isKnown()`: if (defensively)
+   a signature somehow existed in BOTH stores, the blacklist wins and the
+   frame is forced unsafe — the whitelist can never suppress a confirmed-bad
+   match.
+2. No inference runs on a match, so no live model score can under-score it
+   again (this is exactly the reported gap: borderline content the AI scored
+   low now short-circuits to guaranteed-sensitive).
+3. `lastDetectionScore = 1.0f` so the confidence threaded to the strike card
+   (badge "AI • 1.00") reflects the guarantee instead of a stale value from an
+   earlier scan.
+
+### 3.2) reportNotSensitive() — strike 1/2 refusal
+
+`GuardianAccessibilityService.reportNotSensitive()` (lines 601–701) — the
+refusal block (604–643) is the FIRST statement, before the audit-log write
+and before the confidence-based cooling-off branch (655). On a match:
+
+- `peekPendingCandidate()` + `isConfirmedSignature()` → `Timber.w("…REFUSED…")`
+- audit row still written (`reason=NOT_SENSITIVE`, `matchedTerm` prefixed
+  `refused:confirmed-sensitive …`) so the attempt stays in the evidence trail,
+  then `return`.
+- **NOT called:** `cancelLastStrike` (Bug B), `addSignature` (Bug E),
+  `pendingReportManager.enqueue` (Task B cooling-off). The strike stays
+  counted; the card is dismissed by the existing click handler afterwards
+  (same dismiss behavior as the other buttons).
+- Feedback: Toast `ai_strike_report_refused_confirmed` —
+  BN "এই প্যাটার্ন নিশ্চিত সংবেদনশীল হিসেবে সংরক্ষিত — রিপোর্ট করা যাবে না".
+
+### 3.3) BlockOverlayActivity "Mark False" — strike 3 refusal
+
+`BlockOverlayActivity.kt` lines 159–168, the FIRST check inside
+`btnMarkFalse.setOnClickListener`, before the `isHighConfidence` branch:
+
+- match → `Timber.w("Mark False REFUSED…")`, `txtCoolingStatus` shows
+  `overlay_report_refused_confirmed` in error color + Snackbar, then
+  `return@setOnClickListener`.
+- **NOT called:** `clearTempBlock`, `enqueue`, `addSignature`,
+  `relaunchBlockedApp`. The block stays active; the button stays enabled so a
+  repeated tap shows the same honest refusal (the candidate was peeked, not
+  consumed — no silent fall-through on a null candidate).
+- Priority trace: refusal check (159) → confidence branch (172) → low-conf
+  instant path (clearTempBlock at line 221, relaunchBlockedApp right after — Bug D preserved). The
+  0.82 threshold and the escalating-delay queue are only reachable when the
+  candidate is NOT confirmed.
+
+### 3.4) Defense-in-depth: ApplyPendingReportWorker (apply-time refusal)
+
+`ApplyPendingReportWorker.doWork()` lines 64–77: a report queued BEFORE the
+pattern was protected is re-checked at APPLY time; a confirmed match refuses
+the deferred action entirely (no strike cancel / temp-block clear /
+addSignature / relaunch) and marks the row `CANCELLED` so the refusal is
+visible in Pending Reports. This closes the only remaining window in which a
+report could have undone a protected pattern.
+
+### 3.5) Null-candidate honesty
+
+If the in-memory candidate did not survive (process death — a documented
+limitation of the existing `@Volatile pendingCandidate` design, same as
+Bug D), the refusal check cannot match and the normal flow runs — which for
+HIGH confidence is the cooling-off queue (never an instant undo), and for LOW
+confidence is the existing instant path. This is stated, not papered over.
+
+## 4) TASK D — Settings visibility (minimal)
+
+`activity_settings.xml` lines 156–166: inside the AI section card, a divider +
+read-only row — label `confirmed_count_label` / sub `confirmed_count_sub`
+("Protected patterns are permanent and can never be reported") + badge
+`txtConfirmedCount` (success-green badge, matching the existing badge tokens).
+`SettingsActivity.kt` line 116: `binding.txtConfirmedCount.text =
+confirmedSensitiveMemory.size().toString()` (after PIN verification, in
+`initUI`). One-way by design: **no browse/remove UI was built**, per the task.
+
+## 5) VERSION + RELEASE GUARD
+
+- `app/build.gradle.kts`: `versionCode 29 → 30`, `versionName "3.5.0" →
+  "3.6.0"`. v3.5.0 is published (release 2026-08-20T07:53:05Z), so the
+  fail-fast release-tag guard WOULD have aborted an `assembleRelease` — bumped
+  proactively.
+- Tag probe against the same URLs the in-repo guard checks
+  (`releases/tag/v3.6.0`, `tree/v3.6.0`) → **404 / 404 → free** (checked via
+  `gh api` live this session).
+
+## 6) BUILD VERIFICATION — what "green" means here (evidence)
+
+The sandbox has no JDK/Android SDK and `dl.google.com`/`services.gradle.org`
+are network-blocked (re-verified), so `./gradlew assembleRelease` cannot run
+locally — same environment as the previous sessions. Instead:
+
+**Gate 1 — full-app Kotlin compile** (JDK 25 via jdk4py, K2JVMCompiler
+2.3.10-RC via the kotlin-jupyter-kernel fat jar, real `android.jar` android-35
+fetched from Sable/android-platforms via `gh api` blob download (14,488
+entries), generated `R.kt`/`BuildConfig.kt`/ViewBinding classes parsed from the
+ACTUAL res tree — wrong ids/colors/strings fail compilation, handwritten
+androidx/Hilt/Room/Work/TFLite/timber stubs):
+
+```
+$ java -cp <kernel-fat-jar> org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
+    -jvm-target 17 -classpath android.jar:kotlin-stdlib \
+    <ALL 62+ app .kt files> + generated R/Bindings + stubs
+errors: 0     ← full app source set, not just the changed files
+```
+
+**Gate 2 — resource verifier** (`guardian-redesign/tools/verify_res.py`, in-repo):
+`OK — all references resolve. (77 colors, 51 drawables, 37 styles)`. Layout
+XML well-formed (ElementTree parse); EN/BN string sets identical (no missing
+translations).
+
+**Gate 3 — JVM behavior tests (27/27 PASS)** against the gate-compiled
+classes, with a real file-backed Context (ContextWrapper subclass whose
+`getFilesDir` returns a temp dir — real `DataOutputStream` persistence):
+
+```
+PASS matches(exact)/different/near-duplicate/30-of-64-beyond-tolerance
+PASS confirmed add → size 1; isConfirmedSignature(added) true / other false / short-sig false
+PASS dedupe (exact + near-duplicate ignored); distinct pattern stored
+PASS persistence round-trip: fresh instance reloads 2 entries, matches both, rejects unrelated
+PASS peekPendingCandidate does NOT consume; take consumes
+PASS removeSignature removes matching entry, keeps non-matching, 0 when absent
+PASS cross-store override: FP whitelist entry gone, confirmed store retains pattern
+PASS capacity: capped at 2000; oldest trimmed (trim is capacity-based)
+RESULT: 27 passed, 0 failed
+```
+
+Honest limit: Bitmap-dependent APIs (`ImageSignature.compute`,
+`isConfirmedSensitive(bitmap)`, `isKnown(bitmap)`) are compile-verified only —
+android.jar's `Bitmap` methods throw "Stub!" on the JVM and Bitmap can't be
+subclassed outside `android.graphics`. Their logic is a one-line delegation to
+the (tested) signature math. The AiDetector check ORDER is compile-verified +
+traced in §3.1; the report-path refusal predicate itself
+(`isConfirmedSignature`) IS behavior-tested above.
+
+**Gate 4 — CI release build:** the workflow `Build Release APK` runs
+`./gradlew assembleRelease --no-daemon --stacktrace` on push to `main` (i.e.
+after PR #57 merges; `workflow_dispatch` is HTTP 403 for this bot — same
+restriction as every prior session, re-verified). Release-tag guard passes
+(v3.6.0 free). PR #57 is OPEN and MERGEABLE against `main`.
+
+**Expected after merge:**
+- Tag **v3.6.0**, release **Guardian Shield v3.6.0**
+- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.0/app-release.apk
+
+## 7) RE-VERIFICATION TRACES (task sequence item 4)
+
+**Tap "Protect"** → `takePendingCandidate()` (line 476) →
+`addConfirmedSignature(sig)` (478) → defensive `removeSignature(sig)` (482) →
+Toast "সংরক্ষণ করা হয়েছে" → `dismissAiStrikeWarning("protect")` (493) →
+strike gate reopens via `setWarningCardShowing(false)` in
+`dismissAiStrikeWarning` — **no `goHomeAndBlock`, no `applyTempBlock`, no
+strike-cancel anywhere in the handler** → current warning unaffected, strike
+system continues normally (next qualifying detection = strike N+1, exactly as
+before this session).
+
+**Same/similar content detected again later** → `AiDetector.isUnsafe` line
+203 matches → `true` forced, confidence 1.0, no inference → strike counted →
+card shown. Any "Not sensitive" tap on it: `reportNotSensitive` line 615
+matches → REFUSED (strike NOT cancelled, nothing whitelisted, nothing queued)
+at ANY confidence score — the 0.82 threshold and the cooling-off ladder are
+behind this check (655) and are never reached. Same refusal at strike 3
+(overlay line 159) and at deferred-apply time (worker line 71).
+
+**Genuinely different content** → `isConfirmedSensitive` returns false (no
+match — behavior-tested with unrelated signatures), so the flow falls through
+to the EXISTING `isKnown` whitelist check and the EXISTING confidence-based
+report branching — `FalsePositiveMemory` learning, LOW-conf instant apply,
+HIGH-conf cooling-off queue, Bug B/D/E semantics all byte-identical
+(`git diff main..HEAD --name-only` proves `TempBlockManager.kt`,
+`BlockingEngine.kt`, `Constants.kt`, `PendingReportManager.kt` are NOT in the
+change set; within the touched files the pre-existing branches are unchanged,
+and the 27 behavior tests cover the new store's independence).
+
+## 8) UNTOUCHED CORE LOGIC (diff-level verification)
+
+- `STRIKE_THRESHOLD = 3`, `STRIKE_RESET_MS = 10 min`,
+  `ESCALATION_WINDOW_MS/THRESHOLD`, `DAY_BLOCK_MS`, `POST_BLOCK_GRACE_MS` —
+  `Constants.kt` not modified.
+- `CONFIDENCE_THRESHOLD = 0.82f`, `COOLING_BASE/MAX/WINDOW_MS` and the
+  escalating-delay formula — `PendingReportManager.kt` not modified.
+- `TempBlockManager` / `BlockingEngine` — not modified (strike counting, card
+  gate, escalation, launchOverlay).
+- `AiDetector` inference pipeline (threshold/floor/grid) — untouched; only the
+  new first check + `lastDetectionScore = 1.0f` line added.
+- The ONLY behavior additions are the refusal override placed IN FRONT of the
+  existing flows (§3) and the detection short-circuit (§3.1) — nothing
+  existing was re-ordered or weakened.
+
+## 9) COMPLIANCE CHECKLIST
+
+- [x] Third button "সংরক্ষণ করো" added; "আমি বুঝেছি" and "সংবেদনশীল নয়" behavior unchanged.
+- [x] Secondary actions visually distinct (flag/amber vs shield/green) — One UI 8 tokens only, no new styles.
+- [x] ConfirmedSensitiveMemory mirrors FalsePositiveMemory storage (file, same format) and shares ImageSignature — no reimplemented hashing.
+- [x] Protect reuses `takePendingCandidate()` (no new capture logic).
+- [x] Defensive whitelist removal on Protect (blacklist always wins).
+- [x] No immediate escalation on Protect (verified trace in §7).
+- [x] AiDetector confirmed check FIRST: before complexity gate, whitelist, and inference.
+- [x] Refusal override in BOTH report handlers before the cooling-off branch, priority over the 0.82 threshold and the escalation ladder.
+- [x] Apply-time refusal in the worker (defense in depth, gap documented).
+- [x] Refusal feedback is clear and honest (Bengali + English strings; audit row for the refusal).
+- [x] Permanent: no expiry, no time-based reset, no other clearing code path (grep-verified, §2).
+- [x] Settings shows only a count — no browse/remove UI (one-way by design).
+- [x] Version bumped past published v3.5.0; v3.6.0 tag probe 404/404.
+- [x] Compile gate 0 errors (full source set) · verify_res OK · behavior tests 27/27.
+- [x] PR #57 open + mergeable; release link documented (CI runs post-merge on main).

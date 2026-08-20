@@ -21,6 +21,7 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivitySettingsBinding
 import com.guardian.shield.databinding.DialogPartnerBinding
 import com.guardian.shield.service.detection.AiDetector
+import com.guardian.shield.service.detection.ConfirmedSensitiveMemory
 import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.ui.permissions.PermissionsActivity
@@ -47,6 +48,7 @@ class SettingsActivity : AppCompatActivity() {
 
     @Inject lateinit var pinManager: PinManager
     @Inject lateinit var timeLockManager: TimeLockManager
+    @Inject lateinit var confirmedSensitiveMemory: ConfirmedSensitiveMemory
 
     // PHASE 2 (v3.5.0) — accountability partner + PHASE 1c recovery code.
     @Inject lateinit var guardianPrefs: GuardianPreferences
@@ -107,6 +109,11 @@ class SettingsActivity : AppCompatActivity() {
         } else {
             binding.lockBanner.visibility = View.GONE
         }
+
+        // v3.6.0 (Task D) — read-only visibility of the permanent
+        // ConfirmedSensitiveMemory store: just the count. The store is
+        // deliberately one-way, so there is no browse/remove UI.
+        binding.txtConfirmedCount.text = confirmedSensitiveMemory.size().toString()
 
         val editEnabled = !isLocked
 
