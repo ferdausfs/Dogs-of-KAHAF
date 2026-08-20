@@ -47,8 +47,8 @@ data class ScheduleRuleEntity(
 // "Not sensitive" (strike 1/2) or "Mark False" (strike 3 full-block), the
 // unblock action is NOT applied immediately. Instead a PENDING row is inserted
 // here with a scheduledApplyAt timestamp. A WorkManager worker fires at that
-// time and applies the deferred action (cancelLastStrike + addSignature for
-// WARNING_CARD; clearTempBlock + addSignature + relaunch for FULL_BLOCK).
+// time and applies the deferred action (add the snapshotted signature for
+// WARNING_CARD; clearTempBlock + add the snapshotted signature for FULL_BLOCK).
 // The user can view and cancel pending entries before they apply.
 @Entity(tableName = "pending_reports")
 data class PendingReportEntity(
@@ -64,5 +64,11 @@ data class PendingReportEntity(
     // Strike count at the time of the report (for logging/display)
     val strikeCount: Int = 0,
     // Delay in ms that was computed for this report (for display)
-    val delayMs: Long = 0
+    val delayMs: Long = 0,
+    // v3.6.1 — snapshot of the 8x8 image signature at REPORT time
+    // (comma-separated ints). Empty when no candidate survived. The worker
+    // MUST apply this stored signature and must NEVER re-read the in-memory
+    // pendingCandidate (that field is overwritten by later detections and
+    // lost on process death).
+    val signatureCsv: String = ""
 )

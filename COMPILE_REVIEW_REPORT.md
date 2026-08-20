@@ -3243,3 +3243,206 @@ and the 27 behavior tests cover the new store's independence).
 - [x] Version bumped past published v3.5.0; v3.6.0 tag probe 404/404.
 - [x] Compile gate 0 errors (full source set) · verify_res OK · behavior tests 27/27.
 - [x] PR #57 open + mergeable; release link documented (CI runs post-merge on main).
+
+
+---
+
+# 2026-08-20 Session — Full end-to-end audit + cooling-off apply-path fix (arena/01a01edd-dogs-of-kahaf)
+
+**Base:** `main` @ `4b8e82a` (Merge PR #57, v3.6.0 / vc30, published 2026-08-20T10:29:15Z).
+**Target:** **v3.6.1 / vc31**. **PR:** https://github.com/ferdausfs/Dogs-of-KAHAF/pull/59
+**Code commit:** `4b536fd` — `fix: cooling-off apply path, confidence race, WorkManager init (v3.6.1)`
+
+This session is a **full-app audit**, not a feature add. Every claim below is
+backed by a code read of the tree as it existed on `main` @ `4b8e82a`, then a
+fix where the defect was real.
+
+Local `./gradlew assembleRelease` cannot run here (no JDK on PATH; Maven Central /
+`services.gradle.org` / `dl.google.com` unreachable — re-verified).
+`workflow_dispatch` is HTTP 403 for this bot (reproduced). The compile+release
+gate is therefore the `Build Release APK` workflow on push to `main` after this
+PR merges. Tag probe (same URLs the in-repo guard checks):
+`releases/tag/v3.6.1` → **404**, `tree/v3.6.1` → **404** → free.
+
+---
+
+## PHASE 1 — INVENTORY (what is actually on main @ 4b8e82a)
+
+Cross-checked against `COMPILE_REVIEW_REPORT.md` claims. Everything the log
+says was built **is present and wired**. No documented feature is missing;
+no half-wired screen was found.
+
+### Activities (19)
+`MainActivity`, `OnboardingActivity`, `ActivityLogActivity`, `SettingsActivity`,
+`AppListActivity`, `KeywordActivity`, `ScheduleActivity`, `TimeLockActivity`,
+`PermissionsActivity`, `PinSetupActivity`, `PinVerifyActivity`,
+`PinRecoveryActivity`, `DelayUnlockActivity`, `BlockOverlayActivity`,
+`AccessibilityPromptActivity`, `BlockedDetailActivity`,
+`PendingReportsActivity`, `HelpActivity`, `ReelReminderActivity`.
+
+### Fragments
+`DashboardFragment`, `ProtectionFragment`, `OnboardingPageFragment`.
+
+### Services / receivers
+`GuardianAccessibilityService`, `GuardianForegroundService`,
+`NotificationShieldService`, `BootReceiver`, `GuardianDeviceAdminReceiver`.
+
+### Room (version was 3; this session → 4)
+Entities: `AppRule`, `KeywordRule`, `BlockEvent`, `ScheduleRule`,
+`PendingReport`. DAOs for each. Migrations `1→2` (schedule_rules),
+`2→3` (pending_reports), **`3→4` (signatureCsv)** added this session.
+
+### ViewModels
+`DashboardViewModel`, `SettingsViewModel`, `AppListViewModel`,
+`KeywordViewModel`, `ScheduleViewModel`, `PinViewModel`, `ActivityLogViewModel`.
+
+### Managers / engines (all present, all injected)
+`TempBlockManager`, `BlockingEngine`, `PendingReportManager`,
+`ApplyPendingReportWorker`, `AiDetector`, `FalsePositiveMemory`,
+`ConfirmedSensitiveMemory`, `ImageSignature`, `RulesEngine`,
+`ReelScrollDetector`, `TimeLockManager`, `PinManager`, `ModelImportManager`,
+`TamperLogger`, `UninstallProtection`, `BackupRestoreManager`,
+`AccountabilityNotifier`, `GuardianCrashHandler`, `StreakCalculator`,
+`ReligiousReminders`.
+
+### Strike / overlay layouts
+`view_strike_warning.xml` — 3-button layout (`btnAcknowledge` /
+`btnNotSensitive` / `btnProtect`) + ayat include + `txtConfidenceBadge`.
+`activity_block_overlay.xml` — Stay Protected / Request Unlock / Mark False
+(outlined) + ayat sheet + `txtConfidenceBadge` + `txtCoolingStatus`.
+
+**Discrepancy vs prior self-reports (not a missing feature, a logic hole):**
+the v3.4.0 cooling-off write-up claimed the worker "applies cancelLastStrike +
+addSignature / clearTempBlock + relaunch" by reading `takePendingCandidate()`
+at apply time. That code **was** present — and it is the defect fixed below.
+The v3.6.0 write-up claimed `isUnsafe` checks confirmed-sensitive FIRST; the
+interpreter-null early-return actually ran first. Fixed.
+
+---
+
+## PHASE 2 — BUG TABLE
+
+| System | Bug | Severity | Fixed? | Evidence |
+|---|---|---|---|---|
+| Cooling-off worker | `ApplyPendingReportWorker` called `falsePositiveMemory.takePendingCandidate()` at apply time (2–24 h later). That `@Volatile` slot is overwritten by later detections and empty after process death, so the worker learned the **wrong** pattern, or stole the candidate from a currently-showing warning card. | **HIGH** | **Yes** | Pre-fix worker took the live candidate then `addSignature(sig)`. Post-fix: signature is snapshotted into `PendingReportEntity.signatureCsv` at enqueue (`ImageSignature.toCsv`); worker uses `ImageSignature.fromCsv(report.signatureCsv)` only. |
+| Cooling-off worker | `cancelLastStrike(pkg)` at apply time. Strikes live in an in-memory map and reset after `STRIKE_RESET_MS = 10 min`. A 2 h delay therefore decrements a **later, unrelated** strike (or is a no-op after strike-3 reset-to-0). | **HIGH** | **Yes** | Removed from `ApplyPendingReportWorker`. WARNING_CARD delayed action is now **learn the stored signature only**. Instant LOW-conf path still calls `cancelLastStrike` at tap time. |
+| Cooling-off worker | `startActivity(launchIntent)` from the worker. Android 10+ blocks background activity starts (BAL); even when it succeeds, surprise-launching Instagram 2 h later is wrong. | **HIGH** | **Yes** | Replaced with a local notification (`cooling_applied_notif_*`). `clearTempBlock` still runs for FULL_BLOCK (needed if a 24 h escalation is still active). |
+| Cooling-off enqueue | HIGH-conf handlers never consumed/stored the candidate, so the worker had nothing durable to apply. | **HIGH** | **Yes** | `reportNotSensitive` and Mark False HIGH branches now `takePendingCandidate()` **before** `enqueue(..., signature = sig)`. Enqueue-failure restores the candidate and toasts `cooling_enqueue_failed`. |
+| Persistence | `PendingReportEntity` had no signature column; DB v3. | **HIGH** | **Yes** | `signatureCsv TEXT NOT NULL DEFAULT ''`; `MIGRATION_3_4`; Room version 3→4; `AppModule` registers the migration. |
+| Reboot / process start | WorkManager persists work, but the entire `InitializationProvider` had been `tools:node="remove"`'d, and nothing re-enqueued PENDING rows on boot. | **MEDIUM** | **Yes** | Manifest now removes **only** `WorkManagerInitializer` (App Startup stays). `PendingReportManager.rescheduleAllPending()` runs from `GuardianApp.onCreate`. WorkManager itself still survives reboot; this is belt-and-suspenders. |
+| Confidence threading | Callers read `aiDetector.lastDetectionScore` *after* `isUnsafe()` returned. A concurrent scan (content-aware + full-frame, or two screenshot callbacks) can overwrite that `@Volatile` between the two calls, so the badge / 0.82 gate could see a **stale or foreign** score. | **MEDIUM** | **Yes** | New `AiDetector.classify(): ClassifyResult(unsafe, confidence)` returns both atomically. Both AI entry points use it. `isUnsafe()` is now a wrapper. |
+| Confirmed-sensitive vs no model | `isUnsafe` returned `false` when `legacyInterpreter == null` **before** the confirmed-sensitive check, so a user-protected pattern was invisible without a loaded model. | **MEDIUM** | **Yes** | `classify()` runs `isConfirmedSensitive` **first**, then the interpreter-null return. Re-checked inside `inferenceLock` so a racing Protect still wins. |
+| App Startup | Entire `androidx.startup.InitializationProvider` removed. Breaks ProcessLifecycleOwner / Emoji2 / ProfileInstaller; also the documented-wrong way to install a custom `Configuration.Provider`. | **MEDIUM** | **Yes** | Manifest now `tools:node="merge"` + remove only the WorkManagerInitializer meta-data. |
+| Signature files | `FalsePositiveMemory.save()` / `ConfirmedSensitiveMemory.save()` snapshotted then wrote off-thread; a later `add` could be overwritten by an earlier in-flight write. | **LOW** | **Yes** | Epoch-guard: a superseded persist is skipped. |
+| Overlay i18n | `BlockOverlayActivity` hardcoded `"Adult Content • AI Detection"` etc. (no BN). | **LOW** | **Yes** | `overlay_category_*` in `values` + `values-bn` (EN/BN key sets still equal: 437/437). |
+| Overlay leak | `BlockOverlayActivity.workerScope` never cancelled. | **LOW** | **Yes** | `onDestroy { workerScope.cancel() }`; enqueue wrapped in `NonCancellable` so a Stay-Protected finish cannot drop the persist. |
+| Escalation overflow | `computeDelayMs`: `1L shl (n-1)` is undefined for large n. | **LOW** | **Yes** | `n = countInWindow.coerceIn(1, 8)` (n=5 already hits the 24 h cap). |
+| Proguard | `-keep class * extends androidx.work.Worker` does not cover `CoroutineWorker`. | **LOW** | **Yes** | Also keep `CoroutineWorker` / `ListenableWorker`. `service.**` was already kept. |
+
+### Checked and found fine (not changed)
+
+| System | Result | Evidence |
+|---|---|---|
+| Strike counting | `STRIKE_THRESHOLD=3`, `STRIKE_RESET_MS=10 min`, `ESCALATION_THRESHOLD=3` / `WINDOW=2 h`, `DAY_BLOCK_MS=24 h` compose correctly. Reset only when `currentStrikes in 1 until 3` **and** idle > 10 min. Burst dedup `STRIKE_BURST_DEDUP_MS=1 s` independent of the card flag. | `Constants.kt`, `TempBlockManager.recordAiDetection` |
+| Inter-strike gate | User-driven. `warningCardShowing` raised on `StrikeCounted`, cleared on acknowledge / tap-card / not-sensitive / protect / 40 s safety fallback. `STRIKE_WARNING_AUTO_DISMISS_MS` **absent** (grep). | `TempBlockManager`, `GuardianAccessibilityService.showStrikeWarningOverlay` / `dismissAiStrikeWarning` |
+| 3-button card | `btnAcknowledge` ("আমি বুঝেছি") / `btnNotSensitive` / `btnProtect` present and wired. Protect does **not** escalate (no `goHomeAndBlock` / `applyTempBlock` / `cancelLastStrike`). | `view_strike_warning.xml`, `showStrikeWarningOverlay` |
+| Confirmed-sensitive **report** priority | Both handlers `peekPendingCandidate()` + `isConfirmedSignature` **before** the 0.82 branch. Match → refuse (no cancel, no learn, no enqueue). Candidate peeked, not consumed. | `reportNotSensitive`, `BlockOverlayActivity` click listener |
+| Bug D (LOW-conf Mark False) | `clearTempBlock` + relaunch still unconditional; learning best-effort afterwards. | `BlockOverlayActivity` else-branch |
+| Bug E (LOW-conf Not sensitive) | `cancelLastStrike` + `takePendingCandidate`/`addSignature` still instant. | `reportNotSensitive` else-branch |
+| Confidence display | Badge on strike-1/2 card and strike-3 overlay, gated on `confidence >= 0`. Intent extra `EXTRA_CONFIDENCE` survives overlay restore. | layouts + `showStrikeWarningOverlay` / overlay `onCreate` |
+| Cooling-off formula | `delay(n)=min(BASE*2^(n-1), MAX)` with `n = countHighConfSince+1`. First report 2 h … 5th+ 24 h. Rolling 24 h window uses elapsed millis (not a timezone). Counts ALL rows for the pkg (incl. APPLIED/CANCELLED) — commitment-device, left as-is. | `PendingReportManager.enqueue` |
+| WorkManager reboot (platform) | WM persists `OneTimeWorkRequest` in its own DB and restores after BOOT. BootReceiver does not need to reschedule cooling-off **if** WM initializes; we still re-enqueue on process start. | `GuardianApp` + WM docs |
+| DeviceAdmin / TamperLogger / UninstallProtection | Present and wired. FGS 5 s watchdog re-prompts admin revocation. Honest limits (Safe Mode / force-stop / ADB) still hold. | `GuardianForegroundService.checkDeviceAdminWatch`, `UninstallProtection` |
+| PIN recovery | Path A (12-char recovery code, PBKDF2 hash only) shown after every `setPin`; Path B 48 h timed reset. Fail-closed when `SecureStorage.isSecure==false`. | `PinManager`, `PinSetupActivity.revealRecoveryCode`, `PinRecoveryActivity` |
+| Crashlytics | Gated on `app/google-services.json`; no fabricated credentials. Local `GuardianCrashHandler` always on. Manifest has **no INTERNET**. | `app/build.gradle.kts`, `AndroidManifest.xml` |
+| One UI 8 tokens | Overlay / strike card / settings use r2 names (`surface_highest`, `glow_warning`, `warning_amber`, Galaxy Blue compact button). No leftover `#7FE7C4` / `#B8A1FF`. | layouts + `colors.xml` |
+| `!!` / TODO | Zero `!!` in `app/src/main/java`. Only "XXXX" is the recovery-code hint. | grep |
+| EN/BN strings | 437 / 437, identical key sets after this session. | python key diff |
+| PIN keypad | `listOf(btn0..btn9).forEachIndexed` — index 0 appends `"0"`. Correct. | `PinSetupActivity` / `PinVerifyActivity` |
+
+---
+
+## PHASE 3 — WHAT CHANGED (traces)
+
+### Cooling-off, after
+
+```
+HIGH-conf "Not sensitive" (strike 1/2)
+  peek → not confirmed
+  takePendingCandidate()                ← snapshot NOW
+  enqueue(..., signature=sig)
+    → signatureCsv = ImageSignature.toCsv(sig)   ← Room, survives process death
+    → WorkManager delay 2h..24h
+  card dismissed; strike STAYS (commitment); gate reopened
+
+2–24 h later, ApplyPendingReportWorker
+  sig = ImageSignature.fromCsv(row.signatureCsv)  ← NOT takePendingCandidate
+  if confirmed-sensitive → CANCELLED; return
+  WARNING_CARD → addSignature(sig) only     ← no cancelLastStrike
+  FULL_BLOCK   → clearTempBlock + addSignature(sig)
+  notify "report applied"                   ← no startActivity
+  status = APPLIED
+```
+
+LOW-conf paths are byte-identical to v3.6.0 (instant cancel/learn or
+unconditional unblock+relaunch).
+
+### Confidence, after
+
+```
+val classified = aiDetector.classify(bitmap)   // holds inferenceLock
+if (classified.unsafe) {
+    val conf = classified.confidence           // same result object, not a volatile
+    goHomeAndBlock(..., conf)
+}
+```
+
+### Confirmed-sensitive check order, after
+
+```
+classify(bitmap):
+  1. isConfirmedSensitive → (true, 1.0)     // even if no TFLite model
+  2. interpreter == null → (false, -1)
+  3. inferenceLock:
+       re-check confirmed
+       complexity / isKnown / inference / grid
+```
+
+---
+
+## PHASE 4 — BUILD
+
+- Version **3.6.1 (31)**. Published v3.6.0 would trip the fail-fast tag guard;
+  v3.6.1 probed 404/404.
+- Sandbox: no JDK, Maven blocked, `workflow_dispatch` 403 — same as every
+  prior session. CI `./gradlew assembleRelease --no-daemon --stacktrace` runs
+  on merge of PR #59 to `main`.
+- **Expected after merge:**
+  - Tag **v3.6.1**, release **Guardian Shield v3.6.1**
+  - APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.1/app-release.apk
+  - Actions: push-to-main `Build Release APK` (will be linked here once the run exists)
+
+Static checks this session: EN/BN key parity 437=437; Kotlin brace balance 0
+on every edited file; `STRIKE_WARNING_AUTO_DISMISS_MS` still absent.
+
+---
+
+## Honest limitations (not bugs, not papered over)
+
+| Limit | Why it stays |
+|---|---|
+| `TempBlockManager` is in-memory | 15 min / 24 h AI temp blocks die with the process. The FGS usually keeps the process alive; force-stop / LMK still wipe them. Persisting temp blocks is a product change, not a one-line fix. |
+| `pendingCandidate` is in-memory | Process death between detection and tap still means Protect / refusal cannot match (HIGH-conf still queues; LOW-conf Mark False still unblocks — Bug D). Signatures for **queued** reports now persist; the live candidate does not. |
+| Force-stop / Safe Mode / `adb dpm remove-active-admin` | Platform limits. UninstallProtection + Device-Admin re-prompt + tamper log are the in-app ceiling. |
+| AI scans gated on `isLegacyAvailable()` | Without a loaded model there is no screenshot path, so confirmed-sensitive still cannot fire on-screen matches even though `classify()` itself no longer short-circuits. A signature-only scanner would be a new feature. |
+| WorkManager 2–24 h delay is inexact under Doze | Acceptable for a cooling-off queue. |
+| 3-class model output order | Still unverified (open since v2.4.2). Formula assumes `[safe, questionable, explicit]`. |
+
+---
+
+## Compliance
+
+- App name Guardian Shield unchanged.
+- Strike constants / Bug D LOW-conf / Bug E LOW-conf / acknowledge-gated dismiss / 0.82 threshold **untouched**.
+- One UI 8 tokens reused; no new hues.
+- Version bumped past published v3.6.0; tag free.

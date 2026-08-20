@@ -978,11 +978,13 @@ class GuardianAccessibilityService : AccessibilityService() {
             var regionBmp: Bitmap? = null
             try {
                 regionBmp = Bitmap.createBitmap(fullBitmap, left, top, width, height)
-                if (aiDetector.isLegacyAvailable() && aiDetector.isUnsafe(regionBmp)) {
-                    if (currentPackage == pkg) {
-                        // TASK A — capture the confidence score immediately after
-                        // inference, before it can be overwritten by the next scan.
-                        val conf = aiDetector.lastDetectionScore
+                if (aiDetector.isLegacyAvailable()) {
+                    val classified = aiDetector.classify(regionBmp)
+                    if (classified.unsafe && currentPackage == pkg) {
+                        // Confidence is returned atomically with the decision —
+                        // do NOT re-read lastDetectionScore (a concurrent scan
+                        // can overwrite that volatile between return and read).
+                        val conf = classified.confidence
                         // LEARNING MEMORY — keep the offending region so the overlay
                         // can offer "this was a false block" and never block it again.
                         falsePositiveMemory.rememberCandidate(
@@ -1052,9 +1054,9 @@ class GuardianAccessibilityService : AccessibilityService() {
 
                                 if (!blocked) {
                                     if (aiDetector.isLegacyAvailable()) {
-                                        if (aiDetector.isUnsafe(b)) {
-                                            // TASK A — capture confidence immediately after inference.
-                                            val conf = aiDetector.lastDetectionScore
+                                        val classified = aiDetector.classify(b)
+                                        if (classified.unsafe) {
+                                            val conf = classified.confidence
                                             // ✅ Final sanity check before blocking
                                             if (currentPackage == pkg) {
                                                 // LEARNING MEMORY — keep the frame so the

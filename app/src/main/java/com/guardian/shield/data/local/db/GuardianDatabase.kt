@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ScheduleRuleEntity::class,
         PendingReportEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -63,6 +63,17 @@ abstract class GuardianDatabase : RoomDatabase() {
                         `delayMs` INTEGER NOT NULL DEFAULT 0
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        // v3.6.1 — persist the reported image signature so the cooling-off
+        // worker applies the ORIGINAL pattern, not whatever pendingCandidate
+        // happens to be in memory hours later.
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `pending_reports` ADD COLUMN `signatureCsv` TEXT NOT NULL DEFAULT ''"
                 )
             }
         }

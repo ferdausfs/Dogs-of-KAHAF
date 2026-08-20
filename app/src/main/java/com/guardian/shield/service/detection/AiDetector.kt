@@ -186,33 +186,43 @@ class AiDetector @Inject constructor(
         }
     }
 
-    suspend fun isUnsafe(bitmap: Bitmap): Boolean {
-        val interp = legacyInterpreter ?: return false
+    /**
+     * Atomic (decision, confidence) pair. Callers that need the score MUST
+     * use this instead of reading [lastDetectionScore] after [isUnsafe]
+     * returns — a concurrent scan can overwrite that volatile between the
+     * two calls.
+     */
+    data class ClassifyResult(val unsafe: Boolean, val confidence: Float)
+
+    suspend fun isUnsafe(bitmap: Bitmap): Boolean = classify(bitmap).unsafe
+
+    suspend fun classify(bitmap: Bitmap): ClassifyResult {
+        // Confirmed-sensitive override runs BEFORE the interpreter-null
+        // return: a user-protected pattern is guaranteed-sensitive even if
+        // the TFLite model is missing (signature match needs no inference).
+        if (confirmedSensitiveMemory.isConfirmedSensitive(bitmap)) {
+            lastDetectionScore = 1.0f
+            Timber.i("Confirmed-sensitive pattern matched — forced unsafe (user-protected)")
+            return ClassifyResult(true, 1.0f)
+        }
+        val interp = legacyInterpreter ?: return ClassifyResult(false, -1f)
         return inferenceLock.withLock {
             try {
-                // v3.6.0 — CONFIRMED-SENSITIVE OVERRIDE (checked FIRST, before
-                // the complexity gate and before the false-positive whitelist):
-                // a pattern the user protected ("সংরক্ষণ করো") is guaranteed
-                // sensitive. No inference runs, so no live model score can
-                // under-score it again, and the check is deliberately ordered
-                // BEFORE falsePositiveMemory.isKnown() so that a defensive
-                // double-listing (same pattern whitelisted AND confirmed) can
-                // never suppress it. lastDetectionScore is set to 1.0f so the
-                // confidence threaded to the warning card / overlay reflects
-                // the guarantee instead of a stale value from an earlier scan.
+                // Re-check inside the lock so a Protect tap racing this scan
+                // still wins over the whitelist / inference path.
                 if (confirmedSensitiveMemory.isConfirmedSensitive(bitmap)) {
                     lastDetectionScore = 1.0f
                     Timber.i("Confirmed-sensitive pattern matched — forced unsafe (user-protected)")
-                    return@withLock true
+                    return@withLock ClassifyResult(true, 1.0f)
                 }
 
-                if (!isImageComplex(bitmap)) return@withLock false
+                if (!isImageComplex(bitmap)) return@withLock ClassifyResult(false, -1f)
 
                 // LEARNING MEMORY — if this exact pattern was already marked as a
                 // false block by the user, never block it again (no inference needed).
                 if (falsePositiveMemory.isKnown(bitmap)) {
                     Timber.d("Known false-positive pattern — skipping block")
-                    return@withLock false
+                    return@withLock ClassifyResult(false, -1f)
                 }
 
                 // Precision-first: honour the user slider down to 0.30, then
@@ -222,7 +232,7 @@ class AiDetector @Inject constructor(
                 val gridCellFloor = (threshold + 0.10f).coerceIn(0.55f, 0.92f)
                 val voteNeeded = cachedGridVoteCount.coerceIn(1, 4)
 
-                val fullOut = runInferenceSafe(interp, bitmap) ?: return@withLock false
+                val fullOut = runInferenceSafe(interp, bitmap) ?: return@withLock ClassifyResult(false, -1f)
                 // Diagnostic: always log the raw model output so any false block
                 // can be traced to the exact class scores (send us one line).
                 Timber.d("Guardian out[${fullOut.size}] = ${fullOut.joinToString(" ")}")
@@ -238,18 +248,18 @@ class AiDetector @Inject constructor(
                 // hard floor is treated as safe and never reaches the grid — grid
                 // scanning of noisy "Sexy" cells is what used to block cats,
                 // cartoons and avatars on social feeds.
-                if (fullScore < HARD_BLOCK_FLOOR) return@withLock false
+                if (fullScore < HARD_BLOCK_FLOOR) return@withLock ClassifyResult(false, fullScore)
 
                 // Decisive whole-frame block only when the score is at/above the
                 // user threshold (the hard floor is a lower bound on top of it),
                 // so a busy feed can't trip on a single borderline number.
-                if (fullScore >= threshold) return@withLock true
+                if (fullScore >= threshold) return@withLock ClassifyResult(true, fullScore)
 
                 // NO FALSE DETECTION: small cropped regions (avatars, thumbnails,
                 // image tiles) lose their context once cropped, so they must NEVER
                 // be blocked on a borderline score.
                 if (bitmap.width < 500 || bitmap.height < 500) {
-                    return@withLock false
+                    return@withLock ClassifyResult(false, fullScore)
                 }
 
                 // Whole frame is borderline: confirm with a high-density
@@ -266,7 +276,7 @@ class AiDetector @Inject constructor(
                             // If GPU fallback rebuilt the interpreter mid-scan,
                             // [interp] is closed — abort rather than infer on a corpse.
                             val live = legacyInterpreter
-                            if (live == null || live !== interp) return@withLock false
+                            if (live == null || live !== interp) return@withLock ClassifyResult(false, fullScore)
                             val out = runInferenceSafe(live, region) ?: continue
                             val score = extractGuardianScore(out)
                             Timber.d("Grid[$idx]: $score")

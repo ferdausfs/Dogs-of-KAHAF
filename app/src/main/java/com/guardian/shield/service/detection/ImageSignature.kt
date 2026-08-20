@@ -49,6 +49,22 @@ object ImageSignature {
         return sig
     }
 
+    /** Persist a signature as comma-separated ints (Room TEXT column). */
+    fun toCsv(sig: IntArray): String =
+        if (sig.size != CELLS) "" else sig.joinToString(",")
+
+    /** Inverse of [toCsv]; returns null when the payload is empty or malformed. */
+    fun fromCsv(csv: String): IntArray? {
+        if (csv.isBlank()) return null
+        val parts = csv.split(',')
+        if (parts.size != CELLS) return null
+        val out = IntArray(CELLS)
+        for (i in 0 until CELLS) {
+            out[i] = parts[i].toIntOrNull() ?: return null
+        }
+        return out
+    }
+
     /** True when [a] and [b] describe the same colour pattern. */
     fun matches(a: IntArray, b: IntArray): Boolean {
         if (a.size != CELLS || b.size != CELLS) return false

@@ -42,6 +42,8 @@
 -keep class * extends android.accessibilityservice.AccessibilityService
 -keep class * extends android.app.admin.DeviceAdminReceiver
 -keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
+-keep class * extends androidx.work.ListenableWorker
 
 -keep class * implements androidx.viewbinding.ViewBinding {
     public static *** inflate(android.view.LayoutInflater);
