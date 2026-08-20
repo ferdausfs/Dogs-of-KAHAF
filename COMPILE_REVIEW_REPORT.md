@@ -2650,17 +2650,27 @@ Monotonically increasing ✓, capped at 24h ✓, per-package rolling window ✓.
 
 ## 6) BUILD STATUS
 
-**Note:** Java/Android SDK not available in the sandbox environment. The code has
-been verified through:
-- Brace/paren balance checks on all modified Kotlin files (all balanced)
-- Import verification (all new types imported where used)
-- Layout XML structure review
-- Database migration SQL correctness
-- Hilt dependency graph consistency (@Singleton → @Inject chain)
+**CI Build: ✅ SUCCESS** (Run 32333630775, completed in 4m 6s)
 
-**CI will build** on push to the branch. Expected:
-- Tag: **`v3.4.0`**, Release: **Guardian Shield v3.4.0**
-- APK: https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.4.0/app-release.apk
+Initial build failed with lint error `[RemoveWorkManagerInitializer]` — when implementing
+`Configuration.Provider` (needed for `@HiltWorker`), the default `WorkManagerInitializer`
+must be removed from AndroidManifest.xml. Fixed in PR #55 by adding:
+
+```xml
+<provider
+    android:name="androidx.startup.InitializationProvider"
+    android:authorities="${applicationId}.androidx-startup"
+    tools:node="remove" />
+```
+
+**Final Build: ✅ GREEN**
+
+- **CI Run:** https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32333630775
+- **Tag:** `v3.4.0`
+- **Release:** Guardian Shield v3.4.0
+- **APK Size:** 52.7 MB
+- **Download:** https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.4.0/app-release.apk
+- **Published:** 2026-08-20T04:59:09Z
 
 ## 7) COMPLIANCE CHECKLIST
 
