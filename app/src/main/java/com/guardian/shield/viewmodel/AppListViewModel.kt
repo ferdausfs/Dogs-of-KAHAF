@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 enum class AppFilter { ALL, BLOCKED, WHITELISTED }
@@ -99,7 +100,9 @@ class AppListViewModel @Inject constructor(
                     )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to persist block rule for $pkg — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 
@@ -122,7 +125,9 @@ class AppListViewModel @Inject constructor(
                     )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to persist whitelist rule for $pkg — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 }

@@ -74,14 +74,16 @@ class ConfirmedSensitiveMemory @Inject constructor(
 
     /**
      * Persist a confirmed-sensitive pattern permanently. Near-duplicates
-     * (same [ImageSignature] match) are ignored, so repeated protects of the
-     * same content do not grow the store.
+     * (same [ImageSignature] STRICT match) are ignored, so repeated protects
+     * of the same content do not grow the store — while two visually distinct
+     * patterns that merely share a colour palette are stored separately
+     * (strict matching, v3.6.2).
      */
     fun addConfirmedSignature(sig: IntArray) {
         if (sig.size != ImageSignature.CELLS) return
         synchronized(lock) {
-            if (signatures.any { ImageSignature.matches(it, sig) }) {
-                Timber.d("Confirmed-sensitive pattern already stored")
+            if (signatures.any { ImageSignature.matchesStrict(it, sig) }) {
+                Timber.d("Confirmed-sensitive pattern already stored (strict match)")
                 return
             }
             signatures.add(sig)
@@ -93,15 +95,19 @@ class ConfirmedSensitiveMemory @Inject constructor(
 
     /**
      * Is [bitmap] a stored confirmed-bad pattern? Checked FIRST by
-     * [AiDetector.isUnsafe] — a match forces `unsafe = true` regardless of the
+     * [AiDetector.classify] — a match forces `unsafe = true` regardless of the
      * live model score, and is evaluated BEFORE the [FalsePositiveMemory]
      * whitelist so a false-positive entry can never suppress it.
+     *
+     * v3.6.2 — matching uses the STRICT [ImageSignature.matchesStrict]
+     * threshold so innocent content that merely shares a colour distribution
+     * with a protected pattern is not force-blocked at 1.00. On a match, a
+     * Timber.w is emitted with the actual agreeing-cell ratio so future
+     * false-match reports can be diagnosed from the log.
      */
     fun isConfirmedSensitive(bitmap: Bitmap): Boolean {
         val sig = ImageSignature.compute(bitmap)
-        synchronized(lock) {
-            return signatures.any { ImageSignature.matches(it, sig) }
-        }
+        return isConfirmedSignature(sig)
     }
 
     /**
@@ -112,7 +118,22 @@ class ConfirmedSensitiveMemory @Inject constructor(
     fun isConfirmedSignature(sig: IntArray): Boolean {
         if (sig.size != ImageSignature.CELLS) return false
         synchronized(lock) {
-            return signatures.any { ImageSignature.matches(it, sig) }
+            for (stored in signatures) {
+                if (ImageSignature.matchesStrict(stored, sig)) {
+                    val ratio = ImageSignature.matchRatio(
+                        stored, sig, ImageSignature.CHANNEL_TOLERANCE_STRICT
+                    )
+                    Timber.w(
+                        "Confirmed-sensitive STRICT match — ratio=%.2f (need %.2f, tolerance=%d) — " +
+                            "forced sensitive / report refused",
+                        ratio,
+                        ImageSignature.MATCH_RATIO_STRICT,
+                        ImageSignature.CHANNEL_TOLERANCE_STRICT
+                    )
+                    return true
+                }
+            }
+            return false
         }
     }
 

@@ -169,12 +169,22 @@ class PendingReportManager @Inject constructor(
      * work across reboots on its own, but an explicit reschedule on process
      * start covers unique-work loss after a custom Configuration.Provider
      * swap and clock-skewed initialDelay. REPLACE is idempotent.
+     *
+     * v3.6.2 — an overdue PENDING row (scheduledApplyAt in the past, e.g. the
+     * device was off through the deadline) must NOT produce a 0ms
+     * setInitialDelay: androidx.work rejects non-positive initial delays with
+     * IllegalArgumentException, which would abort this loop (runCatching in
+     * GuardianApp) and lose EVERY pending report's work. Floor the delay at
+     * [MIN_RESCHEDULE_DELAY_MS] so a late report applies moments after
+     * process start instead of never.
      */
     suspend fun rescheduleAllPending() = withContext(Dispatchers.IO) {
         val pending = pendingReportDao.getPending()
         val now = System.currentTimeMillis()
         for (row in pending) {
-            val applyAt = if (row.scheduledApplyAt <= now) now else row.scheduledApplyAt
+            val applyAt =
+                if (row.scheduledApplyAt <= now) now + MIN_RESCHEDULE_DELAY_MS
+                else row.scheduledApplyAt
             scheduleApplyWork(row.id, applyAt)
         }
         if (pending.isNotEmpty()) {
@@ -208,4 +218,11 @@ class PendingReportManager @Inject constructor(
         val delayMs: Long,
         val scheduledApplyAt: Long
     )
+
+    companion object {
+        // v3.6.2 — floor for re-scheduled overdue work. WorkManager rejects
+        // non-positive initial delays (IllegalArgumentException in WorkSpec),
+        // so an overdue row must be re-scheduled with a small positive delay.
+        private const val MIN_RESCHEDULE_DELAY_MS = 10_000L
+    }
 }

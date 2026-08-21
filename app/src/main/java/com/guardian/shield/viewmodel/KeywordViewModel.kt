@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,7 +29,9 @@ class KeywordViewModel @Inject constructor(
             try {
                 repo.upsertKeyword(KeywordRule(0, keyword.trim(), isRegex, severity = 1, enabled = true))
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to add keyword rule — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 
@@ -37,7 +40,9 @@ class KeywordViewModel @Inject constructor(
             try {
                 repo.deleteKeyword(id)
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to delete keyword rule — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 }
