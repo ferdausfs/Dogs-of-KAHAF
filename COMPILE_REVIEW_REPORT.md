@@ -3641,9 +3641,23 @@ Blocked/whitelisted/whitelist-beats-blocklist semantics verified correct wheneve
 - CI `Build Release APK` runs `./gradlew assembleRelease --no-daemon --stacktrace` on
   push to `main` (workflow `on:` — push to main/master + manual dispatch; this bot
   cannot dispatch, so the green run happens when the PR merges, as in every prior
-  session). Expected after merge:
-  - Tag **v3.6.3**, release **Guardian Shield v3.6.3**
-  - APK: **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.3/app-release.apk**
+  session).
+
+### ✅ FINAL GREEN BUILD + RELEASE (verified post-merge)
+
+- **PR #62** merged to `main` (merge commit `648da7e8`) → CI run
+  **32454720236** `Build Release APK` — **conclusion: success**; every step green:
+  `Build Release APK` ✓ · `Verify APK signed` ✓ · `Upload Artifact` ✓ ·
+  `Create GitHub Release` ✓ (only cache-restore/save warnings — GitHub cache
+  service incident, not code).
+  Run link: https://github.com/ferdausfs/Dogs-of-KAHAF/actions/runs/32454720236
+- **Release:** **Guardian Shield v3.6.3** —
+  https://github.com/ferdausfs/Dogs-of-KAHAF/releases/tag/v3.6.3
+- **APK download (verified asset, 53,061,524 bytes):**
+  **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.3/app-release.apk**
+- Docs-only follow-up commit bumps to **3.6.4 (34)** so the tree stays releasable
+  (same pattern as the v3.6.1→v3.6.2 evidence commit `ce88ad2`); `v3.6.4` probed
+  free before the merge.
 
 ## Regression check (everything deliberately untouched)
 
