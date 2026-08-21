@@ -3446,3 +3446,212 @@ on every edited file; `STRIKE_WARNING_AUTO_DISMISS_MS` still absent.
 - Strike constants / Bug D LOW-conf / Bug E LOW-conf / acknowledge-gated dismiss / 0.82 threshold **untouched**.
 - One UI 8 tokens reused; no new hues.
 - Version bumped past published v3.6.0; tag free.
+
+
+---
+
+# Session 2026-08-21 — Bug H (confirmed-sensitive over-matching) + Bug I (rules not respected) + Bug J pass (arena/01a022b9-dogs-of-kahaf)
+
+**Base:** `main` @ `ce88ad2` (v3.6.2 / vc32, published 2026-08-20T11:41:19Z). **Target:** v3.6.3 / vc33.
+
+## Verification method (this session had a REAL local build gate)
+
+Sandbox: no JDK/SDK on PATH; `dl.google.com`, `services.gradle.org`, Maven Central
+unreachable (re-verified) — so `./gradlew assembleRelease` cannot run locally, exactly
+as in every prior session. A real compile+behaviour gate was stood up instead:
+
+- JRE 25 (jdk4py), Kotlin **K2JVMCompiler 2.4.0-dev-6891** (kotlin-jupyter-kernel wheel),
+  real `android-35.jar` (14,488 entries, Sable/android-platforms via `gh api`), generated
+  `R`/`BuildConfig`/33 ViewBinding classes parsed from the live res tree, hand-written
+  stubs for androidx/hilt/room/work/datastore/tflite/timber.
+- **Full-app compile: 0 errors, 686 classes emitted** (all ~90 app Kotlin files). The
+  only gate-only artifact is `SettingsViewModel`'s 7-flow vararg `combine`: K2-dev rejects
+  the reified intersection inference, Kotlin 1.9.24 K1 (the project's compiler, used by the
+  green v3.5.0+ CI builds) accepts it — worked around with a fixed-arity stub overload;
+  app code untouched.
+- **27 JVM behaviour tests, all green**, run against the REAL compiled classes
+  (`ImageSignature`, `ConfirmedSensitiveMemory`, `RulesEngine`) and real coroutines.
+
+## BUG H — ConfirmedSensitiveMemory over-matches (confirmed root cause: the shared 8×8 tolerance)
+
+### Root cause (code + measured evidence)
+
+`ImageSignature.kt` shipped **one** match function for BOTH stores:
+`CHANNEL_TOLERANCE = 48` (per channel of 255) and `MATCH_RATIO = 0.62f`
+(40 of 64 cells must agree). That tolerance was designed for the low-stakes
+FalsePositiveMemory; the v3.6.0 session wired ConfirmedSensitiveMemory to the SAME
+function, giving the permanent, un-reportable blacklist whitelist-grade recall.
+
+Measured on the real compiled code (synthetic but statistically meaningful:
+
+| Pair type | OLD (48, 0.62) matches | ratio@48 max |
+|---|---|---|
+| 500 different images sharing a warm skin-tone palette | **500/500** | 1.000 |
+| 500 different dark-UI-chrome layouts | **~43/200** | ~0.90 |
+| 500 true duplicates (same image, ≤8/255 rendering noise) | 500/500 | 1.000 |
+
+⇒ the OLD signature cannot distinguish *"same content re-rendered"* from *"different
+content with a similar colour distribution"* — every skin-tone pair matched. That is
+exactly the reported behaviour: protecting 1–2 genuinely bad items force-blocks
+unrelated warm-lit/UI content at confidence 1.00, and the v3.6.0 refusal override then
+permanently refuses every "Not sensitive" / "Mark False" report on it.
+
+### Fix (option a — strict match used ONLY by the blacklist)
+
+`ImageSignature.matchesStrict()` with `CHANNEL_TOLERANCE_STRICT = 24`,
+`MATCH_RATIO_STRICT = 0.85f` (≥ 55 of 64 cells within 24 on all 3 channels),
+plus `matchRatio()` for diagnostics. ConfirmedSensitiveMemory now uses
+`matchesStrict` for `addConfirmedSignature` dedup, `isConfirmedSensitive`,
+`isConfirmedSignature`; FalsePositiveMemory keeps the original loose `matches`
+byte-for-byte. (Option b — a 16×16 grid — was rejected because it changes the
+persisted signature format: both `.dat` files, `pending_reports.signatureCsv`
+(schema v4 shipped with 64-int CSVs) and the FP store would need a format
+migration for a bug fix; the measured separation below shows 8×8 + strict
+threshold is sufficient.)
+
+### Why these numbers (measured, not guessed)
+
+| Signal | ratio@24 | ratio@48 |
+|---|---|---|
+| True duplicate, ≤8/255 noise (realistic re-render/compression) | **1.000** (min) | 1.000 |
+| Different skin-tone images | ≤ 0.563 | up to 1.000 |
+| Different UI-chrome layouts | ≤ 0.594 | up to ~0.90 |
+
+- `24` ≈ 9.4% of the channel range: a cell agrees only when the average colour is
+  genuinely the same, not merely "warm-ish".
+- `0.85` sits ~0.25 above the worst false pair (0.594) and ~0.15 below the easiest
+  true duplicate (1.000) — deliberate bias toward **no match unless confident** for a
+  permanent blacklist (a missed re-rendered variant can simply be Protected again; a
+  false block can never be undone).
+- This matches perceptual-hash practice (aHash/dHash use 64-bit signatures and demand
+  ~90%+ agreement for a match).
+
+### Verification (behaviour tests, real classes)
+
+```
+TestFix:      8/8 — strict accepts 500/500 realistic duplicates; strict rejects 0/500
+                     different skin-tone AND 0/500 different UI-chrome images;
+                     whitelist loose tolerance unchanged (still matches 200/200 skin-tone
+                     pairs — intentionally untouched); matchRatio diagnostics work.
+TestStore:    6/6 — REAL ConfirmedSensitiveMemory: identical + re-rendered duplicate
+                     confirmed; 0/200 different skin-tone images flagged confirmed
+                     (was 200/200 pre-fix); dedup keeps size 1; distinct patterns stored
+                     separately (size 2).
+```
+
+### Logging added (task requirement)
+
+Every confirmed-sensitive match now emits
+`Timber.w("Confirmed-sensitive STRICT match — ratio=%.2f (need 0.85, tolerance=24) — forced sensitive / report refused")`
+from `isConfirmedSignature()` — the actual agreeing-cell ratio is in the log, so a
+future false-match report is diagnosable from `logcat`.
+
+## BUG I — Allow-list / block-list rules stop being respected (root cause confirmed by elimination + live repro)
+
+### What was ruled out (traced, not assumed)
+
+| Suspect (task list) | Verdict | Evidence |
+|---|---|---|
+| RulesEngine.canBlock/evaluatePackage logic | **correct, untouched** | `git log` shows RulesEngine last modified by `8c35d96` (2026-08-16, Unicode keyword boundaries); the recent sessions (v3.4.0→v3.6.1) changed no line of it. |
+| Room DAO queries (blockedPackages/whitelistPackages) | **correct** | `Daos.kt` `WHERE isBlocked = 1` / `WHERE isWhitelisted = 1`; entity columns stable since May 2026; `RulesRepositoryImpl` delegates straight to them. |
+| Bug H over-matching bypassing canBlock | **ruled out as an independent cause** | every AI scan path is gated by `rulesEngine.canBlock(pkg)` BEFORE `classify()`/confirmed checks: `handleWindowChange` (:736), `handleContentChange` (:772), `triggerAiCheck` (:1041), `startPeriodicScanner` (:1126). A whitelisted app is never scanned, so a strict/loose confirmed match cannot fire for it — **unless the whitelist snapshot is empty/stale**, which is exactly the root cause below. Fixing H alone would NOT fix I. |
+| reload()'s catch swallowing silently | **partly** | `Timber.e` exists, but the collector could die without ever calling reload() again — see below. |
+| v3.6.1 WorkManager/confidence changes | **ruled out** | manifest diff + `git diff 46387d6..4f33388` on the a11y service = only `classify()` atomicity; nothing touches the reload trigger or the DB layer. |
+
+### The confirmed broken link
+
+The ONLY rules-reload trigger in the app is the DataStore collector launched in
+`GuardianAccessibilityService.onServiceConnected()`:
+
+```kotlin
+ioScope.launch {
+    try {
+        prefs.rulesVersion.collect {          // ← the ONLY consumer of bumpRulesVersion()
+            try { rulesEngine.reload(); aiDetector.ensureLoaded() }
+            catch (t: Throwable) { Timber.e(t) }
+        }
+    } catch (t: Throwable) { Timber.e(t) }    // ← flow exception swallowed; collector exits FOREVER
+}
+```
+
+Unlike the sibling collectors in `AiDetector.startPrefsCache()` (which wrap `collect`
+in `while (isActive) { try/catch; delay(1s) }`), this collector has **no retry**: one
+DataStore read failure (DataStore's documented `IOException` mode — e.g. after a crash
+mid-write or file corruption) terminates the collect coroutine permanently. From then on
+every `prefs.bumpRulesVersion()` (AppListViewModel:101/124, KeywordViewModel:30/39,
+ScheduleViewModel:29/38, SettingsViewModel:85/108) still writes the Room DB — **the App
+List UI keeps showing the user's rules** — but no consumer ever calls `reload()`, so
+`RulesEngine.snapshot` stays frozen and `canBlock()`/`evaluatePackage()` silently ignore
+every new allow/block-list edit. `onDestroy()` additionally cancels `ioScope` and the
+`connected` guard prevents re-init on reconnect, so nothing revives the trigger until the
+process restarts. This produces exactly the report: allow-list AND block-list both stop
+being respected while the rest of the app (AI blocking from the stale snapshot, UI,
+events) keeps working.
+
+### Live repro (real coroutines, JVM)
+
+```
+TestReload: 3/3 —
+  [OLD] one IOException in the flow → collector dead → 3 subsequent rule bumps → 0 reloads
+        (this is the reported symptom; reproduced deterministically)
+  [NEW] same failure → retry loop re-subscribes in 1s → next bump → reload runs
+  [NEW] even for bumps missed while down, the re-subscribe re-emits the current value and
+        reload() re-reads Room → the snapshot heals within ~1s
+```
+
+And with the real `RulesEngine` (`TestRules: 10/10`):
+`repo write without reload → newly blocked app NOT blocked (symptom) → reload() → app IS blocked (fix)`.
+Blocked/whitelisted/whitelist-beats-blocklist semantics verified correct whenever reload runs.
+
+### Fix
+
+1. **`GuardianAccessibilityService.onServiceConnected()`** — rulesVersion collector wrapped
+   in the same `while (isActive)` retry loop as `startPrefsCache`; a flow failure logs
+   `"rulesVersion flow died — restarting collector in 1s"` and re-subscribes, re-reading
+   the current value and re-running `reload()` (which reads the CURRENT Room state — so a
+   missed bump heals within ~1s).
+2. **`onDestroy()`** — `connected = false` so a destroy-then-reconnect re-runs full init
+   (collector + scanner + heartbeat) instead of leaving a zombie service.
+3. **`RulesEngine.reload()`** — failure log now states the stale snapshot's sizes
+   (`blocked=n, whitelist=n, keywords=n, schedules=n`) so a frozen snapshot is
+   diagnosable; success logs the new counts at debug.
+4. **AppList/Keyword/Schedule ViewModels** — the rule-writers' `catch (_: Throwable) {}`
+   now `Timber.e(...)` ("rules version NOT bumped; RulesEngine snapshot may stay stale"),
+   so a failed write/version-bump is visible instead of silent.
+
+## BUG J — general pass (everything checked; real defects fixed, nothing invented)
+
+| Area | Bug | Severity | Fixed? | Evidence |
+|---|---|---|---|---|
+| Cooling-off worker | `PendingReportManager.rescheduleAllPending()` passes `setInitialDelay(0)` for overdue rows — WorkManager's `WorkSpec` rejects non-positive initial delays (`IllegalArgumentException`), aborting the whole reschedule inside `GuardianApp`'s `runCatching` and losing every pending report's work. | MEDIUM | **Yes** | Delays floored at 10 s for overdue rows (`MIN_RESCHEDULE_DELAY_MS`); late reports apply moments after process start. |
+| Cross-feature (H × cooling-off × FP whitelist) | Protect dedup now uses strict matching; refusal override still runs before the 0.82 branch; `removeSignature` still removes loosely-matching FP entries at Protect time; apply-time refusal in the worker is strict-consistent. Full scenario traced: "Not sensitive" (LOW) → FP store loose; later "Protect" similar-but-different → stored separately, FP entry removed, future reports refused only for strict matches. No store can contradict the other. | — | ✅ (no code change needed; verified) | `reportNotSensitive` (:630), overlay refusal, worker (:87), `AiDetector` order (:203/:213) all route through the store's strict methods; behaviour tests above. |
+| WorkManager scheduling survival | Enqueue/cancel/reschedule: per-report unique work names + `ExistingWorkPolicy.REPLACE` (idempotent, no duplicate accumulation); `GuardianApp.onCreate` reschedules PENDING rows on every process start; `BootReceiver` handles BOOT/LOCKED_BOOT/MY_PACKAGE_REPLACED → FGS; WorkManager persists work across reboot itself. | — | ✅ (verified) | `PendingReportManager`, `BootReceiver`, `GuardianApp`. |
+| Room schema/migrations | `1→2` (schedule_rules), `2→3` (pending_reports), `3→4` (signatureCsv) all match their entities; fresh install (v4 create) and upgrades from v2/v3 both valid. Note: `app/schemas` only contains `2.json` (3.json/4.json were never committed — KSP export gap, pre-existing since v3.4.0; migration-test assertions need them). Users on pre-May-2026 builds (old v1 columns) need the destructive-era intermediate build — documented limitation since 8d6ffd1, not a new regression. | — | ✅ (verified / documented) | `GuardianDatabase.kt`, `Entities.kt`, schema dir listing. |
+| Settings persistence | partner name/email, notif-shield toggle, confirmed-count badge, streak card all read/write the right DataStore/Room/file stores and reload on resume. | — | ✅ (spot-checked) | `SettingsActivity`, `SettingsViewModel`, `DashboardViewModel`. |
+| `!!` / null-safety | Only 3 `!!` in the app — standard `_binding!!` fragment getters guarded by null-out in `onDestroyView`. No `!!` in any file touched this session. | — | ✅ | `grep -rn "!!" app/src/main/java` |
+| EN/BN strings | 437/437 keys, identical sets. | — | ✅ | python key diff |
+| TODO/FIXME | Zero in `app/src/main/java`. | — | ✅ | grep |
+
+## Version + release
+
+- `versionCode 32 → 33`, `versionName "3.6.2" → "3.6.3"` — **v3.6.2 is published**
+  (release page 200, tree page 200), so the in-repo fail-fast release-tag guard would
+  abort `assembleRelease` with `RELEASE TAG COLLISION`. `v3.6.3` probed live:
+  release page **404**, tree page **404** → free.
+- CI `Build Release APK` runs `./gradlew assembleRelease --no-daemon --stacktrace` on
+  push to `main` (workflow `on:` — push to main/master + manual dispatch; this bot
+  cannot dispatch, so the green run happens when the PR merges, as in every prior
+  session). Expected after merge:
+  - Tag **v3.6.3**, release **Guardian Shield v3.6.3**
+  - APK: **https://github.com/ferdausfs/Dogs-of-KAHAF/releases/download/v3.6.3/app-release.apk**
+
+## Regression check (everything deliberately untouched)
+
+- `STRIKE_THRESHOLD=3`, `STRIKE_RESET_MS`, escalation constants, Bug A/B/C/D/E semantics,
+  0.82 confidence threshold, cooling-off ladder — **unchanged** (`git diff` shows no edits
+  to `TempBlockManager.kt`, `Constants.kt`).
+- `FalsePositiveMemory` matching — **byte-identical** (loose 48/0.62, verified by test:
+  still matches the same skin-tone pairs as before).
+- Signature file format + Room `signatureCsv` (64 ints) — unchanged (strict matching is a
+  pure in-memory decision on the same signatures).
+- Whitelist-beats-blocklist, grace period, non-AI block routing — verified by `TestRules`.

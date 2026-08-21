@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,7 +28,9 @@ class ScheduleViewModel @Inject constructor(
             try {
                 repo.upsertSchedule(rule)
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to save schedule rule — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 
@@ -36,7 +39,9 @@ class ScheduleViewModel @Inject constructor(
             try {
                 repo.deleteSchedule(packageName)
                 prefs.bumpRulesVersion()
-            } catch (_: Throwable) {}
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed to delete schedule rule — rules version NOT bumped; RulesEngine snapshot may stay stale")
+            }
         }
     }
 }

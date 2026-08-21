@@ -153,12 +153,26 @@ class GuardianAccessibilityService : AccessibilityService() {
             (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive ?: true
 
         ioScope.launch {
-            try {
-                prefs.rulesVersion.collect {
-                    try { rulesEngine.reload(); aiDetector.ensureLoaded() }
-                    catch (t: Throwable) { Timber.e(t) }
+            // v3.6.2 — the rules reload trigger MUST survive transient
+            // DataStore read failures. The same retry pattern used by
+            // AiDetector.startPrefsCache(): if the flow throws (DataStore's
+            // documented IOException mode, e.g. after a crash mid-write), the
+            // collector re-subscribes after 1s instead of dying forever.
+            // Without this, the ONLY reload trigger in the app silently stops
+            // and RulesEngine.snapshot freezes — the user's allow/block-list
+            // edits keep updating Room (the UI shows them) but are never
+            // picked up by canBlock()/evaluatePackage().
+            while (isActive) {
+                try {
+                    prefs.rulesVersion.collect {
+                        try { rulesEngine.reload(); aiDetector.ensureLoaded() }
+                        catch (t: Throwable) { Timber.e(t, "rulesVersion reload failed") }
+                    }
+                } catch (t: Throwable) {
+                    Timber.e(t, "rulesVersion flow died — restarting collector in 1s")
+                    delay(1_000)
                 }
-            } catch (t: Throwable) { Timber.e(t) }
+            }
         }
 
         serviceScope.launch {
@@ -1197,5 +1211,12 @@ class GuardianAccessibilityService : AccessibilityService() {
         ioScope.cancel()
         mainHandler.removeCallbacksAndMessages(null)
         try { aiDetector.close() } catch (_: Throwable) {}
+        // v3.6.2 — allow a clean re-init if this instance is re-connected
+        // after destroy. onServiceConnected() skips setup while `connected`
+        // is true; without resetting it here, a destroy-then-reconnect leaves
+        // the service with NO rulesVersion collector, NO periodic scanner and
+        // NO heartbeat (all cancelled above) — the rules snapshot then stays
+        // frozen and allow/block-list edits stop being respected.
+        connected = false
     }
 }

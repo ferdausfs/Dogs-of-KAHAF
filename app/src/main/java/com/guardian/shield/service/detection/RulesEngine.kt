@@ -50,8 +50,21 @@ class RulesEngine @Inject constructor(
                 val sched = repo.allSchedules().associateBy { it.packageName }
                 snapshot = RulesSnapshot(blocked, whitelist, kws, imes, sched)
                 _rulesChanged.tryEmit(Unit)
+                Timber.d(
+                    "Rules reloaded: blocked=${blocked.size} whitelist=${whitelist.size} " +
+                        "keywords=${kws.size} schedules=${sched.size}"
+                )
             } catch (t: Throwable) {
-                Timber.e(t, "Failed to reload rules")
+                // v3.6.2 — surface exactly WHAT stayed stale so a frozen
+                // snapshot (rules edits visible in the UI but ignored by
+                // canBlock/evaluatePackage) is diagnosable from the log.
+                val s = snapshot
+                Timber.e(
+                    t,
+                    "Failed to reload rules — KEEPING STALE snapshot " +
+                        "(blocked=${s.blocked.size}, whitelist=${s.whitelist.size}, " +
+                        "keywords=${s.keywords.size}, schedules=${s.scheduleRules.size})"
+                )
             }
         }
     }
