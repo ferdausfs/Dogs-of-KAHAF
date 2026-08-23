@@ -6,6 +6,7 @@ import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.domain.model.ScheduleRule
 import com.guardian.shield.domain.repository.RulesRepository
 import com.guardian.shield.util.AppClassifier
+import com.guardian.shield.util.DefaultSystemWhitelist
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -71,22 +72,74 @@ class RulesEngine @Inject constructor(
 
     fun current(): RulesSnapshot = snapshot
 
+    /**
+     * Gate used by every scan/block path (a11y window/content handlers,
+     * periodic scanner, AI screenshot callback). Returning false means
+     * "never scan, never block this package".
+     *
+     * Priority (mirrors [evaluatePackage]; see DefaultSystemWhitelist doc):
+     *   1. always-allowed layer (self/SystemUI/home/IME/...)   -> false
+     *   2. user whitelist                                       -> false
+     *   3. user EXPLICIT BLOCK                                  -> TRUE
+     *   4. user ENABLED SCHEDULE rule exists                    -> TRUE
+     *   5. DefaultSystemWhitelist (system/OEM, no user rule)    -> false
+     *   6. otherwise                                            -> true
+     *
+     * #3/#4 must outrank #5 — the caller checks canBlock() BEFORE
+     * evaluatePackage(), so if the default whitelist gated a user-rule
+     * package here, the user's own block/schedule would be unreachable.
+     */
     fun canBlock(pkg: String): Boolean {
         val s = snapshot
         if (AppClassifier.isAlwaysAllowedPackage(ownPkg, pkg, s.inputMethods)) return false
         if (s.whitelist.contains(pkg)) return false
+        // User-explicit rules beat the default system/OEM whitelist (#3/#4).
+        // (For non-system packages these early returns change nothing — the
+        // function would reach `return true` anyway.)
+        if (s.blocked.contains(pkg)) return true
+        if (s.scheduleRules[pkg]?.enabled == true) return true
+        val defaultReason = DefaultSystemWhitelist.matchReason(pkg)
+        if (defaultReason != null) {
+            // Distinct from (silent) user-whitelist skips — diagnosable in logcat.
+            DefaultSystemWhitelist.logSkipOnce(pkg, defaultReason)
+            return false
+        }
         return true
     }
 
+    /**
+     * Full package verdict. Same priority as [canBlock]:
+     * user whitelist > user explicit block > user schedule (in-window) >
+     * DefaultSystemWhitelist > normal Allow. Also called directly (without
+     * the canBlock gate) by NotificationShieldService, so the default
+     * whitelist MUST short-circuit to Allow here too — a system/OEM package
+     * without user rules can never produce Block from this function.
+     */
     fun evaluatePackage(pkg: String): DetectionResult {
         val s = snapshot
         if (AppClassifier.isAlwaysAllowedPackage(ownPkg, pkg, s.inputMethods)) return DetectionResult.Allow
         if (s.whitelist.contains(pkg)) return DetectionResult.Allow
         if (s.blocked.contains(pkg)) {
+            // User block wins over the default system/OEM whitelist (explicit
+            // rule > safety default). Warn-level once per package so an
+            // intentional-but-risky block of e.g. a settings/store app is
+            // visible in diagnostics.
+            val overridden = DefaultSystemWhitelist.matchReason(pkg)
+            if (overridden != null) {
+                Timber.w(
+                    "User rule OVERRIDES DefaultSystemWhitelist for %s (%s) — explicit user block is honored",
+                    pkg, overridden
+                )
+            }
             return DetectionResult.Block(BlockReason.APP_BLOCKED, pkg)
         }
         if (isScheduleBlocked(pkg)) {
             return DetectionResult.Block(BlockReason.SCHEDULE_BLOCKED, pkg)
+        }
+        val defaultReason = DefaultSystemWhitelist.matchReason(pkg)
+        if (defaultReason != null) {
+            DefaultSystemWhitelist.logSkipOnce(pkg, defaultReason)
+            return DetectionResult.Allow
         }
         return DetectionResult.Allow
     }
