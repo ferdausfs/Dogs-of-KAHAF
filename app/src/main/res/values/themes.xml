@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ONE SHIELD — Neutral Pro theme (v3): same theme names, pro normalization:
-         chunky-but-tighter radii (24dp cards), neutral surfaces, System Blue. -->
-    <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- ONE SHIELD — "Violet Pro" theme (v4): DayNight base + dual palettes.
+         Light side = soft shadows (@dimen/card_elevation, day 4dp / night 0dp);
+         dark side = hairline strokes. Same style names across passes. -->
+    <style name="Theme.GuardianShield" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
@@ -28,7 +29,7 @@
 
         <item name="android:statusBarColor">@color/bg_main</item>
         <item name="android:navigationBarColor">@color/bg_main</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">@bool/is_light_theme</item>
         <item name="materialAlertDialogTheme">@style/Theme.GuardianShield.Dialog</item>
         <item name="android:windowActivityTransitions">true</item>
         <item name="colorControlHighlight">@color/ripple_primary</item>
@@ -64,7 +65,7 @@
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.GuardianShield.Large</item>
     </style>
 
-    <style name="Theme.GuardianShield.Overlay" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.GuardianShield.Overlay" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/overlay_dim</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -80,14 +81,14 @@
     <style name="Widget.GuardianShield.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/card_stroke</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Row">
         <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/card_stroke</item>
     </style>
@@ -95,7 +96,7 @@
     <style name="Widget.GuardianShield.Card.Raised" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/card_stroke</item>
     </style>
@@ -103,7 +104,7 @@
     <style name="Widget.GuardianShield.Card.Beacon">
         <item name="cardBackgroundColor">@color/primary_container</item>
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/glow_accent</item>
     </style>
@@ -111,7 +112,7 @@
     <style name="Widget.GuardianShield.Card.Amber">
         <item name="cardBackgroundColor">@color/warning_container</item>
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/glow_warning</item>
     </style>
@@ -119,7 +120,7 @@
     <style name="Widget.GuardianShield.Card.Red">
         <item name="cardBackgroundColor">@color/error_container</item>
         <item name="cardCornerRadius">24dp</item>
-        <item name="cardElevation">0dp</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">@color/glow_error</item>
     </style>
@@ -259,7 +260,7 @@
     </style>
 
     <style name="Widget.GuardianShield.Slider" parent="Widget.Material3.Slider">
-        <item name="thumbColor">@color/white</item>
+        <item name="thumbColor">@color/primary</item>
         <item name="haloColor">@color/ripple_primary</item>
         <item name="trackColorActive">@color/primary</item>
         <item name="trackColorInactive">@color/inset</item>

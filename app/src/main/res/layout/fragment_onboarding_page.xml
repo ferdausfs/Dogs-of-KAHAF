@@ -22,7 +22,7 @@
         android:layout_width="88dp"
         android:layout_height="88dp"
         android:background="@drawable/bg_icon_well"
-        android:backgroundTint="@color/primary_container">
+        android:backgroundTint="@color/beacon_dim">
         <!-- Pass 2: soft radial accent aura behind the page glyph (visual only) -->
         <View
             android:layout_width="match_parent"

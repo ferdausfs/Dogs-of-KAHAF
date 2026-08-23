@@ -1,113 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ===== GUARDIAN SHIELD — "Neutral Pro" palette (v3, 2026-08-23) =====
-         Design direction (user-approved): modern-neutral + clean-chunky.
-         True neutral monochrome ladder (NO tint), ONE restrained accent
-         (System Blue), iOS-pro semantics, opacity-based structure colors.
-         Every legacy color NAME is preserved so R.color.* refs keep compiling;
-         only the VALUES moved.
+    <!-- ===== GUARDIAN SHIELD — "Violet Pro" LIGHT palette (v4-day, 2026-08-23)
+         Reference-inspired redesign (user-approved: Content Blocker mock,
+         BOTH light+dark, full parity rounds). This file = LIGHT (day) set;
+         values-night/colors.xml = dark set. Same TOKEN NAMES on both sides so
+         every screen flips automatically — no layout/code changes.
 
-         Palette goals vs r2 ("One UI 8" Galaxy Blue):
-           · Neutral surfaces (Apple-pro feel) instead of cool-tinted ladder
-           · Single bright-but-restrained accent #0A84FF (reads premium on
-             near-black, AA-safe for buttons)
-           · Semantic status colors harmonized to the same family (iOS dark)
-           · Text contrast re-verified >= AA for all text/surface pairs used. -->
+         Accent: indigo/violet #6C5CE7 (One-UI-playful but restrained).
+         Semantics: green=active, red=blocked, amber=warning per reference.
+         Light side uses SOFT SHADOWS (@dimen/card_elevation) instead of
+         hairline strokes (card_stroke = transparent here). -->
 
-    <!-- Surfaces — true neutral ladder (no hue tint). Levels =
-         bg < elevated < inset/high < surface < variant/highest -->
-    <color name="bg_main">#0A0A0B</color>
-    <color name="bg_elevated">#121214</color>
-    <color name="surface">#1C1C1F</color>
-    <color name="surface_variant">#232326</color>
-    <color name="surface_high">#232326</color>
-    <color name="surface_highest">#2C2C2F</color>
+    <!-- Surfaces — soft white / light gray ladder -->
+    <color name="bg_main">#F4F5FA</color>
+    <color name="bg_elevated">#FBFBFE</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F1F2F8</color>
+    <color name="surface_high">#F1F2F8</color>
+    <color name="surface_highest">#E9EAF3</color>
 
-    <!-- Accent — System Blue: solid fill for primary actions, brighter
-         "link" stop for text-on-surface, dim containers for hero cards. -->
-    <color name="primary">#0A84FF</color>
+    <!-- Accent — indigo/violet. primary_container is intentionally VIVID on
+         the light side: the reference hero card is a rich violet slab with
+         white text (screens that need a PASTEL violet well use beacon_dim). -->
+    <color name="primary">#6C5CE7</color>
     <color name="on_primary">#FFFFFF</color>
-    <color name="primary_container">#0D2440</color>
-    <color name="primary_container_start">#113052</color>
-    <color name="primary_container_end">#0A1C33</color>
-    <color name="on_primary_container">#CFE6FF</color>
-    <color name="primary_dim">#4EA7FF</color>
-    <color name="beacon_dim">#330A84FF</color>
+    <color name="primary_container">#6657F0</color>
+    <color name="primary_container_start">#7B6CFF</color>
+    <color name="primary_container_end">#5E8BFF</color>
+    <color name="on_primary_container">#FFFFFF</color>
+    <color name="primary_dim">#5A4AD1</color>
+    <color name="beacon_dim">#296C5CE7</color>
 
-    <color name="secondary">#8E8E93</color>
-    <color name="on_secondary">#0A0A0B</color>
-    <color name="secondary_container">#2C2C2F</color>
-    <color name="on_secondary_container">#F2F2F7</color>
+    <color name="secondary">#6E6E78</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="secondary_container">#E9EAF3</color>
+    <color name="on_secondary_container">#14142B</color>
 
-    <!-- Semantic — iOS dark-mode family (status only) -->
-    <color name="error">#FF453A</color>
-    <color name="error_bright">#FF6B61</color>
+    <!-- Semantic (light) -->
+    <color name="error">#D92D20</color>
+    <color name="error_bright">#E5484D</color>
     <color name="on_error">#FFFFFF</color>
-    <color name="error_container">#3B1E20</color>
-    <color name="on_error_container">#FFB8B3</color>
-    <color name="success">#30D158</color>
-    <color name="success_container">#153326</color>
-    <color name="success_legacy">#63E6A2</color>
-    <color name="warning_amber">#FFD60A</color>
-    <color name="warning">#FF9F0A</color>
-    <color name="warning_container">#3B2E14</color>
-    <color name="on_warning_container">#FFE3B3</color>
-    <color name="info_sky">#4EA7FF</color>
-    <color name="info_container">#0D2440</color>
+    <color name="error_container">#FDE8E7</color>
+    <color name="on_error_container">#7A271A</color>
+    <color name="success">#1F9D44</color>
+    <color name="success_container">#DDF6E4</color>
+    <color name="success_legacy">#1F9D44</color>
+    <color name="warning_amber">#B54708</color>
+    <color name="warning">#DC6803</color>
+    <color name="warning_container">#FFF1D6</color>
+    <color name="on_warning_container">#93370D</color>
+    <color name="info_sky">#5A4AD1</color>
+    <color name="info_container">#E9E6FF</color>
 
-    <!-- Text -->
-    <color name="on_surface">#F2F2F7</color>
-    <color name="on_surface_variant">#98989E</color>
-    <color name="on_surface_dim">#636368</color>
-    <color name="inverse_surface">#F2F2F7</color>
-    <color name="on_inverse">#0A0A0B</color>
+    <!-- Text (clean dark navy per reference) -->
+    <color name="on_surface">#14142B</color>
+    <color name="on_surface_variant">#565868</color>
+    <color name="on_surface_dim">#9B9DAA</color>
+    <color name="inverse_surface">#14142B</color>
+    <color name="on_inverse">#F6F6FA</color>
 
     <!-- Structure -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
     <color name="overlay_dim">#A6000000</color>
-    <color name="overlay_dim_solid">#0A0A0B</color>
-    <color name="ripple_primary">#334EA7FF</color>
-    <color name="ripple_error">#33FF453A</color>
-    <color name="card_stroke">#10FFFFFF</color>
-    <color name="border_subtle">#0FFFFFFF</color>
-    <color name="border_strong">#21FFFFFF</color>
-    <color name="seam_top">#0AFFFFFF</color>
-    <color name="inset">#17171A</color>
+    <color name="overlay_dim_solid">#F4F5FA</color>
+    <color name="ripple_primary">#336C5CE7</color>
+    <color name="ripple_error">#33D92D20</color>
+    <color name="card_stroke">#00000000</color>
+    <color name="border_subtle">#0F14142B</color>
+    <color name="border_strong">#1A14142B</color>
+    <color name="seam_top">#0A14142B</color>
+    <color name="inset">#EFF0F6</color>
 
-    <!-- Depth tokens: secondary-emphasis accent container, pressed accent,
-         top-edge light for floating surfaces, soft glow borders. -->
-    <color name="accent_soft">#12263E</color>
-    <color name="accent_press">#0A6EDD</color>
-    <color name="edge_highlight">#14FFFFFF</color>
-    <color name="glow_accent">#2E0A84FF</color>
-    <color name="glow_error">#42FF453A</color>
-    <color name="glow_warning">#42FF9F0A</color>
+    <!-- Depth tokens -->
+    <color name="accent_soft">#E9E6FF</color>
+    <color name="accent_press">#5A4AD1</color>
+    <color name="edge_highlight">#0D14142B</color>
+    <color name="glow_accent">#337C6CF7</color>
+    <color name="glow_error">#42E5484D</color>
+    <color name="glow_warning">#42DC6803</color>
 
     <!-- Status indicators -->
-    <color name="block_indicator">#FF453A</color>
-    <color name="allow_indicator">#0A84FF</color>
-    <color name="surface_gradient_start">#0A0A0B</color>
-    <color name="surface_gradient_end">#121214</color>
-    <!-- AI folds into the single accent family -->
-    <color name="ai_detection_color">#4EA7FF</color>
-    <color name="ai_accent">#4EA7FF</color>
-    <color name="purple">#4EA7FF</color>
-    <color name="ai_container">#0D2440</color>
+    <color name="block_indicator">#D92D20</color>
+    <color name="allow_indicator">#6C5CE7</color>
+    <color name="surface_gradient_start">#F4F5FA</color>
+    <color name="surface_gradient_end">#FFFFFF</color>
+    <!-- AI folds into the single violet family -->
+    <color name="ai_detection_color">#5A4AD1</color>
+    <color name="ai_accent">#5A4AD1</color>
+    <color name="purple">#6C5CE7</color>
+    <color name="ai_container">#E9E6FF</color>
 
-    <!-- Badge backgrounds -->
-    <color name="badge_success_bg">#330A84FF</color>
-    <color name="badge_error_bg">#33FF453A</color>
-    <color name="badge_ai_bg">#330A84FF</color>
-    <color name="badge_warn_bg">#33FF9F0A</color>
-    <color name="badge_neutral_bg">#14FFFFFF</color>
+    <!-- Badge backgrounds (alpha tints that read on white) -->
+    <color name="badge_success_bg">#2622B34B</color>
+    <color name="badge_error_bg">#26D92D20</color>
+    <color name="badge_ai_bg">#266C5CE7</color>
+    <color name="badge_warn_bg">#26DC6803</color>
+    <color name="badge_neutral_bg">#0F14142B</color>
 
     <!-- Hero state tints -->
-    <color name="amber_hero_start">#36290F</color>
-    <color name="amber_hero_end">#241B08</color>
-    <color name="red_hero_start">#381A1D</color>
-    <color name="red_hero_end">#261012</color>
+    <color name="amber_hero_start">#FFE4C2</color>
+    <color name="amber_hero_end">#FFF4E2</color>
+    <color name="red_hero_start">#FBD5D3</color>
+    <color name="red_hero_end">#FDE9E8</color>
+
+    <!-- Colorful tile tokens (reference quick-action/summary accents) -->
+    <color name="tile_blue_bg">#E4EBFF</color>
+    <color name="tile_blue_fg">#3B6FE0</color>
+    <color name="tile_green_bg">#DDF6E4</color>
+    <color name="tile_green_fg">#1F9D44</color>
+    <color name="tile_purple_bg">#E9E4FF</color>
+    <color name="tile_purple_fg">#6C5CE7</color>
+    <color name="tile_orange_bg">#FFEAD6</color>
+    <color name="tile_orange_fg">#DC6803</color>
+
+    <!-- Theme-adaptive utility tokens -->
+    <color name="badge_neutral_fill">#0F14142B</color>
+    <color name="switch_track_off">#D8D8DE</color>
 
     <!-- Launcher -->
     <color name="ic_launcher_background">#0A0A0B</color>

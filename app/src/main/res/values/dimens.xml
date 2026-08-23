@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme: soft shadows carry the separation (reference style),
+         so cards are stroked transparent and lifted instead. -->
+    <dimen name="card_elevation">4dp</dimen>
+</resources>
