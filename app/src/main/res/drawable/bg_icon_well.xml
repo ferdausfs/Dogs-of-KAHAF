@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Pass 2 premium: icon wells get a 1dp top-light edge ring so every glyph
+     container reads as a cut-glass inset (16 usages app-wide). Purely visual. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="@color/inset"/>
     <corners android:radius="18dp"/>
+    <stroke android:width="1dp" android:color="@color/edge_highlight"/>
 </shape>

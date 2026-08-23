@@ -37,15 +37,20 @@
 
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="0.55"/>
 
-        <!-- 52dp error-container icon well (mock: .iw in error-container) -->
+        <!-- 64dp error-container icon well + soft warning aura (Pass 2:
+             radial bg_glow_error behind the glyph; purely visual) -->
         <FrameLayout
-            android:layout_width="52dp"
-            android:layout_height="52dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:layout_marginTop="12dp"
             android:background="@drawable/bg_icon_well"
             android:backgroundTint="@color/error_container">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_glow_error"/>
             <ImageView
-                android:layout_width="26dp" android:layout_height="26dp"
+                android:layout_width="32dp" android:layout_height="32dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_shield_alert"
                 app:tint="@color/error_bright"
@@ -55,10 +60,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="18dp"
             android:text="@string/overlay_access_blocked"
             android:textColor="@color/on_surface"
-            android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.02"
+            android:textSize="28sp" android:textStyle="bold" android:letterSpacing="-0.02"
             android:lineSpacingMultiplier="1.2"
             android:gravity="center"/>
 
@@ -69,7 +74,7 @@
             android:maxWidth="300dp"
             android:text="@string/overlay_sensitive_subtitle"
             android:textColor="@color/on_surface_variant"
-            android:textSize="13.5sp" android:lineSpacingMultiplier="1.45"
+            android:textSize="14sp" android:lineSpacingMultiplier="1.45"
             android:gravity="center"/>
 
         <!-- package pill + TASK A confidence badge -->

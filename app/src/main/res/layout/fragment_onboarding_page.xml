@@ -23,6 +23,11 @@
         android:layout_height="88dp"
         android:background="@drawable/bg_icon_well"
         android:backgroundTint="@color/primary_container">
+        <!-- Pass 2: soft radial accent aura behind the page glyph (visual only) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_glow_accent"/>
         <ImageView
             android:id="@+id/imgPageIcon"
             android:layout_width="36dp"

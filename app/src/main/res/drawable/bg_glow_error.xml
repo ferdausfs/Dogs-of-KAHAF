@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pass 2 premium: soft radial error glow — strike-3 overlay icon well.
+     Sits behind the alert glyph so the blocked state carries a visible
+     warning aura (same family as bg_glow_accent). Purely visual. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="42dp"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:startColor="@color/glow_error"
+        android:centerColor="@color/glow_error"
+        android:endColor="@android:color/transparent"/>
+</shape>

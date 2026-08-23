@@ -72,46 +72,56 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
-    <!-- ============ Cards — Neutral Pro sheets: 24dp, gap not stroke ============ -->
+    <!-- ============ Cards — Neutral Pro sheets: 24dp + 1dp hairline edge.
+         Pass 2: user feedback was that gap-only separation read as "no
+         change", so every card now carries a barely-there hairline stroke
+         (iOS/Linear-style crispness) while spacing stays untouched. ============ -->
     <style name="Widget.GuardianShield" parent=""/>
     <style name="Widget.GuardianShield.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Row">
         <item name="cardCornerRadius">20dp</item>
         <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Raised" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Beacon">
         <item name="cardBackgroundColor">@color/primary_container</item>
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/glow_accent</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Amber">
         <item name="cardBackgroundColor">@color/warning_container</item>
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/glow_warning</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Red">
         <item name="cardBackgroundColor">@color/error_container</item>
         <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/glow_error</item>
     </style>
 
     <!-- ============ Text ============ -->
@@ -294,7 +304,7 @@
     </style>
 
     <style name="Widget.GuardianShield.BottomNav" parent="Widget.Material3.BottomNavigationView">
-        <item name="android:background">@color/bg_elevated</item>
+        <item name="android:background">@drawable/bg_bottom_nav</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.GuardianShield.BottomNavActive</item>
         <item name="elevation">0dp</item>
     </style>

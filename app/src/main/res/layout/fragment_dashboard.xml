@@ -46,19 +46,23 @@
                     android:paddingBottom="18dp">
 
                     <FrameLayout
-                        android:layout_width="52dp"
-                        android:layout_height="52dp"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
                         android:background="@drawable/bg_icon_well"
                         android:backgroundTint="@color/beacon_dim">
+                        <!-- Pass 2: glow background — the Kotlin alpha pulse
+                             (0.3→0.6) now renders as a visible breathing
+                             glow. Binding/type unchanged (plain View). -->
                         <View
                             android:id="@+id/shieldGlow"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
+                            android:background="@drawable/bg_glow_accent"
                             android:alpha="0.35"/>
                         <ImageView
                             android:id="@+id/imgShield"
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_shield_check"
                             app:tint="@color/primary_dim"
@@ -69,10 +73,10 @@
                         android:id="@+id/txtStatusTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="16dp"
                         android:text="@string/status_active"
                         android:textColor="@color/on_primary_container"
-                        android:textSize="24sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         android:letterSpacing="-0.02"
                         android:lineSpacingMultiplier="1.15"/>
@@ -122,15 +126,18 @@
                     android:paddingVertical="16dp"
                     android:paddingHorizontal="8dp">
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:id="@+id/txtStatTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="26sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:id="@+id/txtStatTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="28sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_total" android:textColor="@color/on_surface_variant" android:textSize="12sp" android:gravity="center" android:layout_marginTop="4dp"/>
                     </LinearLayout>
+                    <!-- Pass 2: hairline column separators (fintech stat sheet) -->
+                    <View android:layout_width="1dp" android:layout_height="40dp" android:layout_gravity="center_vertical" android:background="@color/border_subtle"/>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:id="@+id/txtStatAi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="26sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:id="@+id/txtStatAi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="28sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_ai" android:textColor="@color/on_surface_variant" android:textSize="12sp" android:gravity="center" android:layout_marginTop="4dp"/>
                     </LinearLayout>
+                    <View android:layout_width="1dp" android:layout_height="40dp" android:layout_gravity="center_vertical" android:background="@color/border_subtle"/>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:id="@+id/txtStatTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0h 0m" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
+                        <TextView android:id="@+id/txtStatTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0h 0m" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="24sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_time" android:textColor="@color/on_surface_variant" android:textSize="12sp" android:gravity="center" android:layout_marginTop="4dp"/>
                         <TextView android:id="@+id/txtStatKeyword" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" tools:text="0"/>
                     </LinearLayout>
@@ -232,26 +239,33 @@
             android:layout_marginHorizontal="20dp"
             style="@style/Widget.GuardianShield.Card">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                <LinearLayout android:id="@+id/cardAppBlocking" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_apps" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                <LinearLayout android:id="@+id/cardAppBlocking" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <!-- Pass 2: 44dp accent well around the glyph -->
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/accent_soft">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_apps" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_apps_title" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_apps_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
-                <LinearLayout android:id="@+id/cardKeywords" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_keyword" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
+                <LinearLayout android:id="@+id/cardKeywords" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/accent_soft">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_keyword" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_keywords_title" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_keywords_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
-                <LinearLayout android:id="@+id/cardWhitelist" android:layout_width="match_parent" android:layout_height="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_shield_check" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
+                <LinearLayout android:id="@+id/cardWhitelist" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/accent_soft">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_shield_check" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/whitelist" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/quick_whitelist_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pass 2 premium: segmented-control track (Activity Log Day/Week/Month).
+     Inset fill with fully-rounded corners so the track matches the 999dp
+     pill buttons inside it — before this the track was a square-cornered
+     rectangle. Purely visual. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/inset"/>
+    <corners android:radius="999dp"/>
+</shape>

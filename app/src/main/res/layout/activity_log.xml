@@ -46,7 +46,7 @@
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@color/inset"
+                    android:background="@drawable/bg_toggle_track"
                     android:padding="4dp"
                     app:singleSelection="true"
                     app:selectionRequired="true"
