@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ONE SHIELD — One UI 8 theme (mocks/oneui8/design-system.html) -->
+    <!-- ONE SHIELD — Neutral Pro theme (v3): same theme names, pro normalization:
+         chunky-but-tighter radii (24dp cards), neutral surfaces, System Blue. -->
     <style name="Theme.GuardianShield" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
@@ -44,15 +45,15 @@
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Small" parent="ShapeAppearance.Material3.SmallComponent">
-        <item name="cornerSize">16dp</item>
+        <item name="cornerSize">14dp</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Medium" parent="ShapeAppearance.Material3.MediumComponent">
-        <item name="cornerSize">20dp</item>
+        <item name="cornerSize">18dp</item>
     </style>
 
     <style name="ShapeAppearance.GuardianShield.Large" parent="ShapeAppearance.Material3.LargeComponent">
-        <item name="cornerSize">28dp</item>
+        <item name="cornerSize">24dp</item>
     </style>
 
     <style name="Theme.GuardianShield.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
@@ -71,11 +72,11 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
-    <!-- ============ Cards — One UI sheets: 28dp, no hairline, gap not stroke ============ -->
+    <!-- ============ Cards — Neutral Pro sheets: 24dp, gap not stroke ============ -->
     <style name="Widget.GuardianShield" parent=""/>
     <style name="Widget.GuardianShield.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
-        <item name="cardCornerRadius">28dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
     </style>
@@ -87,28 +88,28 @@
 
     <style name="Widget.GuardianShield.Card.Raised" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
-        <item name="cardCornerRadius">28dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Beacon">
         <item name="cardBackgroundColor">@color/primary_container</item>
-        <item name="cardCornerRadius">32dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Amber">
         <item name="cardBackgroundColor">@color/warning_container</item>
-        <item name="cardCornerRadius">32dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="Widget.GuardianShield.Card.Red">
         <item name="cardBackgroundColor">@color/error_container</item>
-        <item name="cardCornerRadius">32dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
     </style>

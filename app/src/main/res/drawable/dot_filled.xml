@@ -2,5 +2,5 @@
 <!-- One UI 8 r2: PIN dot on-state = accent-bright (mock .dot.on) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
     <solid android:color="@color/primary_dim"/>
-    <size android:width="14dp" android:height="14dp"/>
+    <size android:width="16dp" android:height="16dp"/>
 </shape>

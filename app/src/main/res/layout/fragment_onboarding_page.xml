@@ -47,8 +47,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:textColor="@color/primary_dim"
-        android:textSize="12sp" android:textStyle="bold"
-        android:letterSpacing="0.1" android:textAllCaps="true"
+        android:textSize="13sp" android:textStyle="bold"
+        android:letterSpacing="0.06" android:textAllCaps="false"
         android:gravity="center"/>
 
     <TextView
