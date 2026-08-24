@@ -11,6 +11,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class DelayUnlockActivity : AppCompatActivity() {
@@ -24,6 +25,7 @@ class DelayUnlockActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityDelayUnlockBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         val pkg = intent.getStringExtra(EXTRA_PACKAGE).orEmpty()
         binding.txtPackage.text = pkg

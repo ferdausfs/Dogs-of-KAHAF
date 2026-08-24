@@ -9,6 +9,7 @@ import com.guardian.shield.databinding.ActivityTimeLockBinding
 import com.guardian.shield.service.detection.TimeLockManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class TimeLockActivity : AppCompatActivity() {
@@ -22,6 +23,7 @@ class TimeLockActivity : AppCompatActivity() {
         binding = ActivityTimeLockBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 

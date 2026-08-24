@@ -10,6 +10,7 @@ import com.guardian.shield.databinding.ActivityPinVerifyBinding
 import com.guardian.shield.service.detection.PinManager
 import com.guardian.shield.viewmodel.PinViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class PinVerifyActivity : AppCompatActivity() {
@@ -22,6 +23,7 @@ class PinVerifyActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPinVerifyBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         val digits = listOf(
             binding.btn0, binding.btn1, binding.btn2, binding.btn3, binding.btn4,

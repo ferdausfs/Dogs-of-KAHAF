@@ -15,6 +15,7 @@ import com.guardian.shield.R
 import com.guardian.shield.databinding.ActivityPermissionsBinding
 import com.guardian.shield.util.PermissionManager
 import dagger.hilt.android.AndroidEntryPoint
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class PermissionsActivity : AppCompatActivity() {
@@ -30,6 +31,7 @@ class PermissionsActivity : AppCompatActivity() {
         binding = ActivityPermissionsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnFixAll.setOnClickListener { fixAllCritical() }

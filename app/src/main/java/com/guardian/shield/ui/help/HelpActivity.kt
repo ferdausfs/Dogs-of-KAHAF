@@ -3,6 +3,7 @@ package com.guardian.shield.ui.help
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.databinding.ActivityHelpBinding
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * PHASE 4b (v3.5.0) — Help & FAQ. Static, offline content only: no network,
@@ -17,6 +18,7 @@ class HelpActivity : AppCompatActivity() {
         val binding = ActivityHelpBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
     }

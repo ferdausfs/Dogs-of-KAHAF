@@ -9,6 +9,7 @@ import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.databinding.ActivityAccessibilityPromptBinding
+import com.guardian.shield.util.ScreenInsets
 
 class AccessibilityPromptActivity : AppCompatActivity() {
 
@@ -33,6 +34,7 @@ class AccessibilityPromptActivity : AppCompatActivity() {
         )
         binding = ActivityAccessibilityPromptBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         binding.btnEnable.setOnClickListener {
             runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }

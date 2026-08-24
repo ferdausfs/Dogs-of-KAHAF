@@ -17,6 +17,7 @@ import com.guardian.shield.util.PinResetNotifier
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * PHASE 1c (v3.5.0) — PIN recovery screen.
@@ -70,6 +71,7 @@ class PinRecoveryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPinRecoveryBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         binding.btnBack.setOnClickListener { finish() }
 
