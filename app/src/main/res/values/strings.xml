@@ -570,4 +570,36 @@
     <string name="schedule_focus_section">Focus • ফোকাস</string>
     <string name="schedule_rules_section">Scheduled rules • শিডিউল</string>
     <string name="whitelist_count_fmt">%1$d allowed</string>
+    <!-- R5 — Private DNS Auto Mode -->
+    <string name="dns_auto_title">Private DNS Auto Mode</string>
+    <string name="dns_master">DNS Auto Schedule</string>
+    <string name="dns_master_on">Active — switches automatically inside the window</string>
+    <string name="dns_master_off">Off — set a window and a filtered DNS hostname</string>
+    <string name="dns_host_label">Filtered DNS hostname (DoT)</string>
+    <string name="dns_host_hint">e.g. family.adguard-dns.com</string>
+    <string name="dns_preset_adguard_family">AdGuard Family</string>
+    <string name="dns_preset_cleanbrowsing">CleanBrowsing Family</string>
+    <string name="dns_preset_adguard_default">AdGuard Default</string>
+    <string name="dns_window_label">Active window (daily)</string>
+    <string name="dns_window_on_at">ON %1$s</string>
+    <string name="dns_window_off_at">OFF %1$s</string>
+    <string name="dns_status_on">🔒 Private DNS active — %1$s</string>
+    <string name="dns_status_on_until">Filtering until %1$s</string>
+    <string name="dns_status_off_now">🌐 Private DNS off right now</string>
+    <string name="dns_status_next">Next: ON at %1$s</string>
+    <string name="dns_status_disabled">Auto schedule is off</string>
+    <string name="dns_status_no_host">Set a DNS hostname to activate the schedule</string>
+    <string name="dns_status_no_perm_sub">One-time grant missing — see banner below</string>
+    <string name="dns_perm_title">One-time setup needed</string>
+    <string name="dns_perm_body">Android does not let apps change Private DNS on their own — not even with Device Admin. Grant the control ONCE from a computer with this command:\n\nadb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS\n\nThen tap Refresh.</string>
+    <string name="dns_perm_copy">Copy ADB command</string>
+    <string name="dns_perm_copied">Copied ✓ Run it once on a computer, then tap Refresh</string>
+    <string name="dns_perm_refresh">Refresh status</string>
+    <string name="dns_test_on">Turn ON now</string>
+    <string name="dns_test_off">Restore now</string>
+    <string name="dns_toast_on">🔒 Private DNS → %1$s</string>
+    <string name="dns_toast_restored">Your DNS setting is restored</string>
+    <string name="dns_toast_no_perm">Grant missing — run the ADB command first</string>
+    <string name="dns_restore_note">Your own Private DNS setting comes back automatically when the window ends — nothing is lost.</string>
+    <string name="btn_dns_schedule">Private DNS Auto</string>
 </resources>

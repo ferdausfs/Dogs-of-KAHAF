@@ -56,6 +56,15 @@ class GuardianPreferences @Inject constructor(
         // in util/FilterCategories; the actual KeywordRule rows are materialized
         // into keyword_rules so RulesEngine needs no schema change).
         val FILTER_CATEGORIES = stringSetPreferencesKey("filter_categories")
+
+        // R5 — Private DNS auto-schedule ("night shield"). One DAILY window
+        // (minutes-of-day, overnight-safe: start > end wraps midnight) during
+        // which a filtered DoT hostname is applied as the device Private DNS;
+        // the user's own previous DNS setting is restored outside the window.
+        val DNS_AUTO_ENABLED = booleanPreferencesKey("dns_auto_enabled")
+        val DNS_AUTO_START_MIN = intPreferencesKey("dns_auto_start_min")
+        val DNS_AUTO_END_MIN = intPreferencesKey("dns_auto_end_min")
+        val DNS_AUTO_HOST = stringPreferencesKey("dns_auto_host")
     }
 
     // Flows
@@ -84,6 +93,12 @@ class GuardianPreferences @Inject constructor(
 
     // R4 — Smart Filters: enabled category ids
     val filterCategories: Flow<Set<String>> = ds.data.map { it[Keys.FILTER_CATEGORIES] ?: emptySet() }
+
+    // R5 — Private DNS auto-schedule (defaults: 8:00 PM -> 8:00 AM, host unset)
+    val dnsAutoEnabled: Flow<Boolean> = ds.data.map { it[Keys.DNS_AUTO_ENABLED] ?: false }
+    val dnsAutoStartMin: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_START_MIN] ?: (20 * 60) }
+    val dnsAutoEndMin: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_END_MIN] ?: (8 * 60) }
+    val dnsAutoHost: Flow<String> = ds.data.map { it[Keys.DNS_AUTO_HOST] ?: "" }
 
     // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
@@ -116,4 +131,22 @@ class GuardianPreferences @Inject constructor(
 
     // R4 — Smart Filters
     suspend fun setFilterCategories(v: Set<String>) { ds.edit { it[Keys.FILTER_CATEGORIES] = v } }
+
+    // R5 — Private DNS auto-schedule
+    suspend fun setDnsAutoEnabled(v: Boolean) { ds.edit { it[Keys.DNS_AUTO_ENABLED] = v } }
+    suspend fun setDnsAutoWindow(startMin: Int, endMin: Int) {
+        ds.edit {
+            it[Keys.DNS_AUTO_START_MIN] = startMin
+            it[Keys.DNS_AUTO_END_MIN] = endMin
+        }
+    }
+    suspend fun setDnsAutoHost(v: String) { ds.edit { it[Keys.DNS_AUTO_HOST] = v.trim().lowercase() } }
+    suspend fun setDnsAuto(enabled: Boolean, startMin: Int, endMin: Int, host: String) {
+        ds.edit {
+            it[Keys.DNS_AUTO_ENABLED] = enabled
+            it[Keys.DNS_AUTO_START_MIN] = startMin
+            it[Keys.DNS_AUTO_END_MIN] = endMin
+            it[Keys.DNS_AUTO_HOST] = host.trim().lowercase()
+        }
+    }
 }

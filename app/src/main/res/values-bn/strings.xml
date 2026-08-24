@@ -565,4 +565,36 @@
     <string name="schedule_focus_section">ফোকাস • Focus</string>
     <string name="schedule_rules_section">শিডিউল করা নিয়ম • Schedules</string>
     <string name="whitelist_count_fmt">%1$dটি allowed</string>
+    <!-- R5 — Private DNS Auto Mode -->
+    <string name="dns_auto_title">প্রাইভেট DNS অটো মোড</string>
+    <string name="dns_master">DNS অটো শিডিউল</string>
+    <string name="dns_master_on">চালু — উইন্ডোর ভেতরে অটোম্যাটিক বদলাবে</string>
+    <string name="dns_master_off">বন্ধ — আগে সময়সীমা আর ফিল্টারড DNS hostname দিন</string>
+    <string name="dns_host_label">ফিল্টারড DNS hostname (DoT)</string>
+    <string name="dns_host_hint">যেমন: family.adguard-dns.com</string>
+    <string name="dns_preset_adguard_family">AdGuard ফ্যামিলি</string>
+    <string name="dns_preset_cleanbrowsing">CleanBrowsing ফ্যামিলি</string>
+    <string name="dns_preset_adguard_default">AdGuard ডিফল্ট</string>
+    <string name="dns_window_label">সক্রিয় সময় (প্রতিদিন)</string>
+    <string name="dns_window_on_at">ON %1$s</string>
+    <string name="dns_window_off_at">OFF %1$s</string>
+    <string name="dns_status_on">🔒 প্রাইভেট DNS সক্রিয় — %1$s</string>
+    <string name="dns_status_on_until">%1$s পর্যন্ত ফিল্টারিং চলবে</string>
+    <string name="dns_status_off_now">🌐 এখন প্রাইভেট DNS বন্ধ</string>
+    <string name="dns_status_next">পরের: ON হবে %1$s-এ</string>
+    <string name="dns_status_disabled">অটো শিডিউল বন্ধ আছে</string>
+    <string name="dns_status_no_host">শিডিউল চালু করতে একটি DNS hostname দিন</string>
+    <string name="dns_status_no_perm_sub">একবারের পারমিশন নেই — নিচের ব্যানার দেখুন</string>
+    <string name="dns_perm_title">একবারের সেটআপ দরকার</string>
+    <string name="dns_perm_body">অ্যান্ড্রয়েড কোনো অ্যাপকে নিজে থেকে প্রাইভেট DNS বদলাতে দেয় না — Device Admin দিয়েও না। কম্পিউটার থেকে একবার এই কমান্ড দিয়ে কন্ট্রোল দিন:\n\nadb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS\n\nতারপর Refresh চাপুন।</string>
+    <string name="dns_perm_copy">ADB কমান্ড কপি করুন</string>
+    <string name="dns_perm_copied">কপি হয়েছে ✓ কম্পিউটারে একবার চালিয়ে Refresh চাপুন</string>
+    <string name="dns_perm_refresh">Refresh করুন</string>
+    <string name="dns_test_on">এখনই ON করুন</string>
+    <string name="dns_test_off">আগেরটা ফেরত দিন</string>
+    <string name="dns_toast_on">🔒 প্রাইভেট DNS → %1$s</string>
+    <string name="dns_toast_restored">আপনার আগের DNS সেটিং ফিরে এসেছে</string>
+    <string name="dns_toast_no_perm">পারমিশন নেই — আগে ADB কমান্ড চালান</string>
+    <string name="dns_restore_note">সময় শেষে আপনার নিজের প্রাইভেট DNS সেটিং আবার অটোম্যাটিক ফিরে আসবে — কিছুই হারাবে না।</string>
+    <string name="btn_dns_schedule">প্রাইভেট DNS অটো</string>
 </resources>

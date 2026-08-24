@@ -16,6 +16,11 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 runCatching { GuardianForegroundService.start(context) }
                     .onFailure { Timber.e(it, "Failed to start on boot") }
+                // R5 — re-arm the Private DNS window-boundary alarm after
+                // reboot/update (the periodic worker re-syncs the cache and
+                // enforces state within its first interval).
+                runCatching { com.guardian.shield.service.dns.PrivateDnsScheduler.reschedule(context) }
+                    .onFailure { Timber.e(it, "Failed to re-arm DNS schedule") }
             }
         }
     }
