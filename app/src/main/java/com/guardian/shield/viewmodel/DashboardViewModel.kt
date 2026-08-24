@@ -201,4 +201,9 @@ class DashboardViewModel @Inject constructor(
     suspend fun getAllEvents(): List<BlockEvent> = withContext(Dispatchers.IO) {
         try { repo.allEvents() } catch (_: Throwable) { emptyList() }
     }
+
+    /** R7.6 — weekly digest text for the dashboard share action. */
+    suspend fun weeklyReportText(): String = withContext(Dispatchers.IO) {
+        com.guardian.shield.util.WeeklyReporter.fetchReportText(appContext, repo)
+    }
 }

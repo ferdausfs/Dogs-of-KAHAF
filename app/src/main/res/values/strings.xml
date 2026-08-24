@@ -263,6 +263,10 @@
     <string name="bedtime_status_off">Off — set a nightly window</string>
     <string name="bedtime_start_fmt">From %1$s</string>
     <string name="bedtime_end_fmt">Until %1$s</string>
+    <string name="weekly_report_title">Your week with Guardian Shield · সপ্তাহের খতিয়ান</string>
+    <string name="weekly_report_body_fmt">%1$d-day clean streak, %2$d blocks this week (last week %3$d). Stay strong — consistency builds the wall. · %1$d দিন ক্লিন স্ট্রিক, এই সপ্তাহে %2$d ব্লক (গত সপ্তাহ %3$d)।</string>
+    <string name="weekly_share">Share weekly report ↗ · রিপোর্ট শেয়ার</string>
+    <string name="weekly_notif_action_share">Share</string>
     <string name="quick_actions">Quick actions · দ্রুত পদক্ষেপ</string>
     <string name="todays_activity">Today’s activity · সাম্প্রতিক ব্লক</string>
     <string name="see_all">See all</string>

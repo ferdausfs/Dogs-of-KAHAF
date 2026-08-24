@@ -74,6 +74,17 @@ class DashboardFragment : Fragment() {
         binding.statsSummaryCard.setOnClickListener {
             startActivity(Intent(requireContext(), com.guardian.shield.ui.screentime.ScreenTimeActivity::class.java))
         }
+        // R7.6 — share the weekly digest straight from the streak card.
+        binding.btnShareReport.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val body = viewModel.weeklyReportText()
+                com.guardian.shield.util.WeeklyReporter.share(
+                    requireContext(),
+                    getString(R.string.weekly_report_title),
+                    body
+                )
+            }
+        }
         binding.btnSuggestBlock.setOnClickListener {
             viewModel.blockSuggestedApp()
             viewLifecycleOwner.lifecycleScope.launch {

@@ -116,6 +116,16 @@ class GuardianApp : Application(), Configuration.Provider {
                 ExistingPeriodicWorkPolicy.UPDATE,
                 bedtimeRequest
             )
+
+            // R7.6 — weekly digest: daily check, posts once every Sunday.
+            val weeklyRequest = PeriodicWorkRequestBuilder<com.guardian.shield.service.blocker.WeeklyReportWorker>(
+                1, TimeUnit.DAYS
+            ).setConstraints(Constraints.Builder().build()).build()
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                WEEKLY_WORK_NAME,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                weeklyRequest
+            )
         } catch (t: Throwable) {
             Timber.e(t, "Failed to schedule watchdog")
         }
@@ -126,6 +136,7 @@ class GuardianApp : Application(), Configuration.Provider {
         const val WATCHDOG_WORK_NAME = "guardian_watchdog"
         const val DNS_WORK_NAME = "guardian_dns_schedule"
         const val BEDTIME_WORK_NAME = "guardian_bedtime"
+        const val WEEKLY_WORK_NAME = "guardian_weekly_report"
     }
 }
 
