@@ -40,8 +40,8 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 39
-        versionName = "3.6.9"
+        versionCode = 40
+        versionName = "3.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         buildConfigField(
@@ -135,6 +135,11 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.4")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("com.jakewharton.timber:timber:5.0.1")
+    // R6 — Shizuku: on-device privileged shell. Lets the app grant ITSELF
+    // WRITE_SECURE_SETTINGS (one tap, no computer, Android 11+ via Wireless
+    // Debugging) and keeps a shell fallback for DNS writes until then.
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
     // PHASE 1b (v3.5.0) — Firebase Crashlytics. The SDK artifact is always on
     // the classpath (so code compiles either way), but it *initializes* only
     // when the google-services plugin injected a firebase_app_id (i.e. the

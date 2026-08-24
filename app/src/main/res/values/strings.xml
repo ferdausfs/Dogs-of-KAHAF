@@ -591,7 +591,16 @@
     <string name="dns_status_no_host">Set a DNS hostname to activate the schedule</string>
     <string name="dns_status_no_perm_sub">One-time grant missing — see banner below</string>
     <string name="dns_perm_title">One-time setup needed</string>
-    <string name="dns_perm_body">Android does not let apps change Private DNS on their own — not even with Device Admin. Grant the control ONCE from a computer with this command:\n\nadb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS\n\nThen tap Refresh.</string>
+    <string name="dns_perm_body">Android locks Private DNS changes — no normal permission covers it. Easiest, NO computer needed (Android 11+):
+
+1) Install the free "Shizuku" app
+2) Settings → Developer options → Wireless debugging → pair once and tap Start in Shizuku
+3) Come back and tap "Enable with Shizuku" below
+
+Guardian Shield then grants itself permanent DNS control — Shizuku does not need to keep running.
+
+Alternative (one time, from any computer):
+adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS</string>
     <string name="dns_perm_copy">Copy ADB command</string>
     <string name="dns_perm_copied">Copied ✓ Run it once on a computer, then tap Refresh</string>
     <string name="dns_perm_refresh">Refresh status</string>
@@ -602,4 +611,9 @@
     <string name="dns_toast_no_perm">Grant missing — run the ADB command first</string>
     <string name="dns_restore_note">Your own Private DNS setting comes back automatically when the window ends — nothing is lost.</string>
     <string name="btn_dns_schedule">Private DNS Auto</string>
+    <!-- R6 — Shizuku no-computer path -->
+    <string name="dns_perm_shizuku_btn">Enable with Shizuku (no computer)</string>
+    <string name="dns_shizuku_missing">Shizuku is not installed or not running yet.\n\n1) Install the free Shizuku app\n2) Settings → Developer options → Wireless debugging → pair once and tap Start in Shizuku\n3) Return here and tap Enable.</string>
+    <string name="dns_shizuku_open">Open Shizuku website</string>
+    <string name="dns_perm_ok">✅ DNS control granted — Auto Mode is fully armed</string>
 </resources>

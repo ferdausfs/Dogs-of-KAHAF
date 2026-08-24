@@ -586,7 +586,16 @@
     <string name="dns_status_no_host">শিডিউল চালু করতে একটি DNS hostname দিন</string>
     <string name="dns_status_no_perm_sub">একবারের পারমিশন নেই — নিচের ব্যানার দেখুন</string>
     <string name="dns_perm_title">একবারের সেটআপ দরকার</string>
-    <string name="dns_perm_body">অ্যান্ড্রয়েড কোনো অ্যাপকে নিজে থেকে প্রাইভেট DNS বদলাতে দেয় না — Device Admin দিয়েও না। কম্পিউটার থেকে একবার এই কমান্ড দিয়ে কন্ট্রোল দিন:\n\nadb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS\n\nতারপর Refresh চাপুন।</string>
+    <string name="dns_perm_body">অ্যান্ড্রয়েড প্রাইভেট DNS বদলাতে দেয় না — কোনো সাধারণ পারমিশনেই হয় না। সবচেয়ে সহজ পথ, কম্পিউটার লাগে না (Android 11+):
+
+1) ফ্রি "Shizuku" অ্যাপ ইনস্টল করুন
+2) Settings → Developer options → Wireless debugging → একবার pair করে Shizuku-তে Start দিন
+3) ফিরে এসে নিচের "Shizuku দিয়ে চালু করুন" চাপুন
+
+তারপর Guardian Shield নিজেই স্থায়ী DNS কন্ট্রোল নিয়ে নেবে — Shizuku আর চালু রাখা লাগবে না।
+
+বিকল্প (যেকোনো কম্পিউটার থেকে মাত্র একবার):
+adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS</string>
     <string name="dns_perm_copy">ADB কমান্ড কপি করুন</string>
     <string name="dns_perm_copied">কপি হয়েছে ✓ কম্পিউটারে একবার চালিয়ে Refresh চাপুন</string>
     <string name="dns_perm_refresh">Refresh করুন</string>
@@ -597,4 +606,9 @@
     <string name="dns_toast_no_perm">পারমিশন নেই — আগে ADB কমান্ড চালান</string>
     <string name="dns_restore_note">সময় শেষে আপনার নিজের প্রাইভেট DNS সেটিং আবার অটোম্যাটিক ফিরে আসবে — কিছুই হারাবে না।</string>
     <string name="btn_dns_schedule">প্রাইভেট DNS অটো</string>
+    <!-- R6 — Shizuku no-computer path -->
+    <string name="dns_perm_shizuku_btn">Shizuku দিয়ে চালু করুন (কম্পিউটার ছাড়াই)</string>
+    <string name="dns_shizuku_missing">Shizuku এখনো ইনস্টল নেই বা চালু নেই।\n\n1) ফ্রি Shizuku অ্যাপ ইনস্টল করুন\n2) Settings → Developer options → Wireless debugging → একবার pair করে Shizuku-তে Start দিন\n3) ফিরে এসে Enable চাপুন।</string>
+    <string name="dns_shizuku_open">Shizuku ওয়েবসাইট খুলুন</string>
+    <string name="dns_perm_ok">✅ DNS কন্ট্রোল পেয়ে গেছি — অটো মোড এখন পুরোপুরি চালু</string>
 </resources>
