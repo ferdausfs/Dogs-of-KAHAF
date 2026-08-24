@@ -118,6 +118,8 @@
     <string name="edit_schedule">Edit Schedule</string>
     <string name="schedule_edit">Edit</string>
     <string name="package_hint">Package name (e.g. com.instagram.android)</string>
+    <string name="schedule_search_hint">Search apps or paste package name</string>
+    <string name="schedule_pick_empty">No apps match this search</string>
     <string name="start_time">Start</string>
     <string name="end_time">End</string>
     <string name="days">Days</string>

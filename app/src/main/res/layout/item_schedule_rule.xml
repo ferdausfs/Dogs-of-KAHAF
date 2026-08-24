@@ -24,9 +24,12 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="10dp">
 
-        <ImageView android:layout_width="18dp" android:layout_height="18dp"
+        <ImageView android:id="@+id/imgAppIcon"
+            android:layout_width="36dp" android:layout_height="36dp"
             android:src="@drawable/ic_clock"
-            app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+            android:scaleType="fitCenter"
+            android:layout_gravity="center_vertical"
+            android:importantForAccessibility="no"/>
 
         <LinearLayout
             android:layout_width="0dp" android:layout_weight="1"
