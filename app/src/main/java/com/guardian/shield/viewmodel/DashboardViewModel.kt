@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockEvent
 import com.guardian.shield.domain.model.BlockReason
+import com.guardian.shield.domain.model.AppRule
 import com.guardian.shield.domain.repository.RulesRepository
+import com.guardian.shield.util.PermissionManager
+import com.guardian.shield.util.ScreenTimeTracker
 import com.guardian.shield.util.StreakCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,6 +40,14 @@ data class DashboardUiState(
     val protectionActive: Boolean = false,
     val protectionEnabled: Boolean = true,
     val stats: BlockStats = BlockStats()
+)
+
+/** R7.4 — real screen-time slice for the dashboard (usage-access powered). */
+data class ScreenTimeUiState(
+    val granted: Boolean = false,
+    val totalTodayMs: Long = 0L,
+    val suggestion: ScreenTimeTracker.AppUsage? = null,
+    val suggestionBlocked: Boolean = false
 )
 
 @HiltViewModel
@@ -106,6 +117,52 @@ class DashboardViewModel @Inject constructor(
             )
 
     fun setProtectionActive(active: Boolean) { _protectionActive.value = active }
+
+    // ---- R7.4 screen time (usage stats are pull-based, no flow — refresh
+    //      from the fragment's onResume) ---------------------------------
+    private val _screenTime = MutableStateFlow(ScreenTimeUiState())
+    val screenTime: StateFlow<ScreenTimeUiState> = _screenTime.asStateFlow()
+
+    fun refreshScreenTime() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val granted = PermissionManager.isUsageStatsGranted(appContext)
+            if (!granted) {
+                _screenTime.value = ScreenTimeUiState(granted = false)
+                return@launch
+            }
+            val summary = ScreenTimeTracker.summary(appContext, topN = 1)
+            val top = summary.top.firstOrNull()
+            val blocked = top?.let { pkg ->
+                runCatching { repo.getApp(pkg.packageName)?.isBlocked == true }
+                    .getOrDefault(false)
+            } ?: false
+            _screenTime.value = ScreenTimeUiState(
+                granted = true,
+                totalTodayMs = summary.totalMs,
+                suggestion = top?.takeIf {
+                    it.totalMs >= ScreenTimeTracker.SUGGEST_AFTER_MS && !blocked
+                },
+                suggestionBlocked = blocked
+            )
+        }
+    }
+
+    /** One-tap block straight from the dashboard suggestion card. */
+    fun blockSuggestedApp() {
+        val target = _screenTime.value.suggestion ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val current = repo.getApp(target.packageName)
+                val updated = (current ?: AppRule(
+                    target.packageName, target.label, false, false,
+                    System.currentTimeMillis()
+                )).copy(isBlocked = true, isWhitelisted = false)
+                repo.upsertApp(updated)
+                prefs.bumpRulesVersion()
+            }
+            refreshScreenTime()
+        }
+    }
 
     // R4 — REAL sparkline data: today's block events bucketed per hour (24
     // buckets). Read-only over block_events; starts from today's local

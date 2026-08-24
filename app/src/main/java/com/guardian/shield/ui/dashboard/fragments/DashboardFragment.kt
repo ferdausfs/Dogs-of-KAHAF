@@ -70,12 +70,27 @@ class DashboardFragment : Fragment() {
             startActivity(Intent(requireContext(), com.guardian.shield.ui.activitylog.ActivityLogActivity::class.java))
         }
 
+        // R7.4 — summary card opens the full Screen Time screen.
+        binding.statsSummaryCard.setOnClickListener {
+            startActivity(Intent(requireContext(), com.guardian.shield.ui.screentime.ScreenTimeActivity::class.java))
+        }
+        binding.btnSuggestBlock.setOnClickListener {
+            viewModel.blockSuggestedApp()
+            viewLifecycleOwner.lifecycleScope.launch {
+                kotlinx.coroutines.delay(400)
+                Snackbar.make(binding.root,
+                    getString(R.string.screentime_blocked_toast_fmt,
+                        binding.txtSuggestApp.text), Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.uiState.collect { render(it) } }
                 launch { viewModel.streakInfo.collect { renderStreak(it) } }
                 // R4 — real hourly sparkline data
                 launch { viewModel.hourlyToday.collect { binding.chartSparkline.setData(it) } }
+                launch { viewModel.screenTime.collect { renderScreenTime(it) } }
             }
         }
     }
@@ -83,6 +98,30 @@ class DashboardFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.setProtectionActive(PermissionManager.isAccessibilityEnabled(requireContext()))
+        viewModel.refreshScreenTime()
+    }
+
+    /** R7.4 — the summary tile now shows REAL screen time + the suggestion card. */
+    private fun renderScreenTime(st: com.guardian.shield.viewmodel.ScreenTimeUiState) {
+        binding.txtStatTime.text =
+            if (st.granted) com.guardian.shield.util.ScreenTimeTracker.formatMs(st.totalTodayMs)
+            else "—"
+        val sug = st.suggestion
+        if (!st.granted || sug == null) {
+            binding.cardScreenTimeSuggest.visibility = View.GONE
+            return
+        }
+        binding.cardScreenTimeSuggest.visibility = View.VISIBLE
+        binding.txtSuggestApp.text = sug.label
+        binding.txtSuggestTime.text = getString(
+            R.string.screentime_used_today_fmt,
+            com.guardian.shield.util.ScreenTimeTracker.formatMs(sug.totalMs)
+        )
+        runCatching {
+            binding.imgSuggestIcon.setImageDrawable(
+                requireContext().packageManager.getApplicationIcon(sug.packageName)
+            )
+        }
     }
 
     private fun handleToggle() {
@@ -145,17 +184,7 @@ class DashboardFragment : Fragment() {
 
         binding.txtStatTotal.text = state.stats.totalBlocks.toString()
         binding.txtStatAi.text = state.stats.aiBlocks.toString()
-        // Third tile: show keyword blocks count as Time Protected placeholder mapping to real data
-        // Protected time not tracked — show keywordBlocks + fake time that grows with total (for UI parity with reference 8h 45m)
-        val protectedTimeText = if (state.stats.totalBlocks > 0) {
-            val hours = (state.stats.totalBlocks / 5).coerceAtLeast(1)
-            val mins = (state.stats.totalBlocks * 7) % 60
-            "${hours}h ${mins}m"
-        } else {
-            "0h 0m"
-        }
-        binding.txtStatTime.text = protectedTimeText
-        // Keep keyword label but show keyword count in accessibility? Use subtitle already shows
+        // R7.4 — txtStatTime is now real screen time (renderScreenTime flow).
         adapter.submitList(state.recent)
     }
 
