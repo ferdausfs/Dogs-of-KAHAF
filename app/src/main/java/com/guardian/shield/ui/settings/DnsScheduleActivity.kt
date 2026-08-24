@@ -253,16 +253,32 @@ class DnsScheduleActivity : AppCompatActivity() {
     }
 
     private fun renderBanner() {
-        // Banner stays until ANY control path exists (permanent grant OR a
-        // live Shizuku shell) — R6: Shizuku alone is already enough to drive.
-        val hasControl = PrivateDnsController.hasControl(this)
-        binding.cardDnsPerm.visibility = if (hasControl) View.GONE else View.VISIBLE
-        rendering = true
-        binding.switchDnsAuto.isEnabled = true
-        rendering = false
-        renderStatus()
-        if (!hasControl && binding.switchDnsAuto.isChecked) {
-            binding.txtDnsStatusSub.text = getString(R.string.dns_status_no_perm_sub)
+        // Engine probe may exec `su` once (root) — do it off the UI thread.
+        lifecycleScope.launch {
+            val engine = withContext(Dispatchers.IO) {
+                PrivateDnsController.activeEngine(this@DnsScheduleActivity)
+            }
+            val hasControl = engine != PrivateDnsController.Engine.NONE
+            binding.cardDnsPerm.visibility = if (hasControl) View.GONE else View.VISIBLE
+            binding.txtDnsEngine.text = getString(
+                R.string.dns_engine_label,
+                getString(
+                    when (engine) {
+                        PrivateDnsController.Engine.PERMANENT -> R.string.dns_engine_perm
+                        PrivateDnsController.Engine.DEVICE_OWNER -> R.string.dns_engine_owner
+                        PrivateDnsController.Engine.ROOT -> R.string.dns_engine_root
+                        PrivateDnsController.Engine.SHIZUKU -> R.string.dns_engine_shizuku
+                        PrivateDnsController.Engine.NONE -> R.string.dns_engine_none
+                    }
+                )
+            )
+            rendering = true
+            binding.switchDnsAuto.isEnabled = true
+            rendering = false
+            renderStatus()
+            if (!hasControl && binding.switchDnsAuto.isChecked) {
+                binding.txtDnsStatusSub.text = getString(R.string.dns_status_no_perm_sub)
+            }
         }
     }
 
