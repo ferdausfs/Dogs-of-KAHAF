@@ -616,4 +616,10 @@ adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS<
     <string name="dns_shizuku_missing">Shizuku is not installed or not running yet.\n\n1) Install the free Shizuku app\n2) Settings → Developer options → Wireless debugging → pair once and tap Start in Shizuku\n3) Return here and tap Enable.</string>
     <string name="dns_shizuku_open">Open Shizuku website</string>
     <string name="dns_perm_ok">✅ DNS control granted — Auto Mode is fully armed</string>
+    <string name="dns_engine_label">Control path: %1$s</string>
+    <string name="dns_engine_perm">Self-grant ✓ (permanent — no computer, no Shizuku)</string>
+    <string name="dns_engine_owner">Device Owner ✓ (fully automatic)</string>
+    <string name="dns_engine_root">Root ✓</string>
+    <string name="dns_engine_shizuku">Shizuku shell ✓</string>
+    <string name="dns_engine_none">not set up yet</string>
 </resources>
