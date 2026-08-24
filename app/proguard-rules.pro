@@ -58,3 +58,13 @@
 
 -dontwarn org.jetbrains.annotations.**
 -keep class timber.log.** { *; }
+# R6 — Shizuku (rikka) API: instantiated/cast reflectively by the Shizuku
+# server (UserService binder). Keep the whole namespace so R8 never strips
+# or renames the glue.
+-keep class rikka.shizuku.** { *; }
+-keep interface rikka.shizuku.** { *; }
+-dontwarn rikka.shizuku.**
+
+# Hand-rolled binder stub/proxy for the DNS UserService (extends Binder —
+# service.** above already keeps it, belt and braces for R8 full mode).
+-keep class com.guardian.shield.service.dns.** { *; }
