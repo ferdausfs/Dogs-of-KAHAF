@@ -91,14 +91,24 @@ class DnsScheduleActivity : AppCompatActivity() {
         binding.btnDnsTestOn.setOnClickListener {
             val host = hostFromUi()
             if (host.isBlank()) { toast(R.string.dns_status_no_host); return@setOnClickListener }
-            val ok = PrivateDnsController.forceOn(this, host)
-            toast(if (ok) getString(R.string.dns_toast_on, host) else getString(R.string.dns_toast_no_perm))
-            renderBanner()
+            lifecycleScope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    PrivateDnsController.forceOn(this@DnsScheduleActivity, host)
+                }
+                toast(if (ok) getString(R.string.dns_toast_on, host) else getString(R.string.dns_toast_no_perm))
+                renderBanner()
+            }
         }
         binding.btnDnsTestOff.setOnClickListener {
-            val ok = PrivateDnsController.forceRestore(this, PrivateDnsScheduler.cache(this))
-            toast(if (ok) getString(R.string.dns_toast_restored) else getString(R.string.dns_toast_no_perm))
-            renderBanner()
+            lifecycleScope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    PrivateDnsController.forceRestore(
+                        this@DnsScheduleActivity, PrivateDnsScheduler.cache(this@DnsScheduleActivity)
+                    )
+                }
+                toast(if (ok) getString(R.string.dns_toast_restored) else getString(R.string.dns_toast_no_perm))
+                renderBanner()
+            }
         }
 
         loadState()
@@ -114,7 +124,7 @@ class DnsScheduleActivity : AppCompatActivity() {
     private val shizukuPermissionListener =
         Shizuku.OnRequestPermissionResultListener { _, grantResult ->
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                bindAndSelfGrant()
+                doSelfGrant()
             } else {
                 toast(R.string.dns_toast_no_perm)
             }
@@ -146,14 +156,20 @@ class DnsScheduleActivity : AppCompatActivity() {
                 .setNegativeButton(R.string.action_later) { _, _ -> }
                 .show()
             !ShizukuDns.hasShizukuPermission() -> ShizukuDns.requestPermission()
-            else -> bindAndSelfGrant()
+            else -> doSelfGrant()
         }
     }
 
-    /** Bind the shell UserService, then grant ourselves WRITE_SECURE_SETTINGS. */
-    private fun bindAndSelfGrant() {
-        ShizukuDns.bindService {
-            val granted = ShizukuDns.grantSelfSecureSettings(this)
+    /**
+     * R7.2 — exec the shell-side `pm grant` directly via Shizuku.newProcess
+     * (no UserService/bind needed) — off the main thread, since it blocks on
+     * process execution.
+     */
+    private fun doSelfGrant() {
+        lifecycleScope.launch {
+            val granted = withContext(Dispatchers.IO) {
+                ShizukuDns.grantSelfSecureSettings(this@DnsScheduleActivity)
+            }
             Timber.i("DNS Shizuku self-grant: $granted")
             if (granted) {
                 toast(R.string.dns_perm_ok)

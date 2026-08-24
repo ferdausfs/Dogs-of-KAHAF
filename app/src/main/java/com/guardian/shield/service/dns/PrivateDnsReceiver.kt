@@ -18,16 +18,27 @@ class PrivateDnsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != ACTION_TICK) return
-        runCatching {
-            val c = PrivateDnsScheduler.readCache(context)
-            val inWindow = PrivateDnsScheduler.isInWindow(
-                PrivateDnsScheduler.nowMinutes(), c.startMin, c.endMin
-            )
-            val outcome = PrivateDnsController.applyDesiredState(
-                context, c.enabled, inWindow, c.host, PrivateDnsScheduler.cache(context)
-            )
-            Timber.i("PrivateDns: tick — inWindow=$inWindow outcome=$outcome")
-        }.onFailure { Timber.e(it, "PrivateDns: tick failed") }
-        PrivateDnsScheduler.reschedule(context)
+        // R7.2 — engine paths now exec processes (Shizuku.newProcess / su),
+        // which MUST NOT run on the main thread (v3.7.0's ensureBound did
+        // exactly that and the tick silently no-op'd). goAsync + worker thread.
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        Thread {
+            try {
+                val c = PrivateDnsScheduler.readCache(appContext)
+                val inWindow = PrivateDnsScheduler.isInWindow(
+                    PrivateDnsScheduler.nowMinutes(), c.startMin, c.endMin
+                )
+                val outcome = PrivateDnsController.applyDesiredState(
+                    appContext, c.enabled, inWindow, c.host, PrivateDnsScheduler.cache(appContext)
+                )
+                Timber.i("PrivateDns: tick — inWindow=$inWindow outcome=$outcome")
+            } catch (t: Throwable) {
+                Timber.e(t, "PrivateDns: tick failed")
+            } finally {
+                PrivateDnsScheduler.reschedule(appContext)
+                pendingResult.finish()
+            }
+        }.start()
     }
 }

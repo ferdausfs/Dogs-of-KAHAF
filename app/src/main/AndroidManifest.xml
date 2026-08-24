@@ -135,22 +135,17 @@
             android:name=".service.dns.PrivateDnsReceiver"
             android:exported="false"/>
 
-        <!-- R6 — Shizuku bridge: provider discovers the Shizuku server; the
-             UserService is spawned BY Shizuku under the shell uid so one tap
-             grants us WRITE_SECURE_SETTINGS with no computer. exported=true
-             is required because the shell (different uid) starts/binds it —
-             any other app starting it would only get OUR uid, never shell. -->
+        <!-- R7.2 — Shizuku bridge: provider discovers the Shizuku server so
+             the app can run `pm grant`/`settings put` via Shizuku.newProcess
+             with no computer. No UserService needed anymore (v3.7.0's
+             hand-rolled binder service was removed — it never bound on real
+             devices). -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
             android:enabled="true"
             android:exported="true"
             android:multiprocess="false"/>
-
-        <service
-            android:name=".service.dns.shizuku.DnsUserService"
-            android:exported="true"
-            tools:ignore="Instantiatable"/>
 
         <activity
             android:name=".ui.permissions.PermissionsActivity"
