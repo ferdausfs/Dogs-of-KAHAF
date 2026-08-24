@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +44,18 @@ class GuardianPreferences @Inject constructor(
         // PHASE 4c (v3.5.0) — notification shade shield. OFF by default; only
         // takes effect after the user ALSO grants system Notification access.
         val NOTIF_SHIELD_ENABLED = booleanPreferencesKey("notif_shield_enabled")
+
+        // R4 — Focus Mode (temporary full-device pause of distracting apps).
+        // Until-timestamp in ms (0 = inactive) + the duration chosen when the
+        // session started (so the countdown ring can show elapsed fraction
+        // even after process death).
+        val FOCUS_UNTIL_MS = longPreferencesKey("focus_until_ms")
+        val FOCUS_DURATION_MINS = intPreferencesKey("focus_duration_mins")
+
+        // R4 — Smart Filters: ids of enabled keyword categories (presets live
+        // in util/FilterCategories; the actual KeywordRule rows are materialized
+        // into keyword_rules so RulesEngine needs no schema change).
+        val FILTER_CATEGORIES = stringSetPreferencesKey("filter_categories")
     }
 
     // Flows
@@ -63,6 +77,13 @@ class GuardianPreferences @Inject constructor(
 
     // PHASE 4c (v3.5.0) — notification shade shield (default OFF)
     val notifShieldEnabled: Flow<Boolean> = ds.data.map { it[Keys.NOTIF_SHIELD_ENABLED] ?: false }
+
+    // R4 — Focus Mode state
+    val focusUntilMs: Flow<Long> = ds.data.map { it[Keys.FOCUS_UNTIL_MS] ?: 0L }
+    val focusDurationMins: Flow<Int> = ds.data.map { it[Keys.FOCUS_DURATION_MINS] ?: 45 }
+
+    // R4 — Smart Filters: enabled category ids
+    val filterCategories: Flow<Set<String>> = ds.data.map { it[Keys.FILTER_CATEGORIES] ?: emptySet() }
 
     // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
@@ -88,4 +109,11 @@ class GuardianPreferences @Inject constructor(
 
     // PHASE 4c (v3.5.0) — notification shade shield toggle.
     suspend fun setNotifShieldEnabled(v: Boolean) { ds.edit { it[Keys.NOTIF_SHIELD_ENABLED] = v } }
+
+    // R4 — Focus Mode
+    suspend fun setFocusUntilMs(v: Long) { ds.edit { it[Keys.FOCUS_UNTIL_MS] = v } }
+    suspend fun setFocusDurationMins(v: Int) { ds.edit { it[Keys.FOCUS_DURATION_MINS] = v } }
+
+    // R4 — Smart Filters
+    suspend fun setFilterCategories(v: Set<String>) { ds.edit { it[Keys.FILTER_CATEGORIES] = v } }
 }

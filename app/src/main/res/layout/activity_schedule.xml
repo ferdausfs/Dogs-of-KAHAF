@@ -67,6 +67,124 @@
                 android:textSize="12.5sp" android:textStyle="bold"/>
         </LinearLayout>
 
+        <!-- R4 — Focus Mode hero (reference "Focus Mode is Active" card):
+             violet beacon, countdown ring, duration chips, start/stop. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardFocus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="14dp"
+            style="@style/Widget.GuardianShield.Card.Beacon">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <LinearLayout
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/focus_title"
+                            android:textColor="@color/on_primary_container"
+                            android:alpha="0.72" android:textSize="11.5sp"/>
+                        <TextView
+                            android:id="@+id/txtFocusStatus"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/focus_status_ready"
+                            android:textColor="@color/on_primary_container"
+                            android:textSize="18sp" android:textStyle="bold"
+                            android:letterSpacing="-0.01"/>
+                        <TextView
+                            android:id="@+id/txtFocusHint"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/focus_hint_ready"
+                            android:textColor="@color/on_primary_container"
+                            android:alpha="0.75" android:textSize="12.5sp"
+                            android:lineSpacingMultiplier="1.35"/>
+                    </LinearLayout>
+                    <FrameLayout
+                        android:layout_width="68dp" android:layout_height="68dp"
+                        android:layout_marginStart="14dp">
+                        <com.guardian.shield.ui.charts.FocusRingView
+                            android:id="@+id/focusRing"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"/>
+                        <TextView
+                            android:id="@+id/txtFocusRemaining"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:textColor="@color/on_primary_container"
+                            android:textSize="12.5sp" android:textStyle="bold"
+                            android:fontFeatureSettings="tnum"
+                            tools:text="25:00"/>
+                    </FrameLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFocus15"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/focus_chip_15"
+                        android:textAlignment="center"
+                        style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFocus25"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/focus_chip_25"
+                        android:textAlignment="center"
+                        style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFocus45"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/focus_chip_45"
+                        android:textAlignment="center"
+                        style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:checkable="true"/>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFocus60"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/focus_chip_60"
+                        android:textAlignment="center"
+                        style="@style/Widget.GuardianShield.Chip.Filter"
+                        android:checkable="true"/>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFocusToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/focus_start"
+                    style="@style/Widget.GuardianShield.Button.Tonal"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/txtEmpty"
             android:layout_width="match_parent"

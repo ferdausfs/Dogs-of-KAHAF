@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R4 — Content Filters (reference "Filters" screen): one switch per
+     category; enabling materializes presets as regular keyword rules. -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_main">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_main"
+        app:elevation="0dp">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/bg_main"
+            app:title=""
+            app:titleTextColor="@color/on_surface"
+            app:navigationIconTint="@color/on_surface"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:overScrollMode="never"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="28dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
+                android:text="@string/filters_title"
+                android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="14dp"
+                android:text="@string/filters_subtitle"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp"
+                android:lineSpacingMultiplier="1.35"/>
+
+            <!-- Adult Content -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_rose_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_shield_alert" app:tint="@color/tile_rose_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_adult_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountAdult" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="18 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_adult_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchAdult"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Gambling & Betting -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_orange_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_flag" app:tint="@color/tile_orange_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_gambling_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountGambling" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="14 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_gambling_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchGambling"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Drugs & Alcohol -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_teal_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_warning" app:tint="@color/tile_teal_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_drugs_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountDrugs" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="12 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_drugs_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchDrugs"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Violence & Self-harm -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_blue_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_shield_off" app:tint="@color/tile_blue_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_violence_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountViolence" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="10 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_violence_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchViolence"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Dating & Hookups -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_purple_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_apps" app:tint="@color/tile_purple_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_dating_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountDating" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="7 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_dating_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchDating"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Reels & Doomscrolling -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.GuardianShield.Card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp" android:paddingVertical="14dp">
+                    <FrameLayout android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_green_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+                            android:src="@drawable/ic_history" app:tint="@color/tile_green_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginStart="13dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/filter_doomscroll_title" android:textColor="@color/on_surface"
+                            android:textSize="15.5sp" android:textStyle="bold"/>
+                        <TextView android:id="@+id/txtCountDoomscroll" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp" android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" tools:text="7 keywords"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp" android:text="@string/filter_doomscroll_sub"
+                            android:textColor="@color/on_surface_dim" android:textSize="11.5sp"/>
+                    </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchDoomscroll"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -216,6 +216,13 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnApps.setOnClickListener {
             startActivity(Intent(this, AppListActivity::class.java))
         }
+        // R4 — Smart Filters + Whitelist screens
+        binding.btnFilters.setOnClickListener {
+            startActivity(Intent(this, FiltersActivity::class.java))
+        }
+        binding.btnWhitelist.setOnClickListener {
+            startActivity(Intent(this, WhitelistActivity::class.java))
+        }
         binding.btnKeywords.setOnClickListener {
             startActivity(Intent(this, KeywordActivity::class.java))
         }

@@ -174,11 +174,13 @@
                                 android:textStyle="bold"
                                 android:letterSpacing="-0.03"/>
 
-                            <ImageView
-                                android:layout_width="100dp"
-                                android:layout_height="36dp"
-                                android:layout_marginTop="6dp"
-                                android:src="@drawable/ic_sparkline"
+                            <!-- R4: REAL hourly sparkline (today's blocks) —
+                                 replaces static art. -->
+                            <com.guardian.shield.ui.charts.SparklineView
+                                android:id="@+id/chartSparkline"
+                                android:layout_width="104dp"
+                                android:layout_height="40dp"
+                                android:layout_marginTop="8dp"
                                 android:importantForAccessibility="no"/>
                         </LinearLayout>
                     </LinearLayout>

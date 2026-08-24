@@ -20,13 +20,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import com.guardian.shield.R
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityScheduleBinding
 import com.guardian.shield.databinding.ItemScheduleRuleBinding
 import com.guardian.shield.domain.model.ScheduleRule
 import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.viewmodel.ScheduleViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -37,6 +40,24 @@ class ScheduleActivity : AppCompatActivity() {
     private lateinit var adapter: ScheduleAdapter
 
     @Inject lateinit var timeLockManager: TimeLockManager
+    @Inject lateinit var guardianPrefs: GuardianPreferences
+
+    // ---- R4 Focus Mode state -------------------------------------------
+    private data class FocusChip(val chip: Chip, val minutes: Int)
+    private lateinit var focusChips: List<FocusChip>
+    private var focusLocked = false
+    private var focusActive = false
+    private var latestFocusUntilMs = 0L
+    private var latestFocusDurationMins = 45
+    private val focusHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val focusTicker = object : Runnable {
+        override fun run() {
+            if (focusActive) {
+                tickFocus()
+                focusHandler.postDelayed(this, 1000L)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +77,9 @@ class ScheduleActivity : AppCompatActivity() {
         } else {
             binding.lockBanner.visibility = View.GONE
         }
+
+        focusLocked = locked
+        setupFocusMode()
 
         adapter = ScheduleAdapter(
             isLocked = locked,
@@ -157,6 +181,150 @@ class ScheduleActivity : AppCompatActivity() {
 
     private fun showLockedSnack() {
         Snackbar.make(binding.root, R.string.lock_editing_disabled, Snackbar.LENGTH_SHORT).show()
+    }
+
+    // ---- R4 Focus Mode ---------------------------------------------------
+    // Temporary whole-device pause of distracting apps. State lives in
+    // DataStore (FOCUS_UNTIL_MS / FOCUS_DURATION_MINS); starting/stopping
+    // bumps rulesVersion so the accessibility service reloads RulesEngine —
+    // whose focus short-circuit is fresh-time-checked, so expiry needs no
+    // wake-up at all.
+
+    private fun setupFocusMode() {
+        focusChips = listOf(
+            FocusChip(binding.chipFocus15, 15),
+            FocusChip(binding.chipFocus25, 25),
+            FocusChip(binding.chipFocus45, 45),
+            FocusChip(binding.chipFocus60, 60)
+        )
+        val onColor = getColor(R.color.on_primary_container)
+        binding.focusRing.setColors(
+            onColor,
+            android.graphics.Color.argb(
+                70,
+                android.graphics.Color.red(onColor),
+                android.graphics.Color.green(onColor),
+                android.graphics.Color.blue(onColor)
+            )
+        )
+        focusChips.forEach { fc ->
+            fc.chip.setOnClickListener {
+                if (focusLocked) { showLockedSnack(); return@setOnClickListener }
+                if (focusActive) return@setOnClickListener
+                selectFocusDuration(fc.minutes)
+            }
+        }
+        binding.btnFocusToggle.setOnClickListener {
+            if (focusLocked) { showLockedSnack(); return@setOnClickListener }
+            toggleFocus()
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                guardianPrefs.focusDurationMins.collect { d ->
+                    latestFocusDurationMins = d
+                    if (!focusActive) {
+                        selectFocusDuration(d)
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                guardianPrefs.focusUntilMs.collect { until ->
+                    latestFocusUntilMs = until
+                    refreshFocusState()
+                }
+            }
+        }
+        // Reflect the state immediately (in case the flows replay slowly).
+        refreshFocusState()
+    }
+
+    private fun selectedFocusMinutes(): Int =
+        focusChips.firstOrNull { it.chip.isChecked }?.minutes ?: latestFocusDurationMins
+
+    private fun selectFocusDuration(minutes: Int) {
+        focusChips.forEach { it.chip.isChecked = it.minutes == minutes }
+        if (!focusActive) {
+            binding.txtFocusRemaining.text = "%d:00".format(minutes)
+        }
+    }
+
+    private fun refreshFocusState() {
+        val now = System.currentTimeMillis()
+        val active = latestFocusUntilMs > now
+        if (active == focusActive) {
+            if (active) tickFocus()
+            return
+        }
+        focusActive = active
+        if (active) startFocusUi() else stopFocusUi()
+    }
+
+    private fun startFocusUi() {
+        binding.txtFocusStatus.text = getString(R.string.focus_status_active)
+        binding.txtFocusHint.text = getString(R.string.focus_hint_active)
+        binding.btnFocusToggle.text = getString(R.string.focus_stop)
+        focusChips.forEach { it.chip.isEnabled = false }
+        focusHandler.removeCallbacks(focusTicker)
+        tickFocus()
+        focusHandler.postDelayed(focusTicker, 1000L)
+    }
+
+    private fun stopFocusUi() {
+        binding.txtFocusStatus.text = getString(R.string.focus_status_ready)
+        binding.txtFocusHint.text = getString(R.string.focus_hint_ready)
+        binding.btnFocusToggle.text = getString(R.string.focus_start)
+        focusChips.forEach { it.chip.isEnabled = !focusLocked }
+        binding.focusRing.setProgress(0f)
+        focusHandler.removeCallbacks(focusTicker)
+        selectFocusDuration(selectedFocusMinutes())
+    }
+
+    private fun tickFocus() {
+        val now = System.currentTimeMillis()
+        val remaining = latestFocusUntilMs - now
+        if (remaining <= 0) {
+            // Expired between emissions — render idle right away.
+            stopFocusUi()
+            focusActive = false
+            return
+        }
+        val totalMs = latestFocusDurationMins * 60_000L
+        val elapsed = (totalMs - remaining).toFloat() / totalMs.coerceAtLeast(1L).toFloat()
+        binding.focusRing.setProgress(elapsed)
+        val totalSec = remaining / 1000L
+        binding.txtFocusRemaining.text = "%d:%02d".format(totalSec / 60, totalSec % 60)
+    }
+
+    private fun toggleFocus() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                if (focusActive) {
+                    guardianPrefs.setFocusUntilMs(0L)
+                    guardianPrefs.bumpRulesVersion()
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(binding.root, R.string.focus_ended, Snackbar.LENGTH_SHORT).show()
+                    }
+                } else {
+                    val mins = selectedFocusMinutes()
+                    guardianPrefs.setFocusDurationMins(mins)
+                    guardianPrefs.setFocusUntilMs(System.currentTimeMillis() + mins * 60_000L)
+                    guardianPrefs.bumpRulesVersion()
+                    withContext(Dispatchers.Main) {
+                        Snackbar.make(binding.root, R.string.focus_started, Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (t: Throwable) {
+                timber.log.Timber.e(t, "focus toggle failed")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        focusHandler.removeCallbacks(focusTicker)
+        super.onDestroy()
     }
 }
 

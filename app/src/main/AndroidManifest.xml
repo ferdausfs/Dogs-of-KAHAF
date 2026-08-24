@@ -104,6 +104,18 @@
             android:exported="false"
             android:parentActivityName=".ui.settings.SettingsActivity"/>
 
+        <!-- R4 — Content Filters (Smart category protection) -->
+        <activity
+            android:name=".ui.settings.FiltersActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
+        <!-- R4 — Whitelist -->
+        <activity
+            android:name=".ui.settings.WhitelistActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity"/>
+
         <activity
             android:name=".ui.permissions.PermissionsActivity"
             android:exported="false"

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R4 — Whitelist screen (reference "Whitelist"): apps allowed through
+     every barrier. Reuses item_app_rule rows; toggling actually writes the
+     isWhitelisted flag (RulesEngine already honors it, incl. Focus Mode). -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_main">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_main"
+        app:elevation="0dp">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/bg_main"
+            app:title=""
+            app:titleTextColor="@color/on_surface"
+            app:navigationIconTint="@color/on_surface"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="4dp"
+            android:text="@string/whitelist_title"
+            android:textAppearance="@style/TextAppearance.GuardianShield.Display"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="12dp"
+            android:text="@string/whitelist_subtitle"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="13sp"
+            android:lineSpacingMultiplier="1.35"/>
+
+        <LinearLayout
+            android:id="@+id/lockBannerWl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_lock_banner"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="12dp"
+            android:layout_marginBottom="14dp"
+            android:visibility="gone"
+            tools:visibility="gone">
+            <ImageView
+                android:layout_width="19dp" android:layout_height="19dp"
+                android:src="@drawable/ic_time_lock"
+                app:tint="@color/warning_amber"
+                android:importantForAccessibility="no"/>
+            <TextView
+                android:id="@+id/txtLockRemainingWl"
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:textColor="@color/warning_amber"
+                android:textSize="12.5sp" android:textStyle="bold"/>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="14dp">
+                <ImageView
+                    android:layout_width="20dp" android:layout_height="20dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="@color/on_surface_dim"
+                    android:importantForAccessibility="no"/>
+                <EditText
+                    android:id="@+id/editSearchWl"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@null"
+                    android:hint="@string/whitelist_search_hint"
+                    android:textColorHint="@color/on_surface_dim"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14.5sp"
+                    android:singleLine="true"
+                    android:importantForAutofill="no"
+                    android:inputType="text"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/txtCountWl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_badge"
+            android:textColor="@color/primary_dim"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:fontFeatureSettings="tnum"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            tools:text="3 allowed"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            style="@style/Widget.GuardianShield.Card">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerWl"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:overScrollMode="never"
+                tools:itemCount="5"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/txtEmptyWl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            style="@style/Widget.GuardianShield.Card"
+            tools:visibility="visible">
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center"
+                android:paddingVertical="36dp" android:paddingHorizontal="30dp">
+                <FrameLayout android:layout_width="64dp" android:layout_height="64dp"
+                    android:background="@drawable/bg_icon_well">
+                    <ImageView android:layout_width="26dp" android:layout_height="26dp"
+                        android:layout_gravity="center" android:src="@drawable/ic_check_circle"
+                        app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+                </FrameLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:text="@string/whitelist_empty"
+                    android:textColor="@color/on_surface_variant" android:textSize="13.5sp"
+                    android:lineSpacingMultiplier="1.45" android:gravity="center"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

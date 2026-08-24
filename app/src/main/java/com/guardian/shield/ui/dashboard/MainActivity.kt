@@ -70,6 +70,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // R4 — floating Quick-Add FAB (reference mock center action button).
+        binding.fabAdd.setOnClickListener {
+            QuickAddSheet().show(supportFragmentManager, "quick_add")
+        }
+
         if (savedInstanceState == null) {
             loadFragment(DashboardFragment())
         }

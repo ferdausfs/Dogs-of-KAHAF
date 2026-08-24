@@ -132,12 +132,13 @@
                                 android:fontFeatureSettings="tnum"
                                 tools:text="12 events"/>
                         </LinearLayout>
-                        <ImageView
+                        <!-- R4: REAL weekly bars (data-bound, Monday-first to
+                             match the letter row) — replaces static art. -->
+                        <com.guardian.shield.ui.charts.WeekBarChartView
+                            android:id="@+id/chartWeek"
                             android:layout_width="match_parent"
-                            android:layout_height="84dp"
+                            android:layout_height="88dp"
                             android:layout_marginTop="12dp"
-                            android:src="@drawable/ic_bars_week"
-                            app:tint="@color/white"
                             android:importantForAccessibility="no"/>
                         <LinearLayout
                             android:layout_width="match_parent"

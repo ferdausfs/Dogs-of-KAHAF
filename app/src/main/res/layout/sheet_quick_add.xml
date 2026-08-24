@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R4 — Quick-Add bottom sheet (center FAB target, reference mock quick
+     action panel). Rows mirror the dashboard tiles: Apps / Keyword / Filters /
+     Whitelist / Focus Mode. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_reason_sheet"
+    android:backgroundTint="@color/bg_elevated"
+    android:paddingBottom="22dp">
+
+    <View
+        android:layout_width="38dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_badge"
+        android:backgroundTint="@color/border_strong"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="22dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="8dp"
+        android:text="@string/quick_add_title"
+        android:textColor="@color/on_surface"
+        android:textSize="17sp"
+        android:textStyle="bold"/>
+
+    <!-- row: Block Apps -->
+    <LinearLayout
+        android:id="@+id/rowQuickApps"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+        <FrameLayout android:layout_width="42dp" android:layout_height="42dp"
+            android:background="@drawable/bg_circle" android:backgroundTint="@color/tile_blue_bg">
+            <ImageView android:layout_width="21dp" android:layout_height="21dp" android:layout_gravity="center"
+                android:src="@drawable/ic_apps" app:tint="@color/tile_blue_fg" android:importantForAccessibility="no"/>
+        </FrameLayout>
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="14dp" android:text="@string/qa_block_apps"
+            android:textColor="@color/on_surface" android:textSize="15.5sp" android:textStyle="bold"/>
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_chevron_right" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+    </LinearLayout>
+
+    <!-- row: Add Keyword -->
+    <LinearLayout
+        android:id="@+id/rowQuickKeyword"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+        <FrameLayout android:layout_width="42dp" android:layout_height="42dp"
+            android:background="@drawable/bg_circle" android:backgroundTint="@color/tile_purple_bg">
+            <ImageView android:layout_width="21dp" android:layout_height="21dp" android:layout_gravity="center"
+                android:src="@drawable/ic_keyword" app:tint="@color/tile_purple_fg" android:importantForAccessibility="no"/>
+        </FrameLayout>
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="14dp" android:text="@string/qa_add_keyword"
+            android:textColor="@color/on_surface" android:textSize="15.5sp" android:textStyle="bold"/>
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_chevron_right" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+    </LinearLayout>
+
+    <!-- row: Smart Filters -->
+    <LinearLayout
+        android:id="@+id/rowQuickFilters"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+        <FrameLayout android:layout_width="42dp" android:layout_height="42dp"
+            android:background="@drawable/bg_circle" android:backgroundTint="@color/tile_rose_bg">
+            <ImageView android:layout_width="21dp" android:layout_height="21dp" android:layout_gravity="center"
+                android:src="@drawable/ic_layers" app:tint="@color/tile_rose_fg" android:importantForAccessibility="no"/>
+        </FrameLayout>
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="14dp" android:text="@string/qa_filters"
+            android:textColor="@color/on_surface" android:textSize="15.5sp" android:textStyle="bold"/>
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_chevron_right" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+    </LinearLayout>
+
+    <!-- row: Whitelist -->
+    <LinearLayout
+        android:id="@+id/rowQuickWhitelist"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+        <FrameLayout android:layout_width="42dp" android:layout_height="42dp"
+            android:background="@drawable/bg_circle" android:backgroundTint="@color/tile_green_bg">
+            <ImageView android:layout_width="21dp" android:layout_height="21dp" android:layout_gravity="center"
+                android:src="@drawable/ic_check_circle" app:tint="@color/tile_green_fg" android:importantForAccessibility="no"/>
+        </FrameLayout>
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="14dp" android:text="@string/qa_whitelist"
+            android:textColor="@color/on_surface" android:textSize="15.5sp" android:textStyle="bold"/>
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_chevron_right" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+    </LinearLayout>
+
+    <!-- row: Focus Mode -->
+    <LinearLayout
+        android:id="@+id/rowQuickFocus"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+        <FrameLayout android:layout_width="42dp" android:layout_height="42dp"
+            android:background="@drawable/bg_circle" android:backgroundTint="@color/tile_orange_bg">
+            <ImageView android:layout_width="21dp" android:layout_height="21dp" android:layout_gravity="center"
+                android:src="@drawable/ic_time_lock" app:tint="@color/tile_orange_fg" android:importantForAccessibility="no"/>
+        </FrameLayout>
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginStart="14dp" android:text="@string/qa_focus"
+            android:textColor="@color/on_surface" android:textSize="15.5sp" android:textStyle="bold"/>
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_chevron_right" app:tint="@color/on_surface_dim" android:importantForAccessibility="no"/>
+    </LinearLayout>
+</LinearLayout>

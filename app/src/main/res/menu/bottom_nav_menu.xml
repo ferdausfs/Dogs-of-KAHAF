@@ -9,6 +9,12 @@
         android:id="@+id/nav_logs"
         android:icon="@drawable/ic_history"
         android:title="Activity" />
+    <!-- R4 — center spacer for the floating Quick-Add FAB (reference mock
+         center action button). Disabled + iconless + labelless: pure gap. -->
+    <item
+        android:id="@+id/nav_quick_add_placeholder"
+        android:title=""
+        android:enabled="false" />
     <item
         android:id="@+id/nav_protection"
         android:icon="@drawable/ic_shield_check"

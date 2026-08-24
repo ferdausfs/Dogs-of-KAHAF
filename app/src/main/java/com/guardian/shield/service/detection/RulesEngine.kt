@@ -1,6 +1,7 @@
 package com.guardian.shield.service.detection
 
 import android.content.Context
+import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.DetectionResult
 import com.guardian.shield.domain.model.ScheduleRule
@@ -11,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -23,13 +25,18 @@ data class RulesSnapshot(
     val whitelist: Set<String> = emptySet(),
     val keywords: List<Pair<String, Boolean>> = emptyList(),
     val inputMethods: Set<String> = emptySet(),
-    val scheduleRules: Map<String, ScheduleRule> = emptyMap()
+    val scheduleRules: Map<String, ScheduleRule> = emptyMap(),
+    // R4 — Focus Mode: epoch-ms until which every non-whitelisted user-facing
+    // app is blocked. Time check happens fresh at evaluation (like schedules),
+    // so expiry needs no rules reload.
+    val focusUntilMs: Long = 0L
 )
 
 @Singleton
 class RulesEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repo: RulesRepository
+    private val repo: RulesRepository,
+    private val prefs: GuardianPreferences
 ) {
     private val mutex = Mutex()
 
@@ -49,11 +56,12 @@ class RulesEngine @Inject constructor(
                 val kws = repo.enabledKeywords().map { it.keyword to it.isRegex }
                 val imes = AppClassifier.loadInputMethodPackages(context)
                 val sched = repo.allSchedules().associateBy { it.packageName }
-                snapshot = RulesSnapshot(blocked, whitelist, kws, imes, sched)
+                val focusUntil = runCatching { prefs.focusUntilMs.first() }.getOrDefault(0L)
+                snapshot = RulesSnapshot(blocked, whitelist, kws, imes, sched, focusUntil)
                 _rulesChanged.tryEmit(Unit)
                 Timber.d(
                     "Rules reloaded: blocked=${blocked.size} whitelist=${whitelist.size} " +
-                        "keywords=${kws.size} schedules=${sched.size}"
+                        "keywords=${kws.size} schedules=${sched.size} focusUntil=$focusUntil"
                 )
             } catch (t: Throwable) {
                 // v3.6.2 — surface exactly WHAT stayed stale so a frozen
@@ -89,10 +97,17 @@ class RulesEngine @Inject constructor(
      * evaluatePackage(), so if the default whitelist gated a user-rule
      * package here, the user's own block/schedule would be unreachable.
      */
+    private fun isFocusActive(s: RulesSnapshot): Boolean =
+        s.focusUntilMs > System.currentTimeMillis()
+
     fun canBlock(pkg: String): Boolean {
         val s = snapshot
         if (AppClassifier.isAlwaysAllowedPackage(ownPkg, pkg, s.inputMethods)) return false
         if (s.whitelist.contains(pkg)) return false
+        // R4 — Focus Mode: during an active session every non-whitelisted,
+        // non-system-critical package is scannable/blockable — including
+        // DefaultSystemWhitelist ones (the user explicitly asked for quiet).
+        if (isFocusActive(s)) return true
         // User-explicit rules beat the default system/OEM whitelist (#3/#4).
         // (For non-system packages these early returns change nothing — the
         // function would reach `return true` anyway.)
@@ -119,6 +134,11 @@ class RulesEngine @Inject constructor(
         val s = snapshot
         if (AppClassifier.isAlwaysAllowedPackage(ownPkg, pkg, s.inputMethods)) return DetectionResult.Allow
         if (s.whitelist.contains(pkg)) return DetectionResult.Allow
+        // R4 — Focus Mode short-circuit: whole-device temporary pause. Uses
+        // SCHEDULE_BLOCKED (time-based) so overlays/logs need no new reason.
+        if (isFocusActive(s)) {
+            return DetectionResult.Block(BlockReason.SCHEDULE_BLOCKED, FOCUS_DETAIL)
+        }
         if (s.blocked.contains(pkg)) {
             // User block wins over the default system/OEM whitelist (explicit
             // rule > safety default). Warn-level once per package so an
@@ -198,5 +218,9 @@ class RulesEngine @Inject constructor(
         // expressed as lookarounds.
         const val BEFORE_WORD = "(?<![\\p{L}\\p{N}_])"
         const val AFTER_WORD = "(?![\\p{L}\\p{N}_])"
+
+        // R4 — detail string attached to Focus Mode blocks (shown in overlays
+        // and the activity log as the blocked-by text).
+        const val FOCUS_DETAIL = "Focus Mode"
     }
 }
