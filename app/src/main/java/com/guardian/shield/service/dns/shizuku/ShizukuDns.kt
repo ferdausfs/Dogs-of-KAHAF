@@ -25,6 +25,31 @@ import timber.log.Timber
  */
 object ShizukuDns {
 
+    /**
+     * `Shizuku.newProcess` is a PRIVATE static in shizuku-api 13.1.5 — the
+     * documented avenue (Shizuku's own samples) is reflection with a cached
+     * Method handle. R8-safe: `rikka.shizuku.**` is fully kept in proguard.
+     */
+    private val newProcessMethod: java.lang.reflect.Method? by lazy {
+        runCatching {
+            Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            ).apply { isAccessible = true }
+        }.onFailure {
+            Timber.e(it, "ShizukuDns: newProcess missing (Shizuku too old?)")
+        }.getOrNull()
+    }
+
+    private fun newShizukuProcess(cmd: Array<String>): Process? {
+        val method = newProcessMethod ?: return null
+        return runCatching { method.invoke(null, cmd, null, null) as Process }
+            .onFailure { Timber.e(it, "ShizukuDns: newProcess invoke failed") }
+            .getOrNull()
+    }
+
     /** Shizuku app installed AND its server running (started by the user). */
     fun isShizukuRunning(): Boolean =
         runCatching { Shizuku.pingBinder() }.getOrDefault(false)
@@ -51,10 +76,7 @@ object ShizukuDns {
      */
     fun run(command: String): Result? {
         if (!hasShizukuPermission()) return null
-        val proc = runCatching {
-            Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-        }.onFailure { Timber.e(it, "ShizukuDns: newProcess failed") }
-            .getOrNull() ?: return null
+        val proc = newShizukuProcess(arrayOf("sh", "-c", command)) ?: return null
         // Read BEFORE waitFor: if the child filled the 64KB pipe buffer it
         // blocks on write, and waitFor would never return (classic deadlock).
         val out = runCatching {

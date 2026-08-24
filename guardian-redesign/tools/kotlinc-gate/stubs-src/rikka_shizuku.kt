@@ -1,4 +1,7 @@
 // GATE STUB — rikka.shizuku (Shizuku API surface used by the app).
+// NOTE: newProcess is intentionally NOT here — it is private in the real
+// API and reached via reflection in the app, so the gate must NOT allow
+// direct calls to it (that's how this bug reached CI in v3.7.2-pre).
 package rikka.shizuku
 
 class Shizuku private constructor() {
@@ -19,10 +22,5 @@ class Shizuku private constructor() {
             listener: OnRequestPermissionResultListener
         ) {
         }
-        fun newProcess(
-            cmd: Array<String>,
-            env: Array<String>?,
-            dir: String?
-        ): Process = throw UnsupportedOperationException("stub")
     }
 }
