@@ -3669,3 +3669,224 @@ Blocked/whitelisted/whitelist-beats-blocklist semantics verified correct wheneve
 - Signature file format + Room `signatureCsv` (64 ints) — unchanged (strict matching is a
   pure in-memory decision on the same signatures).
 - Whitelist-beats-blocklist, grace period, non-AI block routing — verified by `TestRules`.
+
+# Session 2026-08-23 — Default system/OEM whitelist (distinct layer) + explicit high-risk exclusion list (arena/01a02e89-dogs-of-kahaf)
+
+**Base:** `main` @ `6b5eea7` (v3.6.4 / vc34, Bug H/I/J session merged). **Target: NONE this session — feature queued.**
+Per task instruction: **no merge to main, no release build, no versionCode/versionName bump**
+(`app/build.gradle.kts` untouched: still `versionCode 34`, `versionName "3.6.4"`). PR opened and
+left open; queued behind upcoming related changes awaiting the user's go-ahead.
+
+## What was added (scope-tight, 2 files)
+
+1. **NEW `app/src/main/java/com/guardian/shield/util/DefaultSystemWhitelist.kt`** — a static,
+   app-shipped safety layer (package-pattern whitelist for system/OEM namespaces + a hardcoded
+   explicit exclusion list + deduped diagnostic logging). Pure JVM logic: only `kotlin` +
+   `java.util.Collections` + `timber` — zero android/Room/Hilt dependencies, so it is trivially
+   testable and cannot be entangled with `RulesEngine.reload()`'s snapshot machinery.
+2. **MODIFIED `app/src/main/java/com/guardian/shield/service/detection/RulesEngine.kt`**
+   (+53 lines, comments included) — wiring into `canBlock()` and `evaluatePackage()` only.
+   `reload()`, `RulesSnapshot`, `evaluateText()`, `isScheduleBlocked()` — all untouched.
+
+Nothing else changed: no UI, no manifest, no Room schema, no DataStore keys, no strings,
+no build config, no workflow. `git diff --name-only` = `RulesEngine.kt` + new file (verified).
+
+## Research (every package ID evidence-backed, web-searched this session)
+
+| App | Package ID(s) | Source |
+|---|---|---|
+| YouTube | `com.google.android.youtube` | Play Store listing id; stackoverflow.com/q/14578373 |
+| YouTube TV / Music / Kids | `com.google.android.youtube.tv`, `...apps.youtube.music`, `...apps.youtube.kids` | uptodown/apkpure technical pages |
+| Facebook / FB Lite | `com.facebook.katana`, `com.facebook.lite` | stackoverflow.com/q/53433969 (5-upvote answer) + Play |
+| Messenger / Lite | `com.facebook.orca`, `com.facebook.mlite` | same SO answer |
+| Instagram / IG Lite | `com.instagram.android`, `com.instagram.lite` | androidapks.com technical file info |
+| Threads | `com.instagram.barcelona` | threads.androidapks.com + threads.com post |
+| X / Twitter | `com.twitter.android` | 9to5google.com/2023/07/26/x-twitter-android ("the app's package name remains com.twitter.android") |
+| Twitter Lite | `com.twitter.android.lite` | twitter-lite.androidapks.com |
+| Telegram (Play build / direct build) | `org.telegram.messenger`, `org.telegram.messenger.web` | **Telegram's own** core.telegram.org/reproducible-builds doc |
+| Telegram X | `org.thunderdog.challegram` | github.com/TGX-Android/Telegram-X (official) |
+| Chrome | `com.android.chrome` | apkpure listing |
+| Samsung Internet (+ Beta) | `com.sec.android.app.sbrowser(.beta)` | mobile.softpedia.com, androidapks.com, android.stackexchange.com |
+| Mi Video | `com.miui.video`, `com.miui.videoplayer` | apkmirror + apkcombo ("online short video", 1B+ installs) |
+| Core-Google system components | `gms`, `gsf`, `gsf.login`, `webview` (+`.beta/.dev/.canary`), `setupwizard` | Google Workspace admin **"Critical Android system apps"** MDM doc |
+| SafetyCore / KeyVerifier / PCC | `com.google.android.safetycore`, `com.google.android.contactkeys`, `com.google.android.as.oss` | developers.google.com/android/binary_transparency official doc |
+
+## Design decisions (reasoned, not assumed)
+
+### D1 — Patterns are dot-anchored PREFIXES, not a per-package mega-list
+`"com.android."`-style trailing-dot prefixes: `com.android.settings.intelligence` matches,
+`com.androidx.core` does NOT (boundary safety — asserted by test). This is future-proof
+(new OEM packages in the same namespace are covered for free) vs a hardcoded list that
+would be incomplete on day one. Namespace set:
+`android` (exact) + `android.`, `com.android.`, `com.samsung.`, `com.sec.`, `com.miui.`,
+`com.xiaomi.`, `com.mediatek.`, `com.qualcomm.qti.` (chipset-vendor vendor service trees).
+Samsung gets both namespaces (`com.sec.` is the legacy SEC tree that still carries
+incallui/camera/gallery on current devices).
+
+### D2 — REJECTED: blanket `com.google.android.` prefix (the task's explicit trap)
+That namespace holds BOTH platform components (Play services, WebView) AND nearly all
+Google consumer apps: YouTube (`com.google.android.youtube`), Photos/Maps/Gmail/Drive
+(`com.google.android.apps.*`), Google Search (`com.google.android.googlequicksearchbox` —
+Discover feed, image/video search: a content surface). Whitelisting the whole prefix and
+excluding consumer apps one-by-one = unmaintainable whack-a-mole where every FUTURE Google
+consumer app silently escapes content filtering. **Inverted design instead:** the core-Google
+list is a *closed* curated set of platform components with no content surface (sources above:
+Google's own MDM critical-apps list + Google's binary-transparency docs + Mainline module IDs):
+`gms, gsf, gsf.login, tts, as (System Intelligence), as.oss (Private Compute Services),
+safetycore, contactkeys, ext.services, ext.shared, modulemetadata, permissioncontroller,
+networkstack, documentsui`, plus boundary-safe prefixes `com.google.android.webview`
+(covers the stable+beta/dev/canary channel packages) and `com.google.android.overlay` (RROs).
+Every consumer app under `com.google.android.*` (incl. `apps.*`, quicksearchbox, and Chrome
+— which is actually `com.android.chrome`) stays scannable BY DEFAULT; the exclusion list
+keeps YouTube & co. defense-in-depth in case a broader Google pattern is ever added later.
+`com.google.android.deskclock`/`dialer` deliberately NOT duplicated here — already covered by
+AppClassifier's layer-0 always-allow (launchers/dialers), keeping the layers disjoint.
+
+### D3 — Explicit exclusion list ALWAYS wins over every pattern
+`NEVER_DEFAULT_WHITELIST` (exact package IDs) is checked FIRST inside
+`DefaultSystemWhitelist.matchReason()`, before any pattern — so an exclusion beats an OEM
+prefix by construction, not by caller discipline. Functionally critical today for the
+browser/content-app collisions: `com.android.chrome`, `com.android.browser` (vs `com.android.`),
+`com.sec.android.app.sbrowser(.beta)` (vs `com.sec.`), `com.miui.video` + `com.miui.videoplayer`
+(vs `com.miui.`), plus the entire task-named social set (YouTube family, Facebook family,
+Instagram family incl. Threads, X/Twitter + Lite, all three official-adjacent Telegram packages,
+Google Photos). Being excluded is NOT "must block" — it only means "never auto-protected";
+these apps stay fully subject to normal user rules + AI detection exactly as today, and users
+can still manually whitelist them (verified by test B7).
+- **Play Store (`com.android.vending`): NOT excluded — deliberately.** Google's own MDM docs
+  classify it as a *critical system app*; store listings are Play-policy-moderated; and the
+  v2.4.2 report finding **[C]** already recommended never blocking it. Users can still
+  explicitly block it themselves (D4).
+- One Samsung fold-in review: `com.sec.android.app.shealth` (Health), `com.sec.android.app.samsungapps`
+  (Galaxy Store), `com.samsung.android.oh` (Members) — no unsupervised user
+  content feeds → left whitelisted; `sbrowser` is the only real content surface there and is
+  excluded. MIUI: global browser is `com.mi.globalbrowser` — OUTSIDE the whitelisted
+  `com.miui.` prefix, so it stays scannable with no exclusion entry needed.
+
+### D4 — Priority order (the task's key question), implemented and TESTED
+Evaluated in this exact order in `RulesEngine` (both functions):
+
+| # | Layer | Effect |
+|---|---|---|
+| 1 | AppClassifier always-allow (self/SystemUI/home/IME/launchers/dialers/messaging) | never block/scan — **unchanged, non-overridable** (block here could deadlock the device) |
+| 2 | user whitelist | Allow (beats everything below — existing "whitelist-beats-blocklist", verified B6) |
+| 3 | **user EXPLICIT block** | **Block — BEATS the default whitelist** (task-required override; verified B4/B8) |
+| 4 | **user ENABLED schedule rule** | in-window → Block (verified B9); the package becomes "user-managed", so `canBlock=true` |
+| 5 | **DefaultSystemWhitelist** (no user rule) | Allow + never scanned, with distinct deduped Timber log (verified B1/B2/B10/B11) |
+| 6 | otherwise | normal flow (AI detection etc.) |
+
+Rationale for **user-rule-beats-default**: the default whitelist exists to stop ACCIDENTAL
+harm from treating everything equally. A rule the user typed in themselves is by definition
+not accidental (e.g. a parent deliberately blocking YouTube, or scheduling a utility app) —
+it is their device, so the explicit choice wins. The default only fills the gap where the
+user expressed no opinion. Implementation detail that makes this real: `canBlock()` is called
+BEFORE `evaluatePackage()` on every scan path (`handleWindowChange` :750, `handleContentChange`
+:786, `triggerAiCheck` :1055, `startPeriodicScanner` :1140), so `canBlock` itself must return
+`true` for user-blocked/user-scheduled system packages — otherwise the user rule would be
+unreachable. Hence the two added early returns (`s.blocked.contains(pkg)`,
+`s.scheduleRules[pkg]?.enabled == true`) *before* the default-whitelist gate. Consequence,
+documented: a system app with an enabled schedule is scanned like any normal scannable app
+outside the window (identical to how schedule rule apps behave today — schedules are additive
+to the AI path; out-of-window they fall through to the default-whitelist skip → Allow, B10).
+Layer-1 vs layer-0 boundary confirmed by test: `com.android.settings` remains a layer-0 skip
+(pre-existing `SYSTEM_ALWAYS_ALLOW` entry) — a user can NOT block it even today, unchanged;
+the user-override path was tested on `com.samsung.android.app.notes` (not layer-0, IS default
+-whitelisted) where the override genuinely routes through the new code. `NotificationShieldService`
+calls `evaluatePackage` DIRECTLY (no canBlock gate), so the default-whitelist short-circuit
+exists in `evaluatePackage` too (B16).
+
+### D5 — Diagnosable, distinguishable logging (task req. #4)
+`DefaultSystemWhitelist.logSkipOnce(pkg, reason)` — fires on the first skip of a package per
+process, deduped via a bounded (256) `LinkedHashSet` (canBlock is on the hot path; the
+periodic scanner would otherwise log every few seconds forever, verified B2 that 6 skips → 1
+record). Wording: `"DefaultSystemWhitelist: SKIPPED pkg=… (…pattern…) — auto system/OEM skip,
+NOT a user whitelist rule; …"` — user-rule skips log nothing today, so any whitelist-skip
+line in logcat unambiguously identifies this layer. A user's successful override of a
+default-whitelisted package is warn-logged (`.w`) so an intentional-but-risky block (e.g. of
+a store app) is visible in diagnostics (B4). The exact matched pattern (`com.sec.` prefix vs
+curated-component vs family-prefix) is included in the reason string.
+
+## Verification (same real-compile + real-behaviour method as the 2026-08-21 session)
+
+Sandbox: no JDK/SDK on PATH; `dl.google.com`, `services.gradle.org`, Maven Central unreachable —
+`./gradlew assembleRelease` impossible locally (same as every prior session). The real gate
+from the Bug H/I session was re-stood-up from scratch in THIS sandbox (fresh env; nothing
+inherited):
+
+- JRE 25.0.2 (jdk4py wheel), Kotlin **K2JVMCompiler 2.4.0-dev-6891** (same compiler the
+  2026-08-21 session used, extracted from the same `kotlin-jupyter-kernel-0.19.0.944` wheel),
+  **real `android-35.jar`** (27,092,450 bytes, 14,488 entries — matches the Bug-I session's
+  jar byte/entry counts exactly, Sable/android-platforms via `gh api` raw), real
+  `kotlin-stdlib-2.3.10-RC` + real kotlinx-coroutines (extracted from the fat jar WITH
+  `META-INF/kotlinx-coroutines-core.kotlin_module` — the module file is required for
+  multifile facades like `FlowKt`: without it `SupervisorJob`/`flow.first` etc. fail to
+  resolve; root-caused and fixed this session), generated `R.kt`/`BuildConfig.kt`
+  (240 constants) + **34 ViewBinding classes parsed from the live res tree** (293 id'd
+  views), hand-written stubs for androidx/appcompat/activity/fragment/lifecycle/recyclerview/
+  viewpager2/work/room/sqlite/security/datastore/material/tflite/dagger/hilt/javax.inject/timber.
+- **Gate 1 — full-app compile: `exit=0`, 0 errors, 770 `.class` files** (135 sources: all ~90
+  app Kotlin files + new file + gen + stubs, `-jvm-target 17`). The only gate-only artifact
+  is the same one the Bug-I session documented: `SettingsViewModel`'s 7-flow array-transform
+  `combine` — K2-dev refuses reifying the `Comparable&Serializable` intersection
+  (`kotlinx/coroutines/flow/FlowKt` vararg overload); K1 1.9.24 (the project's compiler, all
+  green CI builds) accepts it. Worked around with a fixed-arity, non-reified overload placed
+  in stub sources matching the call site's actual shape (`transform: (Array<out Any?>) -> R`);
+  **app code untouched** — verified: SettingsViewModel.kt has zero diff.
+- **Gate 2 — 103 JVM behaviour assertions, ALL GREEN**, against the REAL compiled classes
+  (`RulesEngine`, `DefaultSystemWhitelist`, real kotlinx-coroutines for `reload()`/Mutex/
+  SharedFlow, real Timber-stub recorder). Runtime android pieces are shadowed
+  (`android.content.Context/ContextWrapper` test-runtime shadows with identical JVM
+  descriptors — the real android.jar throws `Stub!` from every method, so a JVM test can
+  never instantiate a Context; the shadow executes the two methods `RulesEngine` actually
+  calls — `getPackageName`, `getSystemService`).
+
+Key assertions (log excerpts in the gate dir; full 103-line PASS list re-runnable):
+
+```
+TEST-A matcher (54):
+  match   com.android.settings / com.android.vending / com.samsung.android.app.notes /
+          com.sec.android.app.camera / com.miui.securitycenter / com.xiaomi.market /
+          com.mediatek.engineermode / com.qualcomm.qti.telephone / android /
+          all 14 curated core-Google components + webview.beta/dev + overlay.*
+  no-match com.google.android.youtube (+tv/music/kids) / apps.photos /
+          katana/lite/orca/mlite / instagram/lite/barcelona / twitter(+lite) /
+          org.telegram.messenger(+.web) / challegram /
+          com.android.chrome / com.android.browser /
+          com.sec.android.app.sbrowser(+.beta) / com.miui.video / com.miui.videoplayer /
+          googlequicksearchbox / apps.maps / com.androidx.core (prefix boundary!)
+  discriminators: youtube=false vs webview=true; sbrowser=false vs camera=true;
+                  chrome=false vs settings=true
+
+TEST-B priority matrix via real RulesEngine (49):
+  B1   system pkg, no rules -> canBlock=false, Allow, DISTINCT skip log (vs user whitelist)
+  B1'  com.android.settings skipped via layer-0 WITHOUT any default-whitelist log
+  B2   log dedup: 6 skips -> exactly 1 record; re-skip of already-logged pkg silent
+  B3   YouTube: canBlock=TRUE, Allow, NO default-whitelist log (exclusion wins over prefix)
+  B4   user explicit BLOCK of default-whitelisted pkg -> canBlock=true, Block(APP_BLOCKED),
+       override warn-logged            <-- priority statement D4#3
+  B5   user whitelist of system pkg -> Allow, no default-skip log (paths distinct)
+  B6   whitelist-beats-blocklist preserved
+  B7   user CAN whitelist YouTube (exclusion defeats only the DEFAULT whitelist)
+  B8   user-blocked YouTube blocks normally
+  B9   enabled in-window schedule on system app -> Block(SCHEDULE_BLOCKED)   <-- D4#4
+  B10  same schedule out-of-window -> canBlock=true but Allow + skip log
+  B11  DISABLED schedule does not disarm the default whitelist
+  B12  ordinary consumer app unaffected (canBlock/block round-trip)
+  B13  layer-0 messaging exception (com.whatsapp) intact, zero cross-layer logs
+  B14  keyword engine untouched ('porn' blocks, 'Essex' does not)
+  B15  Bug-I snapshot semantics intact: rule added without reload ignored -> reload applies it
+  B16  direct evaluatePackage (notif-shield path) returns Allow for OEM packages
+ALL BEHAVIOUR TESTS GREEN  (103 PASS, 0 FAIL)
+```
+
+## Regression check (deliberately untouched, verified)
+
+- `git diff --name-only` = `RulesEngine.kt` + the new file only. No version bump
+  (still `3.6.4`/34), no workflow changes, no strings, no schema, no manifest.
+- `reload()` / Bug-I retry loop / notification-shield keyword path / strike & temp-block
+  constants / AI thresholds / confirmed-strict matching — zero edits (grep-verified).
+- Semantics preserved & tested: whitelist-beats-blocklist (B6), always-allow messaging
+  (B13), keyword word boundaries (B14), Bug-I stale-snapshot+reload behavior (B15).
+- CI release workflow runs ONLY on push to `main`/`master` — this PR branch cannot trigger
+  it (verified `.github/workflows/build.yml` `on:` block); the in-repo release-tag guard
+  additionally fires only during `assembleRelease` task evaluation.

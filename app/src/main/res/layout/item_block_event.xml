@@ -25,12 +25,19 @@
             android:layout_height="0dp"
             android:visibility="gone"/>
 
-        <ImageView
-            android:id="@+id/imgAppIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:scaleType="fitCenter"
-            android:contentDescription="@null"/>
+        <FrameLayout
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle"
+            android:backgroundTint="@color/badge_error_bg">
+            <ImageView
+                android:id="@+id/imgAppIcon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null"/>
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -104,5 +111,5 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/border_subtle"
-        android:layout_marginStart="68dp"/>
+        android:layout_marginStart="72dp"/>
 </LinearLayout>

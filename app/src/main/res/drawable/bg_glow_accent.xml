@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pass 2 premium: soft radial accent glow. Used as the dashboard hero
+     shieldGlow background — the existing alpha pulse animation
+     (DashboardFragment) becomes a visible breathing glow. Purely visual. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="42dp"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:startColor="@color/glow_accent"
+        android:centerColor="@color/beacon_dim"
+        android:endColor="@android:color/transparent"/>
+</shape>

@@ -22,7 +22,12 @@
         android:layout_width="88dp"
         android:layout_height="88dp"
         android:background="@drawable/bg_icon_well"
-        android:backgroundTint="@color/primary_container">
+        android:backgroundTint="@color/beacon_dim">
+        <!-- Pass 2: soft radial accent aura behind the page glyph (visual only) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_glow_accent"/>
         <ImageView
             android:id="@+id/imgPageIcon"
             android:layout_width="36dp"
@@ -47,8 +52,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:textColor="@color/primary_dim"
-        android:textSize="12sp" android:textStyle="bold"
-        android:letterSpacing="0.1" android:textAllCaps="true"
+        android:textSize="13sp" android:textStyle="bold"
+        android:letterSpacing="0.06" android:textAllCaps="false"
         android:gravity="center"/>
 
     <TextView

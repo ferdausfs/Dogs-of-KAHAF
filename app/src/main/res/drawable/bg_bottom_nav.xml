@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pass 2 premium: bottom-nav bar — elevated fill + 1dp top hairline seam
+     so the tab bar reads as a distinct sheet edge (Linear/iOS-style hairline).
+     Used by Widget.GuardianShield.BottomNav in themes.xml. Purely visual. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/bg_elevated"/>
+            <corners android:topLeftRadius="24dp" android:topRightRadius="24dp"
+                android:bottomLeftRadius="0dp" android:bottomRightRadius="0dp"/>
+        </shape>
+    </item>
+    <item android:gravity="top" android:height="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/seam_top"/>
+        </shape>
+    </item>
+</layer-list>

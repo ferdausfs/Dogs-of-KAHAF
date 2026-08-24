@@ -57,7 +57,7 @@
                     android:visibility="gone"
                     tools:visibility="gone">
                     <ImageView android:layout_width="19dp" android:layout_height="19dp" android:src="@drawable/ic_time_lock" app:tint="@color/warning_amber" android:importantForAccessibility="no"/>
-                    <TextView android:id="@+id/txtLockRemaining" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/on_warning_container" android:textSize="13sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/txtLockRemaining" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/warning_amber" android:textSize="13sp" android:textStyle="bold"/>
                 </LinearLayout>
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="@string/section_protection" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
@@ -90,7 +90,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/unlock_delay" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/unlock_delay" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
@@ -121,7 +121,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_rules" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_rules" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="4dp">
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnApps" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_apps" app:icon="@drawable/ic_apps" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
@@ -134,7 +134,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_ai_v3" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_ai_v3" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
@@ -178,7 +178,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_security" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_security" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnChangePin" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_change_pin" app:icon="@drawable/ic_lock" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
@@ -187,7 +187,7 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- PHASE 2 (v3.5.0) — accountability partner -->
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_accountability" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_accountability" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnPartner" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_partner" app:icon="@drawable/ic_access" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
@@ -198,7 +198,7 @@
 
                 <!-- PHASE 4a (v3.5.0) — local backup/restore (rules + settings only;
                      PIN/time-lock/detection history are never exported). -->
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_backup" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_backup" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnBackupExport" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_backup_export" app:icon="@drawable/ic_export" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>
@@ -209,7 +209,7 @@
 
                 <!-- PHASE 4b (v3.5.0) — Help & FAQ. Read-only: stays usable even
                      during a Time-Lock, so it is NOT in the lock-disable list. -->
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:layout_marginBottom="8dp" android:text="@string/section_help" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:layout_marginBottom="10dp" android:text="@string/section_help" style="@style/TextAppearance.GuardianShield.SectionHeader"/>
                 <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" style="@style/Widget.GuardianShield.Card">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                         <com.google.android.material.button.MaterialButton android:id="@+id/btnHelp" style="@style/Widget.GuardianShield.SettingsRow" android:layout_width="match_parent" android:layout_height="64dp" android:text="@string/btn_help" app:icon="@drawable/ic_help" app:iconTint="@color/primary_dim" app:iconGravity="textStart"/>

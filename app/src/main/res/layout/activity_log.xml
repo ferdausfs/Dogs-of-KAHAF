@@ -46,7 +46,7 @@
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@color/inset"
+                    android:background="@drawable/bg_toggle_track"
                     android:padding="4dp"
                     app:singleSelection="true"
                     app:selectionRequired="true"
@@ -92,16 +92,76 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
+                <!-- R2-mock: violet reports hero (reference Reports screen) —
+                     total + weekly bars. txtCount stays bound (same id/type);
+                     bars are decorative static art until a data-bound chart
+                     lands in a Kotlin round. -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="2dp"
+                    style="@style/Widget.GuardianShield.Card.Beacon">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="18dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                            <TextView
+                                android:layout_width="0dp" android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/log_total_caption"
+                                android:textColor="@color/on_primary_container"
+                                android:alpha="0.72"
+                                android:textSize="11.5sp"
+                                android:maxLines="1"/>
+                            <TextView
+                                android:id="@+id/txtCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/on_primary_container"
+                                android:textSize="28sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="-0.02"
+                                android:fontFeatureSettings="tnum"
+                                tools:text="12 events"/>
+                        </LinearLayout>
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="84dp"
+                            android:layout_marginTop="12dp"
+                            android:src="@drawable/ic_bars_week"
+                            app:tint="@color/white"
+                            android:importantForAccessibility="no"/>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp">
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="M" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="T" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="W" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="T" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="F" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="S" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="S" android:gravity="center" android:textColor="@color/on_primary_container" android:alpha="0.6" android:textSize="10sp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView
-                    android:id="@+id/txtCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
                     android:layout_marginBottom="10dp"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="12 events"/>
+                    android:text="@string/todays_activity"
+                    style="@style/TextAppearance.GuardianShield.SectionHeader"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/txtEmpty"

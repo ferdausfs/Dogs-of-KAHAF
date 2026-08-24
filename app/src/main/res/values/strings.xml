@@ -516,4 +516,10 @@
 
     <string name="help_q10">Do blocked apps still show notification previews?</string>
     <string name="help_a10">By default, yes — Android posts a blocked app’s notifications to the shade, preview included. Turn on Settings → Notification shade shield and grant “Notification access”: previews from blocked apps (list, schedule or temp block) are then cancelled, and with your keyword filter on, any notification whose visible text matches your keywords is hidden too. One honest limit: a preview can flash for a split second before cancellation — unrooted Android gives no way to prevent that.</string>
+    <!-- R2-mock: reference-style home/report chrome -->
+    <string name="home_greeting">Assalamu alaikum 👋</string>
+    <string name="hero_protection_label">Protection is</string>
+    <string name="log_total_caption">Total blocked\nমোট ব্লক</string>
+    <string name="log_daily_activity">Daily activity\nদৈনিক কার্যকলাপ</string>
+    <string name="protection_summary_title">Protection summary\nপ্রোটেকশন সামারি</string>
 </resources>

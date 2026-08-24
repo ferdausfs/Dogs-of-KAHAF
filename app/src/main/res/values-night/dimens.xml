@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme: elevation is invisible on near-black — hairline strokes
+         (@color/card_stroke) carry the separation instead. -->
+    <dimen name="card_elevation">0dp</dimen>
+</resources>

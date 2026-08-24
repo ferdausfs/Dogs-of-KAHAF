@@ -7,14 +7,14 @@
             <gradient android:angle="270"
                 android:startColor="@color/amber_hero_start"
                 android:endColor="@color/amber_hero_end"/>
-            <corners android:radius="32dp"/>
+            <corners android:radius="24dp"/>
             <stroke android:width="1dp" android:color="@color/glow_warning"/>
         </shape>
     </item>
     <item android:gravity="top" android:height="1dp">
         <shape android:shape="rectangle">
             <solid android:color="@color/edge_highlight"/>
-            <corners android:radius="32dp"/>
+            <corners android:radius="24dp"/>
         </shape>
     </item>
 </layer-list>

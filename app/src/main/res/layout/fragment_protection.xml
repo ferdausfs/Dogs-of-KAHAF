@@ -34,17 +34,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="22dp">
 
                 <FrameLayout
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:background="@drawable/bg_icon_well"
                     android:backgroundTint="@color/beacon_dim">
                     <ImageView
                         android:id="@+id/imgShield"
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_shield_check"
                         app:tint="@color/primary_dim"
@@ -55,10 +55,10 @@
                     android:id="@+id/txtProtectionTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="16dp"
                     android:text="@string/all_shields_active"
                     android:textColor="@color/on_primary_container"
-                    android:textSize="22sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     android:letterSpacing="-0.02"/>
 
@@ -79,7 +79,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="● Active • সক্রিয়"
-                    android:textColor="@color/primary_dim"
+                    android:textColor="@color/on_primary_container"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:background="@drawable/bg_badge"
@@ -105,47 +105,57 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
                 <LinearLayout android:id="@+id/cardAi" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_ai_spark" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_purple_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_ai_spark" app:tint="@color/tile_purple_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ai_detection" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_ai_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
 
                 <LinearLayout android:id="@+id/cardAppBlocking" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_apps" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_blue_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_apps" app:tint="@color/tile_blue_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_app_blocking" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_apps_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
 
                 <LinearLayout android:id="@+id/cardKeyword" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_keyword" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_purple_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_keyword" app:tint="@color/tile_purple_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/keyword_filter" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_keywords_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
 
                 <LinearLayout android:id="@+id/cardSchedule" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_clock" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_orange_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_clock" app:tint="@color/tile_orange_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_schedule" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_schedule_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>
                     </LinearLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="@color/on_surface_dim" android:textSize="22sp"/>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="52dp"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="74dp"/>
 
                 <LinearLayout android:id="@+id/cardAccessibility" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="72dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
-                    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_access" app:tint="@color/primary_dim" android:importantForAccessibility="no"/>
+                    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_well" android:backgroundTint="@color/tile_green_bg">
+                        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_access" app:tint="@color/tile_green_fg" android:importantForAccessibility="no"/>
+                    </FrameLayout>
                     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/perm_accessibility" android:textColor="@color/on_surface" android:textSize="16sp" android:textStyle="bold"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/module_accessibility_sub" android:textColor="@color/on_surface_variant" android:textSize="13sp"/>

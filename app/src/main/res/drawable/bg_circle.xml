@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round tile well (summary stats). Tinted per call site via backgroundTint
+     with tile_*_bg; the glyph inside uses tile_*_fg. Purely visual. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/inset"/>
+</shape>

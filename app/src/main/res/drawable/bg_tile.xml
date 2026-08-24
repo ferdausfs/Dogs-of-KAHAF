@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reference quick-action tile: chunky rounded square tinted per call site
+     with tile_*_bg; the ripple comes from the view's FOREGROUND
+     (?attr/selectableItemBackground), so this background stays pure color. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/inset"/>
+    <corners android:radius="24dp"/>
+</shape>
