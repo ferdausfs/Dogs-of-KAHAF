@@ -41,14 +41,14 @@
     <color name="error_bright">#E5484D</color>
     <color name="on_error">#FFFFFF</color>
     <color name="error_container">#FDE8E7</color>
-    <color name="on_error_container">#7A271A</color>
+    <color name="on_error_container">#FFFFFF</color>
     <color name="success">#1F9D44</color>
     <color name="success_container">#DDF6E4</color>
     <color name="success_legacy">#1F9D44</color>
     <color name="warning_amber">#B54708</color>
     <color name="warning">#DC6803</color>
     <color name="warning_container">#FFF1D6</color>
-    <color name="on_warning_container">#93370D</color>
+    <color name="on_warning_container">#FFFFFF</color>
     <color name="info_sky">#5A4AD1</color>
     <color name="info_container">#E9E6FF</color>
 
@@ -100,10 +100,10 @@
     <color name="badge_neutral_bg">#0F14142B</color>
 
     <!-- Hero state tints -->
-    <color name="amber_hero_start">#FFE4C2</color>
-    <color name="amber_hero_end">#FFF4E2</color>
-    <color name="red_hero_start">#FBD5D3</color>
-    <color name="red_hero_end">#FDE9E8</color>
+    <color name="amber_hero_start">#FFB340</color>
+    <color name="amber_hero_end">#F79009</color>
+    <color name="red_hero_start">#FF7A72</color>
+    <color name="red_hero_end">#F04438</color>
 
     <!-- Colorful tile tokens (reference quick-action/summary accents) -->
     <color name="tile_blue_bg">#E4EBFF</color>

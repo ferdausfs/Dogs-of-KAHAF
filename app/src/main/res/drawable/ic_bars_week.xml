@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Decorative weekly bar chart for the Reports/Log summary card (reference
+     mock vibe). Static art tinted accent via app:tint until a data-bound
+     chart lands in a Kotlin round. Bars: M T W T F S S. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="96dp"
+    android:viewportWidth="240" android:viewportHeight="96">
+    <!-- rounded bars; last (today) is full-alpha, rest 45% -->
+    <path android:fillColor="#734EA7FF" android:pathData="M8,44 h18 a4,4 0 0 1 4,4 v44 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-44 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M42,56 h18 a4,4 0 0 1 4,4 v32 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-32 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M76,36 h18 a4,4 0 0 1 4,4 v52 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-52 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M110,48 h18 a4,4 0 0 1 4,4 v40 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-40 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M144,60 h18 a4,4 0 0 1 4,4 v28 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-28 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M178,28 h18 a4,4 0 0 1 4,4 v60 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-60 a4,4 0 0 1 4,-4 z" android:fillAlpha="0.45"/>
+    <path android:fillColor="#734EA7FF" android:pathData="M212,16 h18 a4,4 0 0 1 4,4 v72 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-72 a4,4 0 0 1 4,-4 z"/>
+</vector>

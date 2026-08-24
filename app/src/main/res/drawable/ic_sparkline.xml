@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Decorative sparkline for the hero "Blocked today" block (reference mock
+     vibe). Static art until a data-bound chart lands in a Kotlin round. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp" android:height="36dp"
+    android:viewportWidth="100" android:viewportHeight="36">
+    <!-- soft area fill -->
+    <path
+        android:pathData="M0,30 L12,26 L24,28 L36,20 L48,22 L60,14 L72,16 L84,8 L100,10 L100,36 L0,36 Z"
+        android:fillColor="#26FFFFFF"/>
+    <!-- line -->
+    <path
+        android:pathData="M0,30 L12,26 L24,28 L36,20 L48,22 L60,14 L72,16 L84,8 L100,10"
+        android:strokeColor="#CCFFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"/>
+    <!-- end dot -->
+    <path
+        android:pathData="M100,10 m-2.8,0 a2.8,2.8 0,1 0 5.6,0 a2.8,2.8 0,1 0 -5.6,0"
+        android:fillColor="#FFFFFF"/>
+</vector>

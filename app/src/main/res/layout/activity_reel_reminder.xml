@@ -25,7 +25,7 @@
         android:layout_height="72dp"
         android:layout_gravity="center_horizontal"
         android:background="@drawable/bg_icon_well"
-        android:backgroundTint="@color/primary_container">
+        android:backgroundTint="@color/beacon_dim">
         <ImageView
             android:layout_width="30dp" android:layout_height="30dp"
             android:layout_gravity="center"

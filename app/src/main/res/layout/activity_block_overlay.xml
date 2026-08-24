@@ -135,7 +135,7 @@
                 android:layout_width="0dp" android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:textColor="@color/on_warning_container"
+                android:textColor="@color/warning_amber"
                 android:textSize="13sp" android:textStyle="bold"
                 tools:text="🚫 Blocked for 15 minutes"/>
         </LinearLayout>

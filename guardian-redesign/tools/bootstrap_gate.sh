@@ -18,5 +18,5 @@ if [ ! -f /home/user/gate/android-30.jar ]; then
     -H "Accept: application/vnd.github.raw" > /home/user/gate/android-30.jar
 fi
 /home/user/gate/bin/aapt2 version
-cd - >/dev/null
-python3 "$(dirname "$0")/id_contract_gate.py" && python3 "$(dirname "$0")/aapt2_res_gate.py"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$SCRIPT_DIR/id_contract_gate.py" && python3 "$SCRIPT_DIR/aapt2_res_gate.py"

@@ -511,4 +511,10 @@
 
     <string name="help_q10">ব্লক করা অ্যাপের নোটিফিকেশন প্রিভিউ কি তাও দেখা যায়?</string>
     <string name="help_a10">ডিফল্ট অবস্থায় হ্যাঁ — ব্লক করা অ্যাপের নোটিফিকেশন প্রিভিউসহ শেডে পোস্ট হয়। Settings → Notification shade shield চালু করে “Notification access” দিন: তখন ব্লক করা অ্যাপের (লিস্ট, শিডিউল বা টেম্প ব্লক) প্রিভিউ বাতিল হয়ে যায়, আর কিওয়ার্ড ফিল্টার চালু থাকলে কিওয়ার্ড-মেলা নোটিফিকেশন-লেখাও লুকিয়ে যায়। একটা সৎ সীমা: বাতিলের আগে প্রিভিউ এক মুহূর্ত ঝলক দেখাতে পারে — আনরুটেড অ্যান্ড্রয়েডে এটা আটকানোর কোনো উপায় নেই।</string>
+    <!-- R2-mock: reference-style home/report chrome -->
+    <string name="home_greeting">আসসালামু আলাইকুম 👋</string>
+    <string name="hero_protection_label">সুরক্ষা</string>
+    <string name="log_total_caption">মোট ব্লক\nTotal blocked</string>
+    <string name="log_daily_activity">দৈনিক কার্যকলাপ\nDaily activity</string>
+    <string name="protection_summary_title">প্রোটেকশন সামারি\nProtection summary</string>
 </resources>

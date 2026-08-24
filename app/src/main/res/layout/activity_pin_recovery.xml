@@ -194,7 +194,7 @@
             android:background="@drawable/bg_lock_banner"
             android:padding="14dp"
             android:text="@string/recovery_warning_banner"
-            android:textColor="@color/on_warning_container"
+            android:textColor="@color/warning_amber"
             android:textSize="12.5sp"
             android:lineSpacingMultiplier="1.5"/>
 
