@@ -60,6 +60,12 @@ class KeywordActivity : AppCompatActivity() {
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
 
+        // R4 — Smart Filters entry (viewing is safe; toggling is guarded
+        // inside FiltersActivity when time-locked).
+        binding.cardFilters.setOnClickListener {
+            startActivity(android.content.Intent(this, FiltersActivity::class.java))
+        }
+
         if (!locked) {
             val swipe = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {

@@ -63,8 +63,8 @@ class DashboardFragment : Fragment() {
             startActivity(Intent(requireContext(), com.guardian.shield.ui.settings.KeywordActivity::class.java))
         }
         binding.cardWhitelist.setOnClickListener {
-            // Whitelist is filter inside App List — launch App List, user can tap Whitelisted chip
-            startActivity(Intent(requireContext(), com.guardian.shield.ui.settings.AppListActivity::class.java))
+            // R4 — dedicated Whitelist screen
+            startActivity(Intent(requireContext(), com.guardian.shield.ui.settings.WhitelistActivity::class.java))
         }
         binding.txtSeeAll.setOnClickListener {
             startActivity(Intent(requireContext(), com.guardian.shield.ui.activitylog.ActivityLogActivity::class.java))
@@ -74,6 +74,8 @@ class DashboardFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { viewModel.uiState.collect { render(it) } }
                 launch { viewModel.streakInfo.collect { renderStreak(it) } }
+                // R4 — real hourly sparkline data
+                launch { viewModel.hourlyToday.collect { binding.chartSparkline.setData(it) } }
             }
         }
     }
@@ -243,6 +245,8 @@ class DashboardFragment : Fragment() {
         binding.txtStatusSubtitle.alpha = 0.78f
         binding.btnToggle.backgroundTintList = ColorStateList.valueOf(ctx.getColor(btnBg))
         binding.btnToggle.setTextColor(ctx.getColor(btnText))
+        // r4: sparkline inherits the hero on-color per state
+        binding.chartSparkline.setColors(ctx.getColor(textOn))
     }
 
     private data class Quad(val heroRes: Int, val textOn: Int, val btnBg: Int, val btnText: Int)

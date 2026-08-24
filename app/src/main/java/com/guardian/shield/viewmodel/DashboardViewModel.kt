@@ -107,6 +107,21 @@ class DashboardViewModel @Inject constructor(
 
     fun setProtectionActive(active: Boolean) { _protectionActive.value = active }
 
+    // R4 — REAL sparkline data: today's block events bucketed per hour (24
+    // buckets). Read-only over block_events; starts from today's local
+    // midnight at VM creation.
+    val hourlyToday: StateFlow<List<Int>> = repo.observeEventsSince(todayStart)
+        .map { events ->
+            val buckets = IntArray(24)
+            val cal = Calendar.getInstance()
+            events.forEach {
+                cal.timeInMillis = it.timestamp
+                buckets[cal.get(Calendar.HOUR_OF_DAY)]++
+            }
+            buckets.toList()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), List(24) { 0 })
+
     fun toggleProtection() {
         viewModelScope.launch {
             val current = prefs.protectionEnabled.first()

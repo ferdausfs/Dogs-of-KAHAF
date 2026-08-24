@@ -1,0 +1,2 @@
+# generated + compiled gate artifacts (rebuilt on every kotlinc_gate.sh run)
+build/

@@ -19,6 +19,7 @@ import com.guardian.shield.databinding.ActivityMainBinding
 import com.guardian.shield.service.blocker.GuardianForegroundService
 import com.guardian.shield.ui.activitylog.ActivityLogActivity
 import com.guardian.shield.ui.dashboard.fragments.DashboardFragment
+import com.guardian.shield.ui.guard.AccessibilityPromptActivity
 import com.guardian.shield.ui.onboarding.OnboardingActivity
 import com.guardian.shield.ui.settings.SettingsActivity
 import com.guardian.shield.util.PermissionManager
@@ -70,6 +71,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // R4 — floating Quick-Add FAB (reference mock center action button).
+        binding.fabAdd.setOnClickListener {
+            QuickAddSheet().show(supportFragmentManager, "quick_add")
+        }
+
         if (savedInstanceState == null) {
             loadFragment(DashboardFragment())
         }
@@ -88,6 +94,22 @@ class MainActivity : AppCompatActivity() {
             if (isFirstRun) {
                 startActivity(OnboardingActivity.launchIntent(this@MainActivity))
                 finish()
+                return@launch
+            }
+            // UX FIX (v3.6.6) — the single biggest "the app doesn't block"
+            // report: after a fresh install, an uninstall+reinstall, or the
+            // accessibility toggle silently dying, blocking is OFF until the
+            // service is (re)granted — and the only re-prompt used to come
+            // from the foreground-service watchdog seconds-to-minutes later
+            // (and only while THAT service is alive). Check accessibility on
+            // every cold open so the user is re-prompted instantly; this also
+            // makes "open the app" a guaranteed self-heal step.
+            if (!PermissionManager.isAccessibilityEnabled(this@MainActivity)) {
+                runCatching {
+                    startActivity(
+                        Intent(this@MainActivity, AccessibilityPromptActivity::class.java)
+                    )
+                }
                 return@launch
             }
             checkDeviceAdmin()

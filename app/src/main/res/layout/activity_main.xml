@@ -49,4 +49,32 @@
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
         app:elevation="0dp"/>
+
+    <!-- R4 — floating Quick-Add FAB docked over the nav bar center
+         (reference mock: violet circular action button with halo). Placed
+         AFTER the nav bar so it draws on top. -->
+    <FrameLayout
+        android:id="@+id/fabHalo"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/bg_circle"
+        android:backgroundTint="@color/surface"
+        android:padding="4dp"
+        android:elevation="8dp"
+        android:layout_marginBottom="26dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAdd"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_add"
+            app:tint="@color/on_primary_container"
+            android:backgroundTint="@color/primary_container"
+            app:borderWidth="0dp"
+            app:elevation="0dp"
+            app:fabCustomSize="56dp"
+            android:contentDescription="@string/quick_add_cd"/>
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

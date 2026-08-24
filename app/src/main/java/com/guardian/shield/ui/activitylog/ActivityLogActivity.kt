@@ -51,6 +51,19 @@ class ActivityLogActivity : AppCompatActivity() {
         binding.chipApp.setOnClickListener { viewModel.setFilter(LogFilter.APP) }
         binding.chipSchedule.setOnClickListener { viewModel.setFilter(LogFilter.SCHEDULE) }
 
+        // R4 — real weekly bars on the violet Reports card (white on vivid
+        // hero; track = same hue at 35%).
+        val barColor = getColor(R.color.on_primary_container)
+        binding.chartWeek.setColors(
+            barColor,
+            android.graphics.Color.argb(
+                90,
+                android.graphics.Color.red(barColor),
+                android.graphics.Color.green(barColor),
+                android.graphics.Color.blue(barColor)
+            )
+        )
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
@@ -61,6 +74,12 @@ class ActivityLogActivity : AppCompatActivity() {
                     binding.txtCount.text =
                         getString(R.string.activity_log_count_fmt, state.events.size)
                 }
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.weekCounts.collect { binding.chartWeek.setData(it) }
             }
         }
     }

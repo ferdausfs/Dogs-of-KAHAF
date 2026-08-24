@@ -108,6 +108,10 @@
     <color name="tile_purple_fg">#A99BFF</color>
     <color name="tile_orange_bg">#3A2A16</color>
     <color name="tile_orange_fg">#FFA94D</color>
+    <color name="tile_rose_bg">#38182A</color>
+    <color name="tile_rose_fg">#F48FB1</color>
+    <color name="tile_teal_bg">#12352F</color>
+    <color name="tile_teal_fg">#5ED9C6</color>
 
     <!-- Theme-adaptive utility tokens -->
     <color name="badge_neutral_fill">#12FFFFFF</color>

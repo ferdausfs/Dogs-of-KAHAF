@@ -70,6 +70,59 @@
                 android:textSize="13sp" android:textStyle="bold"/>
         </LinearLayout>
 
+        <!-- R4 — Smart Filters promo: one-tap category protection on top of
+             the manual keyword list below. -->
+        <LinearLayout
+            android:id="@+id/cardFilters"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_tile"
+            android:backgroundTint="@color/tile_rose_bg"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="14dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+            <FrameLayout
+                android:layout_width="44dp" android:layout_height="44dp"
+                android:background="@drawable/bg_circle"
+                android:backgroundTint="@color/surface">
+                <ImageView
+                    android:layout_width="22dp" android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_layers"
+                    app:tint="@color/tile_rose_fg"
+                    android:importantForAccessibility="no"/>
+            </FrameLayout>
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginStart="14dp">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/filters_promo_title"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15.5sp" android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/filters_promo_sub"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12.5sp"/>
+            </LinearLayout>
+            <ImageView
+                android:layout_width="22dp" android:layout_height="22dp"
+                android:layout_marginStart="10dp"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@color/on_surface_dim"
+                android:importantForAccessibility="no"/>
+        </LinearLayout>
+
         <!-- Empty state (mock: inset well + dim glyph, 17sp/800 heading) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/txtEmpty"
