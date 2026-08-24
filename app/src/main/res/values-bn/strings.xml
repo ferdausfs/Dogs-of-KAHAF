@@ -253,6 +253,13 @@
     <string name="screentime_used_today_fmt">আজ %1$s</string>
     <string name="screentime_blocked_toast_fmt">%1$s ব্লক তালিকায় যোগ হয়েছে</string>
     <string name="screentime_tap_hint">বিস্তারিতের জন্য চাপুন</string>
+    <string name="bedtime_title">বেডটাইম মোড · Bedtime</string>
+    <string name="bedtime_sub">প্রতি রাতে অ্যাপ নিজে থামবে · Nightly pause, automatic</string>
+    <string name="bedtime_status_active_fmt">চালু — %1$s পর্যন্ত অ্যাপ থামবে</string>
+    <string name="bedtime_status_next_fmt">আজ রাতে: %1$s → %2$s</string>
+    <string name="bedtime_status_off">বন্ধ — রাতের সময় ঠিক করুন</string>
+    <string name="bedtime_start_fmt">শুরু %1$s</string>
+    <string name="bedtime_end_fmt">শেষ %1$s</string>
     <string name="quick_actions">দ্রুত পদক্ষেপ · Quick actions</string>
     <string name="todays_activity">সাম্প্রতিক ব্লক · Today’s activity</string>
     <string name="see_all">সব দেখুন</string>

@@ -256,6 +256,13 @@
     <string name="screentime_used_today_fmt">%1$s today</string>
     <string name="screentime_blocked_toast_fmt">%1$s added to blocked apps</string>
     <string name="screentime_tap_hint">Tap for details</string>
+    <string name="bedtime_title">Bedtime Mode · বেডটাইম</string>
+    <string name="bedtime_sub">Distractions pause automatically every night · প্রতি রাতে অ্যাপ নিজে থামবে</string>
+    <string name="bedtime_status_active_fmt">Active — apps paused until %1$s</string>
+    <string name="bedtime_status_next_fmt">Tonight: %1$s → %2$s</string>
+    <string name="bedtime_status_off">Off — set a nightly window</string>
+    <string name="bedtime_start_fmt">From %1$s</string>
+    <string name="bedtime_end_fmt">Until %1$s</string>
     <string name="quick_actions">Quick actions · দ্রুত পদক্ষেপ</string>
     <string name="todays_activity">Today’s activity · সাম্প্রতিক ব্লক</string>
     <string name="see_all">See all</string>
