@@ -24,9 +24,19 @@ object ScreenInsets {
     /** Top app bars / full-screen headers: lift content below the status bar. */
     fun padTopForStatusBar(target: View) {
         val baseTop = target.paddingTop
+        // Positive LayoutParams.height = EXACT XML height (e.g. a toolbar's
+        // ?attr/actionBarSize). Padding alone would then SHRINK the content
+        // area and cut the title vertically in half (owner screenshot,
+        // v3.6.7 regression) — so exact-height bars must GROW by the inset
+        // instead of absorbing it. wrap_content views (height <= 0) grow
+        // naturally from padding and need no help.
+        val baseHeight = target.layoutParams?.height ?: 0
         ViewCompat.setOnApplyWindowInsetsListener(target) { v, insets ->
             val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             v.setPadding(v.paddingLeft, baseTop + top, v.paddingRight, v.paddingBottom)
+            if (baseHeight > 0) {
+                v.layoutParams = v.layoutParams?.apply { height = baseHeight + top }
+            }
             insets
         }
         ViewCompat.requestApplyInsets(target)
