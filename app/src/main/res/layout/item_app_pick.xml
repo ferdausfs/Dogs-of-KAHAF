@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R7.3 — ONE SHIELD premium app-pick row for the schedule editor:
+     40dp launcher icon, app name 15sp/600 + package 11.5sp dim, trailing
+     check-circle when picked. All ids NEW — no contract changes. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:minHeight="58dp"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="6dp"
+    android:background="?attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/imgPickIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:scaleType="fitCenter"
+        android:importantForAccessibility="no"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginStart="12dp">
+
+        <TextView
+            android:id="@+id/txtPickName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/on_surface"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/txtPickPkg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="11.5sp"
+            android:fontFamily="monospace"
+            android:singleLine="true"
+            android:ellipsize="end"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/imgPicked"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_check_circle"
+        app:tint="@color/primary"
+        android:visibility="gone"
+        android:importantForAccessibility="no"/>
+</LinearLayout>

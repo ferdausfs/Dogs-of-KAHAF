@@ -126,6 +126,38 @@ class ScheduleActivity : AppCompatActivity() {
         val editPkg = view.findViewById<EditText>(R.id.editPackage)
         val txtStart = view.findViewById<TextView>(R.id.txtStart)
         val txtEnd = view.findViewById<TextView>(R.id.txtEnd)
+
+        // ---- R7.3 — searchable premium app picker ------------------------
+        // editPackage doubles as the (search)box AND the value holder:
+        // tapping a row writes its package there, so Save needs no change.
+        val recyclerAppPick = view.findViewById<RecyclerView>(R.id.recyclerAppPick)
+        val txtPickEmpty = view.findViewById<TextView>(R.id.txtPickEmpty)
+        val pickAdapter = AppPickAdapter(packageManager) { pick ->
+            editPkg.setText(pick.packageName)
+            editPkg.setSelection(pick.packageName.length)
+        }
+        recyclerAppPick.layoutManager = LinearLayoutManager(this)
+        recyclerAppPick.adapter = pickAdapter
+
+        fun refreshPickList(query: String) {
+            if (!pickAdapter.hasData()) return
+            val count = pickAdapter.submitFiltered(query, query.trim())
+            txtPickEmpty.visibility = if (count == 0) View.VISIBLE else View.GONE
+        }
+
+        editPkg.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                refreshPickList(s?.toString().orEmpty())
+            }
+        })
+
+        lifecycleScope.launch {
+            val apps = withContext(Dispatchers.IO) { loadLaunchableApps() }
+            pickAdapter.setData(apps, editPkg.text.toString().trim())
+            refreshPickList(editPkg.text.toString())
+        }
         val chipSu = view.findViewById<Chip>(R.id.chipSun)
         val chipMo = view.findViewById<Chip>(R.id.chipMon)
         val chipTu = view.findViewById<Chip>(R.id.chipTue)
@@ -184,6 +216,28 @@ class ScheduleActivity : AppCompatActivity() {
     private fun showLockedSnack() {
         Snackbar.make(binding.root, R.string.lock_editing_disabled, Snackbar.LENGTH_SHORT).show()
     }
+
+    /** Every launchable app (installed user apps + system apps with a launcher). */
+    private fun loadLaunchableApps(): List<AppPick> = runCatching {
+        val pm = packageManager
+        pm.getInstalledApplications(0)
+            .asSequence()
+            .filter { it.packageName != packageName }
+            .filter { app ->
+                val isSystem =
+                    (app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                !isSystem || pm.getLaunchIntentForPackage(app.packageName) != null
+            }
+            .map { app ->
+                AppPick(
+                    packageName = app.packageName,
+                    label = pm.getApplicationLabel(app).toString()
+                        .ifBlank { app.packageName }
+                )
+            }
+            .sortedBy { it.label.lowercase() }
+            .toList()
+    }.getOrDefault(emptyList())
 
     // ---- R4 Focus Mode ---------------------------------------------------
     // Temporary whole-device pause of distracting apps. State lives in
@@ -345,7 +399,20 @@ class ScheduleAdapter(
 
     inner class VH(private val b: ItemScheduleRuleBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(rule: ScheduleRule) {
-            b.txtPackage.text = rule.packageName
+            // R7.3 — friendly label first ("Instagram"), raw package as
+            // fallback so legacy/manual entries still display something.
+            val label = runCatching {
+                val pmi = b.root.context.packageManager
+                    .getApplicationInfo(rule.packageName, 0)
+                b.root.context.packageManager.getApplicationLabel(pmi).toString()
+            }.getOrNull().orEmpty()
+            b.txtPackage.text = label.ifBlank { rule.packageName }
+            // R7.3 — real app icon in the row (falls back to the clock glyph).
+            runCatching {
+                b.imgAppIcon.setImageDrawable(
+                    b.root.context.packageManager.getApplicationIcon(rule.packageName)
+                )
+            }.onFailure { b.imgAppIcon.setImageResource(R.drawable.ic_clock) }
             val daysShort = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
             val daysText = (0..6).filter { rule.enabledDays.contains(it) }
                 .joinToString("") { daysShort[it] + " " }

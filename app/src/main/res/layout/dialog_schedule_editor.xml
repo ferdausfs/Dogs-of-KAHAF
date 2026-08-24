@@ -28,7 +28,7 @@
         android:layout_marginTop="18dp"
         style="@style/Widget.GuardianShield.SearchBox"
         app:hintEnabled="true"
-        android:hint="@string/package_hint">
+        android:hint="@string/schedule_search_hint">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editPackage"
             android:layout_width="match_parent"
@@ -39,6 +39,28 @@
             android:inputType="text"
             android:maxLines="1"/>
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- R7.3 — searchable premium app list: filters live while typing in
+         editPackage; tapping a row writes its package into the field. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerAppPick"
+        android:layout_width="match_parent"
+        android:layout_height="218dp"
+        android:layout_marginTop="10dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"/>
+
+    <TextView
+        android:id="@+id/txtPickEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="@string/schedule_pick_empty"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="12.5sp"
+        android:visibility="gone"/>
 
     <LinearLayout
         android:layout_width="match_parent"
