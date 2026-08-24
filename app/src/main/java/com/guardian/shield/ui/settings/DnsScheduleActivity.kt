@@ -3,10 +3,14 @@ package com.guardian.shield.ui.settings
 import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.guardian.shield.R
@@ -14,8 +18,10 @@ import com.guardian.shield.data.local.datastore.GuardianPreferences
 import com.guardian.shield.databinding.ActivityDnsScheduleBinding
 import com.guardian.shield.service.dns.PrivateDnsController
 import com.guardian.shield.service.dns.PrivateDnsScheduler
+import com.guardian.shield.service.dns.shizuku.ShizukuDns
 import com.guardian.shield.util.ScreenInsets
 import dagger.hilt.android.AndroidEntryPoint
+import rikka.shizuku.Shizuku
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -79,6 +85,9 @@ class DnsScheduleActivity : AppCompatActivity() {
         }
         binding.btnDnsPermRefresh.setOnClickListener { renderBanner() }
 
+        // R6 — one-tap no-computer grant through Shizuku.
+        binding.btnDnsShizuku.setOnClickListener { startShizukuFlow() }
+
         binding.btnDnsTestOn.setOnClickListener {
             val host = hostFromUi()
             if (host.isBlank()) { toast(R.string.dns_status_no_host); return@setOnClickListener }
@@ -98,6 +107,62 @@ class DnsScheduleActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderBanner()
+    }
+
+    // ------------------------------------------------------------- Shizuku
+
+    private val shizukuPermissionListener =
+        Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                bindAndSelfGrant()
+            } else {
+                toast(R.string.dns_toast_no_perm)
+            }
+            renderBanner()
+        }
+
+    override fun onStart() {
+        super.onStart()
+        runCatching { Shizuku.addRequestPermissionResultListener(shizukuPermissionListener) }
+    }
+
+    override fun onStop() {
+        runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
+        super.onStop()
+    }
+
+    private fun startShizukuFlow() {
+        when {
+            !ShizukuDns.isShizukuRunning() -> AlertDialog.Builder(this)
+                .setTitle(R.string.dns_perm_title)
+                .setMessage(R.string.dns_shizuku_missing)
+                .setPositiveButton(R.string.dns_shizuku_open) { _, _ ->
+                    runCatching {
+                        startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app"))
+                        )
+                    }
+                }
+                .setNegativeButton(R.string.action_later) { _, _ -> }
+                .show()
+            !ShizukuDns.hasShizukuPermission() -> ShizukuDns.requestPermission()
+            else -> bindAndSelfGrant()
+        }
+    }
+
+    /** Bind the shell UserService, then grant ourselves WRITE_SECURE_SETTINGS. */
+    private fun bindAndSelfGrant() {
+        ShizukuDns.bindService {
+            val granted = ShizukuDns.grantSelfSecureSettings(this)
+            Timber.i("DNS Shizuku self-grant: $granted")
+            if (granted) {
+                toast(R.string.dns_perm_ok)
+                applyNow()
+            } else {
+                toast(R.string.dns_toast_no_perm)
+            }
+            renderBanner()
+        }
     }
 
     private fun setHost(host: String) {
@@ -188,13 +253,15 @@ class DnsScheduleActivity : AppCompatActivity() {
     }
 
     private fun renderBanner() {
-        val granted = PrivateDnsController.hasPermission(this)
-        binding.cardDnsPerm.visibility = if (granted) View.GONE else View.VISIBLE
+        // Banner stays until ANY control path exists (permanent grant OR a
+        // live Shizuku shell) — R6: Shizuku alone is already enough to drive.
+        val hasControl = PrivateDnsController.hasControl(this)
+        binding.cardDnsPerm.visibility = if (hasControl) View.GONE else View.VISIBLE
         rendering = true
         binding.switchDnsAuto.isEnabled = true
         rendering = false
         renderStatus()
-        if (!granted && binding.switchDnsAuto.isChecked) {
+        if (!hasControl && binding.switchDnsAuto.isChecked) {
             binding.txtDnsStatusSub.text = getString(R.string.dns_status_no_perm_sub)
         }
     }

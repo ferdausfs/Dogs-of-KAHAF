@@ -99,11 +99,18 @@
                         android:lineSpacingMultiplier="1.25"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDnsShizuku"
+                        style="@style/Widget.GuardianShield.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/dns_perm_shizuku_btn"/>
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDnsCopyCmd"
                         style="@style/Widget.GuardianShield.Button.Tonal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
                         android:text="@string/dns_perm_copy"/>
 
                     <com.google.android.material.button.MaterialButton

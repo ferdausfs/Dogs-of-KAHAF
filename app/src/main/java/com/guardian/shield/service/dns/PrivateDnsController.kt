@@ -5,30 +5,25 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.provider.Settings
+import com.guardian.shield.service.dns.shizuku.ShizukuDns
 import timber.log.Timber
 
 /**
- * Applies the Private DNS desired state (R5 — DNS Auto Mode).
+ * Applies the Private DNS desired state (R5) — now with TWO engines (R6):
  *
- * HARD TRUTH (told to the owner too): a plain Device Admin / normal app can
- * NOT touch Private DNS — Google keeps `Settings.Global` behind
- * `WRITE_SECURE_SETTINGS`, which parents grant ONCE via ADB:
+ *  1. DIRECT  — the app holds WRITE_SECURE_SETTINGS (one-time grant; either
+ *               the classic ADB command, or granted BY ITSELF via Shizuku's
+ *               one-tap `pm grant` — permanent, survives reboots).
+ *  2. SHIZUKU — interim fallback: `settings put/get global` executed through
+ *               the Shizuku shell until the permanent self-grant exists.
  *
- *   adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS
- *
- * So every write goes through [hasPermission] + runCatching: if the grant is
- * missing the feature simply no-ops and the settings screen shows the guided
- * banner. Nothing crashes, ever.
+ * If neither is available the feature no-ops and the settings screen shows
+ * the guided banner (Shizuku path first, ADB as alternative). Never crashes.
  *
  * State machine (cache lives in [PrivateDnsScheduler]'s SharedPreferences):
- *  - Transition OFF→ON: we first CAPTURE the user's own mode/specifier
- *    (`prev_mode`/`prev_spec`) and mark `auto_applied=true`, then write
- *    hostname mode.
- *  - Transition ON→OFF: only if `auto_applied` do we RESTORE the captured
- *    values (hostname+specifier if the user had their own DoT, else
- *    off/opportunistic) — we never stomp a setting we didn't make.
- *  - Manual "turn on now" test buttons bypass `auto_applied`, so the engine
- *    never "helpfully" resets a DNS the user set by hand.
+ *  - OFF→ON: CAPTURE the user's own mode/specifier, mark auto_applied, write hostname.
+ *  - ON→OFF: only if auto_applied, RESTORE the captured values — never stomp
+ *    a DNS setting we didn't make. Manual test buttons bypass the state machine.
  */
 object PrivateDnsController {
 
@@ -43,26 +38,57 @@ object PrivateDnsController {
     const val MODE_OPPORTUNISTIC = "opportunistic"
     const val MODE_HOSTNAME = "hostname"
 
-    private const val C_PREV_MODE = "prev_mode"           // captured user mode
-    private const val C_PREV_SPEC = "prev_spec"           // captured user specifier
-    private const val C_AUTO_APPLIED = "auto_applied"     // we own the current writing
+    private const val C_PREV_MODE = "prev_mode"
+    private const val C_PREV_SPEC = "prev_spec"
+    private const val C_AUTO_APPLIED = "auto_applied"
+
+    /** Any working DNS-control path (direct grant or live Shizuku). */
+    fun hasControl(context: Context): Boolean =
+        hasPermission(context) || ShizukuDns.hasShizukuPermission()
 
     fun hasPermission(context: Context): Boolean =
         context.checkSelfPermission(PERMISSION) == PackageManager.PERMISSION_GRANTED
 
-    /** Current global Private DNS mode ("off"/"opportunistic"/"hostname"/null). */
-    fun currentMode(context: Context): String? = runCatching {
-        Settings.Global.getString(context.contentResolver, KEY_MODE)
-    }.getOrNull()
+    // ---------------------------------------------------------------- engine
 
-    fun currentSpecifier(context: Context): String? = runCatching {
-        Settings.Global.getString(context.contentResolver, KEY_SPECIFIER)
-    }.getOrNull()
+    private fun readGlobal(context: Context, key: String): String? {
+        if (hasPermission(context)) {
+            return runCatching {
+                Settings.Global.getString(context.contentResolver, key)
+            }.getOrNull()
+        }
+        if (ShizukuDns.hasShizukuPermission() && ShizukuDns.ensureBound()) {
+            val out = ShizukuDns.run("settings get global $key") ?: return null
+            val line = out.lineSequence().drop(1).firstOrNull()?.trim()
+            return line?.takeUnless { it.isEmpty() || it == "null" }
+        }
+        return null
+    }
+
+    private fun writeGlobal(context: Context, key: String, value: String): Boolean {
+        if (hasPermission(context)) {
+            return runCatching {
+                Settings.Global.putString(context.contentResolver, key, value)
+            }.onFailure { Timber.e(it, "settings put failed") }.getOrDefault(false)
+        }
+        if (ShizukuDns.hasShizukuPermission() && ShizukuDns.ensureBound()) {
+            val out = ShizukuDns.run("settings put global $key $value")
+            return out?.startsWith("0\n") == true
+        }
+        return false
+    }
+
+    /** Current global Private DNS mode ("off"/"opportunistic"/"hostname"/null). */
+    fun currentMode(context: Context): String? = readGlobal(context, KEY_MODE)
+
+    fun currentSpecifier(context: Context): String? = readGlobal(context, KEY_SPECIFIER)
+
+    // ------------------------------------------------------------- policy
 
     /**
      * Enforce the desired state for RIGHT NOW given the schedule.
      * @return a short human-readable outcome for logs/status, or null when the
-     *         feature is inert (disabled / no host / no permission).
+     *         feature is inert (disabled / no host / no control path).
      */
     fun applyDesiredState(
         context: Context,
@@ -72,8 +98,8 @@ object PrivateDnsController {
         prefs: SharedPreferences
     ): String? {
         if (!enabled || host.isBlank()) return null
-        if (!hasPermission(context)) {
-            Timber.w("PrivateDns: WRITE_SECURE_SETTINGS not granted — skipping")
+        if (!hasControl(context)) {
+            Timber.w("PrivateDns: no DNS control (grant/shizuku missing)")
             return null
         }
 
@@ -110,11 +136,10 @@ object PrivateDnsController {
 
     /** Manual test: force the filtered hostname ON right now (no state capture). */
     fun forceOn(context: Context, host: String): Boolean =
-        hasPermission(context) && host.isNotBlank() && writeHostname(context, host)
+        host.isNotBlank() && writeHostname(context, host)
 
     /** Manual test: put Private DNS back to automatic/off right now. */
     fun forceRestore(context: Context, prefs: SharedPreferences): Boolean {
-        if (!hasPermission(context)) return false
         val prevMode = prefs.getString(C_PREV_MODE, MODE_OFF) ?: MODE_OFF
         val prevSpec = prefs.getString(C_PREV_SPEC, "") ?: ""
         val ok = restore(context, prevMode, prevSpec)
@@ -122,18 +147,17 @@ object PrivateDnsController {
         return ok
     }
 
-    private fun writeHostname(context: Context, host: String): Boolean = runCatching {
-        val cr = context.contentResolver
-        Settings.Global.putString(cr, KEY_SPECIFIER, host) &&
-            Settings.Global.putString(cr, KEY_MODE, MODE_HOSTNAME)
-    }.onFailure { Timber.e(it, "PrivateDns: set hostname failed") }.getOrDefault(false)
+    private fun writeHostname(context: Context, host: String): Boolean =
+        writeGlobal(context, KEY_SPECIFIER, host) &&
+            writeGlobal(context, KEY_MODE, MODE_HOSTNAME)
 
-    private fun restore(context: Context, mode: String, spec: String): Boolean = runCatching {
-        val cr = context.contentResolver
+    private fun restore(context: Context, mode: String, spec: String): Boolean {
         if (mode == MODE_HOSTNAME && spec.isNotBlank()) {
-            Settings.Global.putString(cr, KEY_SPECIFIER, spec)
+            writeGlobal(context, KEY_SPECIFIER, spec)
         }
-        Settings.Global.putString(cr, KEY_MODE,
-            if (mode == MODE_HOSTNAME && spec.isBlank()) MODE_OFF else mode)
-    }.onFailure { Timber.e(it, "PrivateDns: restore failed") }.getOrDefault(false)
+        return writeGlobal(
+            context, KEY_MODE,
+            if (mode == MODE_HOSTNAME && spec.isBlank()) MODE_OFF else mode
+        )
+    }
 }
