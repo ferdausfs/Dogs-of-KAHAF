@@ -381,11 +381,13 @@
                 android:paddingVertical="4dp"/>
         </LinearLayout>
 
-        <!-- summary: AI detections + time protected (Blocked-today lives in the hero) -->
+        <!-- summary: AI detections + screen time (Blocked-today lives in the hero) -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/statsSummaryCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
+            android:foreground="?attr/selectableItemBackground"
             style="@style/Widget.GuardianShield.Card">
             <LinearLayout
                 android:layout_width="match_parent"
@@ -408,6 +410,84 @@
                     <TextView android:id="@+id/txtStatTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0h 0m" android:fontFeatureSettings="tnum" android:textColor="@color/on_surface" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="-0.02"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stat_tile_time" android:textColor="@color/on_surface_variant" android:textSize="11.5sp" android:gravity="center" android:layout_marginTop="4dp"/>
                     <TextView android:id="@+id/txtStatKeyword" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" tools:text="0"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- R7.4 — most-used-app suggestion card: top time consumer with a
+             one-tap Block. Hidden until usage-access granted and one app
+             crossed the suggestion threshold. All ids NEW. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardScreenTimeSuggest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            style="@style/Widget.GuardianShield.Card">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/screentime_suggestion_title"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <ImageView
+                        android:id="@+id/imgSuggestIcon"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:scaleType="fitCenter"
+                        android:importantForAccessibility="no"/>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="12dp">
+
+                        <TextView
+                            android:id="@+id/txtSuggestApp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/on_surface"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:singleLine="true"
+                            android:ellipsize="end"/>
+
+                        <TextView
+                            android:id="@+id/txtSuggestTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/error"
+                            android:textSize="13sp"
+                            android:fontFeatureSettings="tnum"/>
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSuggestBlock"
+                        style="@style/Widget.GuardianShield.Button.Tonal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/screentime_block_now"/>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

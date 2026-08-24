@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- R7.4 — Screen time detail. Matches the ONE SHIELD settings-screen
+     pattern (toolbar + NestedScrollView + hero header + cards).
+     All ids/strings are NEW — no contract changes. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/bg_main"
+        app:title=""
+        app:titleTextColor="@color/on_surface"
+        app:navigationIconTint="@color/on_surface"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="36dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
+                android:text="@string/screentime_screen_title"
+                android:textSize="34sp"
+                style="@style/TextAppearance.GuardianShield.Display"/>
+
+            <TextView
+                android:id="@+id/txtScreenTotalSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="12dp"
+                style="@style/TextAppearance.GuardianShield.BodyDim"/>
+
+            <!-- Grant banner (only while usage-access is missing) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardUsageGrant"
+                style="@style/Widget.GuardianShield.Card.Amber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/screentime_grant_banner_title"
+                        style="@style/TextAppearance.GuardianShield.Title"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/screentime_grant_body"
+                        android:textColor="@color/on_surface"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.25"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUsageGrant"
+                        style="@style/Widget.GuardianShield.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/screentime_grant_btn"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilUsageSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.GuardianShield.SearchBox"
+                app:hintEnabled="true"
+                android:hint="@string/screentime_search_hint">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editUsageSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/on_surface"
+                    android:inputType="text"
+                    android:maxLines="1"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:id="@+id/txtUsageEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="20dp"
+                android:text="@string/screentime_empty"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="13sp"
+                android:visibility="gone"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerUsage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>
