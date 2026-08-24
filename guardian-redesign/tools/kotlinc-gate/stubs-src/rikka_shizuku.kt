@@ -1,17 +1,10 @@
 // GATE STUB — rikka.shizuku (Shizuku API surface used by the app).
+// NOTE: newProcess is intentionally NOT here — it is private in the real
+// API and reached via reflection in the app, so the gate must NOT allow
+// direct calls to it (that's how this bug reached CI in v3.7.2-pre).
 package rikka.shizuku
 
-import android.content.ComponentName
-import android.content.ServiceConnection
-
 class Shizuku private constructor() {
-
-    class UserServiceArgs(componentName: ComponentName) {
-        fun daemon(value: Boolean): UserServiceArgs = this
-        fun processNameSuffix(suffix: String): UserServiceArgs = this
-        fun debuggable(value: Boolean): UserServiceArgs = this
-        fun version(code: Int): UserServiceArgs = this
-    }
 
     fun interface OnRequestPermissionResultListener {
         fun onRequestPermissionResult(requestCode: Int, grantResult: Int)
@@ -27,13 +20,6 @@ class Shizuku private constructor() {
         }
         fun removeRequestPermissionResultListener(
             listener: OnRequestPermissionResultListener
-        ) {
-        }
-        fun bindUserService(args: UserServiceArgs, connection: ServiceConnection) {}
-        fun unbindUserService(
-            args: UserServiceArgs,
-            connection: ServiceConnection,
-            remove: Boolean
         ) {
         }
     }

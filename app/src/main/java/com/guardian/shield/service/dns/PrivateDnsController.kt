@@ -79,11 +79,11 @@ object PrivateDnsController {
             .getOrNull()
             ?.takeUnless { it.isEmpty() || it == "null" }
             ?.let { return it }
-        if (DnsRoot.hasRoot()) return DnsRoot.getGlobal(key)
-        if (ShizukuDns.hasShizukuPermission() && ShizukuDns.ensureBound()) {
-            val out = ShizukuDns.run("settings get global $key") ?: return null
-            val line = out.lineSequence().drop(1).firstOrNull()?.trim()
-            return line?.takeUnless { it.isEmpty() || it == "null" }
+        if (DnsRoot.hasRoot()) {
+            DnsRoot.getGlobal(key)?.let { return it }
+        }
+        if (ShizukuDns.hasShizukuPermission()) {
+            return ShizukuDns.getGlobal(key)
         }
         return null
     }
@@ -102,9 +102,8 @@ object PrivateDnsController {
             }.onFailure { Timber.e(it, "settings put failed") }.getOrDefault(false)
         }
         if (DnsRoot.hasRoot() && DnsRoot.putGlobal(key, value)) return true
-        if (ShizukuDns.hasShizukuPermission() && ShizukuDns.ensureBound()) {
-            val out = ShizukuDns.run("settings put global $key $value")
-            return out?.startsWith("0\n") == true
+        if (ShizukuDns.hasShizukuPermission()) {
+            return ShizukuDns.putGlobal(key, value)
         }
         return false
     }
