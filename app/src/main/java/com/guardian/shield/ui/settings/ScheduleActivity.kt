@@ -28,6 +28,7 @@ import com.guardian.shield.service.detection.TimeLockManager
 import com.guardian.shield.viewmodel.ScheduleViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -82,6 +83,7 @@ class ScheduleActivity : AppCompatActivity() {
 
         focusLocked = locked
         setupFocusMode()
+        setupBedtime()
 
         adapter = ScheduleAdapter(
             isLocked = locked,
@@ -377,6 +379,110 @@ class ScheduleActivity : AppCompatActivity() {
             }
         }
     }
+
+    // ---- R7.5 Bedtime Mode (nightly scheduled focus) ---------------------
+    // Same pattern as DNS Auto Mode: DataStore is UI truth -> mirrored into
+    // the scheduler's sync cache -> exact boundary alarm re-armed -> desired
+    // state enforced IMMEDIATELY so the user can watch it work.
+
+    private var bedtimeStartMin = 23 * 60
+    private var bedtimeEndMin = 6 * 60
+    private var bedtimeRendering = false
+
+    private fun setupBedtime() {
+        binding.switchBedtime.setOnCheckedChangeListener { _, _ ->
+            if (!bedtimeRendering) applyBedtimeNow()
+        }
+        binding.btnBedtimeStart.setOnClickListener {
+            if (focusLocked) { showLockedSnack(); return@setOnClickListener }
+            TimePickerDialog(this, { _, h, m ->
+                bedtimeStartMin = h * 60 + m
+                renderBedtime()
+                applyBedtimeNow()
+            }, bedtimeStartMin / 60, bedtimeStartMin % 60, true).show()
+        }
+        binding.btnBedtimeEnd.setOnClickListener {
+            if (focusLocked) { showLockedSnack(); return@setOnClickListener }
+            TimePickerDialog(this, { _, h, m ->
+                bedtimeEndMin = h * 60 + m
+                renderBedtime()
+                applyBedtimeNow()
+            }, bedtimeEndMin / 60, bedtimeEndMin % 60, true).show()
+        }
+        binding.switchBedtime.setOnClickListener {
+            if (focusLocked) {
+                bedtimeRendering = true
+                binding.switchBedtime.isChecked = false
+                bedtimeRendering = false
+                showLockedSnack()
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { guardianPrefs.bedtimeEnabled.collect { renderBedtime() } }
+                launch { guardianPrefs.bedtimeStartMin.collect {
+                    bedtimeStartMin = it; renderBedtime()
+                } }
+                launch { guardianPrefs.bedtimeEndMin.collect {
+                    bedtimeEndMin = it; renderBedtime()
+                } }
+            }
+        }
+    }
+
+    private fun renderBedtime() {
+        lifecycleScope.launch {
+            val on = guardianPrefs.bedtimeEnabled.first()
+            bedtimeRendering = true
+            binding.switchBedtime.isChecked = on
+            bedtimeRendering = false
+            binding.switchBedtime.isEnabled = !focusLocked
+            binding.rowBedtimeTimes.visibility = if (on) View.VISIBLE else View.GONE
+            val inWindow = com.guardian.shield.service.focus.BedtimeScheduler.isInWindow(
+                com.guardian.shield.service.focus.BedtimeScheduler.nowMinutes(),
+                bedtimeStartMin, bedtimeEndMin
+            )
+            binding.txtBedtimeStatus.text = when {
+                !on -> getString(R.string.bedtime_status_off)
+                inWindow -> getString(R.string.bedtime_status_active_fmt, fmtBed(bedtimeEndMin))
+                else -> getString(
+                    R.string.bedtime_status_next_fmt,
+                    fmtBed(bedtimeStartMin), fmtBed(bedtimeEndMin)
+                )
+            }
+            binding.btnBedtimeStart.text = getString(R.string.bedtime_start_fmt, fmtBed(bedtimeStartMin))
+            binding.btnBedtimeEnd.text = getString(R.string.bedtime_end_fmt, fmtBed(bedtimeEndMin))
+        }
+    }
+
+    /** Save UI -> DataStore, mirror cache, enforce right now, re-arm alarm. */
+    private fun applyBedtimeNow() {
+        val enabled = binding.switchBedtime.isChecked
+        lifecycleScope.launch {
+            guardianPrefs.setBedtime(enabled, bedtimeStartMin, bedtimeEndMin)
+            withContext(Dispatchers.IO) {
+                com.guardian.shield.service.focus.BedtimeScheduler.syncCache(
+                    this@ScheduleActivity, enabled, bedtimeStartMin, bedtimeEndMin
+                )
+                runCatching {
+                    if (enabled) {
+                        com.guardian.shield.service.focus.BedtimeScheduler.tick(
+                            this@ScheduleActivity, guardianPrefs
+                        )
+                    } else {
+                        com.guardian.shield.service.focus.BedtimeScheduler.disableNow(
+                            this@ScheduleActivity, guardianPrefs
+                        )
+                    }
+                }.onFailure { timber.log.Timber.e(it, "bedtime apply failed") }
+                com.guardian.shield.service.focus.BedtimeScheduler.reschedule(this@ScheduleActivity)
+            }
+            renderBedtime()
+        }
+    }
+
+    private fun fmtBed(min: Int): String = "%02d:%02d".format(min / 60, min % 60)
 
     override fun onDestroy() {
         focusHandler.removeCallbacks(focusTicker)

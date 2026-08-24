@@ -21,6 +21,9 @@ class BootReceiver : BroadcastReceiver() {
                 // enforces state within its first interval).
                 runCatching { com.guardian.shield.service.dns.PrivateDnsScheduler.reschedule(context) }
                     .onFailure { Timber.e(it, "Failed to re-arm DNS schedule") }
+                // R7.5 — re-arm the Bedtime window-boundary alarm too.
+                runCatching { com.guardian.shield.service.focus.BedtimeScheduler.reschedule(context) }
+                    .onFailure { Timber.e(it, "Failed to re-arm bedtime schedule") }
             }
         }
     }

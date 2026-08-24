@@ -104,6 +104,18 @@ class GuardianApp : Application(), Configuration.Provider {
                 ExistingPeriodicWorkPolicy.UPDATE,
                 dnsRequest
             )
+
+            // R7.5 — Bedtime Mode: periodic self-healer (syncs the window
+            // cache, enforces the scheduled focus state, re-arms the exact
+            // boundary alarm).
+            val bedtimeRequest = PeriodicWorkRequestBuilder<com.guardian.shield.service.focus.BedtimeWorker>(
+                15, TimeUnit.MINUTES
+            ).setConstraints(Constraints.Builder().build()).build()
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                BEDTIME_WORK_NAME,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                bedtimeRequest
+            )
         } catch (t: Throwable) {
             Timber.e(t, "Failed to schedule watchdog")
         }
@@ -113,6 +125,7 @@ class GuardianApp : Application(), Configuration.Provider {
         const val CHANNEL_GUARDIAN = "guardian_channel"
         const val WATCHDOG_WORK_NAME = "guardian_watchdog"
         const val DNS_WORK_NAME = "guardian_dns_schedule"
+        const val BEDTIME_WORK_NAME = "guardian_bedtime"
     }
 }
 

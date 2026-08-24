@@ -65,6 +65,12 @@ class GuardianPreferences @Inject constructor(
         val DNS_AUTO_START_MIN = intPreferencesKey("dns_auto_start_min")
         val DNS_AUTO_END_MIN = intPreferencesKey("dns_auto_end_min")
         val DNS_AUTO_HOST = stringPreferencesKey("dns_auto_host")
+
+        // R7.5 — Bedtime Mode: nightly scheduled Focus (minutes-of-day,
+        // overnight-safe) that extends FOCUS_UNTIL_MS to the window end.
+        val BEDTIME_ENABLED = booleanPreferencesKey("bedtime_enabled")
+        val BEDTIME_START_MIN = intPreferencesKey("bedtime_start_min")
+        val BEDTIME_END_MIN = intPreferencesKey("bedtime_end_min")
     }
 
     // Flows
@@ -98,6 +104,11 @@ class GuardianPreferences @Inject constructor(
     val dnsAutoEnabled: Flow<Boolean> = ds.data.map { it[Keys.DNS_AUTO_ENABLED] ?: false }
     val dnsAutoStartMin: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_START_MIN] ?: (20 * 60) }
     val dnsAutoEndMin: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_END_MIN] ?: (8 * 60) }
+
+    // R7.5 — Bedtime Mode (nightly scheduled focus window)
+    val bedtimeEnabled: Flow<Boolean> = ds.data.map { it[Keys.BEDTIME_ENABLED] ?: false }
+    val bedtimeStartMin: Flow<Int> = ds.data.map { it[Keys.BEDTIME_START_MIN] ?: (23 * 60) }
+    val bedtimeEndMin: Flow<Int> = ds.data.map { it[Keys.BEDTIME_END_MIN] ?: (6 * 60) }
     val dnsAutoHost: Flow<String> = ds.data.map { it[Keys.DNS_AUTO_HOST] ?: "" }
 
     // Setters
@@ -147,6 +158,15 @@ class GuardianPreferences @Inject constructor(
             it[Keys.DNS_AUTO_START_MIN] = startMin
             it[Keys.DNS_AUTO_END_MIN] = endMin
             it[Keys.DNS_AUTO_HOST] = host.trim().lowercase()
+        }
+    }
+
+    // R7.5 — Bedtime Mode
+    suspend fun setBedtime(enabled: Boolean, startMin: Int, endMin: Int) {
+        ds.edit {
+            it[Keys.BEDTIME_ENABLED] = enabled
+            it[Keys.BEDTIME_START_MIN] = startMin
+            it[Keys.BEDTIME_END_MIN] = endMin
         }
     }
 }

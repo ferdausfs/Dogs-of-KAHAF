@@ -107,6 +107,11 @@
             android:exported="false"
             android:parentActivityName=".ui.dashboard.MainActivity"/>
 
+        <!-- R7.5 — Bedtime window-boundary tick -->
+        <receiver
+            android:name=".service.focus.BedtimeReceiver"
+            android:exported="false"/>
+
         <activity
             android:name=".ui.settings.ScheduleActivity"
             android:exported="false"
