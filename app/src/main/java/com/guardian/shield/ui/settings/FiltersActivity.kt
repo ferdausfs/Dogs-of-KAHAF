@@ -17,6 +17,7 @@ import com.guardian.shield.viewmodel.FiltersViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * R4 — Content Filters screen (reference "Filters" screen). One switch per
@@ -45,6 +46,7 @@ class FiltersActivity : AppCompatActivity() {
         binding = ActivityFiltersBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setTitle(R.string.filters_title)
         binding.toolbar.setNavigationOnClickListener { finish() }

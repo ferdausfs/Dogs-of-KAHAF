@@ -14,6 +14,7 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.ui.dashboard.BlockEventAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * Phase 1 — Activity Log screen (full timeline of block events with filtering).
@@ -34,6 +35,7 @@ class ActivityLogActivity : AppCompatActivity() {
         binding = ActivityLogBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 

@@ -19,6 +19,7 @@ import com.guardian.shield.viewmodel.AppListViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * R4 — Whitelist screen (reference "Whitelist" screen). Lists installed apps
@@ -40,6 +41,7 @@ class WhitelistActivity : AppCompatActivity() {
         binding = ActivityWhitelistBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setTitle(R.string.whitelist_title)
         binding.toolbar.setNavigationOnClickListener { finish() }

@@ -14,6 +14,7 @@ import com.guardian.shield.ui.permissions.PermissionsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * Phase 4 — 4-screen welcome onboarding flow.
@@ -38,6 +39,7 @@ class OnboardingActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityOnboardingBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         binding.viewPager.adapter = OnboardingPagerAdapter(this)
         binding.viewPager.isUserInputEnabled = true

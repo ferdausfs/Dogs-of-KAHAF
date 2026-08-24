@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.guardian.shield.databinding.ActivityBlockedDetailBinding
 import com.guardian.shield.ui.activitylog.ActivityLogActivity
 import com.guardian.shield.ui.settings.AppListActivity
+import com.guardian.shield.util.ScreenInsets
 
 /**
  * Optional expanded Blocked Content details screen per reference (b).
@@ -24,6 +25,7 @@ class BlockedDetailActivity : AppCompatActivity() {
         binding = ActivityBlockedDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 

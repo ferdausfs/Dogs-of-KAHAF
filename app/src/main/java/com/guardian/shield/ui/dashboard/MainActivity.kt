@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -48,6 +49,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
+        ScreenInsets.padBottomForNavBar(binding.bottomNavigation)
 
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {

@@ -22,6 +22,7 @@ import com.guardian.shield.viewmodel.KeywordViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class KeywordActivity : AppCompatActivity() {
@@ -37,6 +38,7 @@ class KeywordActivity : AppCompatActivity() {
         binding = ActivityKeywordBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        ScreenInsets.padTopForStatusBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 

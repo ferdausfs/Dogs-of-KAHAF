@@ -13,6 +13,7 @@ import com.guardian.shield.databinding.ActivityPinSetupBinding
 import com.guardian.shield.viewmodel.PinViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
+import com.guardian.shield.util.ScreenInsets
 
 @AndroidEntryPoint
 class PinSetupActivity : AppCompatActivity() {
@@ -31,6 +32,7 @@ class PinSetupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPinSetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        ScreenInsets.padTopForStatusBar(binding.root)
 
         val digits = listOf(
             binding.btn0, binding.btn1, binding.btn2, binding.btn3, binding.btn4,
