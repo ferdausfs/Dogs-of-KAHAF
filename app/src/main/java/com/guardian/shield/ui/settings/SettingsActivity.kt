@@ -231,6 +231,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnSchedule.setOnClickListener {
             startActivity(Intent(this, ScheduleActivity::class.java))
         }
+        binding.btnDnsSchedule.setOnClickListener {
+            startActivity(Intent(this, DnsScheduleActivity::class.java))
+        }
         binding.btnPermissions.setOnClickListener {
             startActivity(Intent(this, PermissionsActivity::class.java))
         }

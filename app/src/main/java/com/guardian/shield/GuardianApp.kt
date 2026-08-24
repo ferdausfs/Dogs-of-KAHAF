@@ -91,6 +91,19 @@ class GuardianApp : Application(), Configuration.Provider {
                 request
             )
             Timber.d("Watchdog scheduled")
+
+            // R5 — Private DNS Auto Mode: periodic self-healer (syncs the
+            // schedule cache, enforces current desired state, re-arms the
+            // exact boundary alarm). UPDATE so installs upgrading to the
+            // release that introduced this worker pick it up immediately.
+            val dnsRequest = PeriodicWorkRequestBuilder<com.guardian.shield.service.dns.DnsScheduleWorker>(
+                15, TimeUnit.MINUTES
+            ).setConstraints(Constraints.Builder().build()).build()
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                DNS_WORK_NAME,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                dnsRequest
+            )
         } catch (t: Throwable) {
             Timber.e(t, "Failed to schedule watchdog")
         }
@@ -99,6 +112,7 @@ class GuardianApp : Application(), Configuration.Provider {
     companion object {
         const val CHANNEL_GUARDIAN = "guardian_channel"
         const val WATCHDOG_WORK_NAME = "guardian_watchdog"
+        const val DNS_WORK_NAME = "guardian_dns_schedule"
     }
 }
 
