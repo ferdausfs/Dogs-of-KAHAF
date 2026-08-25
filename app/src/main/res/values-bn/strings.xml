@@ -646,4 +646,15 @@ adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS<
     <string name="dns_engine_root">রুট ✓</string>
     <string name="dns_engine_shizuku">Shizuku শেল ✓</string>
     <string name="dns_engine_none">এখনো সেটআপ হয়নি</string>
+    <!-- R8 (v3.7.8): DNS অটো পলিশ — দিনের চিপ, ১৫ মিনিট বিরতি, QS টাইল -->
+    <string name="dns_days_label">যেসব দিন চলবে</string>
+    <string name="dns_pause_15">⏸ ১৫ মিনিট বিরতি</string>
+    <string name="dns_pause_resume">▶ এখনই চালু করুন</string>
+    <string name="dns_paused_until">⏸ %1$s পর্যন্ত বিরতি</string>
+    <string name="dns_pause_toast">ডিএনএস অটো ১৫ মিনিটের জন্য থামলো — আপনার নিজের DNS ফিরে এসেছে</string>
+    <string name="dns_status_off_day">এখন অফ — আজকের দিনটি বাছাই করা নেই</string>
+    <string name="dns_tile_label">ডিএনএস অটো</string>
+    <string name="dns_tile_no_host">আগে Guardian Shield-এ একটি DNS হোস্ট ঠিক করুন</string>
+    <string name="dns_tile_state_on">ডিএনএস অটো চালু আছে</string>
+    <string name="dns_tile_state_off">ডিএনএস অটো বন্ধ আছে</string>
 </resources>

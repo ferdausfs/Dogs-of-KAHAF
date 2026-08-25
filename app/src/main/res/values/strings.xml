@@ -651,4 +651,15 @@ adb shell pm grant com.guardian.shield android.permission.WRITE_SECURE_SETTINGS<
     <string name="dns_engine_root">Root ✓</string>
     <string name="dns_engine_shizuku">Shizuku shell ✓</string>
     <string name="dns_engine_none">not set up yet</string>
+    <!-- R8 (v3.7.8): DNS Auto polish — day chips, 15-min pause, QS tile -->
+    <string name="dns_days_label">Runs on these days</string>
+    <string name="dns_pause_15">⏸ Pause for 15 minutes</string>
+    <string name="dns_pause_resume">▶ Resume now</string>
+    <string name="dns_paused_until">⏸ Paused until %1$s</string>
+    <string name="dns_pause_toast">DNS Auto paused for 15 minutes — your own DNS is back</string>
+    <string name="dns_status_off_day">Off — today is not a selected day</string>
+    <string name="dns_tile_label">DNS Auto</string>
+    <string name="dns_tile_no_host">Set a DNS host in Guardian Shield first</string>
+    <string name="dns_tile_state_on">DNS Auto is on</string>
+    <string name="dns_tile_state_off">DNS Auto is off</string>
 </resources>
