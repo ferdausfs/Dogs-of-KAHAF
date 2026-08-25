@@ -98,6 +98,22 @@ class AiDetector @Inject constructor(
     }
 
     /**
+     * R9 (v3.7.9) — DELIVERY FIX part 2: drop every cached interpreter AFTER
+     * an import/delete so the NEXT inference picks up the new file (or the
+     * absence of one). Until now a re-imported model only took effect after an
+     * app restart, because the old Interpreter stayed cached in memory.
+     */
+    suspend fun reloadImportedModels() {
+        inferenceLock.withLock {
+            runCatching { legacyInterpreter?.close() }
+            runCatching { gpuDelegate?.close() }
+            legacyInterpreter = null
+            gpuDelegate = null
+            Timber.i("Models: cache cleared after import/delete — reload is lazy")
+        }
+    }
+
+    /**
      * STABILITY FIX — if the GPU delegate is producing bad inferences, drop all
      * interpreters and rebuild them on CPU. Called automatically after a few
      * consecutive failures.
