@@ -15,7 +15,10 @@ class AppListAdapter(
     private val pm: PackageManager,
     private val isLocked: Boolean = false,
     private val onBlockChanged: (String, Boolean) -> Unit,
-    private val onWhitelistChanged: (String, Boolean) -> Unit
+    private val onWhitelistChanged: (String, Boolean) -> Unit,
+    // R12 (v3.8.2) — undo an accidental block within the 3-minute grace
+    // window. Works (deliberately) even while a Time-Lock is active.
+    private val onUndoBlocked: (String) -> Unit = {}
 ) : ListAdapter<AppRule, AppListAdapter.VH>(DIFF) {
 
     fun submit(list: List<AppRule>) { submitList(list) }
@@ -70,8 +73,33 @@ class AppListAdapter(
                     b.txtStatusBadge.setTextColor(b.root.context.getColor(com.guardian.shield.R.color.success))
                     b.imgLockIcon.visibility = View.GONE
                 } else {
-                    b.txtStatusBadge.visibility = View.GONE
+                    // R13 (v3.8.2) — an app with NO rule was indistinguishable
+                    // from "unset" (badge hidden); users could not tell it is
+                    // allowed BY DEFAULT. Say it explicitly in a muted chip.
+                    b.txtStatusBadge.visibility = View.VISIBLE
+                    b.txtStatusBadge.text = b.root.context.getString(
+                        com.guardian.shield.R.string.app_badge_default
+                    )
+                    b.txtStatusBadge.setTextColor(
+                        b.root.context.getColor(com.guardian.shield.R.color.on_surface_variant)
+                    )
                     b.imgLockIcon.visibility = View.GONE
+                }
+            } catch (_: Throwable) {}
+
+            // R12 — undo chip: only while the 3-minute grace window is open.
+            try {
+                val remaining = AppRule.graceRemainingMs(rule.blockedAtMs)
+                if (rule.isBlocked && AppRule.isWithinGrace(rule.blockedAtMs) && remaining > 0L) {
+                    val mins = ((remaining + 59_999L) / 60_000L).coerceIn(1L, 3L)
+                    b.btnUndoBlock.visibility = View.VISIBLE
+                    b.btnUndoBlock.text = b.root.context.getString(
+                        com.guardian.shield.R.string.undo_block_chip, mins
+                    )
+                    b.btnUndoBlock.setOnClickListener { onUndoBlocked(rule.packageName) }
+                } else {
+                    b.btnUndoBlock.visibility = View.GONE
+                    b.btnUndoBlock.setOnClickListener(null)
                 }
             } catch (_: Throwable) {}
 

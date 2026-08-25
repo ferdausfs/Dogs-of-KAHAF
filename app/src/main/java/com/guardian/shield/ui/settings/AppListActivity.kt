@@ -76,7 +76,10 @@ class AppListActivity : AppCompatActivity() {
             onWhitelistChanged = { pkg, wl ->
                 if (locked) showLockedSnack()
                 else viewModel.setWhitelisted(pkg, wl)
-            }
+            },
+            // R12 — undo within the 3-minute grace window; intentionally NOT
+            // gated by `locked` (reversing a mistake must stay possible).
+            onUndoBlocked = { pkg -> viewModel.undoBlockWithinGrace(pkg) }
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
@@ -92,6 +95,19 @@ class AppListActivity : AppCompatActivity() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.undoEvents.collect { outcome ->
+                    com.google.android.material.snackbar.Snackbar.make(
+                        binding.root,
+                        if (outcome.undone) getString(R.string.undo_done, outcome.appName)
+                        else getString(R.string.undo_expired),
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

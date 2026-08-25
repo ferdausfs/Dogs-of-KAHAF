@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ScheduleRuleEntity::class,
         PendingReportEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -110,6 +110,16 @@ abstract class GuardianDatabase : RoomDatabase() {
                 )
                 db.execSQL("DROP TABLE `schedule_rules`")
                 db.execSQL("ALTER TABLE `schedule_rules_new` RENAME TO `schedule_rules`")
+            }
+        }
+
+        // R12 (v3.8.2) — 3-minute undo-grace stamp on app blocks. Existing
+        // blocked rows get 0 = legacy permanent block (no surprise grace).
+        val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `app_rules` ADD COLUMN `blockedAtMs` INTEGER NOT NULL DEFAULT 0"
+                )
             }
         }
     }

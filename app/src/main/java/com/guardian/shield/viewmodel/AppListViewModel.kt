@@ -11,9 +11,11 @@ import com.guardian.shield.domain.repository.RulesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -96,7 +98,10 @@ class AppListViewModel @Inject constructor(
                     .copy(
                         isBlocked = blocked,
                         // Blocking clears the whitelist flag
-                        isWhitelisted = if (blocked) false else current?.isWhitelisted ?: false
+                        isWhitelisted = if (blocked) false else current?.isWhitelisted ?: false,
+                        // R12 — stamp the grace window when (re)blocked; clear
+                        // it on a normal (unlockable state) unblock.
+                        blockedAtMs = if (blocked) System.currentTimeMillis() else 0L
                     )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
@@ -105,6 +110,38 @@ class AppListViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * R12 (v3.8.2) — undo an accidental block within the 3-minute grace
+     * window. Intentionally does NOT consult TimeLockManager: the whole point
+     * is that a mistake made (or discovered) DURING a commitment lock can
+     * still be reversed quickly. Once the window lapses the block is
+     * permanent (status quo).
+     */
+    fun undoBlockWithinGrace(pkg: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val current = repo.getApp(pkg)
+                if (current != null && current.isBlocked &&
+                    AppRule.isWithinGrace(current.blockedAtMs)
+                ) {
+                    repo.upsertApp(current.copy(isBlocked = false, blockedAtMs = 0L))
+                    prefs.bumpRulesVersion()
+                    _undoEvents.trySend(UndoOutcome(true, current.appName))
+                } else {
+                    _undoEvents.trySend(UndoOutcome(false, current?.appName ?: pkg))
+                }
+            } catch (t: Throwable) {
+                Timber.e(t, "undoBlockWithinGrace failed for $pkg")
+                _undoEvents.trySend(UndoOutcome(false, pkg))
+            }
+        }
+    }
+
+    data class UndoOutcome(val undone: Boolean, val appName: String)
+
+    private val _undoEvents = Channel<UndoOutcome>(Channel.BUFFERED)
+    val undoEvents = _undoEvents.receiveAsFlow()
 
     /**
      * TASK 1 — One-way block rule.

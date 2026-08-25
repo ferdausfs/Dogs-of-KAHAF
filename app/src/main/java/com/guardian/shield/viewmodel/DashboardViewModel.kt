@@ -156,7 +156,10 @@ class DashboardViewModel @Inject constructor(
                 val updated = (current ?: AppRule(
                     target.packageName, target.label, false, false,
                     System.currentTimeMillis()
-                )).copy(isBlocked = true, isWhitelisted = false)
+                )).copy(
+                    isBlocked = true, isWhitelisted = false,
+                    blockedAtMs = System.currentTimeMillis() // R12 — grace applies
+                )
                 repo.upsertApp(updated)
                 prefs.bumpRulesVersion()
             }
