@@ -9,7 +9,9 @@ data class AppRuleEntity(
     val appName: String,
     val isBlocked: Boolean,
     val isWhitelisted: Boolean,
-    val createdAt: Long
+    val createdAt: Long,
+    // R12 (v3.8.2) — undo grace stamp; 0 for rows blocked before v3.8.2.
+    val blockedAtMs: Long = 0
 )
 
 @Entity(tableName = "keyword_rules")

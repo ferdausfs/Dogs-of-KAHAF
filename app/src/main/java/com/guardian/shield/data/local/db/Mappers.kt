@@ -6,8 +6,10 @@ import com.guardian.shield.domain.model.BlockReason
 import com.guardian.shield.domain.model.KeywordRule
 import com.guardian.shield.domain.model.ScheduleRule
 
-fun AppRuleEntity.toDomain() = AppRule(packageName, appName, isBlocked, isWhitelisted, createdAt)
-fun AppRule.toEntity() = AppRuleEntity(packageName, appName, isBlocked, isWhitelisted, createdAt)
+fun AppRuleEntity.toDomain() =
+    AppRule(packageName, appName, isBlocked, isWhitelisted, createdAt, blockedAtMs)
+fun AppRule.toEntity() =
+    AppRuleEntity(packageName, appName, isBlocked, isWhitelisted, createdAt, blockedAtMs)
 
 fun KeywordRuleEntity.toDomain() = KeywordRule(id, keyword, isRegex, severity, enabled)
 fun KeywordRule.toEntity() = KeywordRuleEntity(id, keyword, isRegex, severity, enabled)

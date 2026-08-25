@@ -49,6 +49,9 @@
 
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="end" android:layout_marginStart="8dp">
             <TextView android:id="@+id/txtStatusBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_badge" android:backgroundTint="@color/badge_error_bg" android:textColor="@color/error_bright" android:textSize="11sp" android:textStyle="bold" android:paddingHorizontal="9dp" android:paddingVertical="4dp" tools:text="BLOCKED"/>
+            <!-- R12 (v3.8.2): undo grace chip — visible only within 3 minutes
+                 of an accidental block (works even during a Time-Lock). -->
+            <TextView android:id="@+id/btnUndoBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/bg_badge" android:backgroundTint="@color/badge_success_bg" android:textColor="@color/success_legacy" android:textSize="11sp" android:textStyle="bold" android:paddingHorizontal="9dp" android:paddingVertical="4dp" android:visibility="gone" tools:visibility="visible" tools:text="↩ UNDO · 2M"/>
             <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
             <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchWhitelist" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp"/>
         </LinearLayout>

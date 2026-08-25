@@ -93,6 +93,11 @@
     <string name="import_">Import</string>
     <string name="remove">Remove</string>
     <string name="model_missing">✗ Missing</string>
+    <!-- R12/R13 (v3.8.2): default-allow clarity + 3-minute undo grace -->
+    <string name="app_badge_default">ALLOWED · DEFAULT</string>
+    <string name="undo_block_chip">↩ UNDO · %1$dM</string>
+    <string name="undo_done">Block undone — %1$s is allowed again</string>
+    <string name="undo_expired">The 3-minute window is over — this block is now permanent</string>
     <!-- R9 (v3.7.9): AI model delivery guidance (no INTERNET by design) -->
     <string name="model_help_link">ⓘ Where do I get the model?</string>
     <string name="model_help_title">Getting the AI model</string>
