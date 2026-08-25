@@ -20,6 +20,7 @@ import com.guardian.shield.util.GuardianCrashHandler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -36,6 +37,9 @@ class GuardianApp : Application(), Configuration.Provider {
 
     // v3.6.1 — re-enqueue cooling-off workers after process start / reboot.
     @Inject lateinit var pendingReportManager: PendingReportManager
+
+    // R14 (v3.8.3) — data-wipe sentinel needs the DataStore uuid.
+    @Inject lateinit var appPrefs: com.guardian.shield.data.local.datastore.GuardianPreferences
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -61,6 +65,36 @@ class GuardianApp : Application(), Configuration.Provider {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching { pendingReportManager.rescheduleAllPending() }
                 .onFailure { Timber.e(it, "Failed to reschedule pending cooling-off reports") }
+        }
+        // R14 (v3.8.3) — app-data-wipe detection (best-effort, no new
+        // permission; silent no-op without the secure grant).
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            runCatching { tamperSentinelCheck() }
+                .onFailure { Timber.e(it, "TamperSentinel check failed") }
+        }
+    }
+
+    /**
+     * R14 — once per process start: local DataStore uuid vs the
+     * Settings.Global sentinel. Blank-local + set-sentinel = data was wiped.
+     */
+    private suspend fun tamperSentinelCheck() {
+        val local = appPrefs.installedUuid.first()
+        val secure = com.guardian.shield.service.detection.TamperSentinel.read(this)
+        if (local.isBlank()) {
+            if (!secure.isNullOrBlank()) {
+                Timber.w("TamperSentinel: data wipe detected (sentinel survived)")
+                com.guardian.shield.admin.TamperLogger.log(this, "app-data-wiped")
+                appPrefs.setInstalledUuid(secure)      // adopt surviving id
+            } else {
+                val fresh = java.util.UUID.randomUUID().toString()
+                appPrefs.setInstalledUuid(fresh)
+                com.guardian.shield.service.detection.TamperSentinel.write(this, fresh)
+            }
+        } else if (secure != local) {
+            // keep sentinel fresh — also covers the secure grant arriving
+            // AFTER first install (e.g. user later enables DNS Auto Mode).
+            com.guardian.shield.service.detection.TamperSentinel.write(this, local)
         }
     }
 

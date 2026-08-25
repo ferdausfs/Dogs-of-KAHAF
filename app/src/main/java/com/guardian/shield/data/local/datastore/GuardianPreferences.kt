@@ -50,6 +50,12 @@ class GuardianPreferences @Inject constructor(
         // takes effect after the user ALSO grants system Notification access.
         val NOTIF_SHIELD_ENABLED = booleanPreferencesKey("notif_shield_enabled")
 
+        // R14 (v3.8.3) — install sentinel for app-data-wipe detection.
+        // Mirrored to Settings.Global by TamperSentinel when the (optional)
+        // WRITE_SECURE_SETTINGS grant is present; a mismatch between a blank
+        // local value and a set sentinel proves a data clear.
+        val INSTALLED_UUID = stringPreferencesKey("installed_uuid")
+
         // R4 — Focus Mode (temporary full-device pause of distracting apps).
         // Until-timestamp in ms (0 = inactive) + the duration chosen when the
         // session started (so the countdown ring can show elapsed fraction
@@ -112,6 +118,9 @@ class GuardianPreferences @Inject constructor(
     // R4 — Smart Filters: enabled category ids
     val filterCategories: Flow<Set<String>> = ds.data.map { it[Keys.FILTER_CATEGORIES] ?: emptySet() }
 
+    // R14 (v3.8.3) — install sentinel (empty until first mint/adopt)
+    val installedUuid: Flow<String> = ds.data.map { it[Keys.INSTALLED_UUID] ?: "" }
+
     // R5 — Private DNS auto-schedule (defaults: 8:00 PM -> 8:00 AM, host unset)
     val dnsAutoEnabled: Flow<Boolean> = ds.data.map { it[Keys.DNS_AUTO_ENABLED] ?: false }
     val dnsAutoStartMin: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_START_MIN] ?: (20 * 60) }
@@ -158,6 +167,9 @@ class GuardianPreferences @Inject constructor(
 
     // R4 — Smart Filters
     suspend fun setFilterCategories(v: Set<String>) { ds.edit { it[Keys.FILTER_CATEGORIES] = v } }
+
+    // R14 (v3.8.3) — install sentinel
+    suspend fun setInstalledUuid(v: String) { ds.edit { it[Keys.INSTALLED_UUID] = v } }
 
     // R5 — Private DNS auto-schedule
     suspend fun setDnsAutoEnabled(v: Boolean) { ds.edit { it[Keys.DNS_AUTO_ENABLED] = v } }
