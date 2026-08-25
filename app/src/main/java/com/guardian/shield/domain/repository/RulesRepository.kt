@@ -32,7 +32,7 @@ interface RulesRepository {
     suspend fun enabledKeywords(): List<KeywordRule>
 
     suspend fun upsertSchedule(rule: ScheduleRule)
-    suspend fun deleteSchedule(packageName: String)
+    suspend fun deleteSchedule(id: Long)
     suspend fun allSchedules(): List<ScheduleRule>
 
     suspend fun logBlock(event: BlockEvent): Long

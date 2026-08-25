@@ -222,11 +222,16 @@ class BackupRestoreManager @Inject constructor(
     private suspend fun importSchedules(arr: JSONArray?): Int {
         if (arr == null) return 0
         var count = 0
+        // R7.7 — multi-window: import replaces ALL existing windows of each
+        // affected package with the backup's set (previously PK=packageName
+        // made this a natural upsert; with autogen ids we must delete first
+        // or repeated imports would duplicate rows).
+        val byPkg = HashMap<String, MutableList<ScheduleRuleEntity>>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
             val pkg = o.optString("packageName", "").trim()
             if (pkg.isEmpty()) continue
-            scheduleDao.upsert(
+            byPkg.getOrPut(pkg) { mutableListOf() }.add(
                 ScheduleRuleEntity(
                     packageName = pkg,
                     startHour = o.optInt("startHour", 0).coerceIn(0, 23),
@@ -238,7 +243,11 @@ class BackupRestoreManager @Inject constructor(
                     createdAt = o.optLong("createdAt", System.currentTimeMillis())
                 )
             )
-            count++
+        }
+        for ((pkg, rows) in byPkg) {
+            scheduleDao.deleteByPackage(pkg)
+            rows.forEach { scheduleDao.upsert(it) }
+            count += rows.size
         }
         return count
     }

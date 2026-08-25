@@ -57,7 +57,7 @@ class RulesRepositoryImpl @Inject constructor(
         keywordDao.getEnabled().map { it.toDomain() }
 
     override suspend fun upsertSchedule(rule: ScheduleRule) = scheduleDao.upsert(rule.toEntity())
-    override suspend fun deleteSchedule(packageName: String) = scheduleDao.delete(packageName)
+    override suspend fun deleteSchedule(id: Long) = scheduleDao.deleteById(id)
     override suspend fun allSchedules(): List<ScheduleRule> =
         scheduleDao.getAll().map { it.toDomain() }
 

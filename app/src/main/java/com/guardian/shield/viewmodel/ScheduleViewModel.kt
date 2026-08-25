@@ -34,10 +34,10 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
-    fun delete(packageName: String) {
+    fun delete(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repo.deleteSchedule(packageName)
+                repo.deleteSchedule(id)
                 prefs.bumpRulesVersion()
             } catch (t: Throwable) {
                 Timber.e(t, "Failed to delete schedule rule — rules version NOT bumped; RulesEngine snapshot may stay stale")

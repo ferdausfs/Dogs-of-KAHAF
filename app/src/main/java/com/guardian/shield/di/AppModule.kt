@@ -29,7 +29,8 @@ object DatabaseModule {
             .addMigrations(
                 GuardianDatabase.MIGRATION_1_2,
                 GuardianDatabase.MIGRATION_2_3,
-                GuardianDatabase.MIGRATION_3_4
+                GuardianDatabase.MIGRATION_3_4,
+                GuardianDatabase.MIGRATION_4_5
             )
             // Intentionally NO fallbackToDestructiveMigration(): the block-event
             // log is the parent's evidence trail and must never be silently
