@@ -52,8 +52,14 @@
             <!-- R12 (v3.8.2): undo grace chip — visible only within 3 minutes
                  of an accidental block (works even during a Time-Lock). -->
             <TextView android:id="@+id/btnUndoBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/bg_badge" android:backgroundTint="@color/badge_success_bg" android:textColor="@color/success_legacy" android:textSize="11sp" android:textStyle="bold" android:paddingHorizontal="9dp" android:paddingVertical="4dp" android:visibility="gone" tools:visibility="visible" tools:text="↩ UNDO · 2M"/>
-            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
-            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchWhitelist" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp"/>
+            <!-- v3.8.4: red toggle = block, green toggle = always-allow;
+                 contentDescription replaces the removed blank badges. -->
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchBlock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                app:thumbTint="@color/switch_block_thumb" app:trackTint="@color/switch_block_track"
+                android:contentDescription="@string/switch_block_desc"/>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchWhitelist" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp"
+                app:thumbTint="@color/switch_allow_thumb" app:trackTint="@color/switch_allow_track"
+                android:contentDescription="@string/switch_allow_desc"/>
         </LinearLayout>
     </LinearLayout>
     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginStart="68dp"/>

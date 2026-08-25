@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v3.8.4: block toggle thumb — red when on, neutral when off -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/error" android:state_checked="true"/>
+    <item android:color="@color/on_surface_dim"/>
+</selector>

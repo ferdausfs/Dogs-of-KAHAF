@@ -94,10 +94,11 @@
     <string name="remove">Remove</string>
     <string name="model_missing">✗ Missing</string>
     <!-- R12/R13 (v3.8.2): default-allow clarity + 3-minute undo grace -->
-    <string name="app_badge_default">ALLOWED · DEFAULT</string>
     <string name="undo_block_chip">↩ UNDO · %1$dM</string>
     <string name="undo_done">Block undone — %1$s is allowed again</string>
     <string name="undo_expired">The 3-minute window is over — this block is now permanent</string>
+    <string name="switch_block_desc">Block this app</string>
+    <string name="switch_allow_desc">Always allow this app</string>
     <!-- R14 (v3.8.3): Commitment Tamper-Shield -->
     <string name="overlay_reason_lockshield">System settings and stores are off-limits during a commitment Time-Lock</string>
     <!-- R9 (v3.7.9): AI model delivery guidance (no INTERNET by design) -->

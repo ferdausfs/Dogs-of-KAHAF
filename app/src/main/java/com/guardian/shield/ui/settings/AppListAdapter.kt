@@ -2,6 +2,8 @@ package com.guardian.shield.ui.settings
 
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +25,11 @@ class AppListAdapter(
 
     fun submit(list: List<AppRule>) { submitList(list) }
 
+    // v3.8.4 — scroll-jank fix: app icons are the heaviest per-bind work
+    // (PackageManager IPC on the main thread). Cache drawables per package
+    // for the process lifetime; 120 entries covers big lists comfortably.
+    private val iconCache = LruCache<String, Drawable>(120)
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val b = ItemAppRuleBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return VH(b)
@@ -36,12 +43,23 @@ class AppListAdapter(
         fun bind(rule: AppRule) {
             b.txtAppName.text = rule.appName.ifBlank { rule.packageName }
             b.txtPackage.text = rule.packageName
-            try {
-                val icon = pm.getApplicationIcon(rule.packageName)
-                b.imgIcon.setImageDrawable(icon)
-            } catch (_: Throwable) {
-                b.imgIcon.setImageDrawable(null)
+            val cachedIcon = iconCache.get(rule.packageName)
+            if (cachedIcon != null) {
+                b.imgIcon.setImageDrawable(cachedIcon)
+            } else {
+                try {
+                    val icon = pm.getApplicationIcon(rule.packageName)
+                    iconCache.put(rule.packageName, icon)
+                    b.imgIcon.setImageDrawable(icon)
+                } catch (_: Throwable) {
+                    b.imgIcon.setImageDrawable(null)
+                }
             }
+
+            // v3.8.4 — colors resolved ONCE per bind (no repeated getColor).
+            val ctx = b.root.context
+            val cError = ctx.getColor(com.guardian.shield.R.color.error)
+            val cSuccess = ctx.getColor(com.guardian.shield.R.color.success)
 
             // Detach listeners before mutating UI to avoid recursive callbacks
             b.switchBlock.setOnCheckedChangeListener(null)
@@ -62,27 +80,21 @@ class AppListAdapter(
 
             // Premium badges — show BLOCKED / ALLOWED chip with design system colors
             try {
+                // v3.8.4 — chips only for REAL states. A no-rule app stays
+                // visually clean; "allowed" is expressed by the green
+                // always-allow toggle when it is actually switched on.
                 if (rule.isBlocked) {
                     b.txtStatusBadge.visibility = View.VISIBLE
                     b.txtStatusBadge.text = "BLOCKED"
-                    b.txtStatusBadge.setTextColor(b.root.context.getColor(com.guardian.shield.R.color.error))
+                    b.txtStatusBadge.setTextColor(cError)
                     b.imgLockIcon.visibility = View.VISIBLE
                 } else if (rule.isWhitelisted) {
                     b.txtStatusBadge.visibility = View.VISIBLE
                     b.txtStatusBadge.text = "ALLOWED"
-                    b.txtStatusBadge.setTextColor(b.root.context.getColor(com.guardian.shield.R.color.success))
+                    b.txtStatusBadge.setTextColor(cSuccess)
                     b.imgLockIcon.visibility = View.GONE
                 } else {
-                    // R13 (v3.8.2) — an app with NO rule was indistinguishable
-                    // from "unset" (badge hidden); users could not tell it is
-                    // allowed BY DEFAULT. Say it explicitly in a muted chip.
-                    b.txtStatusBadge.visibility = View.VISIBLE
-                    b.txtStatusBadge.text = b.root.context.getString(
-                        com.guardian.shield.R.string.app_badge_default
-                    )
-                    b.txtStatusBadge.setTextColor(
-                        b.root.context.getColor(com.guardian.shield.R.color.on_surface_variant)
-                    )
+                    b.txtStatusBadge.visibility = View.GONE
                     b.imgLockIcon.visibility = View.GONE
                 }
             } catch (_: Throwable) {}
@@ -93,7 +105,7 @@ class AppListAdapter(
                 if (rule.isBlocked && AppRule.isWithinGrace(rule.blockedAtMs) && remaining > 0L) {
                     val mins = ((remaining + 59_999L) / 60_000L).coerceIn(1L, 3L)
                     b.btnUndoBlock.visibility = View.VISIBLE
-                    b.btnUndoBlock.text = b.root.context.getString(
+                    b.btnUndoBlock.text = ctx.getString(
                         com.guardian.shield.R.string.undo_block_chip, mins
                     )
                     b.btnUndoBlock.setOnClickListener { onUndoBlocked(rule.packageName) }
@@ -126,8 +138,8 @@ class AppListAdapter(
             // Left side indicator strip — premium colors
             try {
                 when {
-                    rule.isBlocked -> b.viewLeftIndicator.setBackgroundColor(b.root.context.getColor(com.guardian.shield.R.color.error))
-                    rule.isWhitelisted -> b.viewLeftIndicator.setBackgroundColor(b.root.context.getColor(com.guardian.shield.R.color.success))
+                    rule.isBlocked -> b.viewLeftIndicator.setBackgroundColor(cError)
+                    rule.isWhitelisted -> b.viewLeftIndicator.setBackgroundColor(cSuccess)
                     else -> b.viewLeftIndicator.setBackgroundColor(Color.TRANSPARENT)
                 }
             } catch (_: Throwable) {}
