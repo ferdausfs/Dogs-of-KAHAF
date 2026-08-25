@@ -23,6 +23,11 @@ class GuardianPreferences @Inject constructor(
 ) {
     private val ds = context.dataStore
 
+    companion object {
+        /** R8 (v3.7.8) — all seven day bits set: schedule runs every day. */
+        const val DNS_ALL_DAYS = 0b1111111
+    }
+
     object Keys {
         val KEYWORD_FILTER = booleanPreferencesKey("keyword_filter")
         val AI_DETECTION = booleanPreferencesKey("ai_detection")
@@ -65,6 +70,13 @@ class GuardianPreferences @Inject constructor(
         val DNS_AUTO_START_MIN = intPreferencesKey("dns_auto_start_min")
         val DNS_AUTO_END_MIN = intPreferencesKey("dns_auto_end_min")
         val DNS_AUTO_HOST = stringPreferencesKey("dns_auto_host")
+
+        // R8 (v3.7.8) — DNS Auto polish: day-of-week mask (bit0=Sun..bit6=Sat,
+        // default 0b1111111) the schedule runs on, and a 15-minute pause
+        // (until-timestamp ms, 0 = not paused) that temporarily restores the
+        // user's own DNS even inside the window.
+        val DNS_AUTO_DAY_MASK = intPreferencesKey("dns_auto_day_mask")
+        val DNS_AUTO_PAUSE_UNTIL_MS = longPreferencesKey("dns_auto_pause_until_ms")
 
         // R7.5 — Bedtime Mode: nightly scheduled Focus (minutes-of-day,
         // overnight-safe) that extends FOCUS_UNTIL_MS to the window end.
@@ -110,6 +122,10 @@ class GuardianPreferences @Inject constructor(
     val bedtimeStartMin: Flow<Int> = ds.data.map { it[Keys.BEDTIME_START_MIN] ?: (23 * 60) }
     val bedtimeEndMin: Flow<Int> = ds.data.map { it[Keys.BEDTIME_END_MIN] ?: (6 * 60) }
     val dnsAutoHost: Flow<String> = ds.data.map { it[Keys.DNS_AUTO_HOST] ?: "" }
+
+    // R8 (v3.7.8) — DNS Auto polish
+    val dnsAutoDayMask: Flow<Int> = ds.data.map { it[Keys.DNS_AUTO_DAY_MASK] ?: DNS_ALL_DAYS }
+    val dnsAutoPauseUntilMs: Flow<Long> = ds.data.map { it[Keys.DNS_AUTO_PAUSE_UNTIL_MS] ?: 0L }
 
     // Setters
     suspend fun setKeywordFilter(v: Boolean) { ds.edit { it[Keys.KEYWORD_FILTER] = v } }
@@ -158,6 +174,21 @@ class GuardianPreferences @Inject constructor(
             it[Keys.DNS_AUTO_START_MIN] = startMin
             it[Keys.DNS_AUTO_END_MIN] = endMin
             it[Keys.DNS_AUTO_HOST] = host.trim().lowercase()
+        }
+    }
+
+    // R8 (v3.7.8) — DNS Auto polish
+    suspend fun setDnsAutoDayMask(v: Int) { ds.edit { it[Keys.DNS_AUTO_DAY_MASK] = v } }
+    suspend fun setDnsAutoPauseUntilMs(v: Long) { ds.edit { it[Keys.DNS_AUTO_PAUSE_UNTIL_MS] = v } }
+
+    /** QS tile / one-call save incl. day mask (pause stays untouched). */
+    suspend fun setDnsAutoAll(enabled: Boolean, startMin: Int, endMin: Int, host: String, dayMask: Int) {
+        ds.edit {
+            it[Keys.DNS_AUTO_ENABLED] = enabled
+            it[Keys.DNS_AUTO_START_MIN] = startMin
+            it[Keys.DNS_AUTO_END_MIN] = endMin
+            it[Keys.DNS_AUTO_HOST] = host.trim().lowercase()
+            it[Keys.DNS_AUTO_DAY_MASK] = dayMask
         }
     }
 

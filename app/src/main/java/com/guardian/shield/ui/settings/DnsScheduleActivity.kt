@@ -47,6 +47,16 @@ class DnsScheduleActivity : AppCompatActivity() {
     private var rendering = false
     private var startMin = 20 * 60
     private var endMin = 8 * 60
+    // R8 (v3.7.8) — day mask (bit0=Sun..bit6=Sat) + 15-min pause timestamp.
+    private var dayMask = GuardianPreferences.DNS_ALL_DAYS
+    private var pauseUntilMs = 0L
+
+    private val dayChips by lazy {
+        listOf(
+            binding.chipDnsSun, binding.chipDnsMon, binding.chipDnsTue,
+            binding.chipDnsWed, binding.chipDnsThu, binding.chipDnsFri, binding.chipDnsSat
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +87,15 @@ class DnsScheduleActivity : AppCompatActivity() {
                 endMin = h * 60 + m; renderTimes(); applyNow()
             }, endMin / 60, endMin % 60, true).show()
         }
+
+        // R8 — day chips take effect immediately, just like the times.
+        dayChips.forEach { chip ->
+            chip.setOnCheckedChangeListener { _, _ -> if (!rendering) applyNow() }
+        }
+
+        // R8 — 15-minute pause: restores the user's own DNS right away and
+        // resumes automatically (exact alarm at the pause expiry + worker).
+        binding.btnDnsPause.setOnClickListener { togglePause() }
 
         binding.btnDnsCopyCmd.setOnClickListener {
             val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
@@ -196,30 +215,88 @@ class DnsScheduleActivity : AppCompatActivity() {
             startMin = prefs.dnsAutoStartMin.first()
             endMin = prefs.dnsAutoEndMin.first()
             val host = prefs.dnsAutoHost.first()
+            dayMask = prefs.dnsAutoDayMask.first()
+            pauseUntilMs = prefs.dnsAutoPauseUntilMs.first()
             rendering = true
             binding.switchDnsAuto.isChecked = enabled
             binding.inputHost.setText(host)
+            renderDayChips()
             rendering = false
             renderTimes()
+            renderPauseButton()
             renderStatus()
             renderBanner()
         }
+    }
+
+    /** Read the 7 chips into the bitmask; 0 (all off) coerces back to daily. */
+    private fun maskFromChips(): Int {
+        var mask = 0
+        dayChips.forEachIndexed { i, c -> if (c.isChecked) mask = mask or (1 shl i) }
+        return if (mask == 0) GuardianPreferences.DNS_ALL_DAYS else mask
+    }
+
+    private fun renderDayChips() {
+        dayChips.forEachIndexed { i, c -> c.isChecked = (dayMask and (1 shl i)) != 0 }
+    }
+
+    /** R8 — pause/resume toggle; enforces immediately + re-arms the alarm. */
+    private fun togglePause() {
+        val now = System.currentTimeMillis()
+        pauseUntilMs = if (PrivateDnsScheduler.isPaused(pauseUntilMs, now)) 0L
+        else now + 15 * 60 * 1000L
+        if (pauseUntilMs > 0L) toast(R.string.dns_pause_toast)
+        val enabled = binding.switchDnsAuto.isChecked
+        val host = hostFromUi()
+        lifecycleScope.launch {
+            prefs.setDnsAutoPauseUntilMs(pauseUntilMs)
+            withContext(Dispatchers.IO) {
+                PrivateDnsScheduler.syncCache(
+                    this@DnsScheduleActivity, enabled, startMin, endMin, host, dayMask, pauseUntilMs
+                )
+                runCatching {
+                    val effective = PrivateDnsScheduler.isEffectiveNow(
+                        PrivateDnsScheduler.nowMinutes(), startMin, endMin, dayMask, pauseUntilMs
+                    )
+                    PrivateDnsController.applyDesiredState(
+                        this@DnsScheduleActivity, enabled, effective, host,
+                        PrivateDnsScheduler.cache(this@DnsScheduleActivity)
+                    )
+                }.onFailure { Timber.e(it, "dns pause apply failed") }
+                PrivateDnsScheduler.reschedule(this@DnsScheduleActivity)
+            }
+            renderPauseButton()
+            renderStatus()
+        }
+    }
+
+    private fun renderPauseButton() {
+        binding.btnDnsPause.setText(
+            if (PrivateDnsScheduler.isPaused(pauseUntilMs)) R.string.dns_pause_resume
+            else R.string.dns_pause_15
+        )
     }
 
     /** Save current UI -> DataStore, mirror to cache, enforce right now. */
     private fun applyNow() {
         val enabled = binding.switchDnsAuto.isChecked
         val host = hostFromUi()
+        dayMask = maskFromChips()
+        if (dayChips.none { it.isChecked }) {
+            rendering = true; renderDayChips(); rendering = false
+        }
         lifecycleScope.launch {
-            prefs.setDnsAuto(enabled, startMin, endMin, host)
+            prefs.setDnsAutoAll(enabled, startMin, endMin, host, dayMask)
             withContext(Dispatchers.IO) {
-                PrivateDnsScheduler.syncCache(this@DnsScheduleActivity, enabled, startMin, endMin, host)
+                PrivateDnsScheduler.syncCache(
+                    this@DnsScheduleActivity, enabled, startMin, endMin, host, dayMask, pauseUntilMs
+                )
                 runCatching {
-                    val inWindow = PrivateDnsScheduler.isInWindow(
-                        PrivateDnsScheduler.nowMinutes(), startMin, endMin
+                    val effective = PrivateDnsScheduler.isEffectiveNow(
+                        PrivateDnsScheduler.nowMinutes(), startMin, endMin, dayMask, pauseUntilMs
                     )
                     PrivateDnsController.applyDesiredState(
-                        this@DnsScheduleActivity, enabled, inWindow, host,
+                        this@DnsScheduleActivity, enabled, effective, host,
                         PrivateDnsScheduler.cache(this@DnsScheduleActivity)
                     )
                 }.onFailure { Timber.e(it, "dns apply failed") }
@@ -230,6 +307,13 @@ class DnsScheduleActivity : AppCompatActivity() {
     }
 
     private fun fmt(min: Int): String = "%02d:%02d".format(min / 60, min % 60)
+
+    /** R8 — "HH:MM" for a wall-clock timestamp (pause expiry). */
+    private fun fmtTs(ts: Long): String {
+        val c = java.util.Calendar.getInstance()
+        c.timeInMillis = ts
+        return "%02d:%02d".format(c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+    }
 
     private fun renderTimes() {
         binding.btnDnsStart.text = getString(R.string.dns_window_on_at, fmt(startMin))
@@ -251,18 +335,34 @@ class DnsScheduleActivity : AppCompatActivity() {
                 binding.txtDnsStatus.setText(R.string.dns_status_no_host)
                 binding.txtDnsStatusSub.text = getString(R.string.dns_host_hint)
             }
+            PrivateDnsScheduler.isPaused(pauseUntilMs) -> {
+                // R8 — pause wins over every other state message.
+                binding.txtDnsStatus.text = getString(R.string.dns_paused_until, fmtTs(pauseUntilMs))
+                binding.txtDnsStatusSub.text = getString(R.string.dns_status_on, host)
+            }
             else -> {
-                val inWindow = PrivateDnsScheduler.isInWindow(
-                    PrivateDnsScheduler.nowMinutes(), startMin, endMin
+                val nowMin = PrivateDnsScheduler.nowMinutes()
+                val timeInWindow = PrivateDnsScheduler.isInWindow(nowMin, startMin, endMin)
+                val effective = PrivateDnsScheduler.isEffectiveNow(
+                    nowMin, startMin, endMin, dayMask, pauseUntilMs
                 )
-                if (inWindow) {
-                    binding.txtDnsStatus.text = getString(R.string.dns_status_on, host)
-                    binding.txtDnsStatusSub.text =
-                        getString(R.string.dns_status_on_until, fmt(endMin))
-                } else {
-                    binding.txtDnsStatus.setText(R.string.dns_status_off_now)
-                    binding.txtDnsStatusSub.text =
-                        getString(R.string.dns_status_next, fmt(startMin))
+                when {
+                    effective -> {
+                        binding.txtDnsStatus.text = getString(R.string.dns_status_on, host)
+                        binding.txtDnsStatusSub.text =
+                            getString(R.string.dns_status_on_until, fmt(endMin))
+                    }
+                    timeInWindow -> {
+                        // Inside the clock window but today isn't selected.
+                        binding.txtDnsStatus.setText(R.string.dns_status_off_day)
+                        binding.txtDnsStatusSub.text =
+                            getString(R.string.dns_status_next, fmt(startMin))
+                    }
+                    else -> {
+                        binding.txtDnsStatus.setText(R.string.dns_status_off_now)
+                        binding.txtDnsStatusSub.text =
+                            getString(R.string.dns_status_next, fmt(startMin))
+                    }
                 }
             }
         }

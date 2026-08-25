@@ -29,20 +29,39 @@ object PrivateDnsScheduler {
     private const val C_START_MIN = "start_min"
     private const val C_END_MIN = "end_min"
     private const val C_HOST = "host"
+    private const val C_DAY_MASK = "day_mask"
+    private const val C_PAUSE_UNTIL = "pause_until"
 
     fun cache(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun syncCache(context: Context, enabled: Boolean, startMin: Int, endMin: Int, host: String) {
+    fun syncCache(
+        context: Context,
+        enabled: Boolean,
+        startMin: Int,
+        endMin: Int,
+        host: String,
+        dayMask: Int = 0b1111111,
+        pauseUntilMs: Long = 0L
+    ) {
         cache(context).edit()
             .putBoolean(C_ENABLED, enabled)
             .putInt(C_START_MIN, startMin)
             .putInt(C_END_MIN, endMin)
             .putString(C_HOST, host)
+            .putInt(C_DAY_MASK, dayMask)
+            .putLong(C_PAUSE_UNTIL, pauseUntilMs)
             .apply()
     }
 
-    data class Cache(val enabled: Boolean, val startMin: Int, val endMin: Int, val host: String)
+    data class Cache(
+        val enabled: Boolean,
+        val startMin: Int,
+        val endMin: Int,
+        val host: String,
+        val dayMask: Int = 0b1111111,
+        val pauseUntilMs: Long = 0L
+    )
 
     fun readCache(context: Context): Cache {
         val p = cache(context)
@@ -50,7 +69,9 @@ object PrivateDnsScheduler {
             p.getBoolean(C_ENABLED, false),
             p.getInt(C_START_MIN, 20 * 60),
             p.getInt(C_END_MIN, 8 * 60),
-            p.getString(C_HOST, "") ?: ""
+            p.getString(C_HOST, "") ?: "",
+            p.getInt(C_DAY_MASK, 0b1111111),
+            p.getLong(C_PAUSE_UNTIL, 0L)
         )
     }
 
@@ -64,15 +85,48 @@ object PrivateDnsScheduler {
     fun nowMinutes(now: Calendar = Calendar.getInstance()): Int =
         now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
+    /** R8 — day index matching the rest of the app: 0=Sun .. 6=Sat. */
+    fun dayIndex(now: Calendar = Calendar.getInstance()): Int =
+        (now.get(Calendar.DAY_OF_WEEK) - 1).coerceIn(0, 6)
+
+    /** R8 — true while a 15-minute pause is active. */
+    fun isPaused(pauseUntilMs: Long, nowMs: Long = System.currentTimeMillis()): Boolean =
+        pauseUntilMs > nowMs
+
+    /**
+     * R8 — effective "DNS should be filtered RIGHT NOW": inside the time
+     * window AND today is a scheduled day AND not paused. Overnight spillover
+     * (02:00 inside a 20:00→08:00 window) belongs to YESTERDAY's day, so a
+     * Friday night window keeps filtering into Saturday morning.
+     */
+    fun isEffectiveNow(
+        nowMin: Int,
+        startMin: Int,
+        endMin: Int,
+        dayMask: Int,
+        pauseUntilMs: Long,
+        now: Calendar = Calendar.getInstance()
+    ): Boolean {
+        if (isPaused(pauseUntilMs, now.timeInMillis)) return false
+        if (!isInWindow(nowMin, startMin, endMin)) return false
+        val today = dayIndex(now)
+        val dayForWindow =
+            if (startMin > endMin && nowMin < endMin) (today + 6) % 7 else today
+        return dayMask and (1 shl dayForWindow) != 0
+    }
+
     /**
      * Millis of the NEXT boundary (window start or end) strictly after [now],
-     * or 0 when the feature is disabled.
+     * or 0 when the feature is disabled. R8: an active pause adds one extra
+     * boundary at its expiry so filtering resumes exactly on time.
      */
     fun nextBoundaryMillis(c: Cache, now: Calendar = Calendar.getInstance()): Long {
         if (!c.enabled || c.host.isBlank()) return 0L
         val candidates = listOf(c.startMin, c.endMin)
             .flatMap { m -> listOf(atMinutes(now, m, 0), atMinutes(now, m, 1)) }
             .filter { it > now.timeInMillis }
+            .toMutableList()
+        if (isPaused(c.pauseUntilMs, now.timeInMillis)) candidates += c.pauseUntilMs
         return candidates.minOrNull() ?: 0L
     }
 

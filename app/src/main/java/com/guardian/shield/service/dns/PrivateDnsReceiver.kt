@@ -26,13 +26,15 @@ class PrivateDnsReceiver : BroadcastReceiver() {
         Thread {
             try {
                 val c = PrivateDnsScheduler.readCache(appContext)
-                val inWindow = PrivateDnsScheduler.isInWindow(
-                    PrivateDnsScheduler.nowMinutes(), c.startMin, c.endMin
+                // R8 — effective state honours the day mask + 15-min pause.
+                val effective = PrivateDnsScheduler.isEffectiveNow(
+                    PrivateDnsScheduler.nowMinutes(), c.startMin, c.endMin,
+                    c.dayMask, c.pauseUntilMs
                 )
                 val outcome = PrivateDnsController.applyDesiredState(
-                    appContext, c.enabled, inWindow, c.host, PrivateDnsScheduler.cache(appContext)
+                    appContext, c.enabled, effective, c.host, PrivateDnsScheduler.cache(appContext)
                 )
-                Timber.i("PrivateDns: tick — inWindow=$inWindow outcome=$outcome")
+                Timber.i("PrivateDns: tick — effective=$effective outcome=$outcome")
             } catch (t: Throwable) {
                 Timber.e(t, "PrivateDns: tick failed")
             } finally {

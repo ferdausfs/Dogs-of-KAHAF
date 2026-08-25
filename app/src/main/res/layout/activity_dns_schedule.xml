@@ -255,6 +255,62 @@
                             android:layout_marginStart="8dp"/>
                     </LinearLayout>
 
+                    <!-- R8 (v3.7.8): day-of-week chips — the window only runs
+                         on the selected days (overnight spillover belongs to
+                         the day the window STARTED on). -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="@string/dns_days_label"
+                        style="@style/TextAppearance.GuardianShield.SectionHeader"/>
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/dnsDayGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsSun" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_sun" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsMon" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_mon" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsTue" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_tue" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsWed" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_wed" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsThu" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_thu" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsFri" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_fri" android:checkable="true"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipDnsSat" style="@style/Widget.GuardianShield.Chip.Filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/day_sat" android:checkable="true"/>
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <!-- R8: one-tap 15-minute pause (restores your own DNS,
+                         automation resumes exactly on time). -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDnsPause"
+                        style="@style/Widget.GuardianShield.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="@string/dns_pause_15"/>
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

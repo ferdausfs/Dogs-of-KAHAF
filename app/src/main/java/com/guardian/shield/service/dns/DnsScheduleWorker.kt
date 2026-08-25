@@ -30,13 +30,19 @@ class DnsScheduleWorker @AssistedInject constructor(
             val startMin = prefs.dnsAutoStartMin.first()
             val endMin = prefs.dnsAutoEndMin.first()
             val host = prefs.dnsAutoHost.first()
+            // R8 — day mask + pause ride along so the alarm receiver and QS
+            // tile can read them synchronously from the plain-prefs cache.
+            val dayMask = prefs.dnsAutoDayMask.first()
+            val pauseUntilMs = prefs.dnsAutoPauseUntilMs.first()
 
-            PrivateDnsScheduler.syncCache(applicationContext, enabled, startMin, endMin, host)
-            val inWindow = PrivateDnsScheduler.isInWindow(
-                PrivateDnsScheduler.nowMinutes(), startMin, endMin
+            PrivateDnsScheduler.syncCache(
+                applicationContext, enabled, startMin, endMin, host, dayMask, pauseUntilMs
+            )
+            val effective = PrivateDnsScheduler.isEffectiveNow(
+                PrivateDnsScheduler.nowMinutes(), startMin, endMin, dayMask, pauseUntilMs
             )
             val outcome = PrivateDnsController.applyDesiredState(
-                applicationContext, enabled, inWindow, host, PrivateDnsScheduler.cache(applicationContext)
+                applicationContext, enabled, effective, host, PrivateDnsScheduler.cache(applicationContext)
             )
             PrivateDnsScheduler.reschedule(applicationContext)
             if (outcome != null) Timber.d("PrivateDns worker: $outcome")

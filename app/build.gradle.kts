@@ -40,8 +40,8 @@ android {
         applicationId = "com.guardian.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 47
-        versionName = "3.7.7"
+        versionCode = 48
+        versionName = "3.7.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         buildConfigField(
