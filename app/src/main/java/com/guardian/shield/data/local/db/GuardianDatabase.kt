@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ScheduleRuleEntity::class,
         PendingReportEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class GuardianDatabase : RoomDatabase() {
@@ -75,6 +75,41 @@ abstract class GuardianDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE `pending_reports` ADD COLUMN `signatureCsv` TEXT NOT NULL DEFAULT ''"
                 )
+            }
+        }
+
+        // R7.7 — multi-window schedules: schedule_rules PK moves from
+        // packageName to autogen id. Column-preserving table rebuild —
+        // every existing window keeps its values, ids get reassigned.
+        val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `schedule_rules_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `packageName` TEXT NOT NULL,
+                        `startHour` INTEGER NOT NULL,
+                        `startMinute` INTEGER NOT NULL,
+                        `endHour` INTEGER NOT NULL,
+                        `endMinute` INTEGER NOT NULL,
+                        `enabledDaysMask` INTEGER NOT NULL,
+                        `enabled` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO `schedule_rules_new`
+                        (`packageName`, `startHour`, `startMinute`, `endHour`,
+                         `endMinute`, `enabledDaysMask`, `enabled`, `createdAt`)
+                    SELECT `packageName`, `startHour`, `startMinute`, `endHour`,
+                           `endMinute`, `enabledDaysMask`, `enabled`, `createdAt`
+                    FROM `schedule_rules`
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE `schedule_rules`")
+                db.execSQL("ALTER TABLE `schedule_rules_new` RENAME TO `schedule_rules`")
             }
         }
     }

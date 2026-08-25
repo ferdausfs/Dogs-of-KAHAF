@@ -24,11 +24,11 @@ fun BlockEvent.toEntity() = BlockEventEntity(id, packageName, reason.name, match
 fun ScheduleRuleEntity.toDomain(): ScheduleRule {
     val days = mutableSetOf<Int>()
     for (i in 0..6) if (enabledDaysMask and (1 shl i) != 0) days.add(i)
-    return ScheduleRule(packageName, startHour, startMinute, endHour, endMinute, days, enabled, createdAt)
+    return ScheduleRule(packageName, startHour, startMinute, endHour, endMinute, days, enabled, createdAt, id)
 }
 
 fun ScheduleRule.toEntity(): ScheduleRuleEntity {
     var mask = 0
     for (d in enabledDays) if (d in 0..6) mask = mask or (1 shl d)
-    return ScheduleRuleEntity(packageName, startHour, startMinute, endHour, endMinute, mask, enabled, createdAt)
+    return ScheduleRuleEntity(id, packageName, startHour, startMinute, endHour, endMinute, mask, enabled, createdAt)
 }

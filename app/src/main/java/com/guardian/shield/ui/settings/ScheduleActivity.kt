@@ -93,7 +93,7 @@ class ScheduleActivity : AppCompatActivity() {
             },
             onDelete = { rule ->
                 if (locked) showLockedSnack()
-                else viewModel.delete(rule.packageName)
+                else viewModel.delete(rule.id)
             }
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
@@ -105,7 +105,7 @@ class ScheduleActivity : AppCompatActivity() {
                 override fun onMove(rv: RecyclerView, v: RecyclerView.ViewHolder, t: RecyclerView.ViewHolder) = false
                 override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                     val item = adapter.currentList[viewHolder.bindingAdapterPosition]
-                    viewModel.delete(item.packageName)
+                    viewModel.delete(item.id)
                 }
             })
             swipe.attachToRecyclerView(binding.recycler)
@@ -207,7 +207,11 @@ class ScheduleActivity : AppCompatActivity() {
                         endHour = endH, endMinute = endM,
                         enabledDays = enabledDays.ifEmpty { (0..6).toSet() },
                         enabled = true,
-                        createdAt = existing?.createdAt ?: System.currentTimeMillis()
+                        createdAt = existing?.createdAt ?: System.currentTimeMillis(),
+                        // R7.7 — keep the row id on edit so it UPDATES this
+                        // window; a new rule (or same app again) gets id 0
+                        // and INSERTS as another window. Multi-window ✓.
+                        id = existing?.id ?: 0
                     )
                 )
             }
@@ -535,7 +539,8 @@ class ScheduleAdapter(
 
     companion object {
         val DIFF = object : DiffUtil.ItemCallback<ScheduleRule>() {
-            override fun areItemsTheSame(o: ScheduleRule, n: ScheduleRule) = o.packageName == n.packageName
+            // R7.7 — identity is the row id: several windows may share one package.
+            override fun areItemsTheSame(o: ScheduleRule, n: ScheduleRule) = o.id == n.id
             override fun areContentsTheSame(o: ScheduleRule, n: ScheduleRule) = o == n
         }
     }

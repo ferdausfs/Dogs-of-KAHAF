@@ -135,6 +135,11 @@ interface ScheduleRuleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(rule: ScheduleRuleEntity)
 
+    /** R7.7 — delete ONE window by its row id (multi-window schedules). */
+    @Query("DELETE FROM schedule_rules WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    /** Delete ALL windows of a package (backup import replace-per-package). */
     @Query("DELETE FROM schedule_rules WHERE packageName = :pkg")
-    suspend fun delete(pkg: String)
+    suspend fun deleteByPackage(pkg: String)
 }

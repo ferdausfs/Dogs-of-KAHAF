@@ -25,7 +25,9 @@ data class RulesSnapshot(
     val whitelist: Set<String> = emptySet(),
     val keywords: List<Pair<String, Boolean>> = emptyList(),
     val inputMethods: Set<String> = emptySet(),
-    val scheduleRules: Map<String, ScheduleRule> = emptyMap(),
+    // R7.7 — multi-window: one package may hold several schedule windows,
+    // so the snapshot groups rules by package instead of keeping one-per-app.
+    val scheduleRules: Map<String, List<ScheduleRule>> = emptyMap(),
     // R4 — Focus Mode: epoch-ms until which every non-whitelisted user-facing
     // app is blocked. Time check happens fresh at evaluation (like schedules),
     // so expiry needs no rules reload.
@@ -55,7 +57,7 @@ class RulesEngine @Inject constructor(
                 val whitelist = repo.whitelistPackages()
                 val kws = repo.enabledKeywords().map { it.keyword to it.isRegex }
                 val imes = AppClassifier.loadInputMethodPackages(context)
-                val sched = repo.allSchedules().associateBy { it.packageName }
+                val sched = repo.allSchedules().groupBy { it.packageName }
                 val focusUntil = runCatching { prefs.focusUntilMs.first() }.getOrDefault(0L)
                 snapshot = RulesSnapshot(blocked, whitelist, kws, imes, sched, focusUntil)
                 _rulesChanged.tryEmit(Unit)
@@ -112,7 +114,7 @@ class RulesEngine @Inject constructor(
         // (For non-system packages these early returns change nothing — the
         // function would reach `return true` anyway.)
         if (s.blocked.contains(pkg)) return true
-        if (s.scheduleRules[pkg]?.enabled == true) return true
+        if (s.scheduleRules[pkg]?.any { it.enabled } == true) return true
         val defaultReason = DefaultSystemWhitelist.matchReason(pkg)
         if (defaultReason != null) {
             // Distinct from (silent) user-whitelist skips — diagnosable in logcat.
@@ -200,16 +202,20 @@ class RulesEngine @Inject constructor(
     }
 
     private fun isScheduleBlocked(pkg: String): Boolean {
-        val rule = snapshot.scheduleRules[pkg] ?: return false
-        if (!rule.enabled) return false
+        val rules = snapshot.scheduleRules[pkg] ?: return false
         val cal = Calendar.getInstance()
         val dayOfWeek = (cal.get(Calendar.DAY_OF_WEEK) - 1).coerceIn(0, 6) // 0=Sun..6=Sat
-        if (!rule.enabledDays.contains(dayOfWeek)) return false
         val nowMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-        val start = rule.startHour * 60 + rule.startMinute
-        val end = rule.endHour * 60 + rule.endMinute
-        return if (start <= end) nowMins in start until end
-        else nowMins >= start || nowMins < end
+        // R7.7 — blocked when ANY enabled window of this package matches now.
+        return rules.any { rule ->
+            if (!rule.enabled || !rule.enabledDays.contains(dayOfWeek)) false
+            else {
+                val start = rule.startHour * 60 + rule.startMinute
+                val end = rule.endHour * 60 + rule.endMinute
+                if (start <= end) nowMins in start until end
+                else nowMins >= start || nowMins < end
+            }
+        }
     }
 
     private companion object {
