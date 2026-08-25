@@ -60,7 +60,12 @@ class FiltersActivity : AppCompatActivity() {
             Row("drugs", binding.switchDrugs, binding.txtCountDrugs),
             Row("violence", binding.switchViolence, binding.txtCountViolence),
             Row("dating", binding.switchDating, binding.txtCountDating),
-            Row("doomscroll", binding.switchDoomscroll, binding.txtCountDoomscroll)
+            Row("doomscroll", binding.switchDoomscroll, binding.txtCountDoomscroll),
+            // R10 (v3.8.0) — four new categories
+            Row("social", binding.switchSocial, binding.txtCountSocial),
+            Row("gaming", binding.switchGaming, binding.txtCountGaming),
+            Row("crypto", binding.switchCrypto, binding.txtCountCrypto),
+            Row("scams", binding.switchScams, binding.txtCountScams)
         )
 
         rows.forEach { row ->

@@ -100,6 +100,61 @@ object FilterCategories {
                 "tiktok", "reels", "shorts", "doomscroll",
                 "টিকটক", "রিলস", "শর্টস"
             )
+        ),
+        // R10 (v3.8.0) — four new categories. Same materialization path; no
+        // engine change. Lists avoid duplicating keywords from other
+        // categories (e.g. tiktok/lottery already live elsewhere).
+        Category(
+            id = "social",
+            titleRes = R.string.filter_social_title,
+            subtitleRes = R.string.filter_social_sub,
+            iconRes = R.drawable.ic_social,
+            tileBgRes = R.color.tile_blue_bg,
+            tileFgRes = R.color.tile_blue_fg,
+            keywords = listOf(
+                "facebook", "instagram", "snapchat", "messenger", "whatsapp",
+                "telegram",
+                "ফেসবুক", "ইনস্টাগ্রাম", "মেসেঞ্জার", "হোয়াটসঅ্যাপ", "টেলিগ্রাম"
+            )
+        ),
+        Category(
+            id = "gaming",
+            titleRes = R.string.filter_gaming_title,
+            subtitleRes = R.string.filter_gaming_sub,
+            iconRes = R.drawable.ic_game,
+            tileBgRes = R.color.tile_green_bg,
+            tileFgRes = R.color.tile_green_fg,
+            keywords = listOf(
+                "pubg", "free fire", "fortnite", "roblox", "minecraft",
+                "call of duty", "esports",
+                "পাবজি", "ফ্রি ফায়ার", "গেম"
+            )
+        ),
+        Category(
+            id = "crypto",
+            titleRes = R.string.filter_crypto_title,
+            subtitleRes = R.string.filter_crypto_sub,
+            iconRes = R.drawable.ic_coin,
+            tileBgRes = R.color.tile_orange_bg,
+            tileFgRes = R.color.tile_orange_fg,
+            keywords = listOf(
+                "bitcoin", "crypto", "binance", "usdt", "nft", "forex",
+                "ethereum",
+                "বিটকয়েন", "ক্রিপ্টো", "ফরেক্স"
+            )
+        ),
+        Category(
+            id = "scams",
+            titleRes = R.string.filter_scams_title,
+            subtitleRes = R.string.filter_scams_sub,
+            iconRes = R.drawable.ic_scam,
+            tileBgRes = R.color.tile_rose_bg,
+            tileFgRes = R.color.tile_rose_fg,
+            keywords = listOf(
+                "scam", "phishing", "you won", "claim your prize", "gift card",
+                "money doubling", "pyramid scheme",
+                "প্রতারণা", "টাকা দ্বিগুণ", "পিরামিড", "ফ্রি গিফট", "লটারি জিতেছেন"
+            )
         )
     )
 
