@@ -93,6 +93,10 @@
     <string name="import_">Import</string>
     <string name="remove">Remove</string>
     <string name="model_missing">✗ Missing</string>
+    <!-- R9 (v3.7.9): AI model delivery guidance (no INTERNET by design) -->
+    <string name="model_help_link">ⓘ Where do I get the model?</string>
+    <string name="model_help_title">Getting the AI model</string>
+    <string name="model_help_body">Guardian Shield\'s AI detection is 100% on-device — the app has NO internet permission, so the model file can only come from you.\n\n1) On this phone, open any browser and search: nsfw_mobilenet2 tflite — open-source content-filter models on GitHub or Hugging Face (usually 2–30 MB).\n\n2) Download the .tflite file (it lands in Downloads).\n\n3) Back here, tap Import and pick the file.\n\nGuardian verifies the file really loads BEFORE it is installed — a broken download is rejected with a clear message, never silently. And after import, detection uses the new model right away — no app restart needed.\n\nEverything else in Guardian Shield works with or without the model; AI detection simply stays off until you add one.</string>
     <string name="import_success">Imported: %1$s</string>
     <string name="import_failed">Import failed: %1$s</string>
     <string name="model_deleted">Removed: %1$s</string>

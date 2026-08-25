@@ -73,6 +73,22 @@ class ModelImportManager @Inject constructor(
                 tmp.copyTo(finalFile, overwrite = true)
                 tmp.delete()
             }
+
+            // R9 (v3.7.9) — DELIVERY FIX part 1: prove the file actually loads
+            // as a TFLite model BEFORE calling it a success. Until now any
+            // random file was "installed" and AI detection then failed forever
+            // at inference time. Validation is CPU-only (no delegates) and
+            // one-off; a bad file is rolled back with a clear message.
+            val loads = runCatching {
+                org.tensorflow.lite.Interpreter(finalFile).close()
+            }.isSuccess
+            if (!loads) {
+                finalFile.delete()
+                val msg = "Not a loadable .tflite model — nothing was installed"
+                _progress.value = ImportProgress.Error(modelName, msg)
+                return@withContext Result.failure(IllegalStateException(msg))
+            }
+
             _progress.value = ImportProgress.Success(modelName, finalFile.length())
             Result.success(finalFile)
         } catch (t: Throwable) {

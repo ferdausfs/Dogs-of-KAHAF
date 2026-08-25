@@ -209,6 +209,14 @@ class SettingsActivity : AppCompatActivity() {
             binding.btnRemoveLegacy.setOnClickListener {
                 viewModel.deleteModel(AiDetector.MODEL_LEGACY)
             }
+            // R9 (v3.7.9) — model delivery guidance (no INTERNET by design).
+            binding.btnModelHelp.setOnClickListener {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.model_help_title)
+                    .setMessage(R.string.model_help_body)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
             binding.btnChangePin.setOnClickListener {
                 startActivity(Intent(this, PinSetupActivity::class.java))
             }

@@ -92,6 +92,10 @@
     <string name="import_">ইম্পোর্ট</string>
     <string name="remove">মুছুন</string>
     <string name="model_missing">✗ নেই</string>
+    <!-- R9 (v3.7.9): এআই মডেল ডেলিভারি গাইড (ইচ্ছাকৃতভাবে ইন্টারনেট নেই) -->
+    <string name="model_help_link">ⓘ মডেলটি কোথায় পাবো?</string>
+    <string name="model_help_title">এআই মডেল সংগ্রহ</string>
+    <string name="model_help_body">Guardian Shield-এর এআই ডিটেকশন ১০০% অন-ডিভাইস — অ্যাপের কোনো ইন্টারনেট পারমিশন নেই, তাই মডেল ফাইলটি শুধু আপনিই দিতে পারেন।\n\n১) এই ফোনে যেকোনো ব্রাউজারে খুঁজুন: nsfw_mobilenet2 tflite — GitHub বা Hugging Face-এ ওপেন-সোর্স কনটেন্ট-ফিল্টার মডেল (সাধারণত ২–৩০ মেগাবাইট)।\n\n২) .tflite ফাইলটি ডাউনলোড করুন (Downloads ফোল্ডারে যাবে)।\n\n৩) এখানে ফিরে এসে Import চাপুন ও ফাইলটি বেছে নিন।\n\nইনস্টল করার আগেই Guardian যাচাই করে ফাইলটি সত্যিই চলে কি না — ভাঙা ডাউনলোড স্পষ্ট বার্তাসহ বাতিল হয়, নীরবে নয়। আর ইমপোর্টের পর নতুন মডেল সাথে সাথেই কাজ করে — অ্যাপ রিস্টার্ট লাগে না।\n\nমডেল ছাড়াও Guardian Shield-এর বাকি সবকিছু চলে; মডেল না দেওয়া পর্যন্ত শুধু এআই ডিটেকশন বন্ধ থাকে।</string>
     <string name="import_success">ইম্পোর্ট সফল: %1$s</string>
     <string name="import_failed">ইম্পোর্ট ব্যর্থ: %1$s</string>
     <string name="model_deleted">মুছে ফেলা হয়েছে: %1$s</string>

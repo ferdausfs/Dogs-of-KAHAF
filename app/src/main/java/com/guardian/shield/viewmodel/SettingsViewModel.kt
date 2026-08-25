@@ -94,6 +94,7 @@ class SettingsViewModel @Inject constructor(
     fun importModel(uri: Uri, modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = importer.importModel(uri, modelName)
+            if (r.isSuccess) aiDetector.reloadImportedModels() // R9 — live reload, no restart
             refreshTick.value++
             prefs.bumpRulesVersion()
             if (r.isSuccess) _events.trySend(SettingsEvent.ImportSuccess(modelName))
@@ -104,6 +105,7 @@ class SettingsViewModel @Inject constructor(
     fun deleteModel(modelName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             importer.deleteModel(modelName)
+            aiDetector.reloadImportedModels() // R9 — drop cached interpreter too
             refreshTick.value++
             prefs.bumpRulesVersion()
             _events.trySend(SettingsEvent.ModelDeleted(modelName))
