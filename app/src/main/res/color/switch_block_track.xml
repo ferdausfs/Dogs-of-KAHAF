@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v3.8.4: block toggle track — soft red when on, faint neutral off -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/badge_error_bg" android:state_checked="true"/>
+    <item android:color="@color/border_subtle"/>
+</selector>

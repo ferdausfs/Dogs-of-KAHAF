@@ -93,10 +93,11 @@
     <string name="remove">মুছুন</string>
     <string name="model_missing">✗ নেই</string>
     <!-- R12/R13 (v3.8.2): ডিফল্ট-অনুমতি স্পষ্টকরণ + ৩ মিনিটের আনডু সুযোগ -->
-    <string name="app_badge_default">অনুমোদিত · ডিফল্ট</string>
     <string name="undo_block_chip">↩ আনডু · %1$dM</string>
     <string name="undo_done">ব্লক বাতিল — %1$s আবার চলবে</string>
     <string name="undo_expired">৩ মিনিট শেষ — এই ব্লকটি এখন স্থায়ী</string>
+    <string name="switch_block_desc">এই অ্যাপটি ব্লক করুন</string>
+    <string name="switch_allow_desc">এই অ্যাপটি সবসময় অনুমতি দিন</string>
     <!-- R14 (v3.8.3): কমিটমেন্ট ট্যাম্পার-শিল্ড -->
     <string name="overlay_reason_lockshield">কমিটমেন্ট টাইম-লক চলাকালে সিস্টেম সেটিংস ও স্টোর নিষিদ্ধ</string>
     <!-- R9 (v3.7.9): এআই মডেল ডেলিভারি গাইড (ইচ্ছাকৃতভাবে ইন্টারনেট নেই) -->
