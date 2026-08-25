@@ -97,6 +97,8 @@
     <string name="undo_block_chip">↩ আনডু · %1$dM</string>
     <string name="undo_done">ব্লক বাতিল — %1$s আবার চলবে</string>
     <string name="undo_expired">৩ মিনিট শেষ — এই ব্লকটি এখন স্থায়ী</string>
+    <!-- R14 (v3.8.3): কমিটমেন্ট ট্যাম্পার-শিল্ড -->
+    <string name="overlay_reason_lockshield">কমিটমেন্ট টাইম-লক চলাকালে সিস্টেম সেটিংস ও স্টোর নিষিদ্ধ</string>
     <!-- R9 (v3.7.9): এআই মডেল ডেলিভারি গাইড (ইচ্ছাকৃতভাবে ইন্টারনেট নেই) -->
     <string name="model_help_link">ⓘ মডেলটি কোথায় পাবো?</string>
     <string name="model_help_title">এআই মডেল সংগ্রহ</string>

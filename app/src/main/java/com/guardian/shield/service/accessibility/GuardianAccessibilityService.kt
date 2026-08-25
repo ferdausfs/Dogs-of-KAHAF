@@ -40,6 +40,7 @@ import com.guardian.shield.service.blocker.PendingReportManager
 import com.guardian.shield.service.detection.AiDetector
 import com.guardian.shield.service.detection.ConfirmedSensitiveMemory
 import com.guardian.shield.service.detection.FalsePositiveMemory
+import com.guardian.shield.service.detection.LockShield
 import com.guardian.shield.service.detection.ReelScrollDetector
 import com.guardian.shield.service.detection.RulesEngine
 import com.guardian.shield.service.detection.TimeLockManager
@@ -71,6 +72,9 @@ class GuardianAccessibilityService : AccessibilityService() {
     @Inject lateinit var prefs: GuardianPreferences
     @Inject lateinit var reelScrollDetector: ReelScrollDetector
     @Inject lateinit var timeLockManager: TimeLockManager
+
+    // R14 — rate limit for LockShield tamper entries (pkg -> last log ms).
+    private val lockShieldLogAt = HashMap<String, Long>()
     @Inject lateinit var falsePositiveMemory: FalsePositiveMemory
     @Inject lateinit var confirmedSensitiveMemory: ConfirmedSensitiveMemory
     @Inject lateinit var blockEventDao: BlockEventDao
@@ -712,6 +716,24 @@ class GuardianAccessibilityService : AccessibilityService() {
 
     private fun handleWindowChange(pkg: String) {
         if (pkg.isBlank()) return
+
+        // R14 (v3.8.3) — Commitment Tamper-Shield umbrella: during a Time-Lock
+        // (or its cooldown) the WHOLE system surface that could end the
+        // commitment is unreachable — any page, any split-screen pane.
+        try {
+            if (LockShield.isTarget(pkg) &&
+                (timeLockManager.isLocked() || timeLockManager.isInCooldown())
+            ) {
+                val now = System.currentTimeMillis()
+                val lastLog = lockShieldLogAt[pkg] ?: 0L
+                if (now - lastLog > 60_000L) {   // 1 tamper entry per minute per surface
+                    lockShieldLogAt[pkg] = now
+                    runCatching { TamperLogger.log(this, "lockshield:$pkg") }
+                }
+                goHomeAndBlock(pkg, BlockReason.TAMPER_ATTEMPT, LockShield.DETAIL)
+                return
+            }
+        } catch (t: Throwable) { Timber.e(t, "LockShield check failed") }
 
         // PHASE 5 — Uninstall / Force-stop / Disable protection.
         // If the user opened a package-manager page that targets us, kick them out.

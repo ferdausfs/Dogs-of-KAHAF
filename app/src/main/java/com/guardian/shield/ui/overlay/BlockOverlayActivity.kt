@@ -326,7 +326,10 @@ class BlockOverlayActivity : AppCompatActivity() {
         "KEYWORD_MATCH" -> getString(R.string.overlay_reason_kw, detail)
         "APP_BLOCKED" -> getString(R.string.overlay_reason_app)
         "SCHEDULE_BLOCKED" -> getString(R.string.overlay_reason_sched)
-        "TAMPER_ATTEMPT" -> getString(R.string.overlay_reason_tamper)
+        "TAMPER_ATTEMPT" ->
+            if (detail == com.guardian.shield.service.detection.LockShield.DETAIL)
+                getString(R.string.overlay_reason_lockshield)
+            else getString(R.string.overlay_reason_tamper)
         else -> getString(R.string.overlay_reason_manual)
     }
 
