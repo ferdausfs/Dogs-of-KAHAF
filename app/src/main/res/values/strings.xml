@@ -571,6 +571,15 @@
     <string name="filter_dating_sub">Tinder, hookup, ডেটিং…</string>
     <string name="filter_doomscroll_title">Reels &amp; Doomscrolling</string>
     <string name="filter_doomscroll_sub">TikTok, Reels, Shorts, রিলস…</string>
+    <!-- R10 (v3.8.0): four new filter categories -->
+    <string name="filter_social_title">Social Media</string>
+    <string name="filter_social_sub">Facebook, Instagram, ফেসবুক, মেসেঞ্জার…</string>
+    <string name="filter_gaming_title">Gaming</string>
+    <string name="filter_gaming_sub">PUBG, Free Fire, পাবজি, ফ্রি ফায়ার…</string>
+    <string name="filter_crypto_title">Crypto &amp; Forex</string>
+    <string name="filter_crypto_sub">Bitcoin, Binance, বিটকয়েন, ফরেক্স…</string>
+    <string name="filter_scams_title">Scams &amp; Fraud</string>
+    <string name="filter_scams_sub">Phishing, prize traps, টাকা দ্বিগুণ, প্রতারণা…</string>
     <string name="filter_count_fmt">%1$d keywords</string>
     <string name="filters_promo_title">Smart Filters</string>
     <string name="filters_promo_sub">Block whole categories with one tap • এক ট্যাপে ক্যাটাগরি ব্লক</string>
